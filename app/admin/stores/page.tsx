@@ -1,182 +1,162 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Search, SlidersHorizontal, Mail, Phone, MoveVertical as MoreVertical, ArrowUpRight, ArrowDownRight, MapPin, Plus } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  Mail,
+  Phone,
+  MapPin,
+  Plus,
+  Trash2,
+  Pencil,
+  X,
+  Loader2,
+  Check,
+} from "lucide-react";
+import { fetchStores, deleteStore, type Store } from "@/lib/admin-api";
 
-interface StoreItem {
-  id: string;
-  name: string;
-  owner: string;
-  location: string;
-  mrr: number;
-  orders: number;
-  orderTrend: "up" | "down" | "flat";
-  status: "active" | "risk";
-  plan: "ベーシック" | "スタンダード" | "プレミアム";
-  joinDate: string;
-  lastLogin: string;
+const PLAN_LABELS: Record<number, string> = {
+  1: "ベーシック",
+  2: "スタンダード",
+  3: "プレミアム",
+};
+
+function planLabel(plan: number | null) {
+  if (!plan) return "ベーシック";
+  return PLAN_LABELS[plan] ?? "ベーシック";
 }
 
-const stores: StoreItem[] = [
-  {
-    id: "1",
-    name: "パティスリー花",
-    owner: "山田太郎",
-    location: "東京都渋谷区",
-    mrr: 150000,
-    orders: 45,
-    orderTrend: "down",
-    status: "risk",
-    plan: "プレミアム",
-    joinDate: "2024/04/15",
-    lastLogin: "2026/03/15",
-  },
-  {
-    id: "2",
-    name: "スイーツ工房ミル",
-    owner: "佐藤花子",
-    location: "大阪府大阪市",
-    mrr: 98000,
-    orders: 38,
-    orderTrend: "up",
-    status: "active",
-    plan: "スタンダード",
-    joinDate: "2024/06/22",
-    lastLogin: "2026/03/29",
-  },
-  {
-    id: "3",
-    name: "ケーキハウス桜",
-    owner: "鈴木一郎",
-    location: "神奈川県横浜市",
-    mrr: 150000,
-    orders: 52,
-    orderTrend: "up",
-    status: "active",
-    plan: "プレミアム",
-    joinDate: "2023/11/10",
-    lastLogin: "2026/03/28",
-  },
-  {
-    id: "4",
-    name: "洋菓子店ラパン",
-    owner: "田中美咲",
-    location: "愛知県名古屋市",
-    mrr: 98000,
-    orders: 29,
-    orderTrend: "down",
-    status: "risk",
-    plan: "スタンダード",
-    joinDate: "2025/01/18",
-    lastLogin: "2026/03/22",
-  },
-  {
-    id: "5",
-    name: "ドルチェ小町",
-    owner: "伊藤健太",
-    location: "福岡県福岡市",
-    mrr: 58000,
-    orders: 21,
-    orderTrend: "flat",
-    status: "active",
-    plan: "ベーシック",
-    joinDate: "2025/03/05",
-    lastLogin: "2026/03/30",
-  },
-  {
-    id: "6",
-    name: "パティスリー銀座",
-    owner: "高橋次郎",
-    location: "東京都中央区",
-    mrr: 150000,
-    orders: 67,
-    orderTrend: "up",
-    status: "active",
-    plan: "プレミアム",
-    joinDate: "2023/08/12",
-    lastLogin: "2026/03/30",
-  },
-  {
-    id: "7",
-    name: "スイーツアトリエ",
-    owner: "渡辺愛子",
-    location: "京都府京都市",
-    mrr: 98000,
-    orders: 42,
-    orderTrend: "up",
-    status: "active",
-    plan: "スタンダード",
-    joinDate: "2024/02/28",
-    lastLogin: "2026/03/29",
-  },
-  {
-    id: "8",
-    name: "カフェ&ケーキ モモ",
-    owner: "中村雄介",
-    location: "北海道札幌市",
-    mrr: 58000,
-    orders: 18,
-    orderTrend: "flat",
-    status: "active",
-    plan: "ベーシック",
-    joinDate: "2025/07/14",
-    lastLogin: "2026/03/27",
-  },
-];
-
-const summaryCards = [
-  { label: "総店舗数", value: "247店舗", color: "text-gray-900" },
-  { label: "稼働中", value: "234店舗", color: "text-green-600" },
-  { label: "リスク", value: "5店舗", color: "text-red-600" },
-  { label: "非稼働", value: "8店舗", color: "text-gray-900" },
-];
-
-function PlanBadge({ plan }: { plan: string }) {
+function PlanBadge({ plan }: { plan: number | null }) {
+  const label = planLabel(plan);
   const colors =
-    plan === "プレミアム"
+    label === "プレミアム"
       ? "bg-amber-100 text-amber-700 border-amber-200"
-      : plan === "スタンダード"
+      : label === "スタンダード"
       ? "bg-yellow-100 text-yellow-700 border-yellow-200"
       : "bg-gray-100 text-gray-600 border-gray-200";
   return (
     <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${colors}`}>
-      {plan}
+      {label}
     </span>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ active }: { active: boolean }) {
   return (
     <span
       className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-        status === "active"
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
+        active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
       }`}
     >
-      {status === "active" ? "稼働中" : "リスク"}
+      {active ? "稼働中" : "リスク"}
     </span>
   );
 }
 
-export default function AdminStoresPage() {
-  const [searchQuery, setSearchQuery] = useState("");
+function mrrFromPlan(plan: number | null) {
+  if (plan === 3) return 150000;
+  if (plan === 2) return 98000;
+  return 58000;
+}
 
-  const filtered = stores.filter(
-    (s) =>
-      s.name.includes(searchQuery) ||
-      s.owner.includes(searchQuery) ||
-      s.location.includes(searchQuery)
-  );
+type FilterState = {
+  status: "all" | "active" | "risk";
+  plan: "all" | "1" | "2" | "3";
+};
+
+export default function AdminStoresPage() {
+  const router = useRouter();
+  const [stores, setStores] = useState<Store[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Store | null>(null);
+  const [showFilter, setShowFilter] = useState(false);
+  const [filter, setFilter] = useState<FilterState>({ status: "all", plan: "all" });
+  const [toast, setToast] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchStores(searchQuery || undefined);
+      setStores(data);
+    } catch {
+      setStores([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    const onFocus = () => { load(); };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [load]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteStore(deleteTarget.id);
+      setDeleteTarget(null);
+      load();
+      showToast("店舗を削除しました");
+    } catch {
+      showToast("削除に失敗しました");
+    }
+  };
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleMailClick = (store: Store) => {
+    if (store.mail) {
+      window.open(`mailto:${store.mail}`, "_blank");
+    } else {
+      showToast("メールアドレスが登録されていません");
+    }
+  };
+
+  const handlePhoneClick = (store: Store) => {
+    if (store.phone_num) {
+      window.open(`tel:${store.phone_num}`, "_blank");
+    } else {
+      showToast("電話番号が登録されていません");
+    }
+  };
+
+  const filteredStores = stores.filter((s) => {
+    if (filter.status === "active" && s.notification === false) return false;
+    if (filter.status === "risk" && s.notification !== false) return false;
+    if (filter.plan !== "all" && (s.plan ?? 1) !== Number(filter.plan)) return false;
+    return true;
+  });
+
+  const total = stores.length;
+  const activeCount = stores.filter((s) => s.notification !== false).length;
+  const riskCount = stores.filter((s) => s.notification === false).length;
+
+  const summaryCards = [
+    { label: "総店舗数", value: `${total}店舗`, color: "text-gray-900", filterVal: "all" as const },
+    { label: "稼働中", value: `${activeCount}店舗`, color: "text-green-600", filterVal: "active" as const },
+    { label: "リスク", value: `${riskCount}店舗`, color: "text-red-600", filterVal: "risk" as const },
+    { label: "非稼働", value: `${total - activeCount - riskCount}店舗`, color: "text-gray-900", filterVal: "all" as const },
+  ];
 
   return (
     <>
       <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">店舗一覧</h1>
-          <p className="text-xs text-gray-600">全247店舗</p>
+          <p className="text-xs text-gray-600">全{total}店舗</p>
         </div>
         <Link href="/admin/stores/new">
           <motion.button
@@ -202,10 +182,101 @@ export default function AdminStoresPage() {
               className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
             />
           </div>
-          <button className="flex items-center gap-1.5 border border-gray-300 rounded-lg px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
-            <SlidersHorizontal className="w-4 h-4" />
-            フィルター
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowFilter(!showFilter)}
+              className={`flex items-center gap-1.5 border rounded-lg px-4 py-2.5 text-sm transition-colors ${
+                showFilter || filter.status !== "all" || filter.plan !== "all"
+                  ? "border-amber-400 bg-amber-50 text-amber-700"
+                  : "border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              フィルター
+              {(filter.status !== "all" || filter.plan !== "all") && (
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {showFilter && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute right-0 top-12 bg-white border border-gray-200 rounded-xl shadow-xl z-30 p-5 w-72"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-sm">フィルター</h3>
+                    <button
+                      onClick={() => {
+                        setFilter({ status: "all", plan: "all" });
+                        setShowFilter(false);
+                      }}
+                      className="text-xs text-amber-600 hover:underline"
+                    >
+                      リセット
+                    </button>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-500 mb-2">ステータス</p>
+                    <div className="flex gap-2">
+                      {([
+                        { val: "all", label: "すべて" },
+                        { val: "active", label: "稼働中" },
+                        { val: "risk", label: "リスク" },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.val}
+                          onClick={() => setFilter((f) => ({ ...f, status: opt.val }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                            filter.status === opt.val
+                              ? "bg-amber-500 text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-500 mb-2">プラン</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {([
+                        { val: "all", label: "すべて" },
+                        { val: "1", label: "ベーシック" },
+                        { val: "2", label: "スタンダード" },
+                        { val: "3", label: "プレミアム" },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.val}
+                          onClick={() => setFilter((f) => ({ ...f, plan: opt.val }))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                            filter.plan === opt.val
+                              ? "bg-amber-500 text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowFilter(false)}
+                    className="w-full bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold py-2 rounded-lg transition-colors"
+                  >
+                    適用する
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4">
@@ -215,86 +286,178 @@ export default function AdminStoresPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-white rounded-xl border border-gray-200 p-4"
+              onClick={() => {
+                if (card.filterVal !== "all") {
+                  setFilter((f) => ({ ...f, status: card.filterVal }));
+                } else {
+                  setFilter((f) => ({ ...f, status: "all" }));
+                }
+              }}
+              className="bg-white rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-amber-300 transition-colors"
             >
               <p className="text-xs text-gray-500">{card.label}</p>
-              <p className={`text-xl font-bold mt-1 ${card.color}`}>
-                {card.value}
-              </p>
+              <p className={`text-xl font-bold mt-1 ${card.color}`}>{card.value}</p>
             </motion.div>
           ))}
         </div>
 
-        <div className="space-y-3">
-          {filtered.map((store, i) => (
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+          </div>
+        ) : filteredStores.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            店舗が見つかりません
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredStores.map((store, i) => {
+              const mrr = mrrFromPlan(store.plan);
+              const isActive = store.notification !== false;
+              return (
+                <motion.div
+                  key={store.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-bold text-base">{store.name ?? "未設定"}</h3>
+                        <StatusBadge active={isActive} />
+                        <PlanBadge plan={store.plan} />
+                      </div>
+
+                      <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-4 items-start">
+                        <div>
+                          <p className="text-xs text-gray-500">オーナー</p>
+                          <p className="text-sm">{store.creater ?? "-"}</p>
+                        </div>
+                        <div className="flex items-start gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs text-gray-500">所在地</p>
+                            <p className="text-sm">{store.address_url ?? "-"}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">MRR</p>
+                          <p className="text-sm font-bold">&yen;{mrr.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">メール</p>
+                          <p className="text-sm">{store.mail ?? "-"}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
+                        <span>登録日: {store.created_date ? new Date(store.created_date).toLocaleDateString("ja-JP") : "-"}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 ml-4">
+                      <button
+                        onClick={() => handleMailClick(store)}
+                        title={store.mail ? `${store.mail} にメール` : "メール未登録"}
+                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                      >
+                        <Mail className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                      </button>
+                      <button
+                        onClick={() => handlePhoneClick(store)}
+                        title={store.phone_num ? `${store.phone_num} に電話` : "電話番号未登録"}
+                        className="p-2 hover:bg-green-50 rounded-lg transition-colors group"
+                      >
+                        <Phone className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
+                      </button>
+                      <button
+                        onClick={() => router.push(`/admin/stores/${store.id}/edit`)}
+                        title="編集"
+                        className="p-2 hover:bg-amber-50 rounded-lg transition-colors group"
+                      >
+                        <Pencil className="w-4 h-4 text-gray-400 group-hover:text-amber-500" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(store)}
+                        title="削除"
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                      >
+                        <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 削除確認ダイアログ */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+            onClick={() => setDeleteTarget(null)}
+          >
             <motion.div
-              key={store.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-sm transition-shadow"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-6 relative"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-bold text-base">{store.name}</h3>
-                    <StatusBadge status={store.status} />
-                    <PlanBadge plan={store.plan} />
-                  </div>
-
-                  <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-4 items-start">
-                    <div>
-                      <p className="text-xs text-gray-500">オーナー</p>
-                      <p className="text-sm">{store.owner}</p>
-                    </div>
-                    <div className="flex items-start gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs text-gray-500">所在地</p>
-                        <p className="text-sm">{store.location}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">MRR</p>
-                      <p className="text-sm font-bold">
-                        &yen;{store.mrr.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">今月の注文</p>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-bold">{store.orders}件</span>
-                        {store.orderTrend === "up" ? (
-                          <ArrowUpRight className="w-3.5 h-3.5 text-green-500" />
-                        ) : store.orderTrend === "down" ? (
-                          <ArrowDownRight className="w-3.5 h-3.5 text-red-500" />
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-                    <span>加盟日: {store.joinDate}</span>
-                    <span>最終ログイン: {store.lastLogin}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 ml-4">
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <MoreVertical className="w-4 h-4 text-gray-400" />
-                  </button>
-                </div>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="font-bold text-lg mb-2">店舗を削除</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                <strong>{deleteTarget.name}</strong> を削除しますか？この操作は取り消せません。
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                  onClick={() => setDeleteTarget(null)}
+                >
+                  キャンセル
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold"
+                  onClick={handleDelete}
+                >
+                  削除する
+                </motion.button>
               </div>
             </motion.div>
-          ))}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* トースト通知 */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50"
+          >
+            <Check className="w-4 h-4" />
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
+import { Providers } from "@/components/providers";
 
 const notoSansJP = Noto_Sans_JP({
   subsets: ["latin"],
@@ -19,7 +20,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja" suppressHydrationWarning>
-      <body className={notoSansJP.className}>{children}</body>
+      <body className={notoSansJP.className}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }

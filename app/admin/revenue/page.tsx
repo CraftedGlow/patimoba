@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { DollarSign, TrendingUp, Loader2 } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -17,87 +18,196 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import {
+  fetchStores,
+  fetchOrders,
+  computeMRR,
+  computePlanBreakdown,
+  mrrFromPlan,
+  type Store,
+  type Order,
+} from "@/lib/admin-api";
 
-const kpis = [
-  {
-    label: "今月のMRR",
-    value: "¥2,847万",
-    sub: "+5.8%",
-    subColor: "text-green-600",
-    icon: DollarSign,
-  },
-  {
-    label: "年間ARR予測",
-    value: "¥3.42億",
-    sub: "現在の成長率で試算",
-    subColor: "text-gray-500",
-    icon: null,
-  },
-  {
-    label: "平均客単価",
-    value: "¥115,263",
-    sub: "店舗あたり/月",
-    subColor: "text-gray-500",
-    icon: null,
-  },
-  {
-    label: "顧客生涯価値",
-    value: "¥2,150万",
-    sub: "推定LTV",
-    subColor: "text-gray-500",
-    icon: null,
-  },
-];
+function groupByMonth<T extends { created_date: string | null }>(
+  items: T[],
+  monthsBack: number,
+  ref: Date
+) {
+  const buckets: { month: string; count: number; year: number; m: number }[] = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+    buckets.push({
+      month: `${d.getMonth() + 1}月`,
+      count: 0,
+      year: d.getFullYear(),
+      m: d.getMonth(),
+    });
+  }
+  for (const item of items) {
+    if (!item.created_date) continue;
+    const d = new Date(item.created_date);
+    for (const b of buckets) {
+      if (d.getFullYear() === b.year && d.getMonth() === b.m) {
+        b.count++;
+        break;
+      }
+    }
+  }
+  return buckets;
+}
 
-const monthlyRevenue = [
-  { month: "9月", newStores: 320, existingStores: 1930 },
-  { month: "10月", newStores: 380, existingStores: 1920 },
-  { month: "11月", newStores: 420, existingStores: 1980 },
-  { month: "12月", newStores: 350, existingStores: 2000 },
-  { month: "1月", newStores: 300, existingStores: 2050 },
-  { month: "2月", newStores: 340, existingStores: 2100 },
-  { month: "3月", newStores: 380, existingStores: 2120 },
-];
-
-const planBreakdown = [
-  { name: "ベーシック", value: 30, amount: 840, stores: 145, color: "#F59E0B" },
-  { name: "スタンダード", value: 41, amount: 1176, stores: 78, color: "#FDE68A" },
-  { name: "プレミアム", value: 29, amount: 831, stores: 24, color: "#D97706" },
-];
-
-const regionData = [
-  { region: "東京", stores: 68, revenue: 895 },
-  { region: "大阪", stores: 42, revenue: 512 },
-  { region: "神奈川", stores: 35, revenue: 428 },
-  { region: "愛知", stores: 29, revenue: 367 },
-  { region: "福岡", stores: 24, revenue: 298 },
-  { region: "その他", stores: 49, revenue: 347 },
-];
-
-const momGrowth = [
-  { month: "9月", rate: 0 },
-  { month: "10月", rate: 2.1 },
-  { month: "11月", rate: 2.9 },
-  { month: "12月", rate: 1.5 },
-  { month: "1月", rate: 0.8 },
-  { month: "2月", rate: 0.7 },
-  { month: "3月", rate: 1.1 },
-];
+function groupRevenueByMonth(orders: Order[], monthsBack: number, ref: Date) {
+  const buckets: { month: string; revenue: number; year: number; m: number }[] = [];
+  for (let i = monthsBack - 1; i >= 0; i--) {
+    const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+    buckets.push({
+      month: `${d.getMonth() + 1}月`,
+      revenue: 0,
+      year: d.getFullYear(),
+      m: d.getMonth(),
+    });
+  }
+  for (const o of orders) {
+    if (!o.created_date) continue;
+    const d = new Date(o.created_date);
+    for (const b of buckets) {
+      if (d.getFullYear() === b.year && d.getMonth() === b.m) {
+        b.revenue += o.subtotal ?? 0;
+        break;
+      }
+    }
+  }
+  return buckets;
+}
 
 export default function AdminRevenuePage() {
-  const maxRegionRevenue = Math.max(...regionData.map((r) => r.revenue));
+  const [stores, setStores] = useState<Store[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+
+  const load = useCallback(async () => {
+    try {
+      const [s, o] = await Promise.all([fetchStores(), fetchOrders()]);
+      setStores(s);
+      setAllOrders(o);
+    } catch {
+      /* empty */
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const [selYear, selMonth] = selectedMonth.split("-").map(Number);
+  const refDate = new Date(selYear, selMonth - 1, 28);
+
+  const thisMonthOrders = allOrders.filter((o) => {
+    if (!o.created_date) return false;
+    const d = new Date(o.created_date);
+    return d.getFullYear() === selYear && d.getMonth() === selMonth - 1;
+  });
+
+  const thisMonthRevenue = thisMonthOrders.reduce((sum, o) => sum + (o.subtotal ?? 0), 0);
+  const totalMRR = computeMRR(stores);
+  const displayMRR = Math.round(totalMRR / 10000);
+  const arrEstimate = Math.round((totalMRR * 12) / 100000000 * 100) / 100;
+  const avgPerStore = stores.length > 0 ? Math.round(totalMRR / stores.length) : 0;
+
+  const planBreakdown = computePlanBreakdown(stores);
+
+  const monthlyOrderData = groupByMonth(allOrders, 7, refDate);
+  const monthlyRevenueData = groupRevenueByMonth(allOrders, 7, refDate);
+
+  const monthlyRevenue = monthlyRevenueData.map((m) => ({
+    month: m.month,
+    revenue: Math.round(m.revenue / 10000),
+  }));
+
+  const mrrByMonth = groupByMonth(stores, 7, refDate).map((m, i) => {
+    const storeCountAtMonth = stores.filter((s) => {
+      if (!s.created_date) return true;
+      const d = new Date(s.created_date);
+      return d <= new Date(m.year, m.m + 1, 0);
+    }).length;
+    return {
+      month: m.month,
+      value: Math.round(storeCountAtMonth * (avgPerStore || 58000) / 10000),
+    };
+  });
+
+  const momGrowth = monthlyRevenue.map((m, i) => {
+    if (i === 0) return { month: m.month, rate: 0 };
+    const prev = monthlyRevenue[i - 1].revenue;
+    const cur = m.revenue;
+    return {
+      month: m.month,
+      rate: prev > 0 ? Number((((cur - prev) / prev) * 100).toFixed(1)) : 0,
+    };
+  });
+
+  const dateLabel = `${selYear}年${selMonth}月期`;
+
+  const kpis = [
+    {
+      label: "今月のMRR",
+      value: `¥${displayMRR.toLocaleString()}万`,
+      sub: `${stores.length}店舗の合計`,
+      subColor: "text-green-600",
+      icon: DollarSign,
+    },
+    {
+      label: "年間ARR予測",
+      value: `¥${arrEstimate}億`,
+      sub: "現在のMRRで試算",
+      subColor: "text-gray-500",
+      icon: null,
+    },
+    {
+      label: "月間注文売上",
+      value: `¥${Math.round(thisMonthRevenue / 10000).toLocaleString()}万`,
+      sub: `${thisMonthOrders.length}件の注文合計`,
+      subColor: "text-gray-500",
+      icon: null,
+    },
+    {
+      label: "平均客単価",
+      value: thisMonthOrders.length > 0
+        ? `¥${Math.round(thisMonthRevenue / thisMonthOrders.length).toLocaleString()}`
+        : "¥0",
+      sub: "店舗注文の平均",
+      subColor: "text-gray-500",
+      icon: null,
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
       <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">収益分析</h1>
-          <p className="text-xs text-gray-600">2026年3月期</p>
+          <p className="text-xs text-gray-600">{dateLabel}</p>
         </div>
-        <div className="flex items-center gap-2 border border-gray-300 rounded-lg px-3 py-1.5 bg-white">
-          <Calendar className="w-4 h-4 text-gray-400" />
-          <span className="text-sm">2026年3月</span>
-        </div>
+        <input
+          type="month"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+        />
       </header>
 
       <div className="p-6 space-y-6">
@@ -131,33 +241,14 @@ export default function AdminRevenuePage() {
           transition={{ delay: 0.2 }}
           className="bg-white rounded-xl border border-gray-200 p-6"
         >
-          <h2 className="font-bold text-sm mb-4">月次収益推移（万円）</h2>
+          <h2 className="font-bold text-sm mb-4">月次注文売上推移（万円）</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyRevenue}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Legend
-                wrapperStyle={{ fontSize: 12 }}
-                formatter={(value) =>
-                  value === "newStores" ? "新規店舗" : "既存店舗"
-                }
-              />
-              <Bar
-                dataKey="existingStores"
-                stackId="a"
-                fill="#FDE68A"
-                name="existingStores"
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="newStores"
-                stackId="a"
-                fill="#F59E0B"
-                name="newStores"
-                radius={[4, 4, 0, 0]}
-              />
+              <Tooltip formatter={(value: number) => [`¥${value.toLocaleString()}万`, "売上"]} />
+              <Bar dataKey="revenue" fill="#F59E0B" radius={[4, 4, 0, 0]} name="売上（万円）" />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
@@ -218,43 +309,16 @@ export default function AdminRevenuePage() {
             transition={{ delay: 0.35 }}
             className="bg-white rounded-xl border border-gray-200 p-6"
           >
-            <h2 className="font-bold text-sm mb-4">地域別収益ランキング</h2>
-            <div className="space-y-3">
-              {regionData.map((region) => (
-                <div key={region.region}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs w-10 text-right text-gray-600">
-                      {region.region}
-                    </span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{
-                          width: `${(region.revenue / maxRegionRevenue) * 100}%`,
-                        }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="h-full bg-amber-400 rounded-full"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 space-y-1">
-              {regionData.map((region, i) => (
-                <div
-                  key={region.region}
-                  className="flex items-center justify-between text-xs text-gray-600"
-                >
-                  <span>
-                    #{i + 1} {region.region}
-                  </span>
-                  <span>
-                    {region.stores}店舗 / &yen;{region.revenue}万
-                  </span>
-                </div>
-              ))}
-            </div>
+            <h2 className="font-bold text-sm mb-4">月次注文件数推移</h2>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={monthlyOrderData.map((m) => ({ month: m.month, value: m.count }))}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#F59E0B" radius={[4, 4, 0, 0]} name="注文件数" />
+              </BarChart>
+            </ResponsiveContainer>
           </motion.div>
         </div>
 
@@ -264,16 +328,16 @@ export default function AdminRevenuePage() {
           transition={{ delay: 0.4 }}
           className="bg-white rounded-xl border border-gray-200 p-6"
         >
-          <h2 className="font-bold text-sm mb-4">月次成長率（MoM）</h2>
+          <h2 className="font-bold text-sm mb-4">MRR推移（万円）</h2>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={momGrowth}>
+            <LineChart data={mrrByMonth}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <Tooltip formatter={(value: number) => [`¥${value.toLocaleString()}万`, "MRR"]} />
               <Line
                 type="monotone"
-                dataKey="rate"
+                dataKey="value"
                 stroke="#F59E0B"
                 strokeWidth={2}
                 dot={{ fill: "#F59E0B", r: 4 }}

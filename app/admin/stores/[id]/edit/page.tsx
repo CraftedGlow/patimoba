@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { createStore, uploadStoreLogo, saveClosedDays } from "@/lib/admin-api";
-import { supabase } from "@/lib/supabase";
+import { fetchStoreById, updateStore, uploadStoreLogo, fetchClosedDays, saveClosedDays } from "@/lib/admin-api";
+
+const PLAN_MAP: Record<number, "standard" | "premium"> = { 2: "standard", 3: "premium" };
 
 const daysOfWeek = [
   { key: "mon", label: "月" },
@@ -34,28 +35,69 @@ const premiumFeatures = [
   "優先サポート",
 ];
 
-export default function AdminStoreNewPage() {
+export default function AdminStoreEditPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [prefecture, setPrefecture] = useState("");
-  const [city, setCity] = useState("");
-  const [address, setAddress] = useState("");
-  const [openTime, setOpenTime] = useState("10:00");
-  const [closeTime, setCloseTime] = useState("19:00");
-  const [closedDays, setClosedDays] = useState<string[]>(["wed", "sun"]);
-  const [selectedPlan, setSelectedPlan] = useState<"standard" | "premium">("premium");
-  const [agreePrivacy, setAgreePrivacy] = useState(false);
-  const [agreeTrade, setAgreeTrade] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const params = useParams();
+  const storeId = Number(params.id);
+
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const [storeName, setStoreName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [mail, setMail] = useState("");
+  const [addressUrl, setAddressUrl] = useState("");
+  const [openTime, setOpenTime] = useState("10:00");
+  const [closeTime, setCloseTime] = useState("19:00");
+  const [closedDays, setClosedDays] = useState<string[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<"standard" | "premium">("standard");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [existingLogo, setExistingLogo] = useState<string | null>(null);
+
+  const loadStore = useCallback(async () => {
+    try {
+      const store = await fetchStoreById(storeId);
+      const parseTime = (ts: string | null, fallback: string) => {
+        if (!ts) return fallback;
+        try {
+          const d = new Date(ts);
+          if (isNaN(d.getTime())) return fallback;
+          return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        } catch {
+          return fallback;
+        }
+      };
+
+      setStoreName(store.name ?? "");
+      setPhone(store.phone_num ?? "");
+      setMail(store.mail ?? "");
+      setAddressUrl(store.address_url ?? "");
+      setOpenTime(parseTime(store.default_open_time, "10:00"));
+      setCloseTime(parseTime(store.default_close_time, "19:00"));
+      setSelectedPlan(PLAN_MAP[store.plan ?? 2] ?? "standard");
+      if (store.logo) {
+        setExistingLogo(store.logo);
+        setLogoPreview(store.logo);
+      }
+      try {
+        const days = await fetchClosedDays(storeId);
+        setClosedDays(days);
+      } catch {
+        /* ignore if no closed days */
+      }
+    } catch {
+      setError("店舗情報の取得に失敗しました");
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    loadStore();
+  }, [loadStore]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,33 +114,18 @@ export default function AdminStoreNewPage() {
     );
   };
 
-  const allAgreed = agreePrivacy && agreeTrade && agreeTerms;
-
-  const handleSubmit = async () => {
-    if (!allAgreed || saving) return;
+  const handleUpdate = async () => {
+    if (saving) return;
     if (!storeName.trim()) {
       setError("店舗名は必須です");
       return;
     }
-    if (!email.trim()) {
-      setError("メールアドレスは必須です");
-      return;
-    }
-    if (!password.trim()) {
-      setError("パスワードは必須です");
-      return;
-    }
-    if (password.length < 4) {
-      setError("パスワードは4文字以上で設定してください");
-      return;
-    }
-
     setSaving(true);
     setError(null);
     try {
-      let logoUrl: string | null = null;
+      let logoUrl: string | null | undefined = undefined;
       if (logoFile) {
-        logoUrl = await uploadStoreLogo(logoFile);
+        logoUrl = await uploadStoreLogo(logoFile, storeId);
       }
 
       const toTimestamptz = (time: string) => {
@@ -108,45 +135,39 @@ export default function AdminStoreNewPage() {
         return d.toISOString();
       };
 
-      const fullAddress = [prefecture, city, address].filter(Boolean).join(" ");
-      const created = await createStore({
+      const updates: Record<string, unknown> = {
         name: storeName,
-        mail: email,
+        mail: mail || null,
         phone_num: phone || null,
-        address_url: fullAddress || null,
+        address_url: addressUrl || null,
         default_open_time: toTimestamptz(openTime),
         default_close_time: toTimestamptz(closeTime),
         plan: selectedPlan === "premium" ? 3 : 2,
-        tenant_id: postalCode || null,
-        created_date: new Date().toISOString(),
-        logo: logoUrl,
-      });
-      if (closedDays.length > 0) {
-        await saveClosedDays(created.id, closedDays);
+      };
+      if (logoUrl !== undefined) {
+        updates.logo = logoUrl;
       }
-
-      const { error: userErr } = await supabase.from("users").insert({
-        login_num: email,
-        password: password,
-        user_type: "store",
-        store_id: created.id,
-        last_name_kn: storeName,
-        phone_num: phone || null,
-        created_date: new Date().toISOString(),
-      });
-      if (userErr) throw userErr;
-
+      await updateStore(storeId, updates);
+      await saveClosedDays(storeId, closedDays);
       setSuccess(true);
       setTimeout(() => {
         router.refresh();
         router.push("/admin/stores");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登録に失敗しました");
+      setError(err instanceof Error ? err.message : "更新に失敗しました");
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -158,33 +179,12 @@ export default function AdminStoreNewPage() {
           <ArrowLeft className="w-5 h-5 text-gray-700" />
         </button>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">店舗登録</h1>
-          <p className="text-xs text-gray-600">新しい店舗を追加します</p>
+          <h1 className="text-lg font-bold text-gray-900">店舗編集</h1>
+          <p className="text-xs text-gray-600">{storeName || `ID: ${storeId}`}</p>
         </div>
       </header>
 
       <div className="p-6 max-w-2xl mx-auto space-y-6">
-        <Section title="アカウント情報">
-          <Field label="メールアドレス">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="info@patisserie-example.jp"
-              className="form-input"
-            />
-          </Field>
-          <Field label="パスワード">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="form-input"
-            />
-          </Field>
-        </Section>
-
         <Section title="店舗基本情報">
           <Field label="店舗名">
             <input
@@ -192,6 +192,15 @@ export default function AdminStoreNewPage() {
               value={storeName}
               onChange={(e) => setStoreName(e.target.value)}
               placeholder="パティスリー・サクラ"
+              className="form-input"
+            />
+          </Field>
+          <Field label="メールアドレス">
+            <input
+              type="email"
+              value={mail}
+              onChange={(e) => setMail(e.target.value)}
+              placeholder="info@patisserie.jp"
               className="form-input"
             />
           </Field>
@@ -204,39 +213,12 @@ export default function AdminStoreNewPage() {
               className="form-input"
             />
           </Field>
-          <Field label="郵便番号">
+          <Field label="住所">
             <input
               type="text"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              placeholder="150-0001"
-              className="form-input max-w-[200px]"
-            />
-          </Field>
-          <Field label="都道府県">
-            <input
-              type="text"
-              value={prefecture}
-              onChange={(e) => setPrefecture(e.target.value)}
-              placeholder="東京都"
-              className="form-input"
-            />
-          </Field>
-          <Field label="市区町村">
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="渋谷区神宮前"
-              className="form-input"
-            />
-          </Field>
-          <Field label="番地">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="1-2-3 サクラビル1F"
+              value={addressUrl}
+              onChange={(e) => setAddressUrl(e.target.value)}
+              placeholder="東京都渋谷区神宮前1-2-3"
               className="form-input"
             />
           </Field>
@@ -272,21 +254,13 @@ export default function AdminStoreNewPage() {
 
           <Field label="営業時間">
             <div className="flex items-center gap-3">
-              <select
-                value={openTime}
-                onChange={(e) => setOpenTime(e.target.value)}
-                className="form-select"
-              >
+              <select value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="form-select">
                 {hours.map((h) => (
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
               <span className="text-gray-500 text-lg">~</span>
-              <select
-                value={closeTime}
-                onChange={(e) => setCloseTime(e.target.value)}
-                className="form-select"
-              >
+              <select value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="form-select">
                 {hours.map((h) => (
                   <option key={h} value={h}>{h}</option>
                 ))}
@@ -364,44 +338,6 @@ export default function AdminStoreNewPage() {
           </div>
         </Section>
 
-        <Section title="利用規約">
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreePrivacy}
-                onChange={(e) => setAgreePrivacy(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 accent-blue-600"
-              />
-              <span className="text-sm text-gray-700">
-                <a href="#" className="text-blue-600 underline">プライバシーポリシー</a>に同意する
-              </span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeTrade}
-                onChange={(e) => setAgreeTrade(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 accent-blue-600"
-              />
-              <span className="text-sm text-gray-700">
-                <a href="#" className="text-blue-600 underline">特定商取引法に基づく表記</a>を確認した
-              </span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeTerms}
-                onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 accent-blue-600"
-              />
-              <span className="text-sm text-gray-700">
-                <a href="#" className="text-blue-600 underline">利用規約</a>に同意する
-              </span>
-            </label>
-          </div>
-        </Section>
-
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">
             {error}
@@ -410,18 +346,18 @@ export default function AdminStoreNewPage() {
 
         <div className="flex justify-center pt-2 pb-8">
           <motion.button
-            whileHover={allAgreed && !saving ? { scale: 1.02 } : {}}
-            whileTap={allAgreed && !saving ? { scale: 0.97 } : {}}
-            disabled={!allAgreed || saving}
-            onClick={handleSubmit}
+            whileHover={!saving ? { scale: 1.02 } : {}}
+            whileTap={!saving ? { scale: 0.97 } : {}}
+            disabled={saving}
+            onClick={handleUpdate}
             className={`px-16 py-3.5 rounded-full font-bold text-base transition-all flex items-center gap-2 ${
-              allAgreed && !saving
+              !saving
                 ? "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {saving ? "登録中..." : "店舗登録する"}
+            {saving ? "更新中..." : "更新する"}
           </motion.button>
         </div>
 
@@ -439,7 +375,7 @@ export default function AdminStoreNewPage() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="bg-white rounded-xl shadow-xl p-8"
               >
-                <p className="text-lg font-bold text-center">店舗を登録しました</p>
+                <p className="text-lg font-bold text-center">店舗情報を更新しました</p>
               </motion.div>
             </motion.div>
           )}

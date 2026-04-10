@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Mail,
@@ -11,7 +11,11 @@ import {
   Key,
   Bell,
   Save,
+  Loader2,
+  Check,
+  UserPlus,
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const notificationSettings = [
   {
@@ -46,18 +50,251 @@ const notificationSettings = [
   },
 ];
 
+type AdminProfile = {
+  id: number | null;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  company: string;
+};
+
+type AdminProfileResult = AdminProfile & { hasPassword: boolean };
+
+async function fetchAdminProfile(): Promise<AdminProfileResult | null> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("user_type", "admin")
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    name: [data.last_name_kn, data.first_name_kn].filter(Boolean).join(" ") || "",
+    email: data.login_num ?? "",
+    phone: data.phone_num ?? "",
+    department: data.rank ?? "",
+    company: data.creater ?? "",
+    hasPassword: !!data.password,
+  };
+}
+
 export default function AdminAccountPage() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [profileId, setProfileId] = useState<number | null>(null);
+  const [isNew, setIsNew] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [department, setDepartment] = useState("");
+  const [company, setCompany] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [hasPassword, setHasPassword] = useState(false);
+
   const [notifications, setNotifications] = useState<Record<string, boolean>>(
     Object.fromEntries(
       notificationSettings.map((n) => [n.id, n.defaultChecked])
     )
   );
 
+  const loadProfile = useCallback(async () => {
+    try {
+      const profile = await fetchAdminProfile();
+      if (profile) {
+        setProfileId(profile.id);
+        setName(profile.name);
+        setEmail(profile.email);
+        setPhone(profile.phone);
+        setDepartment(profile.department);
+        setCompany(profile.company);
+        setHasPassword(profile.hasPassword);
+        setIsNew(false);
+      } else {
+        setIsNew(true);
+      }
+    } catch {
+      setIsNew(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const handleSave = async () => {
+    if (saving) return;
+    if (!name.trim()) {
+      setError("氏名は必須です");
+      return;
+    }
+    if (!email.trim()) {
+      setError("メールアドレスは必須です");
+      return;
+    }
+
+    if (isNew) {
+      if (!newPassword.trim()) {
+        setError("新規登録時はパスワードの設定が必須です");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setError("パスワードが一致しません");
+        return;
+      }
+      if (newPassword.length < 4) {
+        setError("パスワードは4文字以上で設定してください");
+        return;
+      }
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const nameParts = name.split(" ");
+      const payload: Record<string, any> = {
+        last_name_kn: nameParts[0] ?? "",
+        first_name_kn: nameParts.slice(1).join(" ") || null,
+        login_num: email || null,
+        phone_num: phone || null,
+        rank: department || null,
+        creater: company || null,
+        user_type: "admin",
+      };
+
+      if (isNew && newPassword.trim()) {
+        payload.password = newPassword;
+      }
+
+      if (profileId) {
+        const { error: err } = await supabase
+          .from("users")
+          .update(payload)
+          .eq("id", profileId);
+        if (err) throw err;
+      } else {
+        const { data: created, error: err } = await supabase
+          .from("users")
+          .insert({ ...payload, created_date: new Date().toISOString() })
+          .select()
+          .single();
+        if (err) throw err;
+        if (created) {
+          setProfileId(created.id);
+          setIsNew(false);
+          setHasPassword(true);
+          setNewPassword("");
+          setConfirmPassword("");
+        }
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordSaving) return;
+    setPasswordError(null);
+
+    if (hasPassword && !currentPassword.trim()) {
+      setPasswordError("現在のパスワードを入力してください");
+      return;
+    }
+    if (!newPassword.trim()) {
+      setPasswordError("新しいパスワードを入力してください");
+      return;
+    }
+    if (newPassword.length < 4) {
+      setPasswordError("パスワードは4文字以上で設定してください");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("新しいパスワードが一致しません");
+      return;
+    }
+    if (!profileId) {
+      setPasswordError("先にアカウントを登録してください");
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      if (hasPassword) {
+        const { data: check } = await supabase
+          .from("users")
+          .select("id")
+          .eq("id", profileId)
+          .eq("password", currentPassword)
+          .maybeSingle();
+
+        if (!check) {
+          setPasswordError("現在のパスワードが正しくありません");
+          setPasswordSaving(false);
+          return;
+        }
+      }
+
+      const { error: err } = await supabase
+        .from("users")
+        .update({ password: newPassword })
+        .eq("id", profileId);
+
+      if (err) throw err;
+
+      setHasPassword(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordSaved(true);
+      setTimeout(() => setPasswordSaved(false), 2500);
+    } catch (e) {
+      setPasswordError(e instanceof Error ? e.message : "パスワード変更に失敗しました");
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <>
-      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200">
-        <h1 className="text-lg font-bold text-gray-900">アカウント設定</h1>
-        <p className="text-xs text-gray-600">プロフィールと設定の管理</p>
+      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-gray-900">アカウント設定</h1>
+          <p className="text-xs text-gray-600">
+            {isNew ? "管理者アカウントを新規登録" : "プロフィールと設定の管理"}
+          </p>
+        </div>
+        {isNew && (
+          <span className="flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full">
+            <UserPlus className="w-3.5 h-3.5" />
+            新規登録モード
+          </span>
+        )}
       </header>
 
       <div className="p-6 space-y-6 max-w-5xl">
@@ -69,6 +306,9 @@ export default function AdminAccountPage() {
           <div className="flex items-center gap-2 mb-6">
             <User className="w-5 h-5 text-gray-500" />
             <h2 className="font-bold">プロフィール情報</h2>
+            {isNew && (
+              <span className="text-xs text-amber-600 ml-2">* 必須項目があります</span>
+            )}
           </div>
 
           <div className="flex items-center gap-4 mb-6">
@@ -77,35 +317,39 @@ export default function AdminAccountPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg">管理者アカウント</h3>
+                <h3 className="font-bold text-lg">{name || "管理者アカウント"}</h3>
                 <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
                   管理者
                 </span>
               </div>
-              <p className="text-sm text-gray-500">Crafted Glow Inc.</p>
+              <p className="text-sm text-gray-500">{company || "未設定"}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-600 mb-1.5">
-                氏名
+                氏名 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                defaultValue="山田 太郎"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="山田 太郎"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
               />
             </div>
             <div>
               <label className="block text-sm text-gray-600 mb-1.5">
-                メールアドレス
+                メールアドレス <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="email"
-                  defaultValue="admin@craftedglow.jp"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@craftedglow.jp"
                   className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                 />
               </div>
@@ -118,7 +362,9 @@ export default function AdminAccountPage() {
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="tel"
-                  defaultValue="03-1234-5678"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="03-1234-5678"
                   className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                 />
               </div>
@@ -131,11 +377,60 @@ export default function AdminAccountPage() {
                 <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  defaultValue="営業本部"
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="営業本部"
                   className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                 />
               </div>
             </div>
+            <div className="col-span-2">
+              <label className="block text-sm text-gray-600 mb-1.5">
+                会社名
+              </label>
+              <input
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder="Crafted Glow Inc."
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+              />
+            </div>
+
+            {isNew && (
+              <>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1.5">
+                    パスワード <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="パスワードを設定"
+                      className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1.5">
+                    パスワード（確認） <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="もう一度入力"
+                      className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </motion.div>
 
@@ -152,52 +447,85 @@ export default function AdminAccountPage() {
             </div>
 
             <div className="space-y-4">
+              {hasPassword && (
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1.5">
+                    現在のパスワード
+                  </label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="現在のパスワードを入力"
+                      className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              )}
+              {!hasPassword && (
+                <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                  パスワードが未設定です。ログインに必要なパスワードを設定してください。
+                </p>
+              )}
               <div>
                 <label className="block text-sm text-gray-600 mb-1.5">
-                  現在のパスワード
+                  {hasPassword ? "新しいパスワード" : "パスワード"}
                 </label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="password"
-                    defaultValue="password123"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder={hasPassword ? "新しいパスワードを入力" : "パスワードを設定"}
                     className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1.5">
-                  新しいパスワード
+                  {hasPassword ? "新しいパスワード（確認）" : "パスワード（確認）"}
                 </label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="password"
-                    defaultValue="password123"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="もう一度入力"
                     className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1.5">
-                  新しいパスワード（確認）
-                </label>
-                <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="password"
-                    defaultValue="password123"
-                    className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                  />
-                </div>
-              </div>
+              <AnimatePresence>
+                {passwordError && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="text-sm text-red-500"
+                  >
+                    {passwordError}
+                  </motion.p>
+                )}
+              </AnimatePresence>
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm transition-colors"
+                onClick={handleChangePassword}
+                disabled={passwordSaving || isNew}
+                className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                パスワードを変更
+                {passwordSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {hasPassword ? "パスワードを変更" : "パスワードを設定"}
               </motion.button>
+              {isNew && (
+                <p className="text-xs text-gray-400 text-center">
+                  先にアカウントを登録してからパスワードを変更できます
+                </p>
+              )}
             </div>
           </motion.div>
 
@@ -241,20 +569,66 @@ export default function AdminAccountPage() {
           </motion.div>
         </div>
 
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm"
+          >
+            {error}
+          </motion.div>
+        )}
+
         <div className="flex items-center justify-end gap-3 pb-4">
-          <button className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+          <button
+            onClick={() => loadProfile()}
+            className="px-6 py-2.5 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+          >
             キャンセル
           </button>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-2 bg-amber-400 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-colors"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 bg-amber-400 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
           >
-            <Save className="w-4 h-4" />
-            変更を保存
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isNew ? (
+              <UserPlus className="w-4 h-4" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {saving ? "保存中..." : isNew ? "管理者を登録" : "変更を保存"}
           </motion.button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {saved && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50"
+          >
+            <Check className="w-4 h-4" />
+            {isNew ? "管理者アカウントを登録しました" : "変更を保存しました"}
+          </motion.div>
+        )}
+        {passwordSaved && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50"
+          >
+            <Check className="w-4 h-4" />
+            パスワードを{hasPassword ? "変更" : "設定"}しました
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -2,19 +2,18 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
-  Cake,
-  Smartphone,
   Store,
   ShieldCheck,
   Users,
-  Eye,
-  EyeOff,
-  ArrowLeft,
   ChevronRight,
+  ArrowLeft,
+  Loader2,
 } from "lucide-react";
+import { useAuth, type UserType } from "@/lib/auth-context";
 
 type Role = "store" | "admin" | "customer" | null;
 
@@ -24,7 +23,8 @@ const roles = [
     label: "店舗ログイン",
     description: "店舗管理画面にアクセス",
     icon: Store,
-    color: "bg-amber-50 border-amber-200 hover:border-amber-400 hover:bg-amber-100/60",
+    color:
+      "bg-amber-50 border-amber-200 hover:border-amber-400 hover:bg-amber-100/60",
     iconBg: "bg-amber-100",
     iconColor: "text-amber-600",
     redirect: "/store/dashboard",
@@ -34,7 +34,8 @@ const roles = [
     label: "管理者ログイン",
     description: "社内管理画面にアクセス",
     icon: ShieldCheck,
-    color: "bg-sky-50 border-sky-200 hover:border-sky-400 hover:bg-sky-100/60",
+    color:
+      "bg-sky-50 border-sky-200 hover:border-sky-400 hover:bg-sky-100/60",
     iconBg: "bg-sky-100",
     iconColor: "text-sky-600",
     redirect: "/admin",
@@ -44,7 +45,8 @@ const roles = [
     label: "顧客ログイン",
     description: "テイクアウト・EC注文",
     icon: Users,
-    color: "bg-emerald-50 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-100/60",
+    color:
+      "bg-emerald-50 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-100/60",
     iconBg: "bg-emerald-100",
     iconColor: "text-emerald-600",
     redirect: "/customer/takeout",
@@ -53,51 +55,70 @@ const roles = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [selectedRole, setSelectedRole] = useState<Role>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const currentRole = roles.find((r) => r.id === selectedRole);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentRole) {
+  const handleLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!currentRole || !email || !password) return;
+
+    setError("");
+    setSubmitting(true);
+    try {
+      await login(email, password, selectedRole as UserType);
       router.push(currentRole.redirect);
+    } catch (err: any) {
+      setError(err.message || "ログインに失敗しました");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/60 to-white flex flex-col items-center justify-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
-      >
-        <Link
-          href="/"
-          className="flex items-center justify-center gap-2.5 mb-10"
-        >
-          <div className="relative w-10 h-10">
-            <div className="w-full h-full border-2 border-amber-400 rounded-xl flex items-center justify-center bg-white">
-              <Smartphone className="w-5 h-5 text-amber-400" />
-              <Cake className="w-3 h-3 text-amber-400 absolute -top-1 -right-1" />
-            </div>
-          </div>
-          <span className="font-bold text-xl text-gray-900">パティモバ</span>
-        </Link>
+  const resetToRoleSelect = () => {
+    setSelectedRole(null);
+    setEmail("");
+    setPassword("");
+    setError("");
+  };
 
-        <AnimatePresence mode="wait">
-          {!selectedRole ? (
-            <motion.div
-              key="role-select"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-lg shadow-gray-200/60 p-6"
+  return (
+    <AnimatePresence mode="wait">
+      {!selectedRole ? (
+        <motion.div
+          key="role-select"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="min-h-screen bg-gradient-to-b from-amber-50/60 to-white flex flex-col items-center justify-center px-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="w-full max-w-md"
+          >
+            <Link
+              href="/"
+              className="flex items-center justify-center mb-10"
             >
+              <Image
+                src="/スクリーンショット_2026-04-09_14.49.59.png"
+                alt="パティモバ"
+                width={200}
+                height={56}
+                className="h-10 w-auto"
+                priority
+              />
+            </Link>
+
+            <div className="bg-white rounded-2xl shadow-lg shadow-gray-200/60 p-6">
               <h2 className="text-lg font-bold text-center text-gray-900 mb-2">
                 ログイン
               </h2>
@@ -112,7 +133,10 @@ export default function LoginPage() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: i * 0.08 }}
-                    onClick={() => setSelectedRole(role.id)}
+                    onClick={() => {
+                      setSelectedRole(role.id);
+                      setError("");
+                    }}
                     className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 ${role.color}`}
                   >
                     <div
@@ -132,106 +156,130 @@ export default function LoginPage() {
                   </motion.button>
                 ))}
               </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="login-form"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-lg shadow-gray-200/60 p-6"
-            >
-              <button
-                onClick={() => {
-                  setSelectedRole(null);
-                  setEmail("");
-                  setPassword("");
-                }}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors mb-5"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                戻る
-              </button>
+            </div>
 
-              {currentRole && (
-                <div className="flex items-center gap-3 mb-6">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center ${currentRole.iconBg}`}
-                  >
-                    <currentRole.icon
-                      className={`w-5 h-5 ${currentRole.iconColor}`}
+            <p className="text-center text-xs text-gray-400 mt-6">
+              <Link
+                href="/"
+                className="hover:text-amber-600 transition-colors"
+              >
+                トップページに戻る
+              </Link>
+            </p>
+          </motion.div>
+        </motion.div>
+      ) : (
+        <motion.div
+          key="login-form"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="min-h-screen flex flex-col"
+        >
+          <motion.div
+            initial={{ y: -40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="w-full bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-300 px-5 py-2.5 flex items-center"
+          >
+            <button
+              type="button"
+              onClick={resetToRoleSelect}
+              className="flex items-center gap-1 text-sm font-bold text-gray-800 hover:text-gray-600 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              ログイン
+            </button>
+          </motion.div>
+
+          <div className="flex-1 bg-gradient-to-b from-amber-50/40 to-white flex flex-col items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="w-full max-w-lg flex flex-col items-center"
+            >
+              <Link
+                href="/"
+                className="flex items-center justify-center mb-12"
+              >
+                <Image
+                  src="/スクリーンショット_2026-04-09_14.49.59.png"
+                  alt="パティモバ"
+                  width={240}
+                  height={68}
+                  className="h-14 w-auto"
+                  priority
+                />
+              </Link>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: 0.2 }}
+                className="w-full max-w-md bg-gray-50/80 rounded-2xl px-10 py-10 mb-8"
+              >
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition-all"
+                      placeholder="メールアドレスを入力"
+                      required
                     />
                   </div>
-                  <h2 className="text-lg font-bold text-gray-900">
-                    {currentRole.label}
-                  </h2>
-                </div>
-              )}
 
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    メールアドレス
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-shadow"
-                    placeholder="example@patimoba.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    パスワード
-                  </label>
-                  <div className="relative">
+                  <div>
                     <input
-                      type={showPassword ? "text" : "password"}
+                      type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-shadow"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition-all"
                       placeholder="パスワードを入力"
+                      required
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
                   </div>
-                </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  type="submit"
-                  className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-lg transition-colors mt-2"
-                >
-                  ログイン
-                </motion.button>
-              </form>
+                  <AnimatePresence>
+                    {error && (
+                      <motion.p
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="text-sm text-red-500 text-center"
+                      >
+                        {error}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </form>
+              </motion.div>
 
-              <button className="w-full text-center text-sm text-amber-600 hover:underline mt-4">
-                パスワードをお忘れですか？
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => handleLogin()}
+                disabled={submitting}
+                className="px-12 py-2.5 rounded-full border-2 border-amber-400 text-amber-500 font-bold text-sm hover:bg-amber-400 hover:text-white transition-all duration-200 mb-4 disabled:opacity-50 flex items-center gap-2"
+              >
+                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                ログイン
+              </motion.button>
+
+              <button
+                type="button"
+                className="text-sm text-amber-500 hover:text-amber-600 underline underline-offset-2 transition-colors"
+              >
+                パスワードをお忘れの方
               </button>
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        <p className="text-center text-xs text-gray-400 mt-6">
-          <Link href="/" className="hover:text-amber-600 transition-colors">
-            トップページに戻る
-          </Link>
-        </p>
-      </motion.div>
-    </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

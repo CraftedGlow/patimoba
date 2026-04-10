@@ -1080,6 +1080,7 @@ export type Database = {
           line_name: string | null
           line_user_id: string | null
           login_num: string | null
+          password: string | null
           phone_num: string | null
           points: number | null
           rank: string | null
@@ -1109,6 +1110,7 @@ export type Database = {
           line_name?: string | null
           line_user_id?: string | null
           login_num?: string | null
+          password?: string | null
           phone_num?: string | null
           points?: number | null
           rank?: string | null
@@ -1138,6 +1140,7 @@ export type Database = {
           line_name?: string | null
           line_user_id?: string | null
           login_num?: string | null
+          password?: string | null
           phone_num?: string | null
           points?: number | null
           rank?: string | null

@@ -1,6 +1,7 @@
 "use client"
 
-import { createContext, useContext, useState, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { useAuth } from "./auth-context"
 
 interface StoreContextType {
   storeId: number
@@ -12,8 +13,15 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [storeId, setStoreId] = useState<number>(1)
+  const { user } = useAuth()
+  const [storeId, setStoreId] = useState<number>(0)
   const [storeName, setStoreName] = useState<string>("")
+
+  useEffect(() => {
+    if (user?.storeId) {
+      setStoreId(user.storeId)
+    }
+  }, [user])
 
   return (
     <StoreContext.Provider value={{ storeId, setStoreId, storeName, setStoreName }}>

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
+import { useCustomerContext } from "@/lib/customer-context";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
@@ -19,6 +20,7 @@ const deliveryTimeSlots = [
 
 export default function ECShippingPage() {
   const router = useRouter();
+  const { selectedStoreName } = useCustomerContext();
   const [postalCode, setPostalCode] = useState("");
   const [prefecture, setPrefecture] = useState("");
   const [city, setCity] = useState("");
@@ -28,7 +30,7 @@ export default function ECShippingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader shopName="Patisserie KANATA" />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} showCart />
 
       <div className="px-4 pt-2">
         <Link

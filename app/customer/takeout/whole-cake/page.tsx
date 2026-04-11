@@ -11,13 +11,15 @@ import { WholeCakeOptionsStep } from "@/components/customer/whole-cake/options-s
 import { WholeCakeConfirmStep } from "@/components/customer/whole-cake/confirm-step";
 import type { CandleEntry } from "@/components/customer/whole-cake/basic-step";
 import { useWholeCakes } from "@/hooks/use-whole-cakes";
+import { useCustomerContext } from "@/lib/customer-context";
 
 const wholeCakeSteps = ["基本選択", "オプション", "内容確認"];
 
 export default function WholeCakePage() {
   const router = useRouter();
+  const { selectedStoreName, selectedStoreId } = useCustomerContext();
   const [step, setStep] = useState(1);
-  const { wholeCakes, candleOptions, loading } = useWholeCakes(1);
+  const { wholeCakes, candleOptions, loading } = useWholeCakes(selectedStoreId ?? "");
 
   const [selectedCakeId, setSelectedCakeId] = useState("");
   const [selectedSizeId, setSelectedSizeId] = useState("");
@@ -58,7 +60,7 @@ export default function WholeCakePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader shopName="Patisserie KANATA" points={69} />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} />
 
       <div className="px-4 pt-2">
         {step === 1 ? (

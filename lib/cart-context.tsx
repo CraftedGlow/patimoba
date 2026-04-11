@@ -1,0 +1,175 @@
+"use client"
+
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
+import type { UICartItem, UIDeliveryAddress } from "./types"
+
+interface CartContextType {
+  items: UICartItem[]
+  storeId: string | null
+  total: number
+  itemCount: number
+  deliveryAddress: UIDeliveryAddress | null
+  shippingFee: number
+  usedPoints: number
+  addItem: (item: UICartItem) => void
+  removeItem: (productId: string, customizationKey?: string) => void
+  updateQuantity: (productId: string, quantity: number, customizationKey?: string) => void
+  clear: () => void
+  setDeliveryAddress: (addr: UIDeliveryAddress | null) => void
+  setShippingFee: (fee: number) => void
+  setUsedPoints: (points: number) => void
+}
+
+const CartContext = createContext<CartContextType | undefined>(undefined)
+
+const STORAGE_KEY = "patimoba_cart_v1"
+
+interface PersistedCart {
+  items: UICartItem[]
+  storeId: string | null
+  deliveryAddress: UIDeliveryAddress | null
+  shippingFee: number
+  usedPoints: number
+}
+
+function cartItemKey(item: UICartItem): string {
+  if (!item.customization) return item.productId
+  const c = item.customization
+  return [
+    item.productId,
+    c.sizeId || "",
+    c.candleTypeId || "",
+    c.candleCount || 0,
+    c.optionTypeId || "",
+    c.messagePlate || "",
+  ].join(":")
+}
+
+export function CartProvider({ children }: { children: ReactNode }) {
+  const [items, setItems] = useState<UICartItem[]>([])
+  const [storeId, setStoreId] = useState<string | null>(null)
+  const [deliveryAddress, setDeliveryAddressState] = useState<UIDeliveryAddress | null>(null)
+  const [shippingFee, setShippingFeeState] = useState<number>(0)
+  const [usedPoints, setUsedPointsState] = useState<number>(0)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY)
+      if (raw) {
+        const parsed: PersistedCart = JSON.parse(raw)
+        setItems(parsed.items || [])
+        setStoreId(parsed.storeId ?? null)
+        setDeliveryAddressState(parsed.deliveryAddress ?? null)
+        setShippingFeeState(parsed.shippingFee ?? 0)
+        setUsedPointsState(parsed.usedPoints ?? 0)
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setLoaded(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!loaded) return
+    const payload: PersistedCart = { items, storeId, deliveryAddress, shippingFee, usedPoints }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+    } catch {
+      /* ignore */
+    }
+  }, [items, storeId, deliveryAddress, shippingFee, usedPoints, loaded])
+
+  const addItem = useCallback((item: UICartItem) => {
+    setItems((prev) => {
+      if (storeId != null && storeId !== item.storeId) {
+        setStoreId(item.storeId)
+        return [item]
+      }
+      const key = cartItemKey(item)
+      const existing = prev.find((p) => cartItemKey(p) === key)
+      if (existing && !item.isCustomCake) {
+        return prev.map((p) =>
+          cartItemKey(p) === key ? { ...p, quantity: p.quantity + item.quantity } : p
+        )
+      }
+      return [...prev, item]
+    })
+    if (storeId == null) setStoreId(item.storeId)
+  }, [storeId])
+
+  const removeItem = useCallback((productId: string, customizationKey?: string) => {
+    setItems((prev) =>
+      prev.filter((p) => {
+        if (p.productId !== productId) return true
+        if (customizationKey && cartItemKey(p) !== customizationKey) return true
+        return false
+      })
+    )
+  }, [])
+
+  const updateQuantity = useCallback((productId: string, quantity: number, customizationKey?: string) => {
+    if (quantity <= 0) {
+      removeItem(productId, customizationKey)
+      return
+    }
+    setItems((prev) =>
+      prev.map((p) => {
+        if (p.productId !== productId) return p
+        if (customizationKey && cartItemKey(p) !== customizationKey) return p
+        return { ...p, quantity }
+      })
+    )
+  }, [removeItem])
+
+  const clear = useCallback(() => {
+    setItems([])
+    setStoreId(null)
+    setDeliveryAddressState(null)
+    setShippingFeeState(0)
+    setUsedPointsState(0)
+  }, [])
+
+  const total = items.reduce((sum, item) => {
+    let itemTotal = item.price * item.quantity
+    if (item.customization) {
+      const c = item.customization
+      itemTotal += (c.sizePrice || 0) * item.quantity
+      itemTotal += (c.candlePrice || 0) * (c.candleCount || 0)
+      itemTotal += c.optionPrice || 0
+    }
+    return sum + itemTotal
+  }, 0)
+
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+
+  return (
+    <CartContext.Provider
+      value={{
+        items,
+        storeId,
+        total,
+        itemCount,
+        deliveryAddress,
+        shippingFee,
+        usedPoints,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clear,
+        setDeliveryAddress: setDeliveryAddressState,
+        setShippingFee: setShippingFeeState,
+        setUsedPoints: setUsedPointsState,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  )
+}
+
+export function useCart() {
+  const ctx = useContext(CartContext)
+  if (!ctx) throw new Error("useCart must be used within a CartProvider")
+  return ctx
+}

@@ -15,7 +15,7 @@ import { Product } from "@/lib/types";
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
 export default function TakeoutProductsPage() {
-  const { selectedStoreId } = useCustomerContext();
+  const { selectedStoreId, selectedStoreName } = useCustomerContext();
   const { products, loading: productsLoading } = useProducts({ storeId: selectedStoreId ?? undefined });
   const { categories, loading: categoriesLoading } = useProductTypes();
   const [selectedCategory, setSelectedCategory] = useState("すべて");
@@ -38,7 +38,7 @@ export default function TakeoutProductsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader shopName="Patisserie KANATA" />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} />
 
       <div className="px-4 pt-2">
         <Link

@@ -5,16 +5,19 @@ type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
 type StoreInsert = Database["public"]["Tables"]["stores"]["Insert"];
 type StoreUpdate = Database["public"]["Tables"]["stores"]["Update"];
 type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
+type OrderItemRow = Database["public"]["Tables"]["order_items"]["Row"];
+type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 
 export type Store = StoreRow;
 export type Order = OrderRow;
+export type Customer = CustomerRow;
 
 export async function fetchStores(search?: string) {
-  let query = supabase.from("stores").select("*").order("id", { ascending: false });
+  let query = supabase.from("stores").select("*").order("created_at", { ascending: false });
 
   if (search && search.trim()) {
     const term = `%${search.trim()}%`;
-    query = query.or(`name.ilike.${term},mail.ilike.${term},phone_num.ilike.${term},address_url.ilike.${term}`);
+    query = query.or(`name.ilike.${term},email.ilike.${term},phone.ilike.${term},address.ilike.${term}`);
   }
 
   const { data, error } = await query;
@@ -22,7 +25,7 @@ export async function fetchStores(search?: string) {
   return data as Store[];
 }
 
-export async function fetchStoreById(id: number) {
+export async function fetchStoreById(id: string) {
   const { data, error } = await supabase
     .from("stores")
     .select("*")
@@ -42,7 +45,7 @@ export async function createStore(store: StoreInsert) {
   return data as Store;
 }
 
-export async function updateStore(id: number, updates: StoreUpdate) {
+export async function updateStore(id: string, updates: StoreUpdate) {
   const { data, error } = await supabase
     .from("stores")
     .update(updates)
@@ -53,9 +56,14 @@ export async function updateStore(id: number, updates: StoreUpdate) {
   return data as Store;
 }
 
-export async function deleteStore(id: number) {
-  const { error } = await supabase.from("stores").delete().eq("id", id);
-  if (error) throw error;
+export async function deleteStore(id: string) {
+  const res = await fetch("/api/admin/delete-store", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ storeId: id }),
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.error || "店舗の削除に失敗しました");
 }
 
 export async function fetchStoreCount() {
@@ -74,9 +82,11 @@ export async function fetchOrderCount() {
   return count ?? 0;
 }
 
-export function mrrFromPlan(plan: number | null) {
-  if (plan === 3) return 150000;
-  if (plan === 2) return 98000;
+export type StorePlan = "basic" | "standard" | "premium";
+
+export function mrrFromPlan(plan: string | null): number {
+  if (plan === "premium") return 150000;
+  if (plan === "standard") return 98000;
   return 58000;
 }
 
@@ -85,14 +95,14 @@ export function computeMRR(stores: Store[]): number {
 }
 
 export function computePlanBreakdown(stores: Store[]) {
-  const plans = [
-    { plan: 1, name: "ベーシック", color: "#F59E0B" },
-    { plan: 2, name: "スタンダード", color: "#FDE68A" },
-    { plan: 3, name: "プレミアム", color: "#D97706" },
+  const plans: { plan: StorePlan; name: string; color: string }[] = [
+    { plan: "basic", name: "ベーシック", color: "#F59E0B" },
+    { plan: "standard", name: "スタンダード", color: "#FDE68A" },
+    { plan: "premium", name: "プレミアム", color: "#D97706" },
   ];
   const totalMRR = computeMRR(stores);
   return plans.map((p) => {
-    const filtered = stores.filter((s) => (s.plan ?? 1) === p.plan);
+    const filtered = stores.filter((s) => (s.plan ?? "standard") === p.plan);
     const amount = filtered.reduce((sum, s) => sum + mrrFromPlan(s.plan), 0);
     const pct = totalMRR > 0 ? Math.round((amount / totalMRR) * 100) : 0;
     return {
@@ -109,42 +119,42 @@ export async function fetchOrders(from?: string, to?: string) {
   let query = supabase
     .from("orders")
     .select("*")
-    .order("id", { ascending: false });
+    .order("created_at", { ascending: false });
 
-  if (from) query = query.gte("created_date", from);
-  if (to) query = query.lte("created_date", to);
+  if (from) query = query.gte("created_at", from);
+  if (to) query = query.lte("created_at", to);
 
   const { data, error } = await query;
   if (error) throw error;
   return data as Order[];
 }
 
-export async function fetchLineItems(from?: string, to?: string) {
+export async function fetchOrderItems(from?: string, to?: string) {
   let query = supabase
-    .from("line_items")
+    .from("order_items")
     .select("*")
-    .order("id", { ascending: false });
+    .order("created_at", { ascending: false });
 
-  if (from) query = query.gte("created_date", from);
-  if (to) query = query.lte("created_date", to);
+  if (from) query = query.gte("created_at", from);
+  if (to) query = query.lte("created_at", to);
 
   const { data, error } = await query;
   if (error) throw error;
-  return data;
+  return data as OrderItemRow[];
 }
 
-export async function fetchUsers() {
+export async function fetchCustomers() {
   const { data, error } = await supabase
-    .from("users")
+    .from("customers")
     .select("*")
-    .order("id", { ascending: false });
+    .order("created_at", { ascending: false });
   if (error) throw error;
-  return data;
+  return data as Customer[];
 }
 
 const LOGO_BUCKET = "store-logos";
 
-export async function uploadStoreLogo(file: File, storeId?: number): Promise<string> {
+export async function uploadStoreLogo(file: File, storeId?: string): Promise<string> {
   const ext = file.name.split(".").pop() ?? "png";
   const path = `${storeId ?? "new"}-${Date.now()}.${ext}`;
 
@@ -164,49 +174,67 @@ export async function deleteStoreLogo(url: string): Promise<void> {
   await supabase.storage.from(LOGO_BUCKET).remove([filePath]);
 }
 
-export async function fetchBusinessDaySettings(storeId: number) {
-  const { data, error } = await supabase
-    .from("business_day_settings")
-    .select("*")
-    .eq("store_id", storeId)
-    .order("id", { ascending: true });
-  if (error) throw error;
-  return data;
+const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+export type DayName = typeof DAY_NAMES[number];
+
+function dayNameToIndex(name: string): number {
+  const i = DAY_NAMES.indexOf(name as DayName);
+  return i >= 0 ? i : -1;
 }
 
-export async function saveClosedDays(storeId: number, closedDays: string[]) {
-  const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+function indexToDayName(i: number): DayName | null {
+  return DAY_NAMES[i] ?? null;
+}
 
+export async function saveClosedDays(storeId: string, closedDays: string[]) {
   const { error: delErr } = await supabase
-    .from("business_day_settings")
+    .from("closed_day_rules")
     .delete()
-    .eq("store_id", storeId)
-    .in("business_day", allDays);
+    .eq("store_id", storeId);
   if (delErr) throw delErr;
 
   if (closedDays.length === 0) return;
 
-  const rows = closedDays.map((day) => ({
-    store_id: storeId,
-    business_day: day,
-    is_open: false,
-    created_date: new Date().toISOString(),
-  }));
+  const rows = closedDays
+    .map((day) => {
+      const idx = dayNameToIndex(day);
+      if (idx < 0) return null;
+      return {
+        store_id: storeId,
+        day_of_week: idx,
+        rule: "weekly",
+      };
+    })
+    .filter((r): r is { store_id: string; day_of_week: number; rule: string } => r !== null);
+
+  if (rows.length === 0) return;
 
   const { error: insErr } = await supabase
-    .from("business_day_settings")
+    .from("closed_day_rules")
     .insert(rows);
   if (insErr) throw insErr;
 }
 
-export async function fetchClosedDays(storeId: number): Promise<string[]> {
+export async function fetchClosedDays(storeId: string): Promise<string[]> {
   const { data, error } = await supabase
-    .from("business_day_settings")
-    .select("business_day")
-    .eq("store_id", storeId)
-    .eq("is_open", false);
+    .from("closed_day_rules")
+    .select("day_of_week")
+    .eq("store_id", storeId);
   if (error) throw error;
-  return (data ?? [])
-    .map((r) => r.business_day)
-    .filter((v): v is string => v !== null);
+  const result: string[] = [];
+  for (const r of data ?? []) {
+    const name = indexToDayName(Number(r.day_of_week));
+    if (name) result.push(name);
+  }
+  return result;
+}
+
+export async function fetchBusinessDaySchedules(storeId: string) {
+  const { data, error } = await supabase
+    .from("business_day_schedules")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("date", { ascending: true });
+  if (error) throw error;
+  return data;
 }

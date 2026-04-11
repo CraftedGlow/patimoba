@@ -1,97 +1,93 @@
 "use client";
 
-import {
-  weekdayLabels,
-  dateKey,
-  isDefaultClosed,
-  timeSlots,
-} from "./types";
-import type { DaySchedule } from "./types";
+import { weekdayLabels, formatDateKey, isClosedByRule } from "./types";
+import type { DaySchedule, ClosedDayRule } from "./types";
 
 interface WeekViewProps {
   weekStart: Date;
   schedules: Record<string, DaySchedule>;
-  onDayClick: (year: number, month: number, day: number) => void;
+  onDayClick: (y: number, m: number, d: number) => void;
+  defaultOpenTime?: string;
+  defaultCloseTime?: string;
+  closedDayRules?: ClosedDayRule[];
 }
 
-export function WeekView({ weekStart, schedules, onDayClick }: WeekViewProps) {
-  const days: Date[] = [];
-  for (let i = 0; i < 7; i++) {
+const hours = Array.from({ length: 10 }, (_, i) => i + 6);
+
+export function WeekView({ weekStart, schedules, onDayClick, defaultOpenTime = "10:00", defaultCloseTime = "19:00", closedDayRules = [] }: WeekViewProps) {
+  const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
-    days.push(d);
-  }
-
-  const visibleHours = timeSlots.filter((h) => h >= 6 && h <= 20);
+    return d;
+  });
 
   return (
-    <div className="border border-gray-300 bg-white overflow-auto">
-      <div className="grid grid-cols-[50px_repeat(7,1fr)] min-w-[700px]">
-        <div className="bg-gray-100 border-b border-r border-gray-300" />
-        {days.map((d, i) => (
-          <div
-            key={i}
-            className="text-center text-xs font-bold py-2 bg-gray-100 border-b border-r border-gray-300 text-gray-600 cursor-pointer hover:bg-gray-200 transition-colors"
-            onClick={() => onDayClick(d.getFullYear(), d.getMonth(), d.getDate())}
-          >
-            {weekdayLabels[d.getDay()]} {String(d.getDate()).padStart(2, "0")}/{String(d.getMonth() + 1).padStart(2, "0")}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-[50px_repeat(7,1fr)] min-w-[700px]">
-        <div className="text-xs text-gray-500 text-right pr-1 py-1 border-r border-b border-gray-200 bg-gray-50">
-          終日
-        </div>
+    <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] bg-gray-100 border-b border-gray-300">
+        <div />
         {days.map((d, i) => {
-          const key = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
-          const schedule = schedules[key];
-          const isClosed = schedule
-            ? !schedule.isOpen
-            : isDefaultClosed(d.getFullYear(), d.getMonth(), d.getDate());
-
           return (
             <div
               key={i}
-              className="border-r border-b border-gray-200 h-8 p-0.5"
+              onClick={() => onDayClick(d.getFullYear(), d.getMonth(), d.getDate())}
+              className="text-center py-2 cursor-pointer hover:bg-gray-200 transition-colors border-l border-gray-200"
             >
-              {isClosed && (
-                <div className="bg-amber-400 h-full rounded-sm" />
-              )}
+              <div className="text-xs text-gray-500">
+                {weekdayLabels[d.getDay()]} {d.getDate()}/{String(d.getMonth() + 1).padStart(2, "0")}
+              </div>
             </div>
           );
         })}
       </div>
 
-      {visibleHours.map((hour) => (
-        <div
-          key={hour}
-          className="grid grid-cols-[50px_repeat(7,1fr)] min-w-[700px]"
-        >
-          <div className="text-xs text-gray-500 text-right pr-1 py-1 border-r border-b border-gray-200 bg-gray-50">
+      {/* 終日行 */}
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-200">
+        <div className="text-xs text-gray-500 flex items-center justify-center py-2 border-r border-gray-200">
+          終日
+        </div>
+        {days.map((d, i) => {
+          const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
+          const schedule = schedules[key];
+          const closedByRule = isClosedByRule(closedDayRules, d.getFullYear(), d.getMonth(), d.getDate());
+          const isOpen = schedule ? schedule.isOpen : !closedByRule;
+          return (
+            <div
+              key={i}
+              className={`border-l border-gray-200 py-2 ${!isOpen ? "bg-amber-300" : ""}`}
+              onClick={() => onDayClick(d.getFullYear(), d.getMonth(), d.getDate())}
+            />
+          );
+        })}
+      </div>
+
+      {/* 時間グリッド */}
+      {hours.map((hour) => (
+        <div key={hour} className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-100">
+          <div className="text-xs text-gray-500 flex items-center justify-center py-3 border-r border-gray-200">
             {hour}時
           </div>
           {days.map((d, i) => {
-            const key = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
+            const key = formatDateKey(d.getFullYear(), d.getMonth(), d.getDate());
             const schedule = schedules[key];
-            const isClosed = schedule
-              ? !schedule.isOpen
-              : isDefaultClosed(d.getFullYear(), d.getMonth(), d.getDate());
-            const openH = parseInt(schedule?.openTime || "10");
-            const closeH = parseInt(schedule?.closeTime || "18");
-            const isBusinessHour = !isClosed && hour >= openH && hour < closeH;
-            const isFirst = !isClosed && hour === openH;
+            const closedByRule = isClosedByRule(closedDayRules, d.getFullYear(), d.getMonth(), d.getDate());
+            const isOpen = schedule ? schedule.isOpen : !closedByRule;
+            const openH = parseInt((schedule?.openTime || defaultOpenTime).split(":")[0]);
+            const closeH = parseInt((schedule?.closeTime || defaultCloseTime).split(":")[0]);
+            const inRange = isOpen && hour >= openH && hour < closeH;
 
             return (
               <div
                 key={i}
-                className={`border-r border-b border-gray-200 h-10 relative ${
-                  isBusinessHour ? "bg-[#5B8FA8]" : ""
+                onClick={() => onDayClick(d.getFullYear(), d.getMonth(), d.getDate())}
+                className={`border-l border-gray-200 cursor-pointer transition-colors relative ${
+                  inRange
+                    ? "bg-[#5B8FA8]"
+                    : "hover:bg-gray-50"
                 }`}
               >
-                {isFirst && (
-                  <div className="absolute top-0.5 left-1 text-[9px] text-white leading-tight">
-                    {schedule?.openTime || "10:00"} - {schedule?.closeTime || "18:00"}
+                {inRange && hour === openH && (
+                  <div className="absolute top-1 left-1 text-[9px] text-white font-medium leading-tight">
+                    {schedule?.openTime || defaultOpenTime} - {schedule?.closeTime || defaultCloseTime}
                     <br />営業日
                   </div>
                 )}

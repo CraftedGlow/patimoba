@@ -3,10 +3,10 @@
 import { createContext, useContext, useState, ReactNode } from "react"
 
 interface CustomerContextType {
-  userId: number | null
-  setUserId: (id: number | null) => void
-  selectedStoreId: number | null
-  setSelectedStoreId: (id: number | null) => void
+  userId: string | null
+  setUserId: (id: string | null) => void
+  selectedStoreId: string | null
+  setSelectedStoreId: (id: string | null) => void
   selectedStoreName: string
   setSelectedStoreName: (name: string) => void
 }
@@ -14,8 +14,8 @@ interface CustomerContextType {
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined)
 
 export function CustomerProvider({ children }: { children: ReactNode }) {
-  const [userId, setUserId] = useState<number | null>(null)
-  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
   const [selectedStoreName, setSelectedStoreName] = useState<string>("")
 
   return (

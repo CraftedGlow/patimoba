@@ -3,18 +3,20 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react"
 import type { Database } from "./database.types"
 
-type UserRow = Database["public"]["Tables"]["users"]["Row"]
+type AdminUserRow = Database["public"]["Tables"]["admin_users"]["Row"]
+type StoreUserRow = Database["public"]["Tables"]["store_users"]["Row"]
+type CustomerRow = Database["public"]["Tables"]["customers"]["Row"]
 
 export type UserType = "admin" | "store" | "customer"
 
 interface AuthUser {
-  id: number
+  id: string
   email: string
   userType: UserType
   firstName: string
   lastName: string
-  storeId: number | null
-  raw: UserRow
+  storeId: string | null
+  raw: AdminUserRow | StoreUserRow | CustomerRow
 }
 
 interface AuthContextType {
@@ -27,18 +29,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 const STORAGE_KEY = "patimoba_auth_user"
-
-function rowToAuthUser(row: UserRow): AuthUser {
-  return {
-    id: row.id,
-    email: row.login_num || "",
-    userType: (row.user_type as UserType) || "customer",
-    firstName: row.first_name_kn || "",
-    lastName: row.last_name_kn || "",
-    storeId: row.store_id,
-    raw: row,
-  }
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -61,30 +51,95 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string, expectedType?: UserType): Promise<AuthUser> => {
     const { supabase } = await import("./supabase")
 
-    let query = supabase
-      .from("users")
-      .select("*")
-      .eq("login_num", email)
-      .eq("password", password)
-
-    if (expectedType) {
-      query = query.eq("user_type", expectedType)
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (authError || !authData.user) {
+      throw new Error("メールアドレスまたはパスワードが正しくありません")
     }
 
-    const { data, error } = await query.maybeSingle()
+    const authUserId = authData.user.id
 
-    if (error) throw new Error("ログインに失敗しました")
-    if (!data) throw new Error("メールアドレスまたはパスワードが正しくありません")
+    if (!expectedType || expectedType === "admin") {
+      const { data: admin } = await supabase
+        .from("admin_users")
+        .select("*")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle()
+      if (admin) {
+        const authUser: AuthUser = {
+          id: admin.id,
+          email: admin.email,
+          userType: "admin",
+          firstName: "",
+          lastName: admin.name,
+          storeId: null,
+          raw: admin,
+        }
+        setUser(authUser)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+        return authUser
+      }
+      if (expectedType === "admin") {
+        throw new Error("管理者アカウントが見つかりません")
+      }
+    }
 
-    const authUser = rowToAuthUser(data)
-    setUser(authUser)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
-    return authUser
+    if (!expectedType || expectedType === "store") {
+      const { data: storeUser } = await supabase
+        .from("store_users")
+        .select("*")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle()
+      if (storeUser) {
+        const authUser: AuthUser = {
+          id: storeUser.id,
+          email: storeUser.email,
+          userType: "store",
+          firstName: "",
+          lastName: "",
+          storeId: storeUser.store_id,
+          raw: storeUser,
+        }
+        setUser(authUser)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+        return authUser
+      }
+      if (expectedType === "store") {
+        throw new Error("店舗アカウントが見つかりません")
+      }
+    }
+
+    if (!expectedType || expectedType === "customer") {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle()
+      if (customer) {
+        const authUser: AuthUser = {
+          id: customer.id,
+          email: customer.email || "",
+          userType: "customer",
+          firstName: customer.first_name_kn || "",
+          lastName: customer.last_name_kn || "",
+          storeId: null,
+          raw: customer,
+        }
+        setUser(authUser)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+        return authUser
+      }
+    }
+
+    throw new Error("アカウントが見つかりません")
   }, [])
 
   const logout = useCallback(() => {
     setUser(null)
     localStorage.removeItem(STORAGE_KEY)
+    import("./supabase").then(({ supabase }) => supabase.auth.signOut())
   }, [])
 
   return (

@@ -7,7 +7,7 @@ import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { fetchStoreById, updateStore, uploadStoreLogo, fetchClosedDays, saveClosedDays } from "@/lib/admin-api";
 
-const PLAN_MAP: Record<number, "standard" | "premium"> = { 2: "standard", 3: "premium" };
+const PLAN_MAP: Record<string, "standard" | "premium"> = { standard: "standard", premium: "premium" };
 
 const daysOfWeek = [
   { key: "mon", label: "月" },
@@ -38,7 +38,7 @@ const premiumFeatures = [
 export default function AdminStoreEditPage() {
   const router = useRouter();
   const params = useParams();
-  const storeId = Number(params.id);
+  const storeId = String(params.id);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,27 +60,17 @@ export default function AdminStoreEditPage() {
   const loadStore = useCallback(async () => {
     try {
       const store = await fetchStoreById(storeId);
-      const parseTime = (ts: string | null, fallback: string) => {
-        if (!ts) return fallback;
-        try {
-          const d = new Date(ts);
-          if (isNaN(d.getTime())) return fallback;
-          return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-        } catch {
-          return fallback;
-        }
-      };
 
       setStoreName(store.name ?? "");
-      setPhone(store.phone_num ?? "");
-      setMail(store.mail ?? "");
-      setAddressUrl(store.address_url ?? "");
-      setOpenTime(parseTime(store.default_open_time, "10:00"));
-      setCloseTime(parseTime(store.default_close_time, "19:00"));
-      setSelectedPlan(PLAN_MAP[store.plan ?? 2] ?? "standard");
-      if (store.logo) {
-        setExistingLogo(store.logo);
-        setLogoPreview(store.logo);
+      setPhone(store.phone ?? "");
+      setMail(store.email ?? "");
+      setAddressUrl(store.address || store.address_url || "");
+      setOpenTime(store.open_time ?? "10:00");
+      setCloseTime(store.close_time ?? "19:00");
+      setSelectedPlan(PLAN_MAP[store.plan ?? "standard"] ?? "standard");
+      if (store.logo_url) {
+        setExistingLogo(store.logo_url);
+        setLogoPreview(store.logo_url);
       }
       try {
         const days = await fetchClosedDays(storeId);
@@ -128,24 +118,17 @@ export default function AdminStoreEditPage() {
         logoUrl = await uploadStoreLogo(logoFile, storeId);
       }
 
-      const toTimestamptz = (time: string) => {
-        const [h, m] = time.split(":");
-        const d = new Date();
-        d.setHours(Number(h), Number(m), 0, 0);
-        return d.toISOString();
-      };
-
       const updates: Record<string, unknown> = {
         name: storeName,
-        mail: mail || null,
-        phone_num: phone || null,
-        address_url: addressUrl || null,
-        default_open_time: toTimestamptz(openTime),
-        default_close_time: toTimestamptz(closeTime),
-        plan: selectedPlan === "premium" ? 3 : 2,
+        email: mail || "",
+        phone: phone || "",
+        address: addressUrl || "",
+        open_time: openTime,
+        close_time: closeTime,
+        plan: selectedPlan,
       };
       if (logoUrl !== undefined) {
-        updates.logo = logoUrl;
+        updates.logo_url = logoUrl;
       }
       await updateStore(storeId, updates);
       await saveClosedDays(storeId, closedDays);

@@ -28,7 +28,7 @@ import {
   type Order,
 } from "@/lib/admin-api";
 
-function groupByMonth<T extends { created_date: string | null }>(
+function groupByMonth<T extends { created_at: string | null }>(
   items: T[],
   monthsBack: number,
   ref: Date
@@ -44,8 +44,8 @@ function groupByMonth<T extends { created_date: string | null }>(
     });
   }
   for (const item of items) {
-    if (!item.created_date) continue;
-    const d = new Date(item.created_date);
+    if (!item.created_at) continue;
+    const d = new Date(item.created_at);
     for (const b of buckets) {
       if (d.getFullYear() === b.year && d.getMonth() === b.m) {
         b.count++;
@@ -68,8 +68,8 @@ function groupRevenueByMonth(orders: Order[], monthsBack: number, ref: Date) {
     });
   }
   for (const o of orders) {
-    if (!o.created_date) continue;
-    const d = new Date(o.created_date);
+    if (!o.created_at) continue;
+    const d = new Date(o.created_at);
     for (const b of buckets) {
       if (d.getFullYear() === b.year && d.getMonth() === b.m) {
         b.revenue += o.subtotal ?? 0;
@@ -109,8 +109,8 @@ export default function AdminRevenuePage() {
   const refDate = new Date(selYear, selMonth - 1, 28);
 
   const thisMonthOrders = allOrders.filter((o) => {
-    if (!o.created_date) return false;
-    const d = new Date(o.created_date);
+    if (!o.created_at) return false;
+    const d = new Date(o.created_at);
     return d.getFullYear() === selYear && d.getMonth() === selMonth - 1;
   });
 
@@ -132,8 +132,8 @@ export default function AdminRevenuePage() {
 
   const mrrByMonth = groupByMonth(stores, 7, refDate).map((m, i) => {
     const storeCountAtMonth = stores.filter((s) => {
-      if (!s.created_date) return true;
-      const d = new Date(s.created_date);
+      if (!s.created_at) return true;
+      const d = new Date(s.created_at);
       return d <= new Date(m.year, m.m + 1, 0);
     }).length;
     return {

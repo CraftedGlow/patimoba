@@ -10,7 +10,7 @@ import {
   toUIWholeCakeOption,
 } from "@/lib/types"
 
-export function useWholeCakes(storeId?: number) {
+export function useWholeCakes(storeId?: string) {
   const [wholeCakes, setWholeCakes] = useState<WholeCakeProduct[]>([])
   const [candleOptions, setCandleOptions] = useState<CandleOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,46 +22,37 @@ export function useWholeCakes(storeId?: number) {
 
     try {
       let productQuery = supabase
-        .from("product_registrations")
-        .select("*, product_types(product_type)")
-        .eq("decoration", true)
+        .from("whole_cake_products")
+        .select(`
+          *,
+          whole_cake_sizes(*),
+          whole_cake_options(*)
+        `)
+        .order("sort_order", { ascending: true })
 
       if (storeId) productQuery = productQuery.eq("store_id", storeId)
 
       const { data: products, error: prodErr } = await productQuery
       if (prodErr) throw prodErr
 
-      const cakes: WholeCakeProduct[] = []
-
-      for (const product of products || []) {
-        const [sizesResult, optionsResult] = await Promise.all([
-          supabase
-            .from("customized_cake_sizes")
-            .select("*")
-            .eq("store_id", product.store_id!),
-          supabase
-            .from("customized_cake_options")
-            .select("*")
-            .eq("product_id", product.id),
-        ])
-
-        cakes.push({
-          id: String(product.id),
-          name: product.name || "",
-          image: product.image || "",
-          sizes: (sizesResult.data || []).map(toUIWholeCakeSize),
-          options: (optionsResult.data || []).map(toUIWholeCakeOption),
-        })
-      }
-
-      setWholeCakes(cakes)
-
-      let candleQuery = supabase.from("customized_cake_candles").select("*")
+      let candleQuery = supabase.from("candle_options").select("*")
       if (storeId) candleQuery = candleQuery.eq("store_id", storeId)
-
       const { data: candles, error: candleErr } = await candleQuery
       if (candleErr) throw candleErr
-      setCandleOptions((candles || []).map(toUICandleOption))
+      const uiCandles = (candles || []).map(toUICandleOption)
+      setCandleOptions(uiCandles)
+
+      const cakes: WholeCakeProduct[] = (products || []).map((product: any) => ({
+        id: String(product.id),
+        storeId: String(product.store_id),
+        name: product.name || "",
+        image: product.image || "",
+        sizes: (product.whole_cake_sizes || []).map(toUIWholeCakeSize),
+        options: (product.whole_cake_options || []).map(toUIWholeCakeOption),
+        candles: uiCandles.filter((c) => c.storeId === product.store_id),
+      }))
+
+      setWholeCakes(cakes)
     } catch (e: any) {
       setError(e.message)
     }

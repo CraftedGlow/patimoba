@@ -25,7 +25,7 @@ export default function StoreOrdersPage() {
   const { storeId } = useStoreContext();
   const { orders, loading: ordersLoading, refetch: refetchOrders } = useOrders({ storeId, unpreparedOnly: true });
   const { categories, loading: typesLoading } = useProductTypes();
-  const { updateOrderStatus } = useOrderMutations();
+  const { togglePrepared } = useOrderMutations();
 
   const [productType, setProductType] = useState("すべて");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -47,7 +47,7 @@ export default function StoreOrdersPage() {
   const toggleCheck = async (id: string) => {
     const order = orders.find((o) => o.id === id);
     if (!order) return;
-    await updateOrderStatus(Number(id), !order.isPrepared);
+    await updateOrderStatus(id, !order.isPrepared);
     setCheckedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);

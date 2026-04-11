@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { X, Loader2, Key, Check } from "lucide-react";
+import { X, Loader2, Key, Check, Camera } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
+import { useStoreContext } from "@/lib/store-context";
+import { uploadStoreLogo } from "@/lib/upload-image";
 import type { Database } from "@/lib/database.types";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
-type BusinessDayRow = Database["public"]["Tables"]["business_day_settings"]["Row"];
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = String(Math.floor(i / 2)).padStart(2, "0");
@@ -19,34 +20,60 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
 
 const CUTOFF_OPTIONS = ["1", "1.5", "2", "2.5", "3", "3.5", "4"];
 
-type ModalKind = "hours" | "cutoff" | "saved" | null;
+const WEEKDAYS = [
+  { label: "日", value: 0 },
+  { label: "月", value: 1 },
+  { label: "火", value: 2 },
+  { label: "水", value: 3 },
+  { label: "木", value: 4 },
+  { label: "金", value: 5 },
+  { label: "土", value: 6 },
+];
 
-async function fetchFirstStore(): Promise<StoreRow | null> {
+type ModalKind = "hours" | "cutoff" | "holidays" | "saved" | null;
+
+async function fetchStoreForUser(storeIdHint: string | null): Promise<StoreRow | null> {
+  if (storeIdHint) {
+    const { data } = await supabase
+      .from("stores")
+      .select("*")
+      .eq("id", storeIdHint)
+      .maybeSingle();
+    if (data) return data;
+  }
   const { data, error } = await supabase
     .from("stores")
     .select("*")
-    .order("id", { ascending: true })
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (error || !data) return null;
   return data;
 }
 
-async function fetchHolidays(storeId: number): Promise<BusinessDayRow[]> {
+interface ClosedDayRuleRow {
+  dayOfWeek: number;
+  rule: string;
+}
+
+async function fetchClosedDayRules(storeId: string): Promise<ClosedDayRuleRow[]> {
   const { data, error } = await supabase
-    .from("business_day_settings")
-    .select("*")
+    .from("closed_day_rules")
+    .select("day_of_week, rule")
     .eq("store_id", storeId)
-    .eq("is_open", false)
-    .order("id", { ascending: true });
-  if (error) return [];
-  return data ?? [];
+    .order("day_of_week", { ascending: true });
+  if (error || !data) return [];
+  return data.map((r: any) => ({
+    dayOfWeek: Number(r.day_of_week),
+    rule: r.rule || "毎週",
+  }));
 }
 
 export default function StoreAccountPage() {
   const { user } = useAuth();
+  const { setStoreLogo: updateSidebarLogo } = useStoreContext();
   const [loading, setLoading] = useState(true);
-  const [storeId, setStoreId] = useState<number | null>(null);
+  const [storeId, setStoreId] = useState<string | null>(null);
 
   const [storeName, setStoreName] = useState("");
   const [address, setAddress] = useState("");
@@ -71,43 +98,37 @@ export default function StoreAccountPage() {
   const [modalCutoff, setModalCutoff] = useState(cutoffHours);
 
   const [modal, setModal] = useState<ModalKind>(null);
-  const [holidays, setHolidays] = useState<{ day: string; freq: string }[]>([]);
+  const [holidays, setHolidays] = useState<{ day: string; freq: string; dayOfWeek: number }[]>([]);
   const [saving, setSaving] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  const [modalHolidays, setModalHolidays] = useState<{ dayOfWeek: number; rule: string }[]>([]);
 
   const loadStore = useCallback(async () => {
     try {
-      const store = await fetchFirstStore();
+      const store = await fetchStoreForUser(user?.storeId ?? null);
       if (store) {
         setStoreId(store.id);
         setStoreName(store.name ?? "");
-        setAddress(store.address_url ?? "");
-        setPhone(store.phone_num ?? "");
-        setEmail(store.mail ?? "");
-        setLogoUrl(store.logo ?? null);
+        setAddress(store.address ?? "");
+        setPhone(store.phone ?? "");
+        setEmail(store.email ?? "");
+        setLogoUrl(store.logo_url ?? null);
 
-        const ot = store.default_open_time;
-        const ct = store.default_close_time;
-        if (ot) setOpenTime(ot);
-        if (ct) setCloseTime(ct);
+        if (store.open_time) setOpenTime(store.open_time);
+        if (store.close_time) setCloseTime(store.close_time);
 
-        const h = await fetchHolidays(store.id);
-        if (h.length > 0) {
-          setHolidays(
-            h.map((row) => ({
-              day: row.business_day ?? "不明",
-              freq: row.custom_open_date ?? "毎週",
-            }))
-          );
-        }
+        const rules = await fetchClosedDayRules(store.id);
+        const names = ["日", "月", "火", "水", "木", "金", "土"];
+        setHolidays(rules.map((r) => ({
+          day: names[r.dayOfWeek] ?? "",
+          freq: r.rule,
+          dayOfWeek: r.dayOfWeek,
+        })));
       }
-      if (user) {
-        const { data: u } = await supabase
-          .from("users")
-          .select("password")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (u) setHasPassword(!!u.password);
-      }
+      if (user) setHasPassword(true);
     } catch {
       /* keep defaults */
     } finally {
@@ -137,8 +158,8 @@ export default function StoreAccountPage() {
         await supabase
           .from("stores")
           .update({
-            default_open_time: modalOpenTime,
-            default_close_time: modalCloseTime,
+            open_time: modalOpenTime,
+            close_time: modalCloseTime,
           })
           .eq("id", storeId);
       }
@@ -157,20 +178,86 @@ export default function StoreAccountPage() {
     setTimeout(() => setModal(null), 1500);
   }, [modalCutoff]);
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storeId) return;
+    setLogoUploading(true);
+    try {
+      const { url, error } = await uploadStoreLogo(file, storeId);
+      if (error) throw new Error(error);
+      if (url) {
+        await supabase.from("stores").update({ logo_url: url }).eq("id", storeId);
+        setLogoUrl(url);
+        updateSidebarLogo(url);
+      }
+    } catch (err) {
+      console.error("Logo upload failed:", err);
+    } finally {
+      setLogoUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const openHolidaysModal = useCallback(() => {
+    setModalHolidays(holidays.map((h) => ({ dayOfWeek: h.dayOfWeek, rule: h.freq })));
+    setModal("holidays");
+  }, [holidays]);
+
+  const toggleModalHoliday = (dayOfWeek: number) => {
+    setModalHolidays((prev) => {
+      const exists = prev.find((h) => h.dayOfWeek === dayOfWeek);
+      if (exists) return prev.filter((h) => h.dayOfWeek !== dayOfWeek);
+      return [...prev, { dayOfWeek, rule: "毎週" }].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+    });
+  };
+
+  const updateModalHolidayRule = (dayOfWeek: number, rule: string) => {
+    setModalHolidays((prev) =>
+      prev.map((h) => (h.dayOfWeek === dayOfWeek ? { ...h, rule } : h))
+    );
+  };
+
+  const saveHolidays = async () => {
+    if (!storeId) return;
+    setSaving(true);
+    try {
+      await supabase.from("closed_day_rules").delete().eq("store_id", storeId);
+
+      if (modalHolidays.length > 0) {
+        const rows = modalHolidays.map((h) => ({
+          store_id: storeId,
+          day_of_week: h.dayOfWeek,
+          rule: h.rule,
+        }));
+        const { error } = await supabase.from("closed_day_rules").insert(rows);
+        if (error) throw error;
+      }
+
+      const names = ["日", "月", "火", "水", "木", "金", "土"];
+      setHolidays(modalHolidays.map((h) => ({
+        day: names[h.dayOfWeek] ?? "",
+        freq: h.rule,
+        dayOfWeek: h.dayOfWeek,
+      })));
+      setModal("saved");
+      setTimeout(() => setModal(null), 1500);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleChangePassword = async () => {
     if (pwSaving) return;
     setPwError(null);
 
-    if (hasPassword && !currentPassword.trim()) {
-      setPwError("現在のパスワードを入力してください");
-      return;
-    }
     if (!newPassword.trim()) {
       setPwError("新しいパスワードを入力してください");
       return;
     }
-    if (newPassword.length < 4) {
-      setPwError("パスワードは4文字以上で設定してください");
+    if (newPassword.length < 6) {
+      setPwError("パスワードは6文字以上で設定してください");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -184,24 +271,9 @@ export default function StoreAccountPage() {
 
     setPwSaving(true);
     try {
-      if (hasPassword) {
-        const { data: check } = await supabase
-          .from("users")
-          .select("id")
-          .eq("id", user.id)
-          .eq("password", currentPassword)
-          .maybeSingle();
-        if (!check) {
-          setPwError("現在のパスワードが正しくありません");
-          setPwSaving(false);
-          return;
-        }
-      }
-
-      const { error: err } = await supabase
-        .from("users")
-        .update({ password: newPassword })
-        .eq("id", user.id);
+      const { error: err } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
       if (err) throw err;
 
       setHasPassword(true);
@@ -240,19 +312,53 @@ export default function StoreAccountPage() {
         <div className="space-y-8">
           <div>
             <p className="text-sm text-gray-500 mb-2">店舗のアイコン</p>
-            {logoUrl ? (
-              <Image
-                src={logoUrl}
-                alt="店舗ロゴ"
-                width={200}
-                height={56}
-                className="h-14 w-auto"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-lg bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400">
-                未設定
-              </div>
-            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleLogoUpload}
+            />
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={logoUploading}
+              className="relative group"
+            >
+              {logoUrl ? (
+                <div className="relative">
+                  <Image
+                    src={logoUrl}
+                    alt="店舗ロゴ"
+                    width={200}
+                    height={56}
+                    className="h-14 w-auto rounded-lg"
+                    unoptimized
+                  />
+                  <div className="absolute inset-0 bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+              ) : (
+                <div className="w-16 h-16 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors">
+                  {logoUploading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4 mb-0.5" />
+                      <span>未設定</span>
+                    </>
+                  )}
+                </div>
+              )}
+              {logoUploading && logoUrl && (
+                <div className="absolute inset-0 bg-white/60 rounded-lg flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+                </div>
+              )}
+            </motion.button>
           </div>
 
           <div>
@@ -294,18 +400,29 @@ export default function StoreAccountPage() {
 
           <div>
             <p className="text-sm text-gray-500 mb-2">定休日</p>
-            {holidays.length > 0 ? (
-              <div className="flex items-center gap-8">
-                {holidays.map((h, i) => (
-                  <span key={i} className="text-base">
-                    <span className="font-semibold">{h.day}</span>{" "}
-                    <span className="text-sm text-gray-500">{h.freq}</span>
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">定休日未設定</p>
-            )}
+            <div className="flex items-center gap-3">
+              {holidays.length > 0 ? (
+                <div className="flex items-center gap-6">
+                  {holidays.map((h, i) => (
+                    <span key={i} className="text-base">
+                      <span className="font-semibold">{h.day}</span>{" "}
+                      <span className="text-sm text-gray-500">{h.freq}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400">定休日未設定</p>
+              )}
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={openHolidaysModal}
+                className="px-4 py-1.5 rounded-md bg-amber-400 text-white text-sm font-bold hover:bg-amber-500 transition-colors"
+              >
+                変更
+              </motion.button>
+            </div>
           </div>
         </div>
       </div>
@@ -402,9 +519,9 @@ export default function StoreAccountPage() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {modal === "hours" && (
-          <Modal onClose={() => setModal(null)}>
+          <Modal key="hours" onClose={() => setModal(null)}>
             <h2 className="text-lg font-bold text-center mb-6">
               営業時間の変更
             </h2>
@@ -436,7 +553,7 @@ export default function StoreAccountPage() {
         )}
 
         {modal === "cutoff" && (
-          <Modal onClose={() => setModal(null)}>
+          <Modal key="cutoff" onClose={() => setModal(null)}>
             <h2 className="text-lg font-bold text-center mb-6">
               受付終了時刻の変更
             </h2>
@@ -468,8 +585,70 @@ export default function StoreAccountPage() {
           </Modal>
         )}
 
+        {modal === "holidays" && (
+          <Modal key="holidays" onClose={() => setModal(null)}>
+            <h2 className="text-lg font-bold text-center mb-6">
+              定休日の変更
+            </h2>
+            <div className="space-y-3 mb-6">
+              {WEEKDAYS.map((wd) => {
+                const selected = modalHolidays.find((h) => h.dayOfWeek === wd.value);
+                return (
+                  <div
+                    key={wd.value}
+                    className="flex items-center gap-3"
+                  >
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => toggleModalHoliday(wd.value)}
+                      className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                        selected
+                          ? "bg-amber-400 text-white"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {wd.label}
+                    </motion.button>
+                    {selected && (
+                      <select
+                        value={selected.rule}
+                        onChange={(e) => updateModalHolidayRule(wd.value, e.target.value)}
+                        className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                      >
+                        <option value="毎週">毎週</option>
+                        <option value="第1">第1</option>
+                        <option value="第2">第2</option>
+                        <option value="第3">第3</option>
+                        <option value="第4">第4</option>
+                        <option value="第1.3">第1・3</option>
+                        <option value="第1.4">第1・4</option>
+                        <option value="第2.4">第2・4</option>
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-center">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={saveHolidays}
+                disabled={saving}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                以上の内容に変更
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
         {modal === "saved" && (
-          <Modal onClose={() => setModal(null)} hideClose>
+          <Modal key="saved" onClose={() => setModal(null)} hideClose>
             <p className="text-lg font-bold text-center py-6">
               変更しました
             </p>

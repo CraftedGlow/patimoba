@@ -7,6 +7,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
+import { useCustomerContext } from "@/lib/customer-context";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
@@ -26,6 +27,7 @@ const mockOrderItem = {
 
 export default function TakeoutConfirmPage() {
   const router = useRouter();
+  const { selectedStoreName } = useCustomerContext();
   const [lastName, setLastName] = useState("カイ");
   const [firstName, setFirstName] = useState("ミサキ");
   const [phone, setPhone] = useState("09062501396");
@@ -68,11 +70,7 @@ export default function TakeoutConfirmPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader
-        shopName="Patisserie KANATA"
-        points={availablePoints}
-        showCart={false}
-      />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} />
 
       <StepProgress currentStep={4} steps={steps} />
 

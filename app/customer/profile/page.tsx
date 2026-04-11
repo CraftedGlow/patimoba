@@ -25,7 +25,7 @@ export default function CustomerProfilePage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
-  const [userId, setUserId] = useState<number | null>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
 
   const [lastName, setLastName] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -44,27 +44,39 @@ export default function CustomerProfilePage() {
   const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);
 
   const loadProfile = useCallback(async () => {
-    if (user) {
-      setUserId(user.id);
-      setLastName(user.lastName || "");
-      setFirstName(user.firstName || "");
-      setEmail(user.email || "");
-      setPhone(user.raw.phone_num || "");
-      setGender(user.raw.gender || "女性");
-      setZipCode(user.raw.zip_code || "");
-      setAddress(user.raw.address || "");
-
-      if (user.raw.birthday) {
-        const bd = new Date(user.raw.birthday);
-        setBirthYear(`${bd.getFullYear()}年`);
-        setBirthMonth(`${bd.getMonth() + 1}月`);
-        setBirthDay(`${bd.getDate()}日`);
-      }
-
-      setIsNew(false);
-    } else {
+    if (!user || user.userType !== "customer") {
       setIsNew(true);
+      setLoading(false);
+      return;
     }
+
+    const { data, error: err } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (err || !data) {
+      setIsNew(true);
+      setLoading(false);
+      return;
+    }
+
+    setCustomerId(data.id);
+    setLastName(data.last_name_kn || "");
+    setFirstName(data.first_name_kn || "");
+    setEmail(data.email || "");
+    setPhone(data.phone || "");
+    setGender(data.gender || "女性");
+    setZipCode(data.postal_code || "");
+    setAddress(data.address || "");
+    setMemo(data.store_note || "");
+
+    if (data.birth_year) setBirthYear(`${data.birth_year}年`);
+    if (data.birth_month) setBirthMonth(`${data.birth_month}月`);
+    if (data.birth_day) setBirthDay(`${data.birth_day}日`);
+
+    setIsNew(false);
     setLoading(false);
   }, [user]);
 
@@ -101,8 +113,8 @@ export default function CustomerProfilePage() {
         setError("パスワードを設定してください");
         return;
       }
-      if (password.length < 4) {
-        setError("パスワードは4文字以上で設定してください");
+      if (password.length < 6) {
+        setError("パスワードは6文字以上で設定してください");
         return;
       }
       if (password !== confirmPassword) {
@@ -116,40 +128,49 @@ export default function CustomerProfilePage() {
       const y = parseInt(birthYear) || 1990;
       const m = parseInt(birthMonth) || 1;
       const d = parseInt(birthDay) || 1;
-      const birthday = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
-      const payload: Record<string, any> = {
+      const payload = {
         last_name_kn: lastName,
         first_name_kn: firstName || null,
-        login_num: email,
-        phone_num: phone || null,
-        gender: gender,
-        birthday: birthday,
-        zip_code: zipCode || null,
+        email,
+        phone: phone || null,
+        gender,
+        birth_year: y,
+        birth_month: m,
+        birth_day: d,
+        postal_code: zipCode || null,
         address: address || null,
-        user_type: "customer",
+        store_note: memo || null,
       };
 
-      if (password.trim()) {
-        payload.password = password;
-      }
-
-      if (userId) {
+      if (customerId) {
         const { error: err } = await supabase
-          .from("users")
+          .from("customers")
           .update(payload)
-          .eq("id", userId);
+          .eq("id", customerId);
         if (err) throw err;
+
+        if (password.trim()) {
+          const { error: pwErr } = await supabase.auth.updateUser({ password });
+          if (pwErr) throw pwErr;
+        }
       } else {
-        payload.created_date = new Date().toISOString();
+        const { data: authResp, error: authErr } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+        if (authErr) throw authErr;
+        const authUserId = authResp.user?.id;
+        if (!authUserId) throw new Error("認証ユーザーの作成に失敗しました");
+
         const { data: created, error: err } = await supabase
-          .from("users")
-          .insert(payload)
+          .from("customers")
+          .insert({ ...payload, auth_user_id: authUserId })
           .select()
           .single();
         if (err) throw err;
         if (created) {
-          setUserId(created.id);
+          setCustomerId(created.id);
           setIsNew(false);
         }
       }
@@ -175,11 +196,7 @@ export default function CustomerProfilePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader
-        shopName="パティモバ"
-        points={0}
-        showCart={false}
-      />
+      <CustomerHeader shopName="パティモバ" />
 
       <div className="px-5 py-6 pb-12">
         <h1 className="text-lg font-bold text-gray-900 mb-6">

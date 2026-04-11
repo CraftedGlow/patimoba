@@ -1,59 +1,57 @@
+export type ViewMode = "month" | "week" | "day";
+
 export interface DaySchedule {
-  date: string;
   isOpen: boolean;
   openTime: string;
   closeTime: string;
 }
 
-export type ViewMode = "month" | "week" | "day";
-
-export const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
-
-export const closedDayRules = [
-  { day: "火曜日", rule: "毎週" },
-  { day: "木曜日", rule: "第1.4" },
-];
-
-export const defaultOpen = "01:00";
-export const defaultClose = "08:00";
-
-export const storeOpenTime = "10:00";
-export const storeCloseTime = "18:00";
-
-export function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
+export interface ClosedDayRule {
+  dayOfWeek: number;
+  day: string;
+  rule: string;
 }
 
-export function getFirstDayOfMonth(year: number, month: number) {
-  return new Date(year, month, 1).getDay();
-}
+export function isClosedByRule(
+  rules: ClosedDayRule[],
+  year: number,
+  month: number,
+  day: number
+): boolean {
+  const date = new Date(year, month, day);
+  const dow = date.getDay();
+  const weekOfMonth = Math.ceil(day / 7);
 
-export function dateKey(year: number, month: number, day: number) {
-  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-export function isDefaultClosed(year: number, month: number, day: number): boolean {
-  const d = new Date(year, month, day);
-  const dow = d.getDay();
-  if (dow === 2) return true;
-
-  if (dow === 4) {
-    const weekNum = Math.ceil(day / 7);
-    if (weekNum === 1 || weekNum === 4) return true;
+  for (const rule of rules) {
+    if (rule.dayOfWeek !== dow) continue;
+    if (rule.rule === "毎週") return true;
+    if (rule.rule === "第1" && weekOfMonth === 1) return true;
+    if (rule.rule === "第2" && weekOfMonth === 2) return true;
+    if (rule.rule === "第3" && weekOfMonth === 3) return true;
+    if (rule.rule === "第4" && weekOfMonth === 4) return true;
+    if (rule.rule === "第1.3" && (weekOfMonth === 1 || weekOfMonth === 3)) return true;
+    if (rule.rule === "第1.4" && (weekOfMonth === 1 || weekOfMonth === 4)) return true;
+    if (rule.rule === "第2.4" && (weekOfMonth === 2 || weekOfMonth === 4)) return true;
   }
   return false;
 }
 
+export const weekdayLabels = ["日", "月", "火", "水", "木", "金", "土"];
+
 export function getWeekStartDate(date: Date): Date {
   const d = new Date(date);
-  const dayOfWeek = d.getDay();
-  d.setDate(d.getDate() - dayOfWeek);
+  d.setDate(d.getDate() - d.getDay());
+  d.setHours(0, 0, 0, 0);
   return d;
 }
 
-export const timeSlots = Array.from({ length: 24 }, (_, i) => i);
+export function formatDateKey(y: number, m: number, d: number): string {
+  return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
 
-export const hourOptions = Array.from({ length: 24 }, (_, i) => {
-  const h = i.toString().padStart(2, "0");
-  return `${h}:00`;
-});
+export const timeOptions: string[] = [];
+for (let h = 0; h < 24; h++) {
+  for (let m = 0; m < 60; m += 30) {
+    timeOptions.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+}

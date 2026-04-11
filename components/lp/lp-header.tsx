@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Menu, X, LogIn } from "lucide-react";
+import { PatimobaLogo } from "@/components/patimoba-logo";
 
 const navLinks = [
   { label: "特徴", href: "#features" },
@@ -34,11 +35,7 @@ export function LpHeader() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2">
-            <img
-              src="/スクリーンショット_2026-04-09_14.49.59.png"
-              alt="パティモバ"
-              className="h-8 w-auto"
-            />
+            <PatimobaLogo className="h-8 w-auto" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 
 export interface ProductType {
-  id: number
+  id: string
   productType: string
   typeCode: number
 }
@@ -21,12 +21,12 @@ export function useProductTypes() {
     const { data, error: err } = await supabase
       .from("product_types")
       .select("*")
-      .order("id")
+      .order("type_code")
     if (err) {
       setError(err.message)
     } else {
       const types = (data || []).map((row: any) => ({
-        id: Number(row.id),
+        id: String(row.id),
         productType: row.product_type || "",
         typeCode: Number(row.type_code) || 0,
       }))

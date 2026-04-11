@@ -96,45 +96,45 @@ export default function AdminStoreNewPage() {
     setSaving(true);
     setError(null);
     try {
-      let logoUrl: string | null = null;
+      let logoUrl: string = "";
       if (logoFile) {
         logoUrl = await uploadStoreLogo(logoFile);
       }
 
-      const toTimestamptz = (time: string) => {
-        const [h, m] = time.split(":");
-        const d = new Date();
-        d.setHours(Number(h), Number(m), 0, 0);
-        return d.toISOString();
-      };
-
-      const fullAddress = [prefecture, city, address].filter(Boolean).join(" ");
       const created = await createStore({
         name: storeName,
-        mail: email,
-        phone_num: phone || null,
-        address_url: fullAddress || null,
-        default_open_time: toTimestamptz(openTime),
-        default_close_time: toTimestamptz(closeTime),
-        plan: selectedPlan === "premium" ? 3 : 2,
-        tenant_id: postalCode || null,
-        created_date: new Date().toISOString(),
-        logo: logoUrl,
+        email: email,
+        phone: phone || "",
+        postal_code: postalCode || "",
+        prefecture: prefecture || "",
+        city: city || "",
+        address: address || "",
+        open_time: openTime,
+        close_time: closeTime,
+        plan: selectedPlan,
+        logo_url: logoUrl,
       });
       if (closedDays.length > 0) {
         await saveClosedDays(created.id, closedDays);
       }
 
-      const { error: userErr } = await supabase.from("users").insert({
-        login_num: email,
-        password: password,
-        user_type: "store",
-        store_id: created.id,
-        last_name_kn: storeName,
-        phone_num: phone || null,
-        created_date: new Date().toISOString(),
+      const res = await fetch("/api/admin/create-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      if (userErr) throw userErr;
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "認証ユーザーの作成に失敗しました");
+
+      if (result.userId) {
+        const { error: userErr } = await supabase.from("store_users").insert({
+          auth_user_id: result.userId,
+          store_id: created.id,
+          email: email.trim().toLowerCase(),
+          role: "owner",
+        });
+        if (userErr) throw userErr;
+      }
 
       setSuccess(true);
       setTimeout(() => {

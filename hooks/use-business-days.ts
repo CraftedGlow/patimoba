@@ -1,62 +1,63 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 
 export interface BusinessDay {
-  id: number
-  businessDay: string
-  customOpenDate: string | null
-  customCloseDate: string | null
+  id: string
+  date: string
+  openTime: string | null
+  closeTime: string | null
   isOpen: boolean
-  storeId: number
+  storeId: string
 }
 
-export function useBusinessDays(storeId?: number) {
+export function useBusinessDays(storeId?: string) {
   const [businessDays, setBusinessDays] = useState<BusinessDay[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchBusinessDays = async () => {
+  const fetchBusinessDays = useCallback(async () => {
+    if (!storeId) {
+      setBusinessDays([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
 
-    let query = supabase
-      .from("business_day_settings")
+    const { data, error: err } = await supabase
+      .from("business_day_schedules")
       .select("*")
-      .order("business_day", { ascending: true })
+      .eq("store_id", storeId)
+      .order("date", { ascending: true })
 
-    if (storeId) {
-      query = query.eq("store_id", storeId)
-    }
-
-    const { data, error: err } = await query
     if (err) {
       setError(err.message)
     } else {
       setBusinessDays(
         (data || []).map((row: any) => ({
-          id: Number(row.id),
-          businessDay: row.business_day || "",
-          customOpenDate: row.custom_open_date,
-          customCloseDate: row.custom_close_date,
+          id: String(row.id),
+          date: row.date,
+          openTime: row.open_time,
+          closeTime: row.close_time,
           isOpen: row.is_open ?? true,
-          storeId: Number(row.store_id),
+          storeId: String(row.store_id),
         }))
       )
     }
     setLoading(false)
-  }
+  }, [storeId])
 
   useEffect(() => {
     fetchBusinessDays()
-  }, [storeId])
+  }, [fetchBusinessDays])
 
   const addBusinessDay = async (day: Omit<BusinessDay, "id">) => {
-    const { error: err } = await supabase.from("business_day_settings").insert({
-      business_day: day.businessDay,
-      custom_open_date: day.customOpenDate,
-      custom_close_date: day.customCloseDate,
+    const { error: err } = await supabase.from("business_day_schedules").insert({
+      date: day.date,
+      open_time: day.openTime ?? "",
+      close_time: day.closeTime ?? "",
       is_open: day.isOpen,
       store_id: day.storeId,
     })
@@ -64,26 +65,72 @@ export function useBusinessDays(storeId?: number) {
     await fetchBusinessDays()
   }
 
-  const updateBusinessDay = async (id: number, updates: Partial<BusinessDay>) => {
+  const updateBusinessDay = async (id: string, updates: Partial<BusinessDay>) => {
     const payload: any = {}
-    if (updates.customOpenDate !== undefined) payload.custom_open_date = updates.customOpenDate
-    if (updates.customCloseDate !== undefined) payload.custom_close_date = updates.customCloseDate
+    if (updates.date !== undefined) payload.date = updates.date
+    if (updates.openTime !== undefined) payload.open_time = updates.openTime ?? ""
+    if (updates.closeTime !== undefined) payload.close_time = updates.closeTime ?? ""
     if (updates.isOpen !== undefined) payload.is_open = updates.isOpen
 
     const { error: err } = await supabase
-      .from("business_day_settings")
+      .from("business_day_schedules")
       .update(payload)
       .eq("id", id)
     if (err) throw err
     await fetchBusinessDays()
   }
 
-  const deleteBusinessDay = async (id: number) => {
+  const deleteBusinessDay = async (id: string) => {
     const { error: err } = await supabase
-      .from("business_day_settings")
+      .from("business_day_schedules")
       .delete()
       .eq("id", id)
     if (err) throw err
+    await fetchBusinessDays()
+  }
+
+  /**
+   * 指定月の日別オーバーライドを置換保存する。
+   */
+  const saveMonth = async (
+    targetStoreId: string,
+    year: number,
+    month: number,
+    entries: Array<{
+      date: string
+      isOpen: boolean
+      openTime: string | null
+      closeTime: string | null
+    }>
+  ) => {
+    const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`
+    const nextMonth = new Date(year, month + 1, 1)
+    const monthEnd = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}-01`
+
+    const { error: delErr } = await supabase
+      .from("business_day_schedules")
+      .delete()
+      .eq("store_id", targetStoreId)
+      .gte("date", monthStart)
+      .lt("date", monthEnd)
+    if (delErr) throw delErr
+
+    if (entries.length === 0) {
+      await fetchBusinessDays()
+      return
+    }
+
+    const rows = entries.map((entry) => ({
+      store_id: targetStoreId,
+      date: entry.date,
+      open_time: entry.isOpen ? (entry.openTime ?? "") : "",
+      close_time: entry.isOpen ? (entry.closeTime ?? "") : "",
+      is_open: entry.isOpen,
+    }))
+
+    const { error: insErr } = await supabase.from("business_day_schedules").insert(rows)
+    if (insErr) throw insErr
+
     await fetchBusinessDays()
   }
 
@@ -95,5 +142,6 @@ export function useBusinessDays(storeId?: number) {
     addBusinessDay,
     updateBusinessDay,
     deleteBusinessDay,
+    saveMonth,
   }
 }

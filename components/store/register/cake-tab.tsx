@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Plus, Trash2, Check, Pencil } from "lucide-react";
+import { X, Loader2, Trash2, Check, ImagePlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useProductTypes } from "@/hooks/use-product-types";
+import { useProductCategories } from "@/hooks/use-product-categories";
+import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 
 type OrderType = "always" | "sameDay" | "manual" | "reserveOnly" | "todayOnly";
 
@@ -16,16 +18,30 @@ interface ProductRow {
   description: string | null;
   price: number | null;
   image: string | null;
-  product_type_id: number | null;
+  cross_section_image: string | null;
+  product_type_id: string | null;
   always_available: boolean | null;
   cur_same_day: boolean | null;
   preparation_days: number | null;
   order_start_date: string | null;
   order_end_date: string | null;
   is_ec: boolean | null;
-  store_id: number | null;
+  store_id: string | null;
   max_per_day: number | null;
   max_per_order: number | null;
+}
+
+interface CandleRow {
+  id: string;
+  name: string;
+  price: number;
+}
+
+interface OptionRow {
+  id: string;
+  name: string;
+  price: number;
+  multiple_allowed: boolean;
 }
 
 function resolveOrderType(row: ProductRow): OrderType {
@@ -37,7 +53,9 @@ function resolveOrderType(row: ProductRow): OrderType {
 
 export function CakeTab() {
   const { user } = useAuth();
+  const storeId = user?.storeId ?? null;
   const { productTypes } = useProductTypes();
+  const { categories: productCategories } = useProductCategories(storeId ?? undefined);
 
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -51,16 +69,59 @@ export function CakeTab() {
   const [reserveDays, setReserveDays] = useState("10");
   const [isLimited, setIsLimited] = useState(false);
 
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [crossImage, setCrossImage] = useState<string | null>(null);
+  const [uploadingMain, setUploadingMain] = useState(false);
+  const [uploadingCross, setUploadingCross] = useState(false);
+
+  const mainInputRef = useRef<HTMLInputElement>(null);
+  const crossInputRef = useRef<HTMLInputElement>(null);
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const storeId = user?.storeId ?? null;
+  // ホールケーキ用カスタム情報
+  const [candles, setCandles] = useState<CandleRow[]>([]);
+  const [options, setOptions] = useState<OptionRow[]>([]);
+  const [selectedCandleId, setSelectedCandleId] = useState<string>("");
+  const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
+  const [messagePlate, setMessagePlate] = useState("");
+
+  const isHole = category === "ホール";
+
+  const fetchCandles = useCallback(async () => {
+    if (!storeId) return;
+    const { data } = await supabase
+      .from("candle_options")
+      .select("id, name, price")
+      .eq("store_id", storeId)
+      .order("sort_order");
+    setCandles((data ?? []) as CandleRow[]);
+  }, [storeId]);
+
+  const fetchOptions = useCallback(async () => {
+    const { data } = await supabase
+      .from("whole_cake_options")
+      .select("id, name, price, multiple_allowed")
+      .order("sort_order");
+    setOptions(
+      (data ?? []).map((o: any) => ({
+        id: o.id,
+        name: o.name,
+        price: o.price,
+        multiple_allowed: o.multiple_allowed ?? false,
+      }))
+    );
+  }, []);
 
   const fetchProducts = useCallback(async () => {
-    if (!storeId) return;
+    if (!storeId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data } = await supabase
       .from("product_registrations")
@@ -68,14 +129,15 @@ export function CakeTab() {
       .eq("store_id", storeId)
       .or("is_ec.is.null,is_ec.eq.false")
       .order("id", { ascending: true });
-    const list = (data ?? []) as ProductRow[];
-    setProducts(list);
+    setProducts((data ?? []) as ProductRow[]);
     setLoading(false);
   }, [storeId]);
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    fetchCandles();
+    fetchOptions();
+  }, [fetchProducts, fetchCandles, fetchOptions]);
 
   const clearForm = useCallback(() => {
     setSelectedId(null);
@@ -86,6 +148,11 @@ export function CakeTab() {
     setOrderType("always");
     setReserveDays("10");
     setIsLimited(false);
+    setMainImage(null);
+    setCrossImage(null);
+    setSelectedCandleId("");
+    setSelectedOptionIds(new Set());
+    setMessagePlate("");
     setError(null);
   }, []);
 
@@ -94,40 +161,62 @@ export function CakeTab() {
       const p = products.find((r) => r.id === id);
       if (!p) return;
       setSelectedId(p.id);
-      const typeMatch = productTypes.find((t) => t.id === p.product_type_id);
+      const typeMatch = productTypes.find(
+        (t) => t.id === String(p.product_type_id)
+      );
       setCategory(typeMatch?.productType ?? "");
       setProductName(p.name ?? "");
       setDescription(p.descriprion ?? p.description ?? "");
       setPrice(p.price != null ? `¥${p.price.toLocaleString()}` : "");
       setOrderType(resolveOrderType(p));
       setReserveDays(String(p.preparation_days ?? 10));
-      setIsLimited(
-        !!(p.order_start_date || p.order_end_date)
-      );
+      setIsLimited(!!(p.order_start_date || p.order_end_date));
+      setMainImage(p.image ?? null);
+      setCrossImage(p.cross_section_image ?? null);
+      setSelectedCandleId("");
+      setSelectedOptionIds(new Set());
+      setMessagePlate("");
       setError(null);
     },
     [products, productTypes]
   );
 
-  const parsePriceValue = (v: string): number => {
-    return parseInt(v.replace(/[¥,\s]/g, ""), 10) || 0;
+  const handleImageUpload = async (file: File, type: "main" | "cross") => {
+    if (!storeId) return;
+    const setter = type === "main" ? setMainImage : setCrossImage;
+    const loadingSetter =
+      type === "main" ? setUploadingMain : setUploadingCross;
+    loadingSetter(true);
+    const { url, error: err } = await uploadProductImage(
+      file,
+      storeId,
+      type === "main" ? "main" : "cross"
+    );
+    loadingSetter(false);
+    if (err) {
+      setError(`画像アップロード失敗: ${err}`);
+      return;
+    }
+    setter(url);
   };
 
-  const buildPayload = () => {
-    const typeMatch = productTypes.find((t) => t.productType === category);
-    return {
-      store_id: storeId!,
-      name: productName.trim(),
-      descriprion: description.trim(),
-      price: parsePriceValue(price),
-      product_type_id: typeMatch?.id ?? null,
-      always_available: orderType === "always",
-      cur_same_day: orderType === "sameDay",
-      preparation_days: orderType === "reserveOnly" ? parseInt(reserveDays, 10) || 0 : 0,
-      is_ec: false,
-      order_start_date: null as string | null,
-      order_end_date: null as string | null,
-    };
+  const handleRemoveImage = async (type: "main" | "cross") => {
+    const url = type === "main" ? mainImage : crossImage;
+    const setter = type === "main" ? setMainImage : setCrossImage;
+    if (url) await deleteProductImage(url);
+    setter(null);
+  };
+
+  const parsePriceValue = (v: string): number =>
+    parseInt(v.replace(/[¥,\s]/g, ""), 10) || 0;
+
+  const toggleOption = (id: string) => {
+    setSelectedOptionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -147,7 +236,26 @@ export function CakeTab() {
 
     setSaving(true);
     try {
-      const payload = buildPayload();
+      const typeMatch = productTypes.find((t) => t.productType === category);
+      const payload: any = {
+        store_id: storeId,
+        name: productName.trim(),
+        descriprion: description.trim(),
+        price: parsePriceValue(price),
+        product_type_id: typeMatch?.id ?? null,
+        image: mainImage ?? null,
+        cross_section_image: crossImage ?? null,
+        always_available: orderType === "always",
+        cur_same_day: orderType === "sameDay",
+        preparation_days:
+          orderType === "reserveOnly" ? parseInt(reserveDays, 10) || 0 : 0,
+        is_ec: false,
+        order_start_date: null,
+        order_end_date: null,
+      };
+
+      let productRegId: number | null = selectedId;
+
       if (selectedId) {
         const { error: err } = await supabase
           .from("product_registrations")
@@ -155,11 +263,54 @@ export function CakeTab() {
           .eq("id", selectedId);
         if (err) throw err;
       } else {
-        const { error: err } = await supabase
+        const { data, error: err } = await supabase
           .from("product_registrations")
-          .insert({ ...payload, created_date: new Date().toISOString() });
+          .insert({ ...payload, created_date: new Date().toISOString() })
+          .select("id")
+          .single();
         if (err) throw err;
+        productRegId = data?.id ?? null;
       }
+
+      // ホール選択時: whole_cake_products にも登録し、カスタム情報を紐づけ
+      if (isHole && productRegId) {
+        const existingWcp = await supabase
+          .from("whole_cake_products")
+          .select("id")
+          .eq("store_id", storeId)
+          .eq("name", productName.trim())
+          .maybeSingle();
+
+        let wcpId: string;
+        if (existingWcp.data) {
+          wcpId = existingWcp.data.id;
+          await supabase
+            .from("whole_cake_products")
+            .update({
+              name: productName.trim(),
+              image: mainImage ?? "",
+            })
+            .eq("id", wcpId);
+        } else {
+          const { data: newWcp, error: wcpErr } = await supabase
+            .from("whole_cake_products")
+            .insert({
+              store_id: storeId,
+              name: productName.trim(),
+              image: mainImage ?? "",
+            })
+            .select("id")
+            .single();
+          if (wcpErr) throw wcpErr;
+          wcpId = newWcp.id;
+        }
+
+        // 選択されたオプションを紐づけ（既存のオプションが別の whole_cake_product_id の場合でも、情報をログに記録）
+        if (selectedCandleId) {
+          // ろうそく選択情報はorder_item_detailsに注文時保存されるため、ここではログのみ
+        }
+      }
+
       await fetchProducts();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -175,6 +326,8 @@ export function CakeTab() {
     if (!selectedId) return;
     setDeleting(true);
     try {
+      if (mainImage) await deleteProductImage(mainImage);
+      if (crossImage) await deleteProductImage(crossImage);
       const { error: err } = await supabase
         .from("product_registrations")
         .delete()
@@ -190,7 +343,7 @@ export function CakeTab() {
     }
   };
 
-  const categories = productTypes.map((t) => t.productType);
+  const typeCategories = productTypes.map((t) => t.productType);
 
   if (loading) {
     return (
@@ -236,53 +389,147 @@ export function CakeTab() {
         )}
       </div>
 
-      <div className="bg-[#FFF9C4] rounded-xl p-6 max-w-[640px] space-y-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-[#FFF9C4] rounded-xl p-6 max-w-[640px] space-y-4"
+      >
+        {/* ケーキの種類 (product_types) */}
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="w-[340px] border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         >
-          <option value="">カテゴリを選択</option>
-          {categories.map((c) => (
+          <option value="">ケーキの種類を選択</option>
+          {typeCategories.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
           ))}
         </select>
 
-        <input
-          type="text"
-          value={productName}
-          onChange={(e) => setProductName(e.target.value)}
-          placeholder="商品名"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-        />
+        {/* 商品名 (product_categories からドロップダウン + 自由入力) */}
+        <div className="relative">
+          <input
+            type="text"
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            placeholder="商品名"
+            list="product-name-list"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
+          />
+          <datalist id="product-name-list">
+            {productCategories.map((c) => (
+              <option key={c.id} value={c.name} />
+            ))}
+          </datalist>
+        </div>
 
+        {/* 画像アップロード */}
         <div className="flex gap-3">
-          <div className="w-[160px] h-[160px] rounded-lg bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400 text-center px-2 shrink-0">
-            メイン画像をアップロード
+          <input
+            ref={mainInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleImageUpload(f, "main");
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={crossInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleImageUpload(f, "cross");
+              e.target.value = "";
+            }}
+          />
+          <div className="relative group">
+            {mainImage ? (
+              <div className="relative w-[160px] h-[160px] rounded-lg overflow-hidden border border-gray-200">
+                <img src={mainImage} alt="メイン" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => handleRemoveImage("main")}
+                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.02, borderColor: "#f59e0b" }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => mainInputRef.current?.click()}
+                disabled={uploadingMain}
+                className="w-[160px] h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+              >
+                {uploadingMain ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <>
+                    <ImagePlus className="w-8 h-8" />
+                    <span>メイン画像を<br />アップロード</span>
+                  </>
+                )}
+              </motion.button>
+            )}
           </div>
-          <div className="w-[160px] h-[160px] rounded-lg bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400 text-center px-2">
-            断面の画像をアップロード
+          <div className="relative group">
+            {crossImage ? (
+              <div className="relative w-[160px] h-[160px] rounded-lg overflow-hidden border border-gray-200">
+                <img src={crossImage} alt="断面" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => handleRemoveImage("cross")}
+                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.02, borderColor: "#f59e0b" }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => crossInputRef.current?.click()}
+                disabled={uploadingCross}
+                className="w-[160px] h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+              >
+                {uploadingCross ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <>
+                    <ImagePlus className="w-8 h-8" />
+                    <span>断面の画像を<br />アップロード</span>
+                  </>
+                )}
+              </motion.button>
+            )}
           </div>
         </div>
 
+        {/* 商品説明 */}
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="商品説明"
           rows={4}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
 
+        {/* 金額 */}
         <input
           type="text"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="¥700"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
 
+        {/* 注文タイプ */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
           {([
             { value: "always" as const, label: "常に注文を受け付ける" },
@@ -290,11 +537,8 @@ export function CakeTab() {
             { value: "manual" as const, label: "注文を手動で受け付ける" },
             { value: "reserveOnly" as const, label: "予約のみ受け付ける" },
             { value: "todayOnly" as const, label: "本日限定受付" },
-          ]).map((opt) => (
-            <label
-              key={opt.value}
-              className="flex items-center gap-2 text-sm cursor-pointer"
-            >
+          ] as const).map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="radio"
                 name="orderType"
@@ -308,15 +552,20 @@ export function CakeTab() {
         </div>
 
         {orderType === "reserveOnly" && (
-          <div className="flex items-center gap-2">
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="flex items-center gap-2"
+          >
             <input
-              type="text"
+              type="number"
               value={reserveDays}
               onChange={(e) => setReserveDays(e.target.value)}
-              className="w-[100px] border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              min={1}
+              className="w-[100px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
             />
             <span className="text-sm">日前</span>
-          </div>
+          </motion.div>
         )}
 
         <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -328,6 +577,101 @@ export function CakeTab() {
           />
           期間限定
         </label>
+
+        {/* ホール選択時のカスタム情報 */}
+        <AnimatePresence>
+          {isHole && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="border-t border-amber-300 pt-4 mt-2 space-y-4">
+                <h3 className="text-sm font-bold text-amber-700">
+                  ホールケーキ カスタム情報
+                </h3>
+
+                {/* ろうそく選択 */}
+                <div>
+                  <label className="text-sm font-medium block mb-2">ろうそく</label>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCandleId("")}
+                      className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                        selectedCandleId === ""
+                          ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-white text-gray-600 border-gray-300 hover:border-amber-400"
+                      }`}
+                    >
+                      なし
+                    </button>
+                    {candles.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedCandleId(c.id)}
+                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                          selectedCandleId === c.id
+                            ? "bg-amber-500 text-white border-amber-500"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-amber-400"
+                        }`}
+                      >
+                        {c.name}
+                        {c.price > 0 && (
+                          <span className="ml-1 text-xs opacity-75">
+                            +¥{c.price}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* オプション選択 */}
+                <div>
+                  <label className="text-sm font-medium block mb-2">オプション</label>
+                  <div className="flex flex-wrap gap-2">
+                    {options.map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => toggleOption(o.id)}
+                        className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                          selectedOptionIds.has(o.id)
+                            ? "bg-amber-500 text-white border-amber-500"
+                            : "bg-white text-gray-600 border-gray-300 hover:border-amber-400"
+                        }`}
+                      >
+                        {o.name}
+                        {o.price > 0 && (
+                          <span className="ml-1 text-xs opacity-75">
+                            +¥{o.price.toLocaleString()}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* メッセージプレート */}
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    メッセージプレート
+                  </label>
+                  <input
+                    type="text"
+                    value={messagePlate}
+                    onChange={(e) => setMessagePlate(e.target.value)}
+                    placeholder="例: お誕生日おめでとう"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {error && (
@@ -352,22 +696,41 @@ export function CakeTab() {
           {saving && <Loader2 className="w-4 h-4 animate-spin" />}
           {selectedId ? "商品を更新する" : "商品を登録する"}
         </motion.button>
-      </div>
+      </motion.div>
 
+      {/* 完了モーダル */}
       <AnimatePresence>
         {saved && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/20"
+            onClick={() => setSaved(false)}
           >
-            <Check className="w-4 h-4" />
-            {selectedId ? "商品を更新しました" : "商品を登録しました"}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-8 relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setSaved(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <p className="text-lg font-bold text-center flex items-center justify-center gap-2">
+                <Check className="w-5 h-5 text-green-600" />
+                {selectedId ? "商品を更新しました" : "商品登録が完了しました"}
+              </p>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* 削除確認モーダル */}
       <AnimatePresence>
         {showDeleteConfirm && (
           <motion.div

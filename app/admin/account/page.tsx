@@ -51,34 +51,44 @@ const notificationSettings = [
 ];
 
 type AdminProfile = {
-  id: number | null;
+  id: string | null;
+  authUserId: string | null;
   name: string;
   email: string;
   phone: string;
   department: string;
   company: string;
+  notificationSettings: Record<string, boolean>;
 };
 
-type AdminProfileResult = AdminProfile & { hasPassword: boolean };
+async function fetchAdminProfile(): Promise<AdminProfile | null> {
+  const { data: authData } = await supabase.auth.getUser();
+  const authUser = authData.user;
 
-async function fetchAdminProfile(): Promise<AdminProfileResult | null> {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("user_type", "admin")
-    .limit(1)
-    .maybeSingle();
+  let query = supabase.from("admin_users").select("*").limit(1);
+  if (authUser) {
+    query = supabase
+      .from("admin_users")
+      .select("*")
+      .eq("auth_user_id", authUser.id)
+      .limit(1);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error || !data) return null;
 
+  const ns = (data.notification_settings ?? {}) as Record<string, boolean>;
+
   return {
     id: data.id,
-    name: [data.last_name_kn, data.first_name_kn].filter(Boolean).join(" ") || "",
-    email: data.login_num ?? "",
-    phone: data.phone_num ?? "",
-    department: data.rank ?? "",
-    company: data.creater ?? "",
-    hasPassword: !!data.password,
+    authUserId: data.auth_user_id,
+    name: data.name ?? "",
+    email: data.email ?? "",
+    phone: data.phone ?? "",
+    department: data.department ?? "",
+    company: data.company_name ?? "",
+    notificationSettings: ns,
   };
 }
 
@@ -86,7 +96,7 @@ export default function AdminAccountPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [profileId, setProfileId] = useState<number | null>(null);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,8 +129,11 @@ export default function AdminAccountPage() {
         setPhone(profile.phone);
         setDepartment(profile.department);
         setCompany(profile.company);
-        setHasPassword(profile.hasPassword);
+        setHasPassword(!!profile.authUserId);
         setIsNew(false);
+        if (Object.keys(profile.notificationSettings).length > 0) {
+          setNotifications((prev) => ({ ...prev, ...profile.notificationSettings }));
+        }
       } else {
         setIsNew(true);
       }
@@ -155,8 +168,8 @@ export default function AdminAccountPage() {
         setError("パスワードが一致しません");
         return;
       }
-      if (newPassword.length < 4) {
-        setError("パスワードは4文字以上で設定してください");
+      if (newPassword.length < 6) {
+        setError("パスワードは6文字以上で設定してください");
         return;
       }
     }
@@ -164,31 +177,30 @@ export default function AdminAccountPage() {
     setSaving(true);
     setError(null);
     try {
-      const nameParts = name.split(" ");
-      const payload: Record<string, any> = {
-        last_name_kn: nameParts[0] ?? "",
-        first_name_kn: nameParts.slice(1).join(" ") || null,
-        login_num: email || null,
-        phone_num: phone || null,
-        rank: department || null,
-        creater: company || null,
-        user_type: "admin",
+      const cleanEmail = email.trim().toLowerCase();
+      const basePayload = {
+        name,
+        email: cleanEmail,
+        phone: phone || null,
+        department: department || null,
+        company_name: company || null,
+        notification_settings: notifications,
       };
 
-      if (isNew && newPassword.trim()) {
-        payload.password = newPassword;
-      }
+      if (isNew) {
+        const res = await fetch("/api/admin/create-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password: newPassword }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "認証ユーザーの作成に失敗しました");
+        const authUserId = result.userId;
+        if (!authUserId) throw new Error("認証ユーザーの作成に失敗しました");
 
-      if (profileId) {
-        const { error: err } = await supabase
-          .from("users")
-          .update(payload)
-          .eq("id", profileId);
-        if (err) throw err;
-      } else {
         const { data: created, error: err } = await supabase
-          .from("users")
-          .insert({ ...payload, created_date: new Date().toISOString() })
+          .from("admin_users")
+          .insert({ ...basePayload, auth_user_id: authUserId })
           .select()
           .single();
         if (err) throw err;
@@ -199,6 +211,12 @@ export default function AdminAccountPage() {
           setNewPassword("");
           setConfirmPassword("");
         }
+      } else if (profileId) {
+        const { error: err } = await supabase
+          .from("admin_users")
+          .update(basePayload)
+          .eq("id", profileId);
+        if (err) throw err;
       }
 
       setSaved(true);
@@ -214,16 +232,12 @@ export default function AdminAccountPage() {
     if (passwordSaving) return;
     setPasswordError(null);
 
-    if (hasPassword && !currentPassword.trim()) {
-      setPasswordError("現在のパスワードを入力してください");
-      return;
-    }
     if (!newPassword.trim()) {
       setPasswordError("新しいパスワードを入力してください");
       return;
     }
-    if (newPassword.length < 4) {
-      setPasswordError("パスワードは4文字以上で設定してください");
+    if (newPassword.length < 6) {
+      setPasswordError("パスワードは6文字以上で設定してください");
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -237,26 +251,9 @@ export default function AdminAccountPage() {
 
     setPasswordSaving(true);
     try {
-      if (hasPassword) {
-        const { data: check } = await supabase
-          .from("users")
-          .select("id")
-          .eq("id", profileId)
-          .eq("password", currentPassword)
-          .maybeSingle();
-
-        if (!check) {
-          setPasswordError("現在のパスワードが正しくありません");
-          setPasswordSaving(false);
-          return;
-        }
-      }
-
-      const { error: err } = await supabase
-        .from("users")
-        .update({ password: newPassword })
-        .eq("id", profileId);
-
+      const { error: err } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
       if (err) throw err;
 
       setHasPassword(true);
@@ -447,46 +444,29 @@ export default function AdminAccountPage() {
             </div>
 
             <div className="space-y-4">
-              {hasPassword && (
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1.5">
-                    現在のパスワード
-                  </label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="現在のパスワードを入力"
-                      className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              )}
-              {!hasPassword && (
+              {!hasPassword && !isNew && (
                 <p className="text-sm text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-                  パスワードが未設定です。ログインに必要なパスワードを設定してください。
+                  認証情報が未設定です。ログインに必要なパスワードを設定してください。
                 </p>
               )}
               <div>
                 <label className="block text-sm text-gray-600 mb-1.5">
-                  {hasPassword ? "新しいパスワード" : "パスワード"}
+                  新しいパスワード
                 </label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder={hasPassword ? "新しいパスワードを入力" : "パスワードを設定"}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="新しいパスワードを入力"
                     className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   />
                 </div>
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1.5">
-                  {hasPassword ? "新しいパスワード（確認）" : "パスワード（確認）"}
+                  新しいパスワード（確認）
                 </label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -514,12 +494,15 @@ export default function AdminAccountPage() {
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                onClick={handleChangePassword}
+                onClick={() => {
+                  setNewPassword(currentPassword);
+                  handleChangePassword();
+                }}
                 disabled={passwordSaving || isNew}
                 className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {passwordSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {hasPassword ? "パスワードを変更" : "パスワードを設定"}
+                パスワードを変更
               </motion.button>
               {isNew && (
                 <p className="text-xs text-gray-400 text-center">
@@ -625,7 +608,7 @@ export default function AdminAccountPage() {
             className="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50"
           >
             <Check className="w-4 h-4" />
-            パスワードを{hasPassword ? "変更" : "設定"}しました
+            パスワードを変更しました
           </motion.div>
         )}
       </AnimatePresence>

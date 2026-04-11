@@ -5,8 +5,9 @@ import { supabase } from "@/lib/supabase"
 import { Product, ManagedProduct, toUIProduct, toUIManagedProduct } from "@/lib/types"
 
 interface UseProductsOptions {
-  storeId?: number
+  storeId?: string
   ecOnly?: boolean
+  publishedOnly?: boolean
   category?: string
 }
 
@@ -21,8 +22,8 @@ export function useProducts(options: UseProductsOptions = {}) {
     setError(null)
 
     let query = supabase
-      .from("product_registrations")
-      .select("*, product_types(product_type)")
+      .from("products")
+      .select("*, product_categories(name)")
 
     if (options.storeId) {
       query = query.eq("store_id", options.storeId)
@@ -30,20 +31,25 @@ export function useProducts(options: UseProductsOptions = {}) {
     if (options.ecOnly) {
       query = query.eq("is_ec", true)
     }
+    if (options.publishedOnly) {
+      query = query.eq("accept_orders", true)
+    }
 
-    const { data, error: err } = await query.order("id")
+    const { data, error: err } = await query
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true })
     if (err) {
       setError(err.message)
     } else {
       const rows = data || []
       setProducts(
         rows.map((row: any) =>
-          toUIProduct(row, row.product_types?.product_type)
+          toUIProduct(row, row.product_categories?.name || row.category)
         )
       )
       setManagedProducts(
         rows.map((row: any) =>
-          toUIManagedProduct(row, row.product_types?.product_type)
+          toUIManagedProduct(row, row.product_categories?.name || row.category)
         )
       )
     }
@@ -52,7 +58,7 @@ export function useProducts(options: UseProductsOptions = {}) {
 
   useEffect(() => {
     fetchProducts()
-  }, [options.storeId, options.ecOnly])
+  }, [options.storeId, options.ecOnly, options.publishedOnly])
 
   return { products, managedProducts, loading, error, refetch: fetchProducts }
 }
@@ -66,14 +72,14 @@ export function useProduct(id: string) {
     const fetch = async () => {
       setLoading(true)
       const { data, error: err } = await supabase
-        .from("product_registrations")
-        .select("*, product_types(product_type)")
-        .eq("id", parseInt(id))
+        .from("products")
+        .select("*, product_categories(name)")
+        .eq("id", id)
         .single()
       if (err) {
         setError(err.message)
       } else if (data) {
-        setProduct(toUIProduct(data, (data as any).product_types?.product_type))
+        setProduct(toUIProduct(data, (data as any).product_categories?.name || (data as any).category))
       }
       setLoading(false)
     }

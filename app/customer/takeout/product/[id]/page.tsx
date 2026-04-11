@@ -10,6 +10,7 @@ import { StepProgress } from "@/components/customer/step-progress";
 import { CartModal } from "@/components/customer/cart-modal";
 import type { CartItem } from "@/components/customer/cart-modal";
 import { useProduct } from "@/hooks/use-products";
+import { useCustomerContext } from "@/lib/customer-context";
 import { Product } from "@/lib/types";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
@@ -17,6 +18,7 @@ const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 export default function TakeoutProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { selectedStoreName } = useCustomerContext();
   const { product, loading } = useProduct(params.id as string);
   const [quantity, setQuantity] = useState(1);
   const [showQuantityDropdown, setShowQuantityDropdown] = useState(false);
@@ -68,11 +70,7 @@ export default function TakeoutProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader
-        shopName="Patisserie KANATA"
-        showCart
-        cartCount={totalCartItems}
-      />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} />
 
       <div className="px-4 pt-2">
         <Link

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowLeft, X } from "lucide-react";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
+import { useCustomerContext } from "@/lib/customer-context";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
@@ -23,6 +24,7 @@ type PointOption = "none" | "partial" | "all";
 
 export default function ECConfirmPage() {
   const router = useRouter();
+  const { selectedStoreName } = useCustomerContext();
   const [lastName, setLastName] = useState("カイ");
   const [firstName, setFirstName] = useState("ミサキ");
   const [phone, setPhone] = useState("09062501396");
@@ -62,11 +64,7 @@ export default function ECConfirmPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader
-        shopName="Patisserie KANATA"
-        points={availablePoints}
-        showCart={false}
-      />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} showCart />
 
       <div className="px-4 pt-2">
         <Link

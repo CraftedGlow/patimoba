@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { Customer, toUICustomer } from "@/lib/types"
 
 interface UseCustomersOptions {
-  storeId?: number
+  storeId?: string
 }
 
 export function useCustomers(options: UseCustomersOptions = {}) {
@@ -17,21 +17,37 @@ export function useCustomers(options: UseCustomersOptions = {}) {
     setLoading(true)
     setError(null)
 
-    let query = supabase
-      .from("users")
-      .select("*")
-      .eq("user_type", "customer")
-      .order("last_purchase_date", { ascending: false })
-
     if (options.storeId) {
-      query = query.eq("store_id", options.storeId)
-    }
+      const { data, error: err } = await supabase
+        .from("customer_store_relationships")
+        .select("*, customers(*)")
+        .eq("store_id", options.storeId)
+        .order("last_visit", { ascending: false, nullsFirst: false })
 
-    const { data, error: err } = await query
-    if (err) {
-      setError(err.message)
+      if (err) {
+        setError(err.message)
+      } else {
+        const mapped = (data || [])
+          .filter((row: any) => row.customers)
+          .map((row: any) =>
+            toUICustomer({
+              ...row.customers,
+              customer_store_relationships: [row],
+            })
+          )
+        setCustomers(mapped)
+      }
     } else {
-      setCustomers((data || []).map(toUICustomer))
+      const { data, error: err } = await supabase
+        .from("customers")
+        .select("*, customer_store_relationships(*)")
+        .order("created_at", { ascending: false })
+
+      if (err) {
+        setError(err.message)
+      } else {
+        setCustomers((data || []).map((row: any) => toUICustomer(row)))
+      }
     }
     setLoading(false)
   }

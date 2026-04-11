@@ -27,7 +27,7 @@ export default function StoreDashboardPage() {
   const { storeId } = useStoreContext();
   const { orders, loading: ordersLoading, refetch: refetchOrders } = useOrders({ storeId });
   const { stats, loading: statsLoading } = useDashboardStats(storeId);
-  const { updateOrderStatus } = useOrderMutations();
+  const { togglePrepared } = useOrderMutations();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -36,11 +36,11 @@ export default function StoreDashboardPage() {
 
   const dateStr = `${selectedDate.getFullYear()}年${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日(${dayNames[selectedDate.getDay()]})`;
 
-  const togglePrepared = async (id: string) => {
+  const handleTogglePrepared = async (id: string) => {
     const order = orders.find((o) => o.id === id);
     if (!order) return;
     const newPrepared = !order.isPrepared;
-    await updateOrderStatus(Number(id), newPrepared);
+    await togglePrepared(id, newPrepared);
     if (newPrepared) {
       setModalOrder({ ...order, isPrepared: newPrepared });
     }
@@ -158,7 +158,7 @@ export default function StoreDashboardPage() {
           >
             <div>
               <button
-                onClick={() => togglePrepared(order.id)}
+                onClick={() => handleTogglePrepared(order.id)}
                 className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
                   order.isPrepared
                     ? "bg-blue-500 border-blue-500"

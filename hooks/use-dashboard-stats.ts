@@ -9,7 +9,7 @@ interface DashboardStats {
   monthlySales: number
 }
 
-export function useDashboardStats(storeId?: number) {
+export function useDashboardStats(storeId?: string) {
   const [stats, setStats] = useState<DashboardStats>({
     todaySales: 0,
     todayOrders: 0,
@@ -30,13 +30,13 @@ export function useDashboardStats(storeId?: number) {
       let todayQuery = supabase
         .from("orders")
         .select("subtotal")
-        .gte("created_date", todayStart)
+        .gte("created_at", todayStart)
       if (storeId) todayQuery = todayQuery.eq("store_id", storeId)
 
       let monthQuery = supabase
         .from("orders")
         .select("subtotal")
-        .gte("created_date", monthStart)
+        .gte("created_at", monthStart)
       if (storeId) monthQuery = monthQuery.eq("store_id", storeId)
 
       const [todayResult, monthResult] = await Promise.all([todayQuery, monthQuery])

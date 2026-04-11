@@ -19,18 +19,18 @@ import {
 } from "lucide-react";
 import { fetchStores, deleteStore, type Store } from "@/lib/admin-api";
 
-const PLAN_LABELS: Record<number, string> = {
-  1: "ベーシック",
-  2: "スタンダード",
-  3: "プレミアム",
+const PLAN_LABELS: Record<string, string> = {
+  basic: "ベーシック",
+  standard: "スタンダード",
+  premium: "プレミアム",
 };
 
-function planLabel(plan: number | null) {
+function planLabel(plan: string | null) {
   if (!plan) return "ベーシック";
   return PLAN_LABELS[plan] ?? "ベーシック";
 }
 
-function PlanBadge({ plan }: { plan: number | null }) {
+function PlanBadge({ plan }: { plan: string | null }) {
   const label = planLabel(plan);
   const colors =
     label === "プレミアム"
@@ -57,15 +57,15 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
-function mrrFromPlan(plan: number | null) {
-  if (plan === 3) return 150000;
-  if (plan === 2) return 98000;
+function mrrFromPlan(plan: string | null) {
+  if (plan === "premium") return 150000;
+  if (plan === "standard") return 98000;
   return 58000;
 }
 
 type FilterState = {
   status: "all" | "active" | "risk";
-  plan: "all" | "1" | "2" | "3";
+  plan: "all" | "basic" | "standard" | "premium";
 };
 
 export default function AdminStoresPage() {
@@ -118,16 +118,16 @@ export default function AdminStoresPage() {
   };
 
   const handleMailClick = (store: Store) => {
-    if (store.mail) {
-      window.open(`mailto:${store.mail}`, "_blank");
+    if (store.email) {
+      window.open(`mailto:${store.email}`, "_blank");
     } else {
       showToast("メールアドレスが登録されていません");
     }
   };
 
   const handlePhoneClick = (store: Store) => {
-    if (store.phone_num) {
-      window.open(`tel:${store.phone_num}`, "_blank");
+    if (store.phone) {
+      window.open(`tel:${store.phone}`, "_blank");
     } else {
       showToast("電話番号が登録されていません");
     }
@@ -136,7 +136,7 @@ export default function AdminStoresPage() {
   const filteredStores = stores.filter((s) => {
     if (filter.status === "active" && s.notification === false) return false;
     if (filter.status === "risk" && s.notification !== false) return false;
-    if (filter.plan !== "all" && (s.plan ?? 1) !== Number(filter.plan)) return false;
+    if (filter.plan !== "all" && (s.plan ?? "standard") !== filter.plan) return false;
     return true;
   });
 
@@ -247,9 +247,9 @@ export default function AdminStoresPage() {
                     <div className="flex gap-2 flex-wrap">
                       {([
                         { val: "all", label: "すべて" },
-                        { val: "1", label: "ベーシック" },
-                        { val: "2", label: "スタンダード" },
-                        { val: "3", label: "プレミアム" },
+                        { val: "basic", label: "ベーシック" },
+                        { val: "standard", label: "スタンダード" },
+                        { val: "premium", label: "プレミアム" },
                       ] as const).map((opt) => (
                         <button
                           key={opt.val}
@@ -333,13 +333,13 @@ export default function AdminStoresPage() {
                       <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-4 items-start">
                         <div>
                           <p className="text-xs text-gray-500">オーナー</p>
-                          <p className="text-sm">{store.creater ?? "-"}</p>
+                          <p className="text-sm">{store.owner_name || store.created_by || "-"}</p>
                         </div>
                         <div className="flex items-start gap-1">
                           <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-xs text-gray-500">所在地</p>
-                            <p className="text-sm">{store.address_url ?? "-"}</p>
+                            <p className="text-sm">{store.address || store.address_url || "-"}</p>
                           </div>
                         </div>
                         <div>
@@ -348,26 +348,26 @@ export default function AdminStoresPage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">メール</p>
-                          <p className="text-sm">{store.mail ?? "-"}</p>
+                          <p className="text-sm">{store.email ?? "-"}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-                        <span>登録日: {store.created_date ? new Date(store.created_date).toLocaleDateString("ja-JP") : "-"}</span>
+                        <span>登録日: {store.created_at ? new Date(store.created_at).toLocaleDateString("ja-JP") : "-"}</span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-1 ml-4">
                       <button
                         onClick={() => handleMailClick(store)}
-                        title={store.mail ? `${store.mail} にメール` : "メール未登録"}
+                        title={store.email ? `${store.email} にメール` : "メール未登録"}
                         className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
                       >
                         <Mail className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
                       </button>
                       <button
                         onClick={() => handlePhoneClick(store)}
-                        title={store.phone_num ? `${store.phone_num} に電話` : "電話番号未登録"}
+                        title={store.phone ? `${store.phone} に電話` : "電話番号未登録"}
                         className="p-2 hover:bg-green-50 rounded-lg transition-colors group"
                       >
                         <Phone className="w-4 h-4 text-gray-400 group-hover:text-green-500" />

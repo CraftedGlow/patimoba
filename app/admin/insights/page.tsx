@@ -20,7 +20,7 @@ import {
 import {
   fetchOrders,
   fetchStores,
-  fetchLineItems,
+  fetchOrderItems,
   computeMRR,
   type Order,
   type Store,
@@ -54,7 +54,7 @@ const TIME_SLOTS = [
 function buildTimeDistribution(orders: Order[]) {
   const counts = TIME_SLOTS.map((s) => ({ time: s.label, orders: 0 }));
   for (const o of orders) {
-    const h = parseHour(o.created_date);
+    const h = parseHour(o.created_at);
     for (let i = 0; i < TIME_SLOTS.length; i++) {
       const slot = TIME_SLOTS[i];
       if (slot.min < slot.max) {
@@ -71,8 +71,8 @@ function buildDayOfWeekDistribution(orders: Order[]) {
   const days = ["日", "月", "火", "水", "木", "金", "土"];
   const counts = days.map((d) => ({ day: d, orders: 0 }));
   for (const o of orders) {
-    if (!o.created_date) continue;
-    const dow = new Date(o.created_date).getDay();
+    if (!o.created_at) continue;
+    const dow = new Date(o.created_at).getDay();
     counts[dow].orders++;
   }
   return counts;
@@ -97,7 +97,7 @@ export default function AdminInsightsPage() {
       const [o, s, li] = await Promise.all([
         fetchOrders(fromISO, toISO),
         fetchStores(),
-        fetchLineItems(fromISO, toISO),
+        fetchOrderItems(fromISO, toISO),
       ]);
       setOrders(o);
       setStores(s);
@@ -124,7 +124,7 @@ export default function AdminInsightsPage() {
 
   const dayData = buildDayOfWeekDistribution(orders);
 
-  const customOrders = orders.filter((o) => o.is_custom).length;
+  const customOrders = orders.filter((o) => o.order_type === "cake").length;
   const customPct = totalOrders > 0 ? Math.round((customOrders / totalOrders) * 100) : 0;
 
   const optionsPerOrder = totalOrders > 0 ? (lineItemCount / totalOrders).toFixed(1) : "0";

@@ -39,7 +39,7 @@ import {
   type Order,
 } from "@/lib/admin-api";
 
-function groupByMonth<T extends { created_date: string | null }>(
+function groupByMonth<T extends { created_at: string | null }>(
   items: T[],
   monthsBack: number
 ) {
@@ -55,8 +55,8 @@ function groupByMonth<T extends { created_date: string | null }>(
   }
 
   for (const item of items) {
-    if (!item.created_date) continue;
-    const d = new Date(item.created_date);
+    if (!item.created_at) continue;
+    const d = new Date(item.created_at);
     const diff =
       (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
     if (diff >= 0 && diff < monthsBack) {
@@ -126,14 +126,14 @@ export default function AdminDashboardPage() {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const riskCount = stores.filter((s) => {
-    if (!s.created_date) return false;
-    return new Date(s.created_date) < thirtyDaysAgo;
+    if (!s.created_at) return false;
+    return new Date(s.created_at) < thirtyDaysAgo;
   }).length;
-  const inactiveCount = stores.filter((s) => !s.created_date).length;
+  const inactiveCount = stores.filter((s) => !s.created_at).length;
 
   const thisMonthStores = stores.filter((s) => {
-    if (!s.created_date) return false;
-    const d = new Date(s.created_date);
+    if (!s.created_at) return false;
+    const d = new Date(s.created_at);
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
+import { useCustomerContext } from "@/lib/customer-context";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
@@ -44,6 +45,7 @@ const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
 
 export default function TakeoutPickupPage() {
   const router = useRouter();
+  const { selectedStoreName } = useCustomerContext();
   const days = getNextDays(14);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState("12:00");
@@ -83,11 +85,7 @@ export default function TakeoutPickupPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader
-        shopName="Patisserie KANATA"
-        showCart={true}
-        cartCount={1}
-      />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} />
 
       <div className="px-4 pt-2">
         <Link

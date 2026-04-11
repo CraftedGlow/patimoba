@@ -21,7 +21,7 @@ const historyStores: { id: string; name: string; logo: string; lastOrder: string
 
 export default function TakeoutStorePage() {
   const router = useRouter();
-  const { setSelectedStoreId, setSelectedStoreName } = useCustomerContext();
+  const { selectedStoreName, setSelectedStoreId, setSelectedStoreName } = useCustomerContext();
   const { stores, loading } = useStores();
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("店舗一覧");
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +33,7 @@ export default function TakeoutStorePage() {
 
   const handleStoreClick = (storeId: string, storeName: string) => {
     setSelectedStore({ id: storeId, name: storeName });
-    setSelectedStoreId(Number(storeId));
+    setSelectedStoreId(storeId);
     setSelectedStoreName(storeName);
   };
 
@@ -53,10 +53,7 @@ export default function TakeoutStorePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader
-        shopName="Patisserie KANATA"
-        avatarUrl="https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=80"
-      />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} />
       <StepProgress currentStep={1} steps={steps} />
 
       <div className="px-4">

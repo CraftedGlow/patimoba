@@ -1,13 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown } from "lucide-react";
+import { PatimobaInline } from "@/components/patimoba-logo";
 
-const faqs = [
+const faqs: { q: string; a: ReactNode }[] = [
   {
     q: "ITが苦手でも使えますか？",
-    a: "はい、問題ありません。初期設定（商品登録・予約設定・決済連携など）はすべてパティモバのスタッフが代行します。導入後の操作もシンプルな管理画面に絞っており、スマホからでも確認・管理できます。不明点はいつでもサポートに相談いただけます。",
+    a: (
+      <>
+        はい、問題ありません。初期設定（商品登録・予約設定・決済連携など）はすべて
+        <PatimobaInline />
+        のスタッフが代行します。導入後の操作もシンプルな管理画面に絞っており、スマホからでも確認・管理できます。不明点はいつでもサポートに相談いただけます。
+      </>
+    ),
   },
   {
     q: "本当に初期費用・月額費用が0円なのですか？",
@@ -15,7 +23,13 @@ const faqs = [
   },
   {
     q: "導入までどのくらいの時間がかかりますか？",
-    a: "最短2週間で受付を開始できます。商品登録・予約設定・決済連携などの初期設定はすべてパティモバが行います。",
+    a: (
+      <>
+        最短2週間で受付を開始できます。商品登録・予約設定・決済連携などの初期設定はすべて
+        <PatimobaInline />
+        が行います。
+      </>
+    ),
   },
   {
     q: "テイクアウト以外の商品（ホールケーキ予約・EC・イベント受付）も対応できますか？",
@@ -23,7 +37,13 @@ const faqs = [
   },
   {
     q: "すでに別の予約システムを使っています。乗り換えは難しいですか？",
-    a: "乗り換えもサポートしています。現在のシステムからのデータ移行や設定移行もパティモバが代行しますので、お気軽にご相談ください。",
+    a: (
+      <>
+        乗り換えもサポートしています。現在のシステムからのデータ移行や設定移行も
+        <PatimobaInline />
+        が代行しますので、お気軽にご相談ください。
+      </>
+    ),
   },
 ];
 
@@ -85,9 +105,9 @@ export function LpFaq() {
                     transition={{ duration: 0.2 }}
                   >
                     <div className="px-5 pb-4 pl-[52px]">
-                      <p className="text-sm text-gray-600 leading-relaxed">
+                      <div className="text-sm text-gray-600 leading-relaxed">
                         {faq.a}
-                      </p>
+                      </div>
                     </div>
                   </motion.div>
                 )}

@@ -1,116 +1,99 @@
 "use client";
 
-import {
-  weekdayLabels,
-  getDaysInMonth,
-  getFirstDayOfMonth,
-  dateKey,
-  isDefaultClosed,
-} from "./types";
-import type { DaySchedule } from "./types";
+import { motion } from "framer-motion";
+import { weekdayLabels, formatDateKey, isClosedByRule } from "./types";
+import type { DaySchedule, ClosedDayRule } from "./types";
 
 interface MonthViewProps {
   year: number;
   month: number;
   schedules: Record<string, DaySchedule>;
-  onDayClick: (year: number, month: number, day: number) => void;
+  onDayClick: (y: number, m: number, d: number) => void;
+  defaultOpenTime?: string;
+  closedDayRules?: ClosedDayRule[];
 }
 
-export function MonthView({ year, month, schedules, onDayClick }: MonthViewProps) {
-  const daysInMonth = getDaysInMonth(year, month);
-  const firstDay = getFirstDayOfMonth(year, month);
+export function MonthView({ year, month, schedules, onDayClick, defaultOpenTime = "10:00", closedDayRules = [] }: MonthViewProps) {
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const prevMonth = month === 0 ? 11 : month - 1;
-  const prevYear = month === 0 ? year - 1 : year;
-  const prevDaysInMonth = getDaysInMonth(prevYear, prevMonth);
+  const prevMonthDays = new Date(year, month, 0).getDate();
+  const nextMonthStart = 1;
 
-  const nextMonth = month === 11 ? 0 : month + 1;
-  const nextYear = month === 11 ? year + 1 : year;
+  const cells: Array<{ y: number; m: number; d: number; isCurrentMonth: boolean }> = [];
 
-  const cells: { day: number; inMonth: boolean; year: number; month: number }[] = [];
-
-  for (let i = 0; i < firstDay; i++) {
-    cells.push({
-      day: prevDaysInMonth - firstDay + 1 + i,
-      inMonth: false,
-      year: prevYear,
-      month: prevMonth,
-    });
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const pm = month === 0 ? 11 : month - 1;
+    const py = month === 0 ? year - 1 : year;
+    cells.push({ y: py, m: pm, d: prevMonthDays - i, isCurrentMonth: false });
   }
   for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, inMonth: true, year, month });
+    cells.push({ y: year, m: month, d, isCurrentMonth: true });
   }
-  const remaining = Math.ceil(cells.length / 7) * 7 - cells.length;
-  for (let i = 1; i <= remaining; i++) {
-    cells.push({ day: i, inMonth: false, year: nextYear, month: nextMonth });
+  const remaining = 7 - (cells.length % 7);
+  if (remaining < 7) {
+    for (let d = 0; d < remaining; d++) {
+      const nm = month === 11 ? 0 : month + 1;
+      const ny = month === 11 ? year + 1 : year;
+      cells.push({ y: ny, m: nm, d: nextMonthStart + d, isCurrentMonth: false });
+    }
   }
-
-  const today = new Date();
 
   return (
-    <div className="border border-gray-300 bg-white">
-      <div className="grid grid-cols-7">
-        {weekdayLabels.map((label) => (
+    <div className="border border-gray-300 rounded-lg overflow-hidden">
+      <div className="grid grid-cols-7 bg-gray-100 border-b border-gray-300">
+        {weekdayLabels.map((label, i) => (
           <div
             key={label}
-            className="text-center text-sm font-bold py-2 bg-gray-100 border-b border-gray-300 text-gray-600"
+            className={`text-center text-xs font-bold py-2 ${
+              i === 0 ? "text-red-500" : i === 6 ? "text-blue-500" : "text-gray-600"
+            }`}
           >
             {label}
           </div>
         ))}
       </div>
-
       <div className="grid grid-cols-7">
         {cells.map((cell, i) => {
-          const key = dateKey(cell.year, cell.month, cell.day);
+          const key = formatDateKey(cell.y, cell.m, cell.d);
           const schedule = schedules[key];
-          const isClosed = schedule
-            ? !schedule.isOpen
-            : isDefaultClosed(cell.year, cell.month, cell.day);
-          const openTime = schedule?.openTime || "10";
-          const isToday =
-            cell.inMonth &&
-            today.getFullYear() === cell.year &&
-            today.getMonth() === cell.month &&
-            today.getDate() === cell.day;
+          const closedByRule = isClosedByRule(closedDayRules, cell.y, cell.m, cell.d);
+          const isOpen = schedule ? schedule.isOpen : !closedByRule;
+          const dayOfWeek = new Date(cell.y, cell.m, cell.d).getDay();
+          const isSunday = dayOfWeek === 0;
 
           return (
-            <div
+            <motion.div
               key={i}
-              onClick={() => cell.inMonth && onDayClick(cell.year, cell.month, cell.day)}
-              className={`min-h-[80px] border-b border-r border-gray-200 p-1 relative cursor-pointer hover:bg-gray-50 transition-colors ${
-                !cell.inMonth ? "bg-gray-50" : ""
-              }`}
+              whileHover={{ backgroundColor: "#FFF9C4" }}
+              onClick={() => onDayClick(cell.y, cell.m, cell.d)}
+              className={`border-b border-r border-gray-200 min-h-[80px] p-1 cursor-pointer transition-colors ${
+                cell.isCurrentMonth ? "" : "opacity-40"
+              } ${isSunday && cell.isCurrentMonth ? "bg-amber-50/30" : ""}`}
             >
-              <div className="flex justify-end">
-                <span
-                  className={`text-xs px-1 ${
-                    !cell.inMonth
-                      ? "text-gray-300"
-                      : isToday
-                      ? "bg-amber-400 text-white rounded px-1.5 py-0.5 font-bold"
-                      : "text-gray-600"
-                  }`}
-                >
-                  {cell.day}日
-                </span>
+              <div className={`text-xs font-medium mb-1 ${
+                isSunday ? "text-red-500" : dayOfWeek === 6 ? "text-blue-500" : "text-gray-700"
+              }`}>
+                {cell.d}日
               </div>
-
-              {cell.inMonth && !isClosed && (
-                <div className="mt-1 mx-0.5">
-                  <div className="bg-[#5B8FA8] text-white text-[10px] rounded px-1 py-0.5 truncate">
-                    {openTime.replace(":00", "")}時 営業日
-                  </div>
+              {cell.isCurrentMonth && isOpen && (
+                <div className={`text-[10px] px-1 py-0.5 rounded ${
+                  schedule?.openTime
+                    ? "bg-red-500 text-white"
+                    : "bg-blue-400 text-white"
+                }`}>
+                  <span className="font-bold">
+                    {schedule?.openTime ? schedule.openTime.split(":")[0] : defaultOpenTime.split(":")[0]}時
+                  </span>{" "}
+                  営業日
                 </div>
               )}
-              {cell.inMonth && isClosed && (
-                <div className="mt-1 mx-0.5">
-                  <div className="bg-[#C9B97A] text-white text-[10px] rounded px-1 py-0.5 truncate opacity-60">
-                    3時 営業日
-                  </div>
+              {cell.isCurrentMonth && !isOpen && (
+                <div className="text-[10px] px-1 py-0.5 rounded bg-amber-400 text-white">
+                  休業日
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>

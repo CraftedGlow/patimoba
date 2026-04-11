@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useStoreContext } from "@/lib/store-context";
 
 interface MenuItem {
   label: string;
@@ -24,6 +26,7 @@ const menuItems: MenuItem[] = [
   { label: "商品管理", href: "/store/products" },
   { label: "商品登録", href: "/store/register" },
   { label: "営業日設定", href: "/store/business-days", hasNotification: true },
+  { label: "レポート", href: "/store/report" },
 ];
 
 const bottomItems = [
@@ -34,17 +37,30 @@ export function StoreSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
+  const { storeName, storeImage, storeLogo } = useStoreContext();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const logoSrc = storeLogo || storeImage;
 
   const handleLogout = () => {
     logout();
-    router.push("/store/login");
+    router.push("/");
   };
 
   return (
     <aside className="w-[180px] min-h-screen border-r border-gray-200 bg-white flex flex-col shrink-0">
-      <Link href="/" className="flex items-center gap-2 px-4 py-4">
-        <span className="text-sm font-bold text-amber-600">パティモバ</span>
+      <Link href="/store/dashboard" className="flex items-center justify-center px-4 py-4">
+        {logoSrc ? (
+          <Image
+            src={logoSrc}
+            alt={storeName || "店舗ロゴ"}
+            width={140}
+            height={48}
+            className="object-contain max-h-12 w-auto"
+            unoptimized
+          />
+        ) : (
+          <span className="text-sm font-bold text-amber-600">{storeName || "パティモバ"}</span>
+        )}
       </Link>
 
       <nav className="flex flex-col flex-1">

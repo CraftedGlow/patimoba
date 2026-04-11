@@ -16,7 +16,7 @@ export default function ECStorePage() {
   const { setSelectedStoreId, setSelectedStoreName } = useCustomerContext();
 
   const handleStoreClick = (store: Store) => {
-    setSelectedStoreId(Number(store.id));
+    setSelectedStoreId(store.id);
     setSelectedStoreName(store.name);
   };
 
@@ -30,7 +30,7 @@ export default function ECStorePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader shopName="パティモバ EC" />
+      <CustomerHeader shopName="パティモバ EC" showCart />
       <StepProgress currentStep={1} steps={ecSteps} />
 
       <div className="px-4 pb-8">

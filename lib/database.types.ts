@@ -12,1161 +12,1106 @@ export type Database = {
   }
   public: {
     Tables: {
-      anniversary_registrations: {
+      admin_users: {
         Row: {
-          aniv_date: string | null
-          created_date: string | null
-          creater: string | null
-          description: string | null
-          id: number
-          user_id: number | null
+          auth_user_id: string
+          company_name: string | null
+          created_at: string | null
+          department: string | null
+          email: string
+          id: string
+          name: string
+          notification_settings: Json | null
+          phone: string | null
+          updated_at: string | null
         }
         Insert: {
-          aniv_date?: string | null
-          created_date?: string | null
-          creater?: string | null
-          description?: string | null
-          id?: never
-          user_id?: number | null
+          auth_user_id: string
+          company_name?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          id?: string
+          name?: string
+          notification_settings?: Json | null
+          phone?: string | null
+          updated_at?: string | null
         }
         Update: {
-          aniv_date?: string | null
-          created_date?: string | null
-          creater?: string | null
-          description?: string | null
-          id?: never
-          user_id?: number | null
+          auth_user_id?: string
+          company_name?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          id?: string
+          name?: string
+          notification_settings?: Json | null
+          phone?: string | null
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_anniversary_registrations_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      business_day_settings: {
+      business_day_schedules: {
         Row: {
-          business_day: string | null
-          created_date: string | null
-          creater: string | null
-          custom_close_date: string | null
-          custom_open_date: string | null
-          id: number
-          is_open: boolean | null
-          store_id: number | null
+          close_time: string | null
+          created_at: string | null
+          created_by: string | null
+          date: string
+          id: string
+          is_open: boolean
+          open_time: string | null
+          store_id: string
+          updated_at: string | null
         }
         Insert: {
-          business_day?: string | null
-          created_date?: string | null
-          creater?: string | null
-          custom_close_date?: string | null
-          custom_open_date?: string | null
-          id?: never
-          is_open?: boolean | null
-          store_id?: number | null
+          close_time?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date: string
+          id?: string
+          is_open?: boolean
+          open_time?: string | null
+          store_id: string
+          updated_at?: string | null
         }
         Update: {
-          business_day?: string | null
-          created_date?: string | null
-          creater?: string | null
-          custom_close_date?: string | null
-          custom_open_date?: string | null
-          id?: never
-          is_open?: boolean | null
-          store_id?: number | null
+          close_time?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          id?: string
+          is_open?: boolean
+          open_time?: string | null
+          store_id?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_business_day_settings_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      coupon_lists: {
+      candle_options: {
         Row: {
-          created_date: string | null
-          creater: string | null
-          discount_price: number | null
-          id: number
-          name: string | null
-          store_id: number | null
+          created_at: string | null
+          id: string
+          name: string
+          price: number
+          sort_order: number | null
+          store_id: string
+          updated_at: string | null
         }
         Insert: {
-          created_date?: string | null
-          creater?: string | null
-          discount_price?: number | null
-          id?: never
-          name?: string | null
-          store_id?: number | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          price?: number
+          sort_order?: number | null
+          store_id: string
+          updated_at?: string | null
         }
         Update: {
-          created_date?: string | null
-          creater?: string | null
-          discount_price?: number | null
-          id?: never
-          name?: string | null
-          store_id?: number | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          price?: number
+          sort_order?: number | null
+          store_id?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_coupon_lists_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      customized_cake_candles: {
+      closed_day_rules: {
         Row: {
-          created_date: string | null
-          creater: string | null
-          id: number
-          price_per_candle: number | null
-          product_id: number | null
-          store_id: number | null
-          types_of_candles: string | null
+          created_at: string | null
+          day_of_week: number
+          id: string
+          rule: string
+          store_id: string
+          updated_at: string | null
         }
         Insert: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          price_per_candle?: number | null
-          product_id?: number | null
-          store_id?: number | null
-          types_of_candles?: string | null
+          created_at?: string | null
+          day_of_week: number
+          id?: string
+          rule?: string
+          store_id: string
+          updated_at?: string | null
         }
         Update: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          price_per_candle?: number | null
-          product_id?: number | null
-          store_id?: number | null
-          types_of_candles?: string | null
+          created_at?: string | null
+          day_of_week?: number
+          id?: string
+          rule?: string
+          store_id?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_customized_cake_candles_product_id"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "product_registrations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_customized_cake_candles_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      customized_cake_messages: {
+      coupons: {
         Row: {
-          created_date: string | null
-          creater: string | null
-          id: number
-          image: string | null
-          product_id: number | null
-          store_id: number | null
-          type: string | null
+          created_at: string | null
+          created_by: string | null
+          discount_price: number
+          id: string
+          name: string
+          store_id: string
+          updated_at: string | null
         }
         Insert: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          image?: string | null
-          product_id?: number | null
-          store_id?: number | null
-          type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          discount_price?: number
+          id?: string
+          name?: string
+          store_id: string
+          updated_at?: string | null
         }
         Update: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          image?: string | null
-          product_id?: number | null
-          store_id?: number | null
-          type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          discount_price?: number
+          id?: string
+          name?: string
+          store_id?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_customized_cake_messages_product_id"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "product_registrations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_customized_cake_messages_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      customized_cake_options: {
+      customer_anniversaries: {
         Row: {
-          add_option: string | null
-          add_option_flag: boolean | null
-          created_date: string | null
-          creater: string | null
-          id: number
-          image: string | null
-          multiple_add_allowed: boolean | null
-          option_name: string | null
-          option_price: number | null
-          product_id: number | null
-          store_id: number | null
+          created_at: string | null
+          customer_id: string
+          day: number
+          id: string
+          label: string
+          month: number
+          store_id: string
+          updated_at: string | null
         }
         Insert: {
-          add_option?: string | null
-          add_option_flag?: boolean | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          image?: string | null
-          multiple_add_allowed?: boolean | null
-          option_name?: string | null
-          option_price?: number | null
-          product_id?: number | null
-          store_id?: number | null
+          created_at?: string | null
+          customer_id: string
+          day: number
+          id?: string
+          label?: string
+          month: number
+          store_id: string
+          updated_at?: string | null
         }
         Update: {
-          add_option?: string | null
-          add_option_flag?: boolean | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          image?: string | null
-          multiple_add_allowed?: boolean | null
-          option_name?: string | null
-          option_price?: number | null
-          product_id?: number | null
-          store_id?: number | null
+          created_at?: string | null
+          customer_id?: string
+          day?: number
+          id?: string
+          label?: string
+          month?: number
+          store_id?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_customized_cake_options_product_id"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "product_registrations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_customized_cake_options_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      customized_cake_sizes: {
+      customer_coupons: {
         Row: {
-          cake_size: string | null
-          cake_type_id: number | null
-          created_date: string | null
-          creater: string | null
-          id: number
-          size_price: number | null
-          store_id: number | null
+          coupon_id: string
+          created_at: string | null
+          customer_id: string
+          id: string
+          quantity: number | null
+          updated_at: string | null
         }
         Insert: {
-          cake_size?: string | null
-          cake_type_id?: number | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          size_price?: number | null
-          store_id?: number | null
+          coupon_id: string
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          quantity?: number | null
+          updated_at?: string | null
         }
         Update: {
-          cake_size?: string | null
-          cake_type_id?: number | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          size_price?: number | null
-          store_id?: number | null
+          coupon_id?: string
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          quantity?: number | null
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_customized_cake_sizes_cake_type_id"
-            columns: ["cake_type_id"]
-            isOneToOne: false
-            referencedRelation: "product_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_customized_cake_sizes_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      delivery_addresses: {
+      customer_store_relationships: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          last_visit: string | null
+          points_balance: number | null
+          rank: string | null
+          store_id: string
+          store_note: string | null
+          total_orders: number | null
+          total_spent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          last_visit?: string | null
+          points_balance?: number | null
+          rank?: string | null
+          store_id: string
+          store_note?: string | null
+          total_orders?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          last_visit?: string | null
+          points_balance?: number | null
+          rank?: string | null
+          store_id?: string
+          store_note?: string | null
+          total_orders?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      customers: {
         Row: {
           address: string | null
+          allergies: string[] | null
+          auth_user_id: string | null
+          avatar: string | null
+          birth_day: number | null
+          birth_month: number | null
+          birth_year: number | null
           building: string | null
-          created_date: string | null
-          creater: string | null
-          first_name_kj: string | null
-          first_name_kn: string | null
-          id: number
-          last_name_kj: string | null
-          last_name_kn: string | null
-          order_id: number | null
-          phone_num: string | null
-          street_num: string | null
-          user_id: number | null
-          zip_code: string | null
-        }
-        Insert: {
-          address?: string | null
-          building?: string | null
-          created_date?: string | null
-          creater?: string | null
-          first_name_kj?: string | null
-          first_name_kn?: string | null
-          id?: never
-          last_name_kj?: string | null
-          last_name_kn?: string | null
-          order_id?: number | null
-          phone_num?: string | null
-          street_num?: string | null
-          user_id?: number | null
-          zip_code?: string | null
-        }
-        Update: {
-          address?: string | null
-          building?: string | null
-          created_date?: string | null
-          creater?: string | null
-          first_name_kj?: string | null
-          first_name_kn?: string | null
-          id?: never
-          last_name_kj?: string | null
-          last_name_kn?: string | null
-          order_id?: number | null
-          phone_num?: string | null
-          street_num?: string | null
-          user_id?: number | null
-          zip_code?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_delivery_addresses_order_id"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_delivery_addresses_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      line_items: {
-        Row: {
-          cake_type_id: number | null
           created_at: string | null
-          created_date: string | null
-          creater: string | null
-          id: number
-          modified_date: string | null
-          parent_order_id: number | null
-          quantity: number | null
-          store_id: number | null
-          total_amount: number | null
-          user_id: number | null
+          created_by: string | null
+          email: string | null
+          first_name: string | null
+          first_name_kn: string | null
+          gender: string | null
+          id: string
+          last_name: string | null
+          last_name_kn: string | null
+          line_name: string | null
+          line_user_id: string | null
+          phone: string | null
+          postal_code: string | null
+          store_note: string | null
+          updated_at: string | null
         }
         Insert: {
-          cake_type_id?: number | null
+          address?: string | null
+          allergies?: string[] | null
+          auth_user_id?: string | null
+          avatar?: string | null
+          birth_day?: number | null
+          birth_month?: number | null
+          birth_year?: number | null
+          building?: string | null
           created_at?: string | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          modified_date?: string | null
-          parent_order_id?: number | null
-          quantity?: number | null
-          store_id?: number | null
-          total_amount?: number | null
-          user_id?: number | null
+          created_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          first_name_kn?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          last_name_kn?: string | null
+          line_name?: string | null
+          line_user_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          store_note?: string | null
+          updated_at?: string | null
         }
         Update: {
-          cake_type_id?: number | null
+          address?: string | null
+          allergies?: string[] | null
+          auth_user_id?: string | null
+          avatar?: string | null
+          birth_day?: number | null
+          birth_month?: number | null
+          birth_year?: number | null
+          building?: string | null
           created_at?: string | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          modified_date?: string | null
-          parent_order_id?: number | null
-          quantity?: number | null
-          store_id?: number | null
-          total_amount?: number | null
-          user_id?: number | null
+          created_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          first_name_kn?: string | null
+          gender?: string | null
+          id?: string
+          last_name?: string | null
+          last_name_kn?: string | null
+          line_name?: string | null
+          line_user_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          store_note?: string | null
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_line_items_parent_order_id"
-            columns: ["parent_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_line_items_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_line_items_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lineitem_customized_cakes: {
-        Row: {
-          cake_size_id: number | null
-          cake_type_id: number | null
-          confirm: boolean | null
-          created_date: string | null
-          creater: string | null
-          id: number
-          message_plate: string | null
-          parent_order_id: number | null
-          print_cake_type_id: number | null
-          print_image: number | null
-          total_amount: number | null
-          user_id: number | null
-        }
-        Insert: {
-          cake_size_id?: number | null
-          cake_type_id?: number | null
-          confirm?: boolean | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          message_plate?: string | null
-          parent_order_id?: number | null
-          print_cake_type_id?: number | null
-          print_image?: number | null
-          total_amount?: number | null
-          user_id?: number | null
-        }
-        Update: {
-          cake_size_id?: number | null
-          cake_type_id?: number | null
-          confirm?: boolean | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          message_plate?: string | null
-          parent_order_id?: number | null
-          print_cake_type_id?: number | null
-          print_image?: number | null
-          total_amount?: number | null
-          user_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_lineitem_customized_cakes_cake_size_id"
-            columns: ["cake_size_id"]
-            isOneToOne: false
-            referencedRelation: "customized_cake_sizes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_cakes_cake_type_id"
-            columns: ["cake_type_id"]
-            isOneToOne: false
-            referencedRelation: "product_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_cakes_parent_order_id"
-            columns: ["parent_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_cakes_print_cake_type_id"
-            columns: ["print_cake_type_id"]
-            isOneToOne: false
-            referencedRelation: "product_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_cakes_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lineitem_customized_candles: {
-        Row: {
-          candle_count: number | null
-          candle_number: number | null
-          candle_price: number | null
-          candle_type_id: number | null
-          created_date: string | null
-          creater: string | null
-          id: number
-          parent_cake_id: number | null
-          parent_order_id: number | null
-        }
-        Insert: {
-          candle_count?: number | null
-          candle_number?: number | null
-          candle_price?: number | null
-          candle_type_id?: number | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          parent_cake_id?: number | null
-          parent_order_id?: number | null
-        }
-        Update: {
-          candle_count?: number | null
-          candle_number?: number | null
-          candle_price?: number | null
-          candle_type_id?: number | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          parent_cake_id?: number | null
-          parent_order_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_lineitem_customized_candles_candle_type_id"
-            columns: ["candle_type_id"]
-            isOneToOne: false
-            referencedRelation: "customized_cake_candles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_candles_parent_cake_id"
-            columns: ["parent_cake_id"]
-            isOneToOne: false
-            referencedRelation: "lineitem_customized_cakes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_candles_parent_order_id"
-            columns: ["parent_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lineitem_customized_options: {
-        Row: {
-          created_date: string | null
-          creater: string | null
-          id: number
-          message: string | null
-          option_price: number | null
-          option_type_id: number | null
-          parent_cake_id: number | null
-          parent_order_id: number | null
-        }
-        Insert: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          message?: string | null
-          option_price?: number | null
-          option_type_id?: number | null
-          parent_cake_id?: number | null
-          parent_order_id?: number | null
-        }
-        Update: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          message?: string | null
-          option_price?: number | null
-          option_type_id?: number | null
-          parent_cake_id?: number | null
-          parent_order_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_lineitem_customized_options_option_type_id"
-            columns: ["option_type_id"]
-            isOneToOne: false
-            referencedRelation: "customized_cake_options"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_options_parent_cake_id"
-            columns: ["parent_cake_id"]
-            isOneToOne: false
-            referencedRelation: "lineitem_customized_cakes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lineitem_customized_options_parent_order_id"
-            columns: ["parent_order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       order_customer_info: {
         Row: {
           address: string | null
           building: string | null
           card_id: string | null
-          created_date: string | null
-          creater: string | null
+          created_at: string | null
+          customer_id: string | null
+          email: string | null
           first_name_kj: string | null
           first_name_kn: string | null
-          id: number
+          id: string
           last_name_kj: string | null
           last_name_kn: string | null
-          mail: string | null
-          phone_num: string | null
-          street_num: string | null
-          user_id: number | null
-          zip_code: string | null
+          order_id: string | null
+          phone: string | null
+          postal_code: string | null
         }
         Insert: {
           address?: string | null
           building?: string | null
           card_id?: string | null
-          created_date?: string | null
-          creater?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
           first_name_kj?: string | null
           first_name_kn?: string | null
-          id?: never
+          id?: string
           last_name_kj?: string | null
           last_name_kn?: string | null
-          mail?: string | null
-          phone_num?: string | null
-          street_num?: string | null
-          user_id?: number | null
-          zip_code?: string | null
+          order_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
         }
         Update: {
           address?: string | null
           building?: string | null
           card_id?: string | null
-          created_date?: string | null
-          creater?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
           first_name_kj?: string | null
           first_name_kn?: string | null
-          id?: never
+          id?: string
           last_name_kj?: string | null
           last_name_kn?: string | null
-          mail?: string | null
-          phone_num?: string | null
-          street_num?: string | null
-          user_id?: number | null
-          zip_code?: string | null
+          order_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_order_customer_info_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      order_item_details: {
+        Row: {
+          allergy_note: string | null
+          candle_option_id: string | null
+          created_at: string | null
+          detail_type: string
+          id: string
+          label: string | null
+          message_text: string | null
+          order_item_id: string
+          price: number | null
+          quantity: number | null
+          updated_at: string | null
+          whole_cake_option_id: string | null
+          whole_cake_size_id: string | null
+        }
+        Insert: {
+          allergy_note?: string | null
+          candle_option_id?: string | null
+          created_at?: string | null
+          detail_type?: string
+          id?: string
+          label?: string | null
+          message_text?: string | null
+          order_item_id: string
+          price?: number | null
+          quantity?: number | null
+          updated_at?: string | null
+          whole_cake_option_id?: string | null
+          whole_cake_size_id?: string | null
+        }
+        Update: {
+          allergy_note?: string | null
+          candle_option_id?: string | null
+          created_at?: string | null
+          detail_type?: string
+          id?: string
+          label?: string | null
+          message_text?: string | null
+          order_item_id?: string
+          price?: number | null
+          quantity?: number | null
+          updated_at?: string | null
+          whole_cake_option_id?: string | null
+          whole_cake_size_id?: string | null
+        }
+        Relationships: []
+      }
+      order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          order_id: string
+          product_id: string | null
+          quantity: number
+          subtotal: number
+          unit_price: number
+          updated_at: string | null
+          whole_cake_product_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          order_id: string
+          product_id?: string | null
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+          updated_at?: string | null
+          whole_cake_product_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          order_id?: string
+          product_id?: string | null
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+          updated_at?: string | null
+          whole_cake_product_id?: string | null
+        }
+        Relationships: []
       }
       orders: {
         Row: {
           coupon_amount: number | null
-          created_date: string | null
-          creater: string | null
-          delivery_address_id: number | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string | null
+          customer_name: string | null
+          delivery_address_id: string | null
           delivery_preference: boolean | null
-          id: number
-          is_custom: boolean | null
-          is_web: boolean | null
+          id: string
+          is_prepared: boolean | null
+          line_name: string | null
           notes: string | null
           order_completed_at: string | null
           order_confirmed: boolean | null
-          order_details_id: number | null
+          order_date: string | null
+          order_type: string
           payment_method: string | null
-          pickup_time: string | null
+          payment_status: string | null
+          phone: string | null
+          pickup_date: string | null
+          pickup_time_slot: string | null
+          points_earned: number | null
+          points_used: number | null
           preparing: boolean | null
           same_day: boolean | null
+          shipping_address: string | null
+          shipping_included: boolean | null
           status: string | null
-          store_id: number | null
+          store_id: string
           subtotal: number | null
-          used_points: number | null
-          user_id: number | null
-          visit_date_time: string | null
+          total: number | null
+          updated_at: string | null
+          visit_time: string | null
         }
         Insert: {
           coupon_amount?: number | null
-          created_date?: string | null
-          creater?: string | null
-          delivery_address_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          delivery_address_id?: string | null
           delivery_preference?: boolean | null
-          id?: never
-          is_custom?: boolean | null
-          is_web?: boolean | null
+          id?: string
+          is_prepared?: boolean | null
+          line_name?: string | null
           notes?: string | null
           order_completed_at?: string | null
           order_confirmed?: boolean | null
-          order_details_id?: number | null
+          order_date?: string | null
+          order_type?: string
           payment_method?: string | null
-          pickup_time?: string | null
+          payment_status?: string | null
+          phone?: string | null
+          pickup_date?: string | null
+          pickup_time_slot?: string | null
+          points_earned?: number | null
+          points_used?: number | null
           preparing?: boolean | null
           same_day?: boolean | null
+          shipping_address?: string | null
+          shipping_included?: boolean | null
           status?: string | null
-          store_id?: number | null
+          store_id: string
           subtotal?: number | null
-          used_points?: number | null
-          user_id?: number | null
-          visit_date_time?: string | null
+          total?: number | null
+          updated_at?: string | null
+          visit_time?: string | null
         }
         Update: {
           coupon_amount?: number | null
-          created_date?: string | null
-          creater?: string | null
-          delivery_address_id?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          delivery_address_id?: string | null
           delivery_preference?: boolean | null
-          id?: never
-          is_custom?: boolean | null
-          is_web?: boolean | null
+          id?: string
+          is_prepared?: boolean | null
+          line_name?: string | null
           notes?: string | null
           order_completed_at?: string | null
           order_confirmed?: boolean | null
-          order_details_id?: number | null
+          order_date?: string | null
+          order_type?: string
           payment_method?: string | null
-          pickup_time?: string | null
+          payment_status?: string | null
+          phone?: string | null
+          pickup_date?: string | null
+          pickup_time_slot?: string | null
+          points_earned?: number | null
+          points_used?: number | null
           preparing?: boolean | null
           same_day?: boolean | null
+          shipping_address?: string | null
+          shipping_included?: boolean | null
           status?: string | null
-          store_id?: number | null
+          store_id?: string
           subtotal?: number | null
-          used_points?: number | null
-          user_id?: number | null
-          visit_date_time?: string | null
+          total?: number | null
+          updated_at?: string | null
+          visit_time?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_orders_delivery_address_id"
-            columns: ["delivery_address_id"]
-            isOneToOne: false
-            referencedRelation: "delivery_addresses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_orders_order_details_id"
-            columns: ["order_details_id"]
-            isOneToOne: false
-            referencedRelation: "order_customer_info"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_orders_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_orders_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      owned_coupon_lists: {
+      point_transactions: {
         Row: {
-          coupon_type_id: number | null
-          created_date: string | null
-          creater: string | null
-          id: number
-          num: number | null
-          user_id: number | null
-        }
-        Insert: {
-          coupon_type_id?: number | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          num?: number | null
-          user_id?: number | null
-        }
-        Update: {
-          coupon_type_id?: number | null
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          num?: number | null
-          user_id?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_owned_coupon_lists_coupon_type_id"
-            columns: ["coupon_type_id"]
-            isOneToOne: false
-            referencedRelation: "coupon_lists"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_owned_coupon_lists_user_id"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      product_registrations: {
-        Row: {
-          always_available: boolean | null
-          created_date: string | null
-          creater: string | null
-          cur_same_day: boolean | null
-          decoration: boolean | null
-          descriprion: string | null
+          amount: number
+          balance_after: number
+          created_at: string | null
+          customer_id: string
           description: string | null
-          expiration_days: number | null
-          id: number
-          image: string | null
-          ingredients: string | null
-          is_ec: boolean | null
-          max_per_day: number | null
-          max_per_order: number | null
-          name: string | null
-          order_end_date: string | null
-          order_start_date: string | null
-          preparation_days: number | null
-          price: number | null
-          product_type_id: number | null
-          shipping_type: string | null
-          storage_type: string | null
-          store_id: number | null
-          whole_size: number[] | null
+          id: string
+          order_id: string | null
+          store_id: string
+          type: string
         }
         Insert: {
-          always_available?: boolean | null
-          created_date?: string | null
-          creater?: string | null
-          cur_same_day?: boolean | null
-          decoration?: boolean | null
-          descriprion?: string | null
+          amount?: number
+          balance_after?: number
+          created_at?: string | null
+          customer_id: string
           description?: string | null
-          expiration_days?: number | null
-          id?: never
-          image?: string | null
-          ingredients?: string | null
-          is_ec?: boolean | null
-          max_per_day?: number | null
-          max_per_order?: number | null
-          name?: string | null
-          order_end_date?: string | null
-          order_start_date?: string | null
-          preparation_days?: number | null
-          price?: number | null
-          product_type_id?: number | null
-          shipping_type?: string | null
-          storage_type?: string | null
-          store_id?: number | null
-          whole_size?: number[] | null
+          id?: string
+          order_id?: string | null
+          store_id: string
+          type?: string
         }
         Update: {
-          always_available?: boolean | null
-          created_date?: string | null
-          creater?: string | null
-          cur_same_day?: boolean | null
-          decoration?: boolean | null
-          descriprion?: string | null
+          amount?: number
+          balance_after?: number
+          created_at?: string | null
+          customer_id?: string
           description?: string | null
-          expiration_days?: number | null
-          id?: never
-          image?: string | null
-          ingredients?: string | null
-          is_ec?: boolean | null
-          max_per_day?: number | null
-          max_per_order?: number | null
-          name?: string | null
-          order_end_date?: string | null
-          order_start_date?: string | null
-          preparation_days?: number | null
-          price?: number | null
-          product_type_id?: number | null
-          shipping_type?: string | null
-          storage_type?: string | null
-          store_id?: number | null
-          whole_size?: number[] | null
+          id?: string
+          order_id?: string | null
+          store_id?: string
+          type?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_product_registrations_product_type_id"
-            columns: ["product_type_id"]
-            isOneToOne: false
-            referencedRelation: "product_types"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_product_registrations_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      product_categories: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       product_types: {
         Row: {
-          created_date: string | null
-          creater: string | null
-          id: number
-          product_type: string | null
+          created_at: string | null
+          id: string
+          product_type: string
           type_code: number | null
+          updated_at: string | null
         }
         Insert: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          product_type?: string | null
+          created_at?: string | null
+          id?: string
+          product_type?: string
           type_code?: number | null
+          updated_at?: string | null
         }
         Update: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
-          product_type?: string | null
+          created_at?: string | null
+          id?: string
+          product_type?: string
           type_code?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          accept_orders: boolean | null
+          always_available: boolean | null
+          category: string | null
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          decoration: boolean | null
+          description: string | null
+          expiration_days: number | null
+          id: string
+          image: string | null
+          ingredients: string | null
+          is_ec: boolean | null
+          is_limited: boolean | null
+          limited_until: string | null
+          max_per_day: number | null
+          max_per_order: number | null
+          name: string
+          order_end_date: string | null
+          order_start_date: string | null
+          prep_days: number | null
+          price: number
+          shipping_type: string | null
+          sort_order: number | null
+          storage_type: string | null
+          store_id: string
+          today_available: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          accept_orders?: boolean | null
+          always_available?: boolean | null
+          category?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          decoration?: boolean | null
+          description?: string | null
+          expiration_days?: number | null
+          id?: string
+          image?: string | null
+          ingredients?: string | null
+          is_ec?: boolean | null
+          is_limited?: boolean | null
+          limited_until?: string | null
+          max_per_day?: number | null
+          max_per_order?: number | null
+          name?: string
+          order_end_date?: string | null
+          order_start_date?: string | null
+          prep_days?: number | null
+          price?: number
+          shipping_type?: string | null
+          sort_order?: number | null
+          storage_type?: string | null
+          store_id: string
+          today_available?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          accept_orders?: boolean | null
+          always_available?: boolean | null
+          category?: string | null
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          decoration?: boolean | null
+          description?: string | null
+          expiration_days?: number | null
+          id?: string
+          image?: string | null
+          ingredients?: string | null
+          is_ec?: boolean | null
+          is_limited?: boolean | null
+          limited_until?: string | null
+          max_per_day?: number | null
+          max_per_order?: number | null
+          name?: string
+          order_end_date?: string | null
+          order_start_date?: string | null
+          prep_days?: number | null
+          price?: number
+          shipping_type?: string | null
+          sort_order?: number | null
+          storage_type?: string | null
+          store_id?: string
+          today_available?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shipping_addresses: {
+        Row: {
+          address: string | null
+          building: string | null
+          city: string | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          is_default: boolean | null
+          postal_code: string | null
+          prefecture: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          building?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          is_default?: boolean | null
+          postal_code?: string | null
+          prefecture?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          building?: string | null
+          city?: string | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          is_default?: boolean | null
+          postal_code?: string | null
+          prefecture?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
       shipping_fees: {
         Row: {
-          created_date: string | null
-          creater: string | null
-          id: number
+          created_at: string | null
+          id: string
           max_distance: number | null
           min_distance: number | null
-          price: number | null
+          price: number
+          store_id: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
+          created_at?: string | null
+          id?: string
           max_distance?: number | null
           min_distance?: number | null
-          price?: number | null
+          price?: number
+          store_id?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_date?: string | null
-          creater?: string | null
-          id?: never
+          created_at?: string | null
+          id?: string
           max_distance?: number | null
           min_distance?: number | null
-          price?: number | null
+          price?: number
+          store_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      store_users: {
+        Row: {
+          auth_user_id: string
+          created_at: string | null
+          email: string
+          id: string
+          role: string | null
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          auth_user_id: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          role?: string | null
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string
+          created_at?: string | null
+          email?: string
+          id?: string
+          role?: string | null
+          store_id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       stores: {
         Row: {
+          address: string | null
           address_url: string | null
-          created_date: string | null
-          creater: string | null
-          default_close_time: string | null
-          default_open_time: string | null
+          city: string | null
+          close_time: string | null
+          closed_days: string[] | null
+          created_at: string | null
+          created_by: string | null
           delivery: boolean | null
           ec: boolean | null
-          id: number
+          email: string | null
+          id: string
           image: string | null
-          logo: string | null
-          mail: string | null
+          join_date: string | null
+          last_login: string | null
+          line_official_account_id: string | null
+          logo_url: string | null
           max_per_day: number | null
           max_per_order: number | null
-          name: string | null
+          mrr: number | null
+          name: string
           notification: boolean | null
-          phone_num: string | null
-          plan: number | null
+          open_time: string | null
+          owner_name: string | null
+          phone: string | null
+          plan: string | null
+          postal_code: string | null
+          prefecture: string | null
           specified_commercial_transaction: string | null
-          tenant_id: string | null
+          status: string | null
+          updated_at: string | null
         }
         Insert: {
+          address?: string | null
           address_url?: string | null
-          created_date?: string | null
-          creater?: string | null
-          default_close_time?: string | null
-          default_open_time?: string | null
+          city?: string | null
+          close_time?: string | null
+          closed_days?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
           delivery?: boolean | null
           ec?: boolean | null
-          id?: never
+          email?: string | null
+          id?: string
           image?: string | null
-          logo?: string | null
-          mail?: string | null
+          join_date?: string | null
+          last_login?: string | null
+          line_official_account_id?: string | null
+          logo_url?: string | null
           max_per_day?: number | null
           max_per_order?: number | null
-          name?: string | null
+          mrr?: number | null
+          name?: string
           notification?: boolean | null
-          phone_num?: string | null
-          plan?: number | null
+          open_time?: string | null
+          owner_name?: string | null
+          phone?: string | null
+          plan?: string | null
+          postal_code?: string | null
+          prefecture?: string | null
           specified_commercial_transaction?: string | null
-          tenant_id?: string | null
+          status?: string | null
+          updated_at?: string | null
         }
         Update: {
+          address?: string | null
           address_url?: string | null
-          created_date?: string | null
-          creater?: string | null
-          default_close_time?: string | null
-          default_open_time?: string | null
+          city?: string | null
+          close_time?: string | null
+          closed_days?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
           delivery?: boolean | null
           ec?: boolean | null
-          id?: never
+          email?: string | null
+          id?: string
           image?: string | null
-          logo?: string | null
-          mail?: string | null
+          join_date?: string | null
+          last_login?: string | null
+          line_official_account_id?: string | null
+          logo_url?: string | null
           max_per_day?: number | null
           max_per_order?: number | null
-          name?: string | null
+          mrr?: number | null
+          name?: string
           notification?: boolean | null
-          phone_num?: string | null
-          plan?: number | null
+          open_time?: string | null
+          owner_name?: string | null
+          phone?: string | null
+          plan?: string | null
+          postal_code?: string | null
+          prefecture?: string | null
           specified_commercial_transaction?: string | null
-          tenant_id?: string | null
+          status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
-      users: {
+      subscriptions: {
         Row: {
-          address: string | null
-          allergies: string[] | null
-          birthday: string | null
-          building: string | null
-          card_id: string | null
+          cancelled_at: string | null
           created_at: string | null
-          created_date: string | null
-          creater: string | null
-          creater_alt: string | null
-          first_name_kn: string | null
-          gender: string | null
-          id: number
-          is_locked: boolean | null
-          last_name_kn: string | null
-          last_purchase_date: string | null
-          line_name: string | null
-          line_user_id: string | null
-          login_num: string | null
-          password: string | null
-          phone_num: string | null
-          points: number | null
-          rank: string | null
-          selected_store_id: number | null
-          store_id: number | null
-          street_num: string | null
-          total_purchase_amount: number | null
-          user_type: string | null
-          zip_code: string | null
+          id: string
+          monthly_price: number
+          plan: string
+          started_at: string | null
+          status: string | null
+          store_id: string
+          updated_at: string | null
         }
         Insert: {
-          address?: string | null
-          allergies?: string[] | null
-          birthday?: string | null
-          building?: string | null
-          card_id?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
-          created_date?: string | null
-          creater?: string | null
-          creater_alt?: string | null
-          first_name_kn?: string | null
-          gender?: string | null
-          id?: never
-          is_locked?: boolean | null
-          last_name_kn?: string | null
-          last_purchase_date?: string | null
-          line_name?: string | null
-          line_user_id?: string | null
-          login_num?: string | null
-          password?: string | null
-          phone_num?: string | null
-          points?: number | null
-          rank?: string | null
-          selected_store_id?: number | null
-          store_id?: number | null
-          street_num?: string | null
-          total_purchase_amount?: number | null
-          user_type?: string | null
-          zip_code?: string | null
+          id?: string
+          monthly_price?: number
+          plan?: string
+          started_at?: string | null
+          status?: string | null
+          store_id: string
+          updated_at?: string | null
         }
         Update: {
-          address?: string | null
-          allergies?: string[] | null
-          birthday?: string | null
-          building?: string | null
-          card_id?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
-          created_date?: string | null
-          creater?: string | null
-          creater_alt?: string | null
-          first_name_kn?: string | null
-          gender?: string | null
-          id?: never
-          is_locked?: boolean | null
-          last_name_kn?: string | null
-          last_purchase_date?: string | null
-          line_name?: string | null
-          line_user_id?: string | null
-          login_num?: string | null
-          password?: string | null
-          phone_num?: string | null
-          points?: number | null
-          rank?: string | null
-          selected_store_id?: number | null
-          store_id?: number | null
-          street_num?: string | null
-          total_purchase_amount?: number | null
-          user_type?: string | null
-          zip_code?: string | null
+          id?: string
+          monthly_price?: number
+          plan?: string
+          started_at?: string | null
+          status?: string | null
+          store_id?: string
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_users_selected_store_id"
-            columns: ["selected_store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_users_store_id"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      whole_cake_options: {
+        Row: {
+          created_at: string | null
+          id: string
+          image: string | null
+          multiple_allowed: boolean | null
+          name: string
+          price: number
+          sort_order: number | null
+          updated_at: string | null
+          whole_cake_product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image?: string | null
+          multiple_allowed?: boolean | null
+          name?: string
+          price?: number
+          sort_order?: number | null
+          updated_at?: string | null
+          whole_cake_product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image?: string | null
+          multiple_allowed?: boolean | null
+          name?: string
+          price?: number
+          sort_order?: number | null
+          updated_at?: string | null
+          whole_cake_product_id?: string
+        }
+        Relationships: []
+      }
+      whole_cake_products: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          image: string | null
+          name: string
+          sort_order: number | null
+          store_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          image?: string | null
+          name?: string
+          sort_order?: number | null
+          store_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          image?: string | null
+          name?: string
+          sort_order?: number | null
+          store_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      whole_cake_sizes: {
+        Row: {
+          created_at: string | null
+          id: string
+          label: string
+          price: number
+          servings: string | null
+          sort_order: number | null
+          updated_at: string | null
+          whole_cake_product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label?: string
+          price?: number
+          servings?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+          whole_cake_product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label?: string
+          price?: number
+          servings?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+          whole_cake_product_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

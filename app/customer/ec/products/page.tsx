@@ -15,7 +15,7 @@ import { Product } from "@/lib/types";
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
 export default function ECProductsPage() {
-  const { selectedStoreId } = useCustomerContext();
+  const { selectedStoreId, selectedStoreName } = useCustomerContext();
   const { products, loading: productsLoading } = useProducts({ storeId: selectedStoreId ?? undefined, ecOnly: true });
   const { categories, loading: categoriesLoading } = useProductTypes();
   const [selectedCategory, setSelectedCategory] = useState("すべて");
@@ -38,7 +38,7 @@ export default function ECProductsPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader shopName="Patisserie KANATA" />
+      <CustomerHeader shopName={selectedStoreName || "パティモバ"} showCart />
 
       <div className="px-4 pt-2">
         <Link

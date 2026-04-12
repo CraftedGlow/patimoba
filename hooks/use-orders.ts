@@ -12,7 +12,6 @@ interface UseOrdersOptions {
   date?: string
   from?: string
   to?: string
-  unpreparedOnly?: boolean
   orderType?: string
 }
 
@@ -29,8 +28,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
       .from("orders")
       .select(`
         *,
-        customers(id, line_name, last_name_kn, first_name_kn, phone, gender),
-        order_items(id, name, quantity, unit_price, subtotal, product_id)
+        users(id, name, line_name, phone, email),
+        order_items(id, product_name_snapshot, quantity, unit_price, subtotal, product_id)
       `)
       .order("created_at", { ascending: false })
 
@@ -42,16 +41,13 @@ export function useOrders(options: UseOrdersOptions = {}) {
     }
     if (options.status) {
       if (Array.isArray(options.status)) {
-        query = query.in("status", options.status)
+        query = query.in("order_status", options.status)
       } else {
-        query = query.eq("status", options.status)
+        query = query.eq("order_status", options.status)
       }
     }
     if (options.excludeStatus && options.excludeStatus.length > 0) {
-      query = query.not("status", "in", `(${options.excludeStatus.join(",")})`)
-    }
-    if (options.unpreparedOnly) {
-      query = query.or("is_prepared.is.null,is_prepared.eq.false")
+      query = query.not("order_status", "in", `(${options.excludeStatus.join(",")})`)
     }
     if (options.orderType) {
       query = query.eq("order_type", options.orderType)
@@ -86,7 +82,6 @@ export function useOrders(options: UseOrdersOptions = {}) {
     options.to,
     Array.isArray(options.status) ? options.status.join(",") : options.status,
     options.excludeStatus?.join(","),
-    options.unpreparedOnly,
     options.orderType,
   ])
 

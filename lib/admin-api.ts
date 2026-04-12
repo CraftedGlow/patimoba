@@ -6,11 +6,11 @@ type StoreInsert = Database["public"]["Tables"]["stores"]["Insert"];
 type StoreUpdate = Database["public"]["Tables"]["stores"]["Update"];
 type OrderRow = Database["public"]["Tables"]["orders"]["Row"];
 type OrderItemRow = Database["public"]["Tables"]["order_items"]["Row"];
-type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
+type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
 export type Store = StoreRow;
 export type Order = OrderRow;
-export type Customer = CustomerRow;
+export type Customer = UserRow;
 
 export async function fetchStores(search?: string) {
   let query = supabase.from("stores").select("*").order("created_at", { ascending: false });
@@ -82,39 +82,6 @@ export async function fetchOrderCount() {
   return count ?? 0;
 }
 
-export type StorePlan = "basic" | "standard" | "premium";
-
-export function mrrFromPlan(plan: string | null): number {
-  if (plan === "premium") return 150000;
-  if (plan === "standard") return 98000;
-  return 58000;
-}
-
-export function computeMRR(stores: Store[]): number {
-  return stores.reduce((sum, s) => sum + mrrFromPlan(s.plan), 0);
-}
-
-export function computePlanBreakdown(stores: Store[]) {
-  const plans: { plan: StorePlan; name: string; color: string }[] = [
-    { plan: "basic", name: "ベーシック", color: "#F59E0B" },
-    { plan: "standard", name: "スタンダード", color: "#FDE68A" },
-    { plan: "premium", name: "プレミアム", color: "#D97706" },
-  ];
-  const totalMRR = computeMRR(stores);
-  return plans.map((p) => {
-    const filtered = stores.filter((s) => (s.plan ?? "standard") === p.plan);
-    const amount = filtered.reduce((sum, s) => sum + mrrFromPlan(s.plan), 0);
-    const pct = totalMRR > 0 ? Math.round((amount / totalMRR) * 100) : 0;
-    return {
-      name: p.name,
-      value: pct,
-      amount: Math.round(amount / 10000),
-      stores: filtered.length,
-      color: p.color,
-    };
-  });
-}
-
 export async function fetchOrders(from?: string, to?: string) {
   let query = supabase
     .from("orders")
@@ -145,8 +112,9 @@ export async function fetchOrderItems(from?: string, to?: string) {
 
 export async function fetchCustomers() {
   const { data, error } = await supabase
-    .from("customers")
+    .from("users")
     .select("*")
+    .eq("user_type", "customer")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data as Customer[];
@@ -187,39 +155,33 @@ function indexToDayName(i: number): DayName | null {
 }
 
 export async function saveClosedDays(storeId: string, closedDays: string[]) {
+  // store_business_hours テーブルで曜日別の定休日を管理
+  // まず既存の曜日設定を削除
   const { error: delErr } = await supabase
-    .from("closed_day_rules")
+    .from("store_business_hours")
     .delete()
     .eq("store_id", storeId);
   if (delErr) throw delErr;
 
-  if (closedDays.length === 0) return;
-
-  const rows = closedDays
-    .map((day) => {
-      const idx = dayNameToIndex(day);
-      if (idx < 0) return null;
-      return {
-        store_id: storeId,
-        day_of_week: idx,
-        rule: "weekly",
-      };
-    })
-    .filter((r): r is { store_id: string; day_of_week: number; rule: string } => r !== null);
-
-  if (rows.length === 0) return;
+  // 全曜日分のレコードを作成（定休日フラグ付き）
+  const rows = Array.from({ length: 7 }, (_, i) => ({
+    store_id: storeId,
+    day_of_week: i,
+    is_closed: closedDays.some((day) => dayNameToIndex(day) === i),
+  }));
 
   const { error: insErr } = await supabase
-    .from("closed_day_rules")
+    .from("store_business_hours")
     .insert(rows);
   if (insErr) throw insErr;
 }
 
 export async function fetchClosedDays(storeId: string): Promise<string[]> {
   const { data, error } = await supabase
-    .from("closed_day_rules")
-    .select("day_of_week")
-    .eq("store_id", storeId);
+    .from("store_business_hours")
+    .select("day_of_week, is_closed")
+    .eq("store_id", storeId)
+    .eq("is_closed", true);
   if (error) throw error;
   const result: string[] = [];
   for (const r of data ?? []) {
@@ -229,12 +191,22 @@ export async function fetchClosedDays(storeId: string): Promise<string[]> {
   return result;
 }
 
-export async function fetchBusinessDaySchedules(storeId: string) {
+export async function fetchBusinessHours(storeId: string) {
   const { data, error } = await supabase
-    .from("business_day_schedules")
+    .from("store_business_hours")
     .select("*")
     .eq("store_id", storeId)
-    .order("date", { ascending: true });
+    .order("day_of_week", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export async function fetchSpecialDates(storeId: string) {
+  const { data, error } = await supabase
+    .from("store_special_dates")
+    .select("*")
+    .eq("store_id", storeId)
+    .order("target_date", { ascending: true });
   if (error) throw error;
   return data;
 }

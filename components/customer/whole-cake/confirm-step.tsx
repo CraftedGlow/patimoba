@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { WholeCakeProduct, WholeCakeSize, CandleOption } from "@/lib/types";
+import type { WholeCakeProduct, WholeCakeSize } from "@/lib/types";
+import type { CandleOption } from "@/hooks/use-whole-cakes";
 import type { CandleEntry } from "./basic-step";
 
 interface ConfirmStepProps {
@@ -31,9 +32,8 @@ export function WholeCakeConfirmStep({
   onAddToCart,
   onProceedToDateTime,
 }: ConfirmStepProps) {
-  const selectedOptions = cake.options.filter((o) =>
-    selectedOptionIds.includes(o.id)
-  );
+  const selectedOptions: { id: string; name: string; price: number }[] = [];
+  void selectedOptionIds;
 
   const validCandles = candles.filter(
     (c) => c.candleOptionId && Number(c.quantity) > 0
@@ -58,7 +58,7 @@ export function WholeCakeConfirmStep({
             <div>
               <span className="text-sm font-bold">サイズ：</span>
               <span className="text-sm">
-                {selectedSize.label}（{selectedSize.servings}）
+                {selectedSize.name}
               </span>
             </div>
             <span className="text-sm">

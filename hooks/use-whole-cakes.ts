@@ -2,54 +2,58 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { CANDLE_OPTIONS } from "@/lib/constants/product-master"
 import {
   WholeCakeProduct,
-  CandleOption,
-  toUICandleOption,
   toUIWholeCakeSize,
-  toUIWholeCakeOption,
 } from "@/lib/types"
+
+export interface CandleOption {
+  id: string
+  name: string
+  price: number
+  storeId: string
+}
 
 export function useWholeCakes(storeId?: string) {
   const [wholeCakes, setWholeCakes] = useState<WholeCakeProduct[]>([])
-  const [candleOptions, setCandleOptions] = useState<CandleOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // ろうそくは定数から取得
+  const candleOptions: CandleOption[] = CANDLE_OPTIONS.map((c) => ({
+    id: c.id,
+    name: c.name,
+    price: c.price,
+    storeId: storeId ?? "",
+  }))
 
   const fetchWholeCakes = async () => {
     setLoading(true)
     setError(null)
 
     try {
-      let productQuery = supabase
-        .from("whole_cake_products")
+      // products + product_variants で取得（is_preorder_required のものがホールケーキ相当）
+      let query = supabase
+        .from("products")
         .select(`
           *,
-          whole_cake_sizes(*),
-          whole_cake_options(*)
+          product_variants(*)
         `)
-        .order("sort_order", { ascending: true })
+        .eq("is_preorder_required", true)
+        .order("display_order", { ascending: true })
 
-      if (storeId) productQuery = productQuery.eq("store_id", storeId)
+      if (storeId) query = query.eq("store_id", storeId)
 
-      const { data: products, error: prodErr } = await productQuery
+      const { data: products, error: prodErr } = await query
       if (prodErr) throw prodErr
-
-      let candleQuery = supabase.from("candle_options").select("*")
-      if (storeId) candleQuery = candleQuery.eq("store_id", storeId)
-      const { data: candles, error: candleErr } = await candleQuery
-      if (candleErr) throw candleErr
-      const uiCandles = (candles || []).map(toUICandleOption)
-      setCandleOptions(uiCandles)
 
       const cakes: WholeCakeProduct[] = (products || []).map((product: any) => ({
         id: String(product.id),
         storeId: String(product.store_id),
         name: product.name || "",
         image: product.image || "",
-        sizes: (product.whole_cake_sizes || []).map(toUIWholeCakeSize),
-        options: (product.whole_cake_options || []).map(toUIWholeCakeOption),
-        candles: uiCandles.filter((c) => c.storeId === product.store_id),
+        sizes: (product.product_variants || []).map(toUIWholeCakeSize),
       }))
 
       setWholeCakes(cakes)

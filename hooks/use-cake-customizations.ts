@@ -2,154 +2,82 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { CANDLE_OPTIONS } from "@/lib/constants/product-master"
 import {
-  CandleOption,
   WholeCakeSize,
-  WholeCakeOption,
-  toUICandleOption,
   toUIWholeCakeSize,
-  toUIWholeCakeOption,
 } from "@/lib/types"
+
+export interface CandleOption {
+  id: string
+  name: string
+  price: number
+  storeId: string
+}
 
 interface UseCakeCustomizationsOptions {
   storeId?: string
-  wholeCakeProductId?: string
+  productId?: string
 }
 
 export function useCakeCustomizations(options: UseCakeCustomizationsOptions = {}) {
   const [sizes, setSizes] = useState<WholeCakeSize[]>([])
-  const [candles, setCandles] = useState<CandleOption[]>([])
-  const [cakeOptions, setCakeOptions] = useState<WholeCakeOption[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // ろうそくは定数から取得
+  const candles: CandleOption[] = CANDLE_OPTIONS.map((c) => ({
+    id: c.id,
+    name: c.name,
+    price: c.price,
+    storeId: options.storeId ?? "",
+  }))
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const sizesPromise = options.wholeCakeProductId
-        ? supabase.from("whole_cake_sizes").select("*").eq("whole_cake_product_id", options.wholeCakeProductId)
+      const sizesPromise = options.productId
+        ? supabase.from("product_variants").select("*").eq("product_id", options.productId).order("display_order", { ascending: true })
         : Promise.resolve({ data: [], error: null })
 
-      const optsPromise = options.wholeCakeProductId
-        ? supabase.from("whole_cake_options").select("*").eq("whole_cake_product_id", options.wholeCakeProductId)
-        : Promise.resolve({ data: [], error: null })
-
-      const candlesPromise = options.storeId
-        ? supabase.from("candle_options").select("*").eq("store_id", options.storeId)
-        : supabase.from("candle_options").select("*")
-
-      const [sizesRes, candlesRes, optsRes] = await Promise.all([
-        sizesPromise,
-        candlesPromise,
-        optsPromise,
-      ])
+      const [sizesRes] = await Promise.all([sizesPromise])
 
       if ((sizesRes as any).error) throw (sizesRes as any).error
-      if ((candlesRes as any).error) throw (candlesRes as any).error
-      if ((optsRes as any).error) throw (optsRes as any).error
 
       setSizes(((sizesRes as any).data || []).map(toUIWholeCakeSize))
-      setCandles(((candlesRes as any).data || []).map(toUICandleOption))
-      setCakeOptions(((optsRes as any).data || []).map(toUIWholeCakeOption))
     } catch (e: any) {
       setError(e?.message || "読み込みに失敗しました")
     }
     setLoading(false)
-  }, [options.storeId, options.wholeCakeProductId])
+  }, [options.storeId, options.productId])
 
   useEffect(() => {
     fetchAll()
   }, [fetchAll])
 
-  const addSize = async (input: { label: string; servings?: string; price: number }) => {
-    if (!options.wholeCakeProductId) return { error: "ホールケーキ未設定" }
-    const { error: err } = await supabase.from("whole_cake_sizes").insert({
-      whole_cake_product_id: options.wholeCakeProductId,
-      label: input.label,
-      servings: input.servings ?? "",
+  const addSize = async (input: { name: string; price: number }) => {
+    if (!options.productId) return { error: "商品未設定" }
+    const { error: err } = await supabase.from("product_variants").insert({
+      product_id: options.productId,
+      name: input.name,
       price: input.price,
     })
     if (!err) await fetchAll()
     return { error: err?.message || null }
   }
 
-  const updateSize = async (id: string, updates: { label?: string; servings?: string; price?: number }) => {
+  const updateSize = async (id: string, updates: { name?: string; price?: number }) => {
     const payload: any = {}
-    if (updates.label !== undefined) payload.label = updates.label
-    if (updates.servings !== undefined) payload.servings = updates.servings
+    if (updates.name !== undefined) payload.name = updates.name
     if (updates.price !== undefined) payload.price = updates.price
-    const { error: err } = await supabase.from("whole_cake_sizes").update(payload).eq("id", id)
+    const { error: err } = await supabase.from("product_variants").update(payload).eq("id", id)
     if (!err) await fetchAll()
     return { error: err?.message || null }
   }
 
   const deleteSize = async (id: string) => {
-    const { error: err } = await supabase.from("whole_cake_sizes").delete().eq("id", id)
-    if (!err) await fetchAll()
-    return { error: err?.message || null }
-  }
-
-  const addCandle = async (input: { name: string; price: number }) => {
-    if (!options.storeId) return { error: "店舗未設定" }
-    const { error: err } = await supabase.from("candle_options").insert({
-      store_id: options.storeId,
-      name: input.name,
-      price: input.price,
-    })
-    if (!err) await fetchAll()
-    return { error: err?.message || null }
-  }
-
-  const updateCandle = async (id: string, updates: { name?: string; price?: number }) => {
-    const payload: any = {}
-    if (updates.name !== undefined) payload.name = updates.name
-    if (updates.price !== undefined) payload.price = updates.price
-    const { error: err } = await supabase.from("candle_options").update(payload).eq("id", id)
-    if (!err) await fetchAll()
-    return { error: err?.message || null }
-  }
-
-  const deleteCandle = async (id: string) => {
-    const { error: err } = await supabase.from("candle_options").delete().eq("id", id)
-    if (!err) await fetchAll()
-    return { error: err?.message || null }
-  }
-
-  const addOption = async (input: {
-    name: string
-    price: number
-    image?: string
-    multipleAllowed?: boolean
-  }) => {
-    if (!options.wholeCakeProductId) return { error: "ホールケーキ未設定" }
-    const { error: err } = await supabase.from("whole_cake_options").insert({
-      whole_cake_product_id: options.wholeCakeProductId,
-      name: input.name,
-      price: input.price,
-      image: input.image ?? "",
-      multiple_allowed: input.multipleAllowed ?? false,
-    })
-    if (!err) await fetchAll()
-    return { error: err?.message || null }
-  }
-
-  const updateOption = async (
-    id: string,
-    updates: { name?: string; price?: number; image?: string; multipleAllowed?: boolean }
-  ) => {
-    const payload: any = {}
-    if (updates.name !== undefined) payload.name = updates.name
-    if (updates.price !== undefined) payload.price = updates.price
-    if (updates.image !== undefined) payload.image = updates.image
-    if (updates.multipleAllowed !== undefined) payload.multiple_allowed = updates.multipleAllowed
-    const { error: err } = await supabase.from("whole_cake_options").update(payload).eq("id", id)
-    if (!err) await fetchAll()
-    return { error: err?.message || null }
-  }
-
-  const deleteOption = async (id: string) => {
-    const { error: err } = await supabase.from("whole_cake_options").delete().eq("id", id)
+    const { error: err } = await supabase.from("product_variants").delete().eq("id", id)
     if (!err) await fetchAll()
     return { error: err?.message || null }
   }
@@ -157,18 +85,11 @@ export function useCakeCustomizations(options: UseCakeCustomizationsOptions = {}
   return {
     sizes,
     candles,
-    cakeOptions,
     loading,
     error,
     refetch: fetchAll,
     addSize,
     updateSize,
     deleteSize,
-    addCandle,
-    updateCandle,
-    deleteCandle,
-    addOption,
-    updateOption,
-    deleteOption,
   }
 }

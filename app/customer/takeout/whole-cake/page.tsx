@@ -62,7 +62,7 @@ export default function WholeCakePage() {
         <CustomerHeader
           userName={profile?.lineName}
           avatarUrl={profile?.avatar || undefined}
-          points={profile?.points}
+          points={0}
           onCartClick={() => setCartOpen(true)}
         />
         <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
@@ -82,8 +82,9 @@ export default function WholeCakePage() {
     return sum + (opt?.price ?? 0) * qty;
   }, 0);
 
+  const cakeOptionsList: { id: string; name: string; price: number }[] = [];
   const optionTotal = selectedOptionIds.reduce((sum, oid) => {
-    const opt = selectedCake.options.find((o) => o.id === oid);
+    const opt = cakeOptionsList.find((o) => o.id === oid);
     return sum + (opt?.price ?? 0);
   }, 0);
 
@@ -105,7 +106,7 @@ export default function WholeCakePage() {
       });
 
     const cakeOptions: CartCakeOptionEntry[] = selectedOptionIds
-      .map((oid) => selectedCake.options.find((o) => o.id === oid))
+      .map((oid) => cakeOptionsList.find((o) => o.id === oid))
       .filter((o): o is NonNullable<typeof o> => !!o)
       .map((o) => ({
         wholeCakeOptionId: o.id,
@@ -124,8 +125,7 @@ export default function WholeCakePage() {
       uid: `wc-${selectedCake.id}-${Date.now()}`,
       customization: {
         sizeId: selectedSize.id,
-        sizeLabel: selectedSize.label,
-        sizeServings: selectedSize.servings,
+        sizeLabel: selectedSize.name,
         sizePrice: Number(selectedSize.price) || 0,
         candles: validCandles,
         options: cakeOptions,
@@ -154,7 +154,7 @@ export default function WholeCakePage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         onCartClick={() => setCartOpen(true)}
       />
 

@@ -64,10 +64,7 @@ export default function AdminStoreEditPage() {
       setStoreName(store.name ?? "");
       setPhone(store.phone ?? "");
       setMail(store.email ?? "");
-      setAddressUrl(store.address || store.address_url || "");
-      setOpenTime(store.open_time ?? "10:00");
-      setCloseTime(store.close_time ?? "19:00");
-      setSelectedPlan(PLAN_MAP[store.plan ?? "standard"] ?? "standard");
+      setAddressUrl(store.address ?? "");
       if (store.logo_url) {
         setExistingLogo(store.logo_url);
         setLogoPreview(store.logo_url);
@@ -123,9 +120,6 @@ export default function AdminStoreEditPage() {
         email: mail || "",
         phone: phone || "",
         address: addressUrl || "",
-        open_time: openTime,
-        close_time: closeTime,
-        plan: selectedPlan,
       };
       if (logoUrl !== undefined) {
         updates.logo_url = logoUrl;

@@ -21,7 +21,6 @@ import {
   fetchOrders,
   fetchStores,
   fetchOrderItems,
-  computeMRR,
   type Order,
   type Store,
 } from "@/lib/admin-api";
@@ -116,7 +115,7 @@ export default function AdminInsightsPage() {
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, o) => sum + (o.subtotal ?? 0), 0);
   const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-  const totalMRR = computeMRR(stores);
+  const totalMRR = 0;
 
   const timeData = buildTimeDistribution(orders);
   const outsideHoursOrders = (timeData[0]?.orders ?? 0) + (timeData[4]?.orders ?? 0) + (timeData[5]?.orders ?? 0);
@@ -129,10 +128,10 @@ export default function AdminInsightsPage() {
 
   const optionsPerOrder = totalOrders > 0 ? (lineItemCount / totalOrders).toFixed(1) : "0";
 
-  const confirmedOrders = orders.filter((o) => o.order_confirmed).length;
+  const confirmedOrders = orders.filter((o) => o.confirmed_at != null).length;
   const confirmRate = totalOrders > 0 ? Math.round((confirmedOrders / totalOrders) * 100) : 0;
 
-  const completedOrders = orders.filter((o) => o.order_completed_at).length;
+  const completedOrders = orders.filter((o) => o.order_status === "completed").length;
   const completionRate = totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0;
 
   const radarData = [

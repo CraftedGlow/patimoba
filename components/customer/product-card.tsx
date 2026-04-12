@@ -28,11 +28,6 @@ export function ProductCard({ product, basePath }: ProductCardProps) {
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
-          {product.isLimited && (
-            <span className="absolute top-2 left-2 bg-pink-500 text-white text-xs font-bold px-3 py-1 rounded">
-              期間限定
-            </span>
-          )}
         </div>
         <h3 className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">
           {product.name}

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Loader2, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
+import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
 
 type SubTab = "基本" | "ろうそく" | "オプション";
 
@@ -48,7 +49,11 @@ export function CustomTab() {
   const storeId = user?.storeId ?? null;
 
   const [subTab, setSubTab] = useState<SubTab>("基本");
-  const [candles, setCandles] = useState<CandleRow[]>([]);
+  const candles: CandleRow[] = CANDLE_OPTIONS.map((c) => ({
+    id: c.id,
+    name: c.name,
+    price: c.price,
+  }));
   const [options, setOptions] = useState<OptionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<StoreCustomSettings>(DEFAULT_SETTINGS);
@@ -75,43 +80,8 @@ export function CustomTab() {
     setLoading(true);
     setError(null);
     try {
-      const [candleRes, optionRes] = await Promise.all([
-        supabase
-          .from("candle_options")
-          .select("id, name, price")
-          .eq("store_id", storeId)
-          .order("sort_order"),
-        supabase
-          .from("whole_cake_options")
-          .select("id, name, price, multiple_allowed")
-          .order("sort_order"),
-      ]);
-
-      if (candleRes.error) throw candleRes.error;
-      if (optionRes.error) throw optionRes.error;
-
-      setCandles(candleRes.data ?? []);
-      setOptions(
-        (optionRes.data ?? []).map((o: any) => ({
-          id: o.id,
-          name: o.name,
-          price: o.price,
-          multiple_allowed: o.multiple_allowed ?? false,
-        }))
-      );
-
-      const { data: storeData } = await supabase
-        .from("stores")
-        .select("*")
-        .eq("id", storeId)
-        .single();
-
-      if (storeData) {
-        const meta = (storeData as any).custom_settings;
-        if (meta && typeof meta === "object") {
-          setSettings({ ...DEFAULT_SETTINGS, ...meta });
-        }
-      }
+      // オプションはコード定数管理に移行したため、空配列を設定
+      setOptions([]);
     } catch (e: any) {
       setError(e.message);
     }
@@ -138,123 +108,17 @@ export function CustomTab() {
     setSaving(false);
   };
 
-  const handleAddCandle = async () => {
-    if (!storeId || !newName.trim()) return;
-    setSaving(true);
-    try {
-      const { error: err } = await supabase.from("candle_options").insert({
-        store_id: storeId,
-        name: newName.trim(),
-        price: parseInt(newPrice) || 0,
-      });
-      if (err) throw err;
-      await fetchData();
-      setNewName("");
-      setNewPrice("");
-      showToast("ろうそくを追加しました");
-    } catch (e: any) {
-      setError(e.message);
-    }
-    setSaving(false);
-  };
-
-  const handleUpdateCandle = async (id: string) => {
-    setSaving(true);
-    try {
-      const { error: err } = await supabase
-        .from("candle_options")
-        .update({ name: editName.trim(), price: parseInt(editPrice) || 0 })
-        .eq("id", id);
-      if (err) throw err;
-      await fetchData();
-      setEditId(null);
-      showToast("保存しました");
-    } catch (e: any) {
-      setError(e.message);
-    }
-    setSaving(false);
-  };
-
-  const handleDeleteCandle = async (id: string) => {
-    try {
-      const { error: err } = await supabase
-        .from("candle_options")
-        .delete()
-        .eq("id", id);
-      if (err) throw err;
-      await fetchData();
-    } catch (e: any) {
-      setError(e.message);
-    }
-  };
-
   const handleAddOption = async () => {
-    if (!newName.trim()) return;
-
-    const wholeCakeRes = await supabase
-      .from("whole_cake_products")
-      .select("id")
-      .eq("store_id", storeId!)
-      .limit(1)
-      .single();
-
-    if (!wholeCakeRes.data) {
-      setError("ホールケーキ商品が登録されていません。先にホールケーキ商品を登録してください。");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error: err } = await supabase.from("whole_cake_options").insert({
-        whole_cake_product_id: wholeCakeRes.data.id,
-        name: newName.trim(),
-        price: parseInt(newPrice) || 0,
-        multiple_allowed: newMultiple,
-      });
-      if (err) throw err;
-      await fetchData();
-      setNewName("");
-      setNewPrice("");
-      setNewMultiple(false);
-      showToast("オプションを追加しました");
-    } catch (e: any) {
-      setError(e.message);
-    }
-    setSaving(false);
+    // オプションはコード定数管理に移行しました
+    showToast("オプションはコード定数で管理されています");
   };
 
   const handleUpdateOption = async (id: string) => {
-    setSaving(true);
-    try {
-      const { error: err } = await supabase
-        .from("whole_cake_options")
-        .update({
-          name: editName.trim(),
-          price: parseInt(editPrice) || 0,
-          multiple_allowed: editMultiple,
-        })
-        .eq("id", id);
-      if (err) throw err;
-      await fetchData();
-      setEditId(null);
-      showToast("保存しました");
-    } catch (e: any) {
-      setError(e.message);
-    }
-    setSaving(false);
+    showToast("オプションはコード定数で管理されています");
   };
 
   const handleDeleteOption = async (id: string) => {
-    try {
-      const { error: err } = await supabase
-        .from("whole_cake_options")
-        .delete()
-        .eq("id", id);
-      if (err) throw err;
-      await fetchData();
-    } catch (e: any) {
-      setError(e.message);
-    }
+    showToast("オプションはコード定数で管理されています");
   };
 
   const startEdit = (item: { id: string; name: string; price: number; multiple_allowed?: boolean }) => {
@@ -557,114 +421,32 @@ export function CustomTab() {
               </motion.div>
             )}
 
-            {/* ろうそくタブ */}
+            {/* ろうそくタブ (読み取り専用 - コード管理) */}
             {subTab === "ろうそく" && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="space-y-3"
               >
-                <AnimatePresence mode="popLayout">
-                  {candles.map((item) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      layout
-                      className="flex items-center gap-3"
-                    >
-                      {editId === item.id ? (
-                        <>
-                          <input
-                            type="text"
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="flex-1 border border-amber-400 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-300"
-                          />
-                          <input
-                            type="text"
-                            value={editPrice}
-                            onChange={(e) => setEditPrice(e.target.value)}
-                            className="w-24 border border-amber-400 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-300"
-                          />
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleUpdateCandle(item.id)}
-                            disabled={saving}
-                            className="bg-amber-400 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
-                          >
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "保存"}
-                          </motion.button>
-                          <button
-                            onClick={() => setEditId(null)}
-                            className="text-gray-400 hover:text-gray-600 p-1"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <input
-                            type="text"
-                            value={item.name}
-                            readOnly
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white cursor-pointer"
-                            onClick={() => startEdit(item)}
-                          />
-                          <input
-                            type="text"
-                            value={`¥${item.price.toLocaleString()}`}
-                            readOnly
-                            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white cursor-pointer"
-                            onClick={() => startEdit(item)}
-                          />
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => startEdit(item)}
-                            className="bg-amber-400 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors"
-                          >
-                            保存
-                          </motion.button>
-                          <button
-                            onClick={() => handleDeleteCandle(item.id)}
-                            className="text-gray-500 hover:text-red-500 p-1 transition-colors"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </>
-                      )}
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                <div className="flex items-center gap-3 pt-2 border-t border-amber-200">
-                  <input
-                    type="text"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="名前"
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={newPrice}
-                    onChange={(e) => setNewPrice(e.target.value)}
-                    placeholder="¥0"
-                    className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={handleAddCandle}
-                    disabled={saving}
-                    className="bg-green-500 hover:bg-green-600 text-white p-2 rounded-lg transition-colors disabled:opacity-50"
+                {candles.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3"
                   >
-                    <Plus className="w-4 h-4" />
-                  </motion.button>
-                </div>
+                    <input
+                      type="text"
+                      value={item.name}
+                      readOnly
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50"
+                    />
+                    <input
+                      type="text"
+                      value={`¥${item.price.toLocaleString()}`}
+                      readOnly
+                      className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-gray-50"
+                    />
+                  </div>
+                ))}
               </motion.div>
             )}
 

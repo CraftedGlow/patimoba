@@ -1,38 +1,19 @@
 "use client"
 
 import { supabase } from "@/lib/supabase"
-import type { OrderStatus, PaymentMethod, UICartItem, UIDeliveryAddress } from "@/lib/types"
-
-interface CustomerInfoInput {
-  lastNameKj?: string
-  firstNameKj?: string
-  lastNameKn?: string
-  firstNameKn?: string
-  email?: string
-  phone?: string
-  postalCode?: string
-  address?: string
-  building?: string
-}
+import type { OrderStatus, UICartItem } from "@/lib/types"
 
 interface CreateOrderInput {
   storeId: string
   customerId: string | null
-  paymentMethod: PaymentMethod
+  paymentStatus?: string
   items: UICartItem[]
   subtotal: number
-  shippingFee?: number
-  sameDay?: boolean
+  discountAmount?: number
   pickupDate?: string | null
-  pickupTimeSlot?: string | null
-  visitTime?: string | null
-  deliveryPreference?: boolean
+  pickupTime?: string | null
   notes?: string
-  usedPoints?: number
-  couponAmount?: number
   orderType?: string
-  customerInfo?: CustomerInfoInput
-  deliveryAddress?: UIDeliveryAddress | null
 }
 
 interface CreateOrderResult {
@@ -42,29 +23,22 @@ interface CreateOrderResult {
 
 export function useOrderMutations() {
   const createOrder = async (input: CreateOrderInput): Promise<CreateOrderResult> => {
-    const total = input.subtotal + (input.shippingFee ?? 0) - (input.usedPoints ?? 0) - (input.couponAmount ?? 0)
+    const totalAmount = input.subtotal - (input.discountAmount ?? 0)
 
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .insert({
         store_id: input.storeId,
         customer_id: input.customerId,
-        order_type: input.orderType ?? "takeout",
-        payment_method: input.paymentMethod || "",
+        order_type: input.orderType ?? "pickup",
+        order_status: "pending",
+        payment_status: input.paymentStatus ?? "unpaid",
         subtotal: input.subtotal,
-        total,
-        same_day: input.sameDay ?? false,
+        discount_amount: input.discountAmount ?? 0,
+        total_amount: totalAmount,
         pickup_date: input.pickupDate ?? null,
-        pickup_time_slot: input.pickupTimeSlot ?? "",
-        visit_time: input.visitTime ?? "",
-        delivery_preference: input.deliveryPreference ?? false,
+        pickup_time: input.pickupTime ?? null,
         notes: input.notes ?? "",
-        points_used: input.usedPoints ?? 0,
-        coupon_amount: input.couponAmount ?? 0,
-        shipping_included: (input.shippingFee ?? 0) > 0,
-        status: "pending" as OrderStatus,
-        preparing: false,
-        order_confirmed: true,
       })
       .select("id")
       .single()
@@ -90,12 +64,12 @@ export function useOrderMutations() {
 
       const orderItems = input.items.map((item) => ({
         order_id: order.id,
-        product_id: item.isCustomCake ? null : item.productId,
-        whole_cake_product_id: item.isCustomCake ? item.productId : null,
-        name: item.name,
+        product_id: item.productId,
+        product_name_snapshot: item.name,
         quantity: item.quantity,
         unit_price: item.price,
         subtotal: calcItemSubtotal(item),
+        variant_name_snapshot: item.customization?.sizeLabel ?? null,
       }))
 
       const { data: insertedItems, error: itemsErr } = await supabase
@@ -104,134 +78,78 @@ export function useOrderMutations() {
         .select("id")
       if (itemsErr) throw itemsErr
 
+      // order_item_options にカスタマイズ情報を保存
       for (let i = 0; i < input.items.length; i++) {
         const item = input.items[i]
         const insertedId = insertedItems?.[i]?.id
         if (!item.isCustomCake || !item.customization || !insertedId) continue
         const c = item.customization
 
-        const details: any[] = []
+        const options: any[] = []
         if (c.sizeId) {
-          details.push({
+          options.push({
             order_item_id: insertedId,
-            detail_type: "size",
-            label: c.sizeLabel ?? "",
-            price: c.sizePrice ?? 0,
-            whole_cake_size_id: c.sizeId,
+            option_group_name_snapshot: "サイズ",
+            option_item_name_snapshot: c.sizeLabel ?? "",
+            price_delta: c.sizePrice ?? 0,
           })
         }
         for (const cd of c.candles || []) {
           if (!cd.candleOptionId || cd.quantity <= 0) continue
-          details.push({
+          options.push({
             order_item_id: insertedId,
-            detail_type: "candle",
-            label: cd.name,
-            price: cd.price,
+            option_group_name_snapshot: "ろうそく",
+            option_item_name_snapshot: cd.name,
+            price_delta: cd.price,
             quantity: cd.quantity,
-            candle_option_id: cd.candleOptionId,
           })
         }
         for (const op of c.options || []) {
           if (!op.wholeCakeOptionId) continue
-          details.push({
+          options.push({
             order_item_id: insertedId,
-            detail_type: "option",
-            label: op.name,
-            price: op.price,
-            whole_cake_option_id: op.wholeCakeOptionId,
+            option_group_name_snapshot: "オプション",
+            option_item_name_snapshot: op.name,
+            price_delta: op.price,
           })
         }
         if (c.messagePlate) {
-          details.push({
+          options.push({
             order_item_id: insertedId,
-            detail_type: "message",
-            label: "メッセージ",
-            price: 0,
-            message_text: c.messagePlate,
+            option_group_name_snapshot: "メッセージ",
+            option_item_name_snapshot: c.messagePlate,
+            price_delta: 0,
           })
         }
         if (c.allergyNote) {
-          details.push({
+          options.push({
             order_item_id: insertedId,
-            detail_type: "allergy",
-            label: "アレルギー",
-            price: 0,
-            allergy_note: c.allergyNote,
+            option_group_name_snapshot: "アレルギー",
+            option_item_name_snapshot: c.allergyNote,
+            price_delta: 0,
           })
         }
 
-        if (details.length > 0) {
-          const { error: detErr } = await supabase.from("order_item_details").insert(details)
-          if (detErr) throw detErr
+        if (options.length > 0) {
+          const { error: optErr } = await supabase.from("order_item_options").insert(options)
+          if (optErr) throw optErr
         }
-      }
-
-      if (input.customerInfo) {
-        const ci = input.customerInfo
-        const { error: ciErr } = await supabase
-          .from("order_customer_info")
-          .insert({
-            order_id: order.id,
-            customer_id: input.customerId,
-            last_name_kj: ci.lastNameKj ?? "",
-            first_name_kj: ci.firstNameKj ?? "",
-            last_name_kn: ci.lastNameKn ?? "",
-            first_name_kn: ci.firstNameKn ?? "",
-            email: ci.email ?? "",
-            phone: ci.phone ?? "",
-            postal_code: ci.postalCode ?? "",
-            address: ci.address ?? "",
-            building: ci.building ?? "",
-          })
-        if (ciErr) throw ciErr
-      }
-
-      if (input.deliveryAddress) {
-        await supabase
-          .from("orders")
-          .update({ shipping_address: [
-            input.deliveryAddress.postalCode,
-            input.deliveryAddress.prefecture,
-            input.deliveryAddress.city,
-            input.deliveryAddress.address,
-            input.deliveryAddress.building,
-          ].filter(Boolean).join(" ") })
-          .eq("id", order.id)
       }
 
       return { orderId: String(order.id), error: null }
     } catch (e: any) {
       await supabase.from("order_items").delete().eq("order_id", order.id)
-      await supabase.from("order_customer_info").delete().eq("order_id", order.id)
       await supabase.from("orders").delete().eq("id", order.id)
       return { orderId: "", error: e?.message || "注文処理中にエラーが発生しました" }
     }
   }
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
-    const payload: any = { status }
-    if (status === "completed") {
-      payload.order_completed_at = new Date().toISOString()
-      payload.preparing = true
-    } else if (status === "ready" || status === "preparing") {
-      payload.preparing = true
-    } else if (status === "pending" || status === "confirmed") {
-      payload.preparing = false
+    const payload: any = { order_status: status }
+    if (status === "confirmed") {
+      payload.confirmed_at = new Date().toISOString()
     }
     const { error } = await supabase.from("orders").update(payload).eq("id", orderId)
-    return { error: error?.message || null }
-  }
-
-  const togglePrepared = async (orderId: string, prepared: boolean) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        is_prepared: prepared,
-        preparing: prepared,
-        status: prepared ? "ready" : "confirmed",
-        order_completed_at: prepared ? new Date().toISOString() : null,
-      })
-      .eq("id", orderId)
     return { error: error?.message || null }
   }
 
@@ -239,13 +157,12 @@ export function useOrderMutations() {
     const { data: items } = await supabase.from("order_items").select("id").eq("order_id", orderId)
     if (items && items.length > 0) {
       const itemIds = items.map((i: any) => i.id)
-      await supabase.from("order_item_details").delete().in("order_item_id", itemIds)
+      await supabase.from("order_item_options").delete().in("order_item_id", itemIds)
     }
     await supabase.from("order_items").delete().eq("order_id", orderId)
-    await supabase.from("order_customer_info").delete().eq("order_id", orderId)
     const { error } = await supabase.from("orders").delete().eq("id", orderId)
     return { error: error?.message || null }
   }
 
-  return { createOrder, updateOrderStatus, togglePrepared, deleteOrder }
+  return { createOrder, updateOrderStatus, deleteOrder }
 }

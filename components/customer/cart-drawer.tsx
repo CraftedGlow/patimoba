@@ -155,7 +155,6 @@ export function CartDrawer({
                                 {c.sizeLabel && (
                                   <p className="text-xs text-gray-500">
                                     サイズ: {c.sizeLabel}
-                                    {c.sizeServings ? `（${c.sizeServings}）` : ""}
                                   </p>
                                 )}
                                 {(c.candles || []).map((cd, i) => (

@@ -21,9 +21,6 @@ import {
 import {
   fetchStores,
   fetchOrders,
-  computeMRR,
-  computePlanBreakdown,
-  mrrFromPlan,
   type Store,
   type Order,
 } from "@/lib/admin-api";
@@ -115,12 +112,12 @@ export default function AdminRevenuePage() {
   });
 
   const thisMonthRevenue = thisMonthOrders.reduce((sum, o) => sum + (o.subtotal ?? 0), 0);
-  const totalMRR = computeMRR(stores);
+  const totalMRR = 0;
   const displayMRR = Math.round(totalMRR / 10000);
   const arrEstimate = Math.round((totalMRR * 12) / 100000000 * 100) / 100;
   const avgPerStore = stores.length > 0 ? Math.round(totalMRR / stores.length) : 0;
 
-  const planBreakdown = computePlanBreakdown(stores);
+  const planBreakdown: { name: string; value: number; color: string; amount: number; stores: number }[] = [];
 
   const monthlyOrderData = groupByMonth(allOrders, 7, refDate);
   const monthlyRevenueData = groupRevenueByMonth(allOrders, 7, refDate);

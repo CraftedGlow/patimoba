@@ -58,14 +58,15 @@ interface ClosedDayRuleRow {
 
 async function fetchClosedDayRules(storeId: string): Promise<ClosedDayRuleRow[]> {
   const { data, error } = await supabase
-    .from("closed_day_rules")
-    .select("day_of_week, rule")
+    .from("store_business_hours")
+    .select("day_of_week, is_closed")
     .eq("store_id", storeId)
+    .eq("is_closed", true)
     .order("day_of_week", { ascending: true });
   if (error || !data) return [];
   return data.map((r: any) => ({
     dayOfWeek: Number(r.day_of_week),
-    rule: r.rule || "毎週",
+    rule: "毎週",
   }));
 }
 
@@ -117,11 +118,26 @@ export default function StoreAccountPage() {
         setEmail(store.email ?? "");
         setLogoUrl(store.logo_url ?? null);
 
-        if (store.open_time) setOpenTime(store.open_time);
-        if (store.close_time) setCloseTime(store.close_time);
-        if (store.same_day_cutoff_minutes != null) {
-          setCutoffHours(String(Math.round(store.same_day_cutoff_minutes / 60)));
+        // store_order_rules から当日受付設定を取得
+        const { data: orderRules } = await supabase
+          .from("store_order_rules")
+          .select("default_cutoff_time, default_lead_time_minutes")
+          .eq("store_id", store.id)
+          .maybeSingle();
+        if (orderRules?.default_lead_time_minutes != null) {
+          setCutoffHours(String(Math.round(orderRules.default_lead_time_minutes / 60)));
         }
+
+        // store_business_hours から通常営業時間を取得（最初の営業日を基準に）
+        const { data: bhRows } = await supabase
+          .from("store_business_hours")
+          .select("open_time, close_time, is_closed")
+          .eq("store_id", store.id)
+          .eq("is_closed", false)
+          .limit(1)
+          .maybeSingle();
+        if (bhRows?.open_time) setOpenTime(bhRows.open_time);
+        if (bhRows?.close_time) setCloseTime(bhRows.close_time);
 
         const rules = await fetchClosedDayRules(store.id);
         const names = ["日", "月", "火", "水", "木", "金", "土"];
@@ -158,13 +174,15 @@ export default function StoreAccountPage() {
     setSaving(true);
     try {
       if (storeId) {
+        // store_business_hours の営業日の open_time, close_time を一括更新
         await supabase
-          .from("stores")
+          .from("store_business_hours")
           .update({
             open_time: modalOpenTime,
             close_time: modalCloseTime,
           })
-          .eq("id", storeId);
+          .eq("store_id", storeId)
+          .eq("is_closed", false);
       }
       setOpenTime(modalOpenTime);
       setCloseTime(modalCloseTime);
@@ -179,10 +197,22 @@ export default function StoreAccountPage() {
     if (!storeId) return;
     setSaving(true);
     try {
-      await supabase
-        .from("stores")
-        .update({ same_day_cutoff_minutes: Number(modalCutoff) * 60 })
-        .eq("id", storeId);
+      // store_order_rules に保存（upsert）
+      const { data: existing } = await supabase
+        .from("store_order_rules")
+        .select("id")
+        .eq("store_id", storeId)
+        .maybeSingle();
+      if (existing) {
+        await supabase
+          .from("store_order_rules")
+          .update({ default_lead_time_minutes: Number(modalCutoff) * 60 })
+          .eq("id", existing.id);
+      } else {
+        await supabase
+          .from("store_order_rules")
+          .insert({ store_id: storeId, default_lead_time_minutes: Number(modalCutoff) * 60 });
+      }
       setCutoffHours(modalCutoff);
       setModal("saved");
       setTimeout(() => setModal(null), 1500);
@@ -234,17 +264,21 @@ export default function StoreAccountPage() {
     if (!storeId) return;
     setSaving(true);
     try {
-      await supabase.from("closed_day_rules").delete().eq("store_id", storeId);
+      // store_business_hours を再構築
+      await supabase.from("store_business_hours").delete().eq("store_id", storeId);
 
-      if (modalHolidays.length > 0) {
-        const rows = modalHolidays.map((h) => ({
+      const allDays = Array.from({ length: 7 }, (_, i) => {
+        const isClosed = modalHolidays.some((h) => h.dayOfWeek === i);
+        return {
           store_id: storeId,
-          day_of_week: h.dayOfWeek,
-          rule: h.rule,
-        }));
-        const { error } = await supabase.from("closed_day_rules").insert(rows);
-        if (error) throw error;
-      }
+          day_of_week: i,
+          is_closed: isClosed,
+          open_time: isClosed ? null : openTime,
+          close_time: isClosed ? null : closeTime,
+        };
+      });
+      const { error } = await supabase.from("store_business_hours").insert(allDays);
+      if (error) throw error;
 
       const names = ["日", "月", "火", "水", "木", "金", "土"];
       setHolidays(modalHolidays.map((h) => ({

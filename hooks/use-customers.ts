@@ -17,37 +17,17 @@ export function useCustomers(options: UseCustomersOptions = {}) {
     setLoading(true)
     setError(null)
 
-    if (options.storeId) {
-      const { data, error: err } = await supabase
-        .from("customer_store_relationships")
-        .select("*, customers(*)")
-        .eq("store_id", options.storeId)
-        .order("last_visit", { ascending: false, nullsFirst: false })
+    let query = supabase
+      .from("users")
+      .select("*")
+      .eq("user_type", "customer")
+      .order("created_at", { ascending: false })
 
-      if (err) {
-        setError(err.message)
-      } else {
-        const mapped = (data || [])
-          .filter((row: any) => row.customers)
-          .map((row: any) =>
-            toUICustomer({
-              ...row.customers,
-              customer_store_relationships: [row],
-            })
-          )
-        setCustomers(mapped)
-      }
+    const { data, error: err } = await query
+    if (err) {
+      setError(err.message)
     } else {
-      const { data, error: err } = await supabase
-        .from("customers")
-        .select("*, customer_store_relationships(*)")
-        .order("created_at", { ascending: false })
-
-      if (err) {
-        setError(err.message)
-      } else {
-        setCustomers((data || []).map((row: any) => toUICustomer(row)))
-      }
+      setCustomers((data || []).map((row: any) => toUICustomer(row)))
     }
     setLoading(false)
   }

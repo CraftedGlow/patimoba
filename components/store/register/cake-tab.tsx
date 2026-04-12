@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useProductTypes } from "@/hooks/use-product-types";
 import { useProductCategories } from "@/hooks/use-product-categories";
+import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 
 type OrderType = "always" | "sameDay" | "manual" | "reserveOnly" | "todayOnly";
@@ -15,19 +16,16 @@ interface ProductRow {
   id: string;
   name: string | null;
   description: string | null;
-  price: number | null;
+  base_price: number | null;
   image: string | null;
   cross_section_image: string | null;
-  product_type_id: string | null;
-  always_available: boolean | null;
-  cur_same_day: boolean | null;
-  preparation_days: number | null;
-  order_start_date: string | null;
-  order_end_date: string | null;
-  is_ec: boolean | null;
+  category_name: string | null;
+  is_active: boolean | null;
+  same_day_order_allowed: boolean | null;
+  is_preorder_required: boolean | null;
+  min_order_lead_minutes: number | null;
   store_id: string | null;
-  max_per_day: number | null;
-  max_per_order: number | null;
+  display_order: number | null;
 }
 
 interface CandleRow {
@@ -44,9 +42,8 @@ interface OptionRow {
 }
 
 function resolveOrderType(row: ProductRow): OrderType {
-  if (row.cur_same_day) return "sameDay";
-  if (row.preparation_days && row.preparation_days > 0) return "reserveOnly";
-  if (row.always_available === false) return "manual";
+  if (row.same_day_order_allowed) return "sameDay";
+  if (row.is_preorder_required) return "reserveOnly";
   return "always";
 }
 
@@ -83,38 +80,17 @@ export function CakeTab() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // ホールケーキ用カスタム情報
-  const [candles, setCandles] = useState<CandleRow[]>([]);
+  const candles: CandleRow[] = CANDLE_OPTIONS.map((c) => ({
+    id: c.id,
+    name: c.name,
+    price: c.price,
+  }));
   const [options, setOptions] = useState<OptionRow[]>([]);
   const [selectedCandleId, setSelectedCandleId] = useState<string>("");
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
   const [messagePlate, setMessagePlate] = useState("");
 
   const isHole = category === "ホール";
-
-  const fetchCandles = useCallback(async () => {
-    if (!storeId) return;
-    const { data } = await supabase
-      .from("candle_options")
-      .select("id, name, price")
-      .eq("store_id", storeId)
-      .order("sort_order");
-    setCandles((data ?? []) as CandleRow[]);
-  }, [storeId]);
-
-  const fetchOptions = useCallback(async () => {
-    const { data } = await supabase
-      .from("whole_cake_options")
-      .select("id, name, price, multiple_allowed")
-      .order("sort_order");
-    setOptions(
-      (data ?? []).map((o: any) => ({
-        id: o.id,
-        name: o.name,
-        price: o.price,
-        multiple_allowed: o.multiple_allowed ?? false,
-      }))
-    );
-  }, []);
 
   const fetchProducts = useCallback(async () => {
     if (!storeId) {
@@ -123,20 +99,19 @@ export function CakeTab() {
     }
     setLoading(true);
     const { data } = await supabase
-      .from("product_registrations")
+      .from("products")
       .select("*")
       .eq("store_id", storeId)
-      .or("is_ec.is.null,is_ec.eq.false")
-      .order("id", { ascending: true });
+      .order("display_order", { ascending: true });
     setProducts((data ?? []) as ProductRow[]);
+    // オプションは現在使用しないため空にする
+    setOptions([]);
     setLoading(false);
   }, [storeId]);
 
   useEffect(() => {
     fetchProducts();
-    fetchCandles();
-    fetchOptions();
-  }, [fetchProducts, fetchCandles, fetchOptions]);
+  }, [fetchProducts]);
 
   const clearForm = useCallback(() => {
     setSelectedId(null);
@@ -160,16 +135,13 @@ export function CakeTab() {
       const p = products.find((r) => r.id === id);
       if (!p) return;
       setSelectedId(p.id);
-      const typeMatch = productTypes.find(
-        (t) => t.id === String(p.product_type_id)
-      );
-      setCategory(typeMatch?.productType ?? "");
+      setCategory(p.category_name ?? "");
       setProductName(p.name ?? "");
       setDescription(p.description ?? "");
-      setPrice(p.price != null ? `¥${p.price.toLocaleString()}` : "");
+      setPrice(p.base_price != null ? `¥${p.base_price.toLocaleString()}` : "");
       setOrderType(resolveOrderType(p));
-      setReserveDays(String(p.preparation_days ?? 10));
-      setIsLimited(!!(p.order_start_date || p.order_end_date));
+      setReserveDays(String(p.min_order_lead_minutes ?? 0));
+      setIsLimited(false);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setSelectedCandleId("");
@@ -235,79 +207,34 @@ export function CakeTab() {
 
     setSaving(true);
     try {
-      const typeMatch = productTypes.find((t) => t.productType === category);
       const payload: any = {
         store_id: storeId,
         name: productName.trim(),
         description: description.trim(),
-        price: parsePriceValue(price),
-        product_type_id: typeMatch?.id ?? null,
+        base_price: parsePriceValue(price),
+        category_name: category || null,
         image: mainImage ?? null,
         cross_section_image: crossImage ?? null,
-        always_available: orderType === "always",
-        cur_same_day: orderType === "sameDay",
-        preparation_days:
+        same_day_order_allowed: orderType === "sameDay",
+        is_preorder_required: isHole || orderType === "reserveOnly",
+        min_order_lead_minutes:
           orderType === "reserveOnly" ? parseInt(reserveDays, 10) || 0 : 0,
-        is_ec: false,
-        order_start_date: null,
-        order_end_date: null,
+        is_active: true,
       };
-
-      let productRegId: string | null = selectedId;
 
       if (selectedId) {
         const { error: err } = await supabase
-          .from("product_registrations")
+          .from("products")
           .update(payload)
           .eq("id", selectedId);
         if (err) throw err;
       } else {
-        const { data, error: err } = await supabase
-          .from("product_registrations")
-          .insert({ ...payload, created_date: new Date().toISOString() })
+        const { error: err } = await supabase
+          .from("products")
+          .insert(payload)
           .select("id")
           .single();
         if (err) throw err;
-        productRegId = data?.id ?? null;
-      }
-
-      // ホール選択時: whole_cake_products にも登録し、カスタム情報を紐づけ
-      if (isHole && productRegId) {
-        const existingWcp = await supabase
-          .from("whole_cake_products")
-          .select("id")
-          .eq("store_id", storeId)
-          .eq("name", productName.trim())
-          .maybeSingle();
-
-        let wcpId: string;
-        if (existingWcp.data) {
-          wcpId = existingWcp.data.id;
-          await supabase
-            .from("whole_cake_products")
-            .update({
-              name: productName.trim(),
-              image: mainImage ?? "",
-            })
-            .eq("id", wcpId);
-        } else {
-          const { data: newWcp, error: wcpErr } = await supabase
-            .from("whole_cake_products")
-            .insert({
-              store_id: storeId,
-              name: productName.trim(),
-              image: mainImage ?? "",
-            })
-            .select("id")
-            .single();
-          if (wcpErr) throw wcpErr;
-          wcpId = newWcp.id;
-        }
-
-        // 選択されたオプションを紐づけ（既存のオプションが別の whole_cake_product_id の場合でも、情報をログに記録）
-        if (selectedCandleId) {
-          // ろうそく選択情報はorder_item_detailsに注文時保存されるため、ここではログのみ
-        }
       }
 
       await fetchProducts();
@@ -327,8 +254,9 @@ export function CakeTab() {
     try {
       if (mainImage) await deleteProductImage(mainImage);
       if (crossImage) await deleteProductImage(crossImage);
+      await supabase.from("product_variants").delete().eq("product_id", selectedId);
       const { error: err } = await supabase
-        .from("product_registrations")
+        .from("products")
         .delete()
         .eq("id", selectedId);
       if (err) throw err;

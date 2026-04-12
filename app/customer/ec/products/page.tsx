@@ -15,7 +15,7 @@ const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
 export default function ECProductsPage() {
   const { selectedStoreId, selectedStoreName, profile } = useCustomerContext();
-  const { products, loading: productsLoading } = useProducts({ storeId: selectedStoreId ?? undefined, ecOnly: true });
+  const { products, loading: productsLoading } = useProducts({ storeId: selectedStoreId ?? undefined });
   const { categories, loading: categoriesLoading } = useProductTypes();
   const [selectedCategory, setSelectedCategory] = useState("すべて");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -42,7 +42,7 @@ export default function ECProductsPage() {
         shopName={selectedStoreName || "パティモバ"}
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         onCartClick={() => setCartOpen(true)}
       />
 

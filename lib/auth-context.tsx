@@ -3,9 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react"
 import type { Database } from "./database.types"
 
-type AdminUserRow = Database["public"]["Tables"]["admin_users"]["Row"]
-type StoreUserRow = Database["public"]["Tables"]["store_users"]["Row"]
-type CustomerRow = Database["public"]["Tables"]["customers"]["Row"]
+type UserRow = Database["public"]["Tables"]["users"]["Row"]
 
 export type UserType = "admin" | "store" | "customer"
 
@@ -16,7 +14,7 @@ interface AuthUser {
   firstName: string
   lastName: string
   storeId: string | null
-  raw: AdminUserRow | StoreUserRow | CustomerRow
+  raw: UserRow
 }
 
 interface AuthContextType {
@@ -61,79 +59,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const authUserId = authData.user.id
 
-    if (!expectedType || expectedType === "admin") {
-      const { data: admin } = await supabase
-        .from("admin_users")
-        .select("*")
-        .eq("auth_user_id", authUserId)
-        .maybeSingle()
-      if (admin) {
-        const authUser: AuthUser = {
-          id: admin.id,
-          email: admin.email,
-          userType: "admin",
-          firstName: "",
-          lastName: admin.name,
-          storeId: null,
-          raw: admin,
-        }
-        setUser(authUser)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
-        return authUser
-      }
-      if (expectedType === "admin") {
-        throw new Error("管理者アカウントが見つかりません")
-      }
+    // users テーブルから auth_user_id で検索
+    const { data: userRow } = await supabase
+      .from("users")
+      .select("*")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle()
+
+    if (!userRow) {
+      throw new Error("アカウントが見つかりません")
     }
 
-    if (!expectedType || expectedType === "store") {
+    const userType = userRow.user_type as UserType
+    if (expectedType && userType !== expectedType) {
+      if (expectedType === "admin") throw new Error("管理者アカウントが見つかりません")
+      if (expectedType === "store") throw new Error("店舗アカウントが見つかりません")
+      throw new Error("アカウントが見つかりません")
+    }
+
+    // store スタッフの場合は store_users から store_id を取得
+    let storeId: string | null = null
+    if (userType === "store") {
       const { data: storeUser } = await supabase
         .from("store_users")
-        .select("*")
-        .eq("auth_user_id", authUserId)
+        .select("store_id")
+        .eq("user_id", userRow.id)
+        .eq("is_active", true)
         .maybeSingle()
-      if (storeUser) {
-        const authUser: AuthUser = {
-          id: storeUser.id,
-          email: storeUser.email,
-          userType: "store",
-          firstName: "",
-          lastName: "",
-          storeId: storeUser.store_id,
-          raw: storeUser,
-        }
-        setUser(authUser)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
-        return authUser
-      }
-      if (expectedType === "store") {
-        throw new Error("店舗アカウントが見つかりません")
-      }
+      storeId = storeUser?.store_id ?? null
     }
 
-    if (!expectedType || expectedType === "customer") {
-      const { data: customer } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("auth_user_id", authUserId)
-        .maybeSingle()
-      if (customer) {
-        const authUser: AuthUser = {
-          id: customer.id,
-          email: customer.email || "",
-          userType: "customer",
-          firstName: customer.first_name_kn || "",
-          lastName: customer.last_name_kn || "",
-          storeId: null,
-          raw: customer,
-        }
-        setUser(authUser)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
-        return authUser
-      }
+    const nameParts = (userRow.name || "").split(" ")
+    const authUser: AuthUser = {
+      id: userRow.id,
+      email: userRow.email || "",
+      userType,
+      firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
+      lastName: nameParts[0] || "",
+      storeId,
+      raw: userRow,
     }
-
-    throw new Error("アカウントが見つかりません")
+    setUser(authUser)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+    return authUser
   }, [])
 
   const logout = useCallback(() => {

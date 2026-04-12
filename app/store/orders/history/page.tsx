@@ -35,7 +35,7 @@ export default function StoreOrderHistoryPage() {
   // Initialize checked IDs from prepared orders once loaded
   useEffect(() => {
     if (!ordersLoading && orders.length > 0) {
-      setCheckedIds(new Set(orders.filter((o) => o.isPrepared).map((o) => o.id)));
+      setCheckedIds(new Set(orders.filter((o) => o.orderStatus === "ready" || o.orderStatus === "completed").map((o) => o.id)));
     }
   }, [orders, ordersLoading]);
 
@@ -123,7 +123,7 @@ export default function StoreOrderHistoryPage() {
 
         {orders.map((order, i) => {
           const isChecked = checkedIds.has(order.id);
-          const isDelivery = !!order.address;
+          const isDelivery = order.orderType === "delivery";
 
           return (
             <motion.div
@@ -163,17 +163,7 @@ export default function StoreOrderHistoryPage() {
               </div>
 
               <div className="text-sm text-gray-600">
-                {order.visitTime && <div>{order.visitTime}</div>}
-                {isDelivery && (
-                  <div className="text-xs text-gray-500 whitespace-pre-line leading-relaxed">
-                    {order.address}
-                    {order.pickupTimeSlot && (
-                      <>
-                        {"\n"}受取時間：{order.pickupTimeSlot}
-                      </>
-                    )}
-                  </div>
-                )}
+                {order.pickupTime && <div>{order.pickupTime}</div>}
               </div>
 
               <div className="text-sm">
@@ -190,10 +180,7 @@ export default function StoreOrderHistoryPage() {
 
               <div>
                 <div className="text-sm font-bold">
-                  &yen;{order.total.toLocaleString()}
-                  {order.shippingIncluded && (
-                    <span className="text-xs font-normal">(配送料込)</span>
-                  )}
+                  &yen;{order.totalAmount.toLocaleString()}
                 </div>
                 <div
                   className={`text-xs ${
@@ -211,12 +198,12 @@ export default function StoreOrderHistoryPage() {
               <div className="flex justify-center">
                 <div
                   className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
-                    order.isPrepared
+                    (order.orderStatus === "ready" || order.orderStatus === "completed")
                       ? "bg-amber-400 text-white"
                       : "bg-gray-200 text-gray-500"
                   }`}
                 >
-                  {order.isPrepared ? "済" : "未"}
+                  {(order.orderStatus === "ready" || order.orderStatus === "completed") ? "済" : "未"}
                 </div>
               </div>
             </motion.div>

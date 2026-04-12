@@ -50,7 +50,7 @@ export function WholeCakeOptionsStep({
         </div>
 
         <div className="border border-gray-200 rounded-xl divide-y divide-gray-200 mb-8">
-          {cake.options.map((option) => {
+          {([] as { id: string; name: string; price: number }[]).map((option) => {
             const isChecked = selectedOptionIds.includes(option.id);
             return (
               <label

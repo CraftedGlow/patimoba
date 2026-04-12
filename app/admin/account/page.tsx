@@ -65,12 +65,13 @@ async function fetchAdminProfile(): Promise<AdminProfile | null> {
   const { data: authData } = await supabase.auth.getUser();
   const authUser = authData.user;
 
-  let query = supabase.from("admin_users").select("*").limit(1);
+  let query = supabase.from("users").select("*").eq("user_type", "admin").limit(1);
   if (authUser) {
     query = supabase
-      .from("admin_users")
+      .from("users")
       .select("*")
       .eq("auth_user_id", authUser.id)
+      .eq("user_type", "admin")
       .limit(1);
   }
 
@@ -78,17 +79,15 @@ async function fetchAdminProfile(): Promise<AdminProfile | null> {
 
   if (error || !data) return null;
 
-  const ns = (data.notification_settings ?? {}) as Record<string, boolean>;
-
   return {
     id: data.id,
     authUserId: data.auth_user_id,
     name: data.name ?? "",
     email: data.email ?? "",
     phone: data.phone ?? "",
-    department: data.department ?? "",
-    company: data.company_name ?? "",
-    notificationSettings: ns,
+    department: "",
+    company: "",
+    notificationSettings: {},
   };
 }
 
@@ -199,8 +198,14 @@ export default function AdminAccountPage() {
         if (!authUserId) throw new Error("認証ユーザーの作成に失敗しました");
 
         const { data: created, error: err } = await supabase
-          .from("admin_users")
-          .insert({ ...basePayload, auth_user_id: authUserId })
+          .from("users")
+          .insert({
+            name: basePayload.name,
+            email: basePayload.email,
+            phone: basePayload.phone,
+            auth_user_id: authUserId,
+            user_type: "admin",
+          })
           .select()
           .single();
         if (err) throw err;
@@ -213,8 +218,12 @@ export default function AdminAccountPage() {
         }
       } else if (profileId) {
         const { error: err } = await supabase
-          .from("admin_users")
-          .update(basePayload)
+          .from("users")
+          .update({
+            name: basePayload.name,
+            email: basePayload.email,
+            phone: basePayload.phone,
+          })
           .eq("id", profileId);
         if (err) throw err;
       }

@@ -57,7 +57,7 @@ export default function ECProductDetailPage() {
         shopName={selectedStoreName || "パティモバ"}
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         onCartClick={() => setCartOpen(true)}
       />
 

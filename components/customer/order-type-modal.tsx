@@ -43,89 +43,98 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
 
     const check = async () => {
       const { supabase } = await import("@/lib/supabase");
-      const { isClosedByRule } = await import("@/components/store/business-days/types");
 
       const now = new Date();
       const fmtKey = (d: Date) =>
         `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
       const todayKey = fmtKey(now);
+      const todayDow = now.getDay(); // 0=Sun
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayKey = fmtKey(yesterday);
+      const yesterdayDow = yesterday.getDay();
 
-      const { data: rules } = await supabase
-        .from("closed_day_rules")
-        .select("day_of_week, rule")
+      // store_business_hours から曜日別営業時間を取得
+      const { data: hours } = await supabase
+        .from("store_business_hours")
+        .select("day_of_week, is_closed, open_time, close_time")
         .eq("store_id", store.id);
 
-      const closedRules = (rules || []).map((r: any) => ({
-        dayOfWeek: r.day_of_week,
-        day: "",
-        rule: r.rule,
-      }));
+      const hoursMap = new Map<number, { is_closed: boolean; open_time: string | null; close_time: string | null }>();
+      (hours || []).forEach((h: any) => hoursMap.set(h.day_of_week, h));
 
-      // 深夜帯（open > close → 日またぎ営業）の場合、前日の営業が継続中かを先にチェック
-      const defaultOpen = store.openTime;
-      const defaultClose = store.closeTime;
+      // store_order_rules からカットオフ時間を取得
+      const { data: orderRules } = await supabase
+        .from("store_order_rules")
+        .select("default_lead_time_minutes")
+        .eq("store_id", store.id)
+        .maybeSingle();
+
+      const cutoffMinutes = orderRules?.default_lead_time_minutes ?? 60;
+
+      const todayHours = hoursMap.get(todayDow);
+      const defaultOpen = todayHours?.open_time ?? null;
+      const defaultClose = todayHours?.close_time ?? null;
+
       const isOvernightStore =
         defaultOpen && defaultClose &&
         toMin(defaultOpen) > toMin(defaultClose);
 
+      // 深夜帯（open > close → 日またぎ営業）の場合、前日の営業が継続中かを先にチェック
       if (isOvernightStore && now.getHours() < 12) {
-        const { data: yesterdaySchedule } = await supabase
-          .from("business_day_schedules")
-          .select("is_open, open_time, close_time")
+        // store_special_dates で前日の特例を確認
+        const { data: yesterdaySpecial } = await supabase
+          .from("store_special_dates")
+          .select("is_closed, open_time, close_time")
           .eq("store_id", store.id)
-          .eq("date", yesterdayKey)
+          .eq("target_date", yesterdayKey)
           .maybeSingle();
 
-        if (yesterdaySchedule) {
-          if (yesterdaySchedule.is_open) {
-            const ot = yesterdaySchedule.open_time || defaultOpen;
-            const ct = yesterdaySchedule.close_time || defaultClose;
-            checkTimeWindow(store, ot, ct, now, setStatus);
+        if (yesterdaySpecial) {
+          if (!yesterdaySpecial.is_closed) {
+            const ot = yesterdaySpecial.open_time || defaultOpen;
+            const ct = yesterdaySpecial.close_time || defaultClose;
+            checkTimeWindow(cutoffMinutes, ot, ct, now, setStatus);
             return;
           }
         } else {
-          const yy = yesterday.getFullYear();
-          const ym = yesterday.getMonth();
-          const yd = yesterday.getDate();
-          if (!isClosedByRule(closedRules, yy, ym, yd)) {
-            checkTimeWindow(store, defaultOpen, defaultClose, now, setStatus);
+          const yHours = hoursMap.get(yesterdayDow);
+          if (!yHours?.is_closed) {
+            const yOpen = yHours?.open_time ?? defaultOpen;
+            const yClose = yHours?.close_time ?? defaultClose;
+            checkTimeWindow(cutoffMinutes, yOpen, yClose, now, setStatus);
             return;
           }
         }
       }
 
-      // 通常の今日の判定
-      const { data: scheduleRow } = await supabase
-        .from("business_day_schedules")
-        .select("is_open, open_time, close_time")
+      // store_special_dates で今日の特例を確認
+      const { data: todaySpecial } = await supabase
+        .from("store_special_dates")
+        .select("is_closed, open_time, close_time")
         .eq("store_id", store.id)
-        .eq("date", todayKey)
+        .eq("target_date", todayKey)
         .maybeSingle();
 
-      if (scheduleRow) {
-        if (!scheduleRow.is_open) {
+      if (todaySpecial) {
+        if (todaySpecial.is_closed) {
           setStatus({ available: false, reason: "closed_today", acceptStart: null, acceptEnd: null });
           return;
         }
-        const openTime = scheduleRow.open_time || defaultOpen;
-        const closeTime = scheduleRow.close_time || defaultClose;
-        checkTimeWindow(store, openTime, closeTime, now, setStatus);
+        const openTime = todaySpecial.open_time || defaultOpen;
+        const closeTime = todaySpecial.close_time || defaultClose;
+        checkTimeWindow(cutoffMinutes, openTime, closeTime, now, setStatus);
         return;
       }
 
-      const ty = now.getFullYear();
-      const tm = now.getMonth();
-      const td = now.getDate();
-      if (isClosedByRule(closedRules, ty, tm, td)) {
+      // 曜日別定休日チェック
+      if (todayHours?.is_closed) {
         setStatus({ available: false, reason: "closed_today", acceptStart: null, acceptEnd: null });
         return;
       }
 
-      checkTimeWindow(store, defaultOpen, defaultClose, now, setStatus);
+      checkTimeWindow(cutoffMinutes, defaultOpen, defaultClose, now, setStatus);
     };
 
     check();
@@ -140,7 +149,7 @@ function minutesToTimeStr(m: number): string {
 }
 
 function checkTimeWindow(
-  store: Store,
+  cutoffMin: number,
   openTime: string | null,
   closeTime: string | null,
   now: Date,
@@ -153,7 +162,6 @@ function checkTimeWindow(
 
   const [oh, om] = openTime.split(":").map(Number);
   const [ch, cm] = closeTime.split(":").map(Number);
-  const cutoffMin = store.sameDayCutoffMinutes ?? 60;
 
   let openMinutes = oh * 60 + om;
   let closeMinutes = ch * 60 + cm;

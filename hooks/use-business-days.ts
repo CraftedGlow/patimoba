@@ -3,23 +3,24 @@
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 
-export interface BusinessDay {
+export interface SpecialDate {
   id: string
-  date: string
+  targetDate: string
   openTime: string | null
   closeTime: string | null
-  isOpen: boolean
+  isClosed: boolean
+  reason: string | null
   storeId: string
 }
 
 export function useBusinessDays(storeId?: string) {
-  const [businessDays, setBusinessDays] = useState<BusinessDay[]>([])
+  const [specialDates, setSpecialDates] = useState<SpecialDate[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchBusinessDays = useCallback(async () => {
+  const fetchSpecialDates = useCallback(async () => {
     if (!storeId) {
-      setBusinessDays([])
+      setSpecialDates([])
       setLoading(false)
       return
     }
@@ -27,21 +28,22 @@ export function useBusinessDays(storeId?: string) {
     setError(null)
 
     const { data, error: err } = await supabase
-      .from("business_day_schedules")
+      .from("store_special_dates")
       .select("*")
       .eq("store_id", storeId)
-      .order("date", { ascending: true })
+      .order("target_date", { ascending: true })
 
     if (err) {
       setError(err.message)
     } else {
-      setBusinessDays(
+      setSpecialDates(
         (data || []).map((row: any) => ({
           id: String(row.id),
-          date: row.date,
+          targetDate: row.target_date,
           openTime: row.open_time,
           closeTime: row.close_time,
-          isOpen: row.is_open ?? true,
+          isClosed: row.is_closed ?? false,
+          reason: row.reason,
           storeId: String(row.store_id),
         }))
       )
@@ -50,57 +52,57 @@ export function useBusinessDays(storeId?: string) {
   }, [storeId])
 
   useEffect(() => {
-    fetchBusinessDays()
-  }, [fetchBusinessDays])
+    fetchSpecialDates()
+  }, [fetchSpecialDates])
 
-  const addBusinessDay = async (day: Omit<BusinessDay, "id">) => {
-    const { error: err } = await supabase.from("business_day_schedules").insert({
-      date: day.date,
-      open_time: day.openTime ?? "",
-      close_time: day.closeTime ?? "",
-      is_open: day.isOpen,
+  const addSpecialDate = async (day: Omit<SpecialDate, "id">) => {
+    const { error: err } = await supabase.from("store_special_dates").insert({
+      target_date: day.targetDate,
+      open_time: day.openTime ?? null,
+      close_time: day.closeTime ?? null,
+      is_closed: day.isClosed,
+      reason: day.reason ?? null,
       store_id: day.storeId,
     })
     if (err) throw err
-    await fetchBusinessDays()
+    await fetchSpecialDates()
   }
 
-  const updateBusinessDay = async (id: string, updates: Partial<BusinessDay>) => {
+  const updateSpecialDate = async (id: string, updates: Partial<SpecialDate>) => {
     const payload: any = {}
-    if (updates.date !== undefined) payload.date = updates.date
-    if (updates.openTime !== undefined) payload.open_time = updates.openTime ?? ""
-    if (updates.closeTime !== undefined) payload.close_time = updates.closeTime ?? ""
-    if (updates.isOpen !== undefined) payload.is_open = updates.isOpen
+    if (updates.targetDate !== undefined) payload.target_date = updates.targetDate
+    if (updates.openTime !== undefined) payload.open_time = updates.openTime ?? null
+    if (updates.closeTime !== undefined) payload.close_time = updates.closeTime ?? null
+    if (updates.isClosed !== undefined) payload.is_closed = updates.isClosed
+    if (updates.reason !== undefined) payload.reason = updates.reason
 
     const { error: err } = await supabase
-      .from("business_day_schedules")
+      .from("store_special_dates")
       .update(payload)
       .eq("id", id)
     if (err) throw err
-    await fetchBusinessDays()
+    await fetchSpecialDates()
   }
 
-  const deleteBusinessDay = async (id: string) => {
+  const deleteSpecialDate = async (id: string) => {
     const { error: err } = await supabase
-      .from("business_day_schedules")
+      .from("store_special_dates")
       .delete()
       .eq("id", id)
     if (err) throw err
-    await fetchBusinessDays()
+    await fetchSpecialDates()
   }
 
-  /**
-   * 指定月の日別オーバーライドを置換保存する。
-   */
   const saveMonth = async (
     targetStoreId: string,
     year: number,
     month: number,
     entries: Array<{
       date: string
-      isOpen: boolean
+      isClosed: boolean
       openTime: string | null
       closeTime: string | null
+      reason?: string | null
     }>
   ) => {
     const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`
@@ -108,40 +110,69 @@ export function useBusinessDays(storeId?: string) {
     const monthEnd = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}-01`
 
     const { error: delErr } = await supabase
-      .from("business_day_schedules")
+      .from("store_special_dates")
       .delete()
       .eq("store_id", targetStoreId)
-      .gte("date", monthStart)
-      .lt("date", monthEnd)
+      .gte("target_date", monthStart)
+      .lt("target_date", monthEnd)
     if (delErr) throw delErr
 
     if (entries.length === 0) {
-      await fetchBusinessDays()
+      await fetchSpecialDates()
       return
     }
 
     const rows = entries.map((entry) => ({
       store_id: targetStoreId,
-      date: entry.date,
-      open_time: entry.isOpen ? (entry.openTime ?? "") : "",
-      close_time: entry.isOpen ? (entry.closeTime ?? "") : "",
-      is_open: entry.isOpen,
+      target_date: entry.date,
+      open_time: entry.isClosed ? null : (entry.openTime ?? null),
+      close_time: entry.isClosed ? null : (entry.closeTime ?? null),
+      is_closed: entry.isClosed,
+      reason: entry.reason ?? null,
     }))
 
-    const { error: insErr } = await supabase.from("business_day_schedules").insert(rows)
+    const { error: insErr } = await supabase.from("store_special_dates").insert(rows)
     if (insErr) throw insErr
 
-    await fetchBusinessDays()
+    await fetchSpecialDates()
   }
 
   return {
-    businessDays,
+    specialDates,
+    // backwards compat alias
+    businessDays: specialDates.map((sd) => ({
+      id: sd.id,
+      date: sd.targetDate,
+      openTime: sd.openTime,
+      closeTime: sd.closeTime,
+      isOpen: !sd.isClosed,
+      storeId: sd.storeId,
+    })),
     loading,
     error,
-    refetch: fetchBusinessDays,
-    addBusinessDay,
-    updateBusinessDay,
-    deleteBusinessDay,
+    refetch: fetchSpecialDates,
+    addSpecialDate,
+    addBusinessDay: async (day: { date: string; openTime: string | null; closeTime: string | null; isOpen: boolean; storeId: string }) => {
+      await addSpecialDate({
+        targetDate: day.date,
+        openTime: day.openTime,
+        closeTime: day.closeTime,
+        isClosed: !day.isOpen,
+        reason: null,
+        storeId: day.storeId,
+      })
+    },
+    updateBusinessDay: async (id: string, updates: any) => {
+      await updateSpecialDate(id, {
+        targetDate: updates.date,
+        openTime: updates.openTime,
+        closeTime: updates.closeTime,
+        isClosed: updates.isOpen !== undefined ? !updates.isOpen : undefined,
+      })
+    },
+    deleteBusinessDay: deleteSpecialDate,
+    updateSpecialDate,
+    deleteSpecialDate,
     saveMonth,
   }
 }

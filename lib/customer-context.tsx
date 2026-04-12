@@ -6,7 +6,6 @@ import { useAuth } from "./auth-context"
 interface CustomerProfile {
   lineName: string
   avatar: string | null
-  points: number
 }
 
 interface CustomerContextType {
@@ -70,26 +69,15 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     const fetchProfile = async () => {
       const { supabase } = await import("./supabase")
 
-      const { data: customer } = await supabase
-        .from("customers")
-        .select("line_name, avatar")
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("name, line_name")
         .eq("id", user.id)
         .maybeSingle()
 
-      const { data: rels } = await supabase
-        .from("customer_store_relationships")
-        .select("points_balance")
-        .eq("customer_id", user.id)
-
-      const totalPoints = (rels || []).reduce(
-        (sum, r) => sum + (Number(r.points_balance) || 0),
-        0
-      )
-
       setProfile({
-        lineName: customer?.line_name || user.lastName || "ゲスト",
-        avatar: customer?.avatar || null,
-        points: totalPoints,
+        lineName: userRow?.line_name || userRow?.name || user.lastName || "ゲスト",
+        avatar: null,
       })
     }
 

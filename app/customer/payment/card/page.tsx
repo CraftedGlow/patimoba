@@ -49,7 +49,7 @@ export default function CardAddPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
       />
 
       <StepProgress currentStep={4} steps={steps} />

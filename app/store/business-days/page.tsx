@@ -51,31 +51,33 @@ export default function BusinessDaysPage() {
     let cancelled = false;
 
     (async () => {
-      const { data: store } = await supabase
-        .from("stores")
-        .select("open_time, close_time")
-        .eq("id", storeId)
-        .maybeSingle();
-      if (cancelled) return;
-      if (store) {
-        setStoreOpenTime(store.open_time || "10:00");
-        setStoreCloseTime(store.close_time || "19:00");
-      }
-
-      const { data: rules } = await supabase
-        .from("closed_day_rules")
-        .select("day_of_week, rule")
+      // store_business_hours から営業時間と定休日を取得
+      const { data: bhData } = await supabase
+        .from("store_business_hours")
+        .select("day_of_week, open_time, close_time, is_closed")
         .eq("store_id", storeId)
         .order("day_of_week", { ascending: true });
       if (cancelled) return;
-      if (rules && rules.length > 0) {
-        setClosedDayRules(
-          rules.map((r: any) => ({
-            dayOfWeek: r.day_of_week,
-            day: weekdayNames[r.day_of_week] ?? `${r.day_of_week}`,
-            rule: r.rule || "毎週",
-          }))
-        );
+      if (bhData && bhData.length > 0) {
+        // 営業日の最初のレコードからopen/close timeを取得
+        const openDay = bhData.find((r: any) => !r.is_closed);
+        if (openDay) {
+          setStoreOpenTime(openDay.open_time || "10:00");
+          setStoreCloseTime(openDay.close_time || "19:00");
+        }
+        // 定休日を抽出
+        const closed = bhData.filter((r: any) => r.is_closed);
+        if (closed.length > 0) {
+          setClosedDayRules(
+            closed.map((r: any) => ({
+              dayOfWeek: r.day_of_week,
+              day: weekdayNames[r.day_of_week] ?? `${r.day_of_week}`,
+              rule: "毎週",
+            }))
+          );
+        } else {
+          setClosedDayRules([]);
+        }
       } else {
         setClosedDayRules([]);
       }
@@ -185,12 +187,12 @@ export default function BusinessDaysPage() {
     setSaving(true);
     try {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const entries: Array<{ date: string; isOpen: boolean; openTime: string | null; closeTime: string | null }> = [];
+      const entries: Array<{ date: string; isClosed: boolean; openTime: string | null; closeTime: string | null }> = [];
       for (let d = 1; d <= daysInMonth; d++) {
         const key = formatDateKey(year, month, d);
         const s = schedules[key];
         if (s) {
-          entries.push({ date: key, isOpen: s.isOpen, openTime: s.openTime, closeTime: s.closeTime });
+          entries.push({ date: key, isClosed: !s.isOpen, openTime: s.openTime, closeTime: s.closeTime });
         }
       }
       await saveMonth(storeId, year, month, entries);

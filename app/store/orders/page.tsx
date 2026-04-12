@@ -27,7 +27,7 @@ function formatDate(date: Date) {
 
 type ConfirmAction = {
   orderId: string;
-  toPrepared: boolean;
+  toReady: boolean;
 };
 
 export default function StoreOrdersPage() {
@@ -39,7 +39,7 @@ export default function StoreOrdersPage() {
     orderType: productType || undefined,
     date: selectedDate.toISOString(),
   });
-  const { togglePrepared } = useOrderMutations();
+  const { updateOrderStatus } = useOrderMutations();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -60,7 +60,7 @@ export default function StoreOrdersPage() {
     if (!confirmAction || confirmLoading) return;
     setConfirmLoading(true);
     try {
-      await togglePrepared(confirmAction.orderId, confirmAction.toPrepared);
+      await updateOrderStatus(confirmAction.orderId, confirmAction.toReady ? "ready" : "pending");
       await refetchOrders();
     } finally {
       setConfirmAction(null);
@@ -133,8 +133,8 @@ export default function StoreOrdersPage() {
         )}
 
         {orders.map((order, i) => {
-          const isPrepared = order.isPrepared;
-          const isDelivery = !!order.address;
+          const isPrepared = order.orderStatus === "ready" || order.orderStatus === "completed";
+          const isDelivery = order.orderType === "delivery";
 
           return (
             <motion.div
@@ -158,17 +158,7 @@ export default function StoreOrdersPage() {
               </div>
 
               <div className="text-sm text-gray-600">
-                {order.visitTime && <div>{order.visitTime}</div>}
-                {isDelivery && (
-                  <div className="text-xs text-gray-500 whitespace-pre-line leading-relaxed">
-                    {order.address}
-                    {order.pickupTimeSlot && (
-                      <>
-                        {"\n"}受取時間：{order.pickupTimeSlot}
-                      </>
-                    )}
-                  </div>
-                )}
+                {order.pickupTime && <div>{order.pickupTime}</div>}
               </div>
 
               <div className="text-sm">
@@ -185,10 +175,7 @@ export default function StoreOrdersPage() {
 
               <div>
                 <div className="text-sm font-bold">
-                  &yen;{order.total.toLocaleString()}
-                  {order.shippingIncluded && (
-                    <span className="text-xs font-normal">(配送料込)</span>
-                  )}
+                  &yen;{order.totalAmount.toLocaleString()}
                 </div>
                 <div
                   className={`text-xs ${
@@ -211,7 +198,7 @@ export default function StoreOrdersPage() {
                   onClick={() =>
                     setConfirmAction({
                       orderId: order.id,
-                      toPrepared: !isPrepared,
+                      toReady: !isPrepared,
                     })
                   }
                   className={`min-w-[56px] text-sm font-bold px-3 py-2 rounded-lg transition-colors ${
@@ -246,12 +233,12 @@ export default function StoreOrdersPage() {
               className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-[60] p-6 w-[90%] max-w-sm"
             >
               <h3 className="text-base font-bold text-center mb-2">
-                {confirmAction.toPrepared
+                {confirmAction.toReady
                   ? "準備完了にします"
                   : "準備未完了に戻す"}
               </h3>
               <p className="text-xs text-gray-500 text-center mb-5">
-                {confirmAction.toPrepared
+                {confirmAction.toReady
                   ? "この注文を準備完了にしますか？"
                   : "この注文を未準備に戻しますか？"}
               </p>
@@ -269,7 +256,7 @@ export default function StoreOrdersPage() {
                   disabled={confirmLoading}
                   onClick={handleConfirm}
                   className={`flex-1 font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 disabled:opacity-60 text-white ${
-                    confirmAction.toPrepared
+                    confirmAction.toReady
                       ? "bg-amber-400 hover:bg-amber-500"
                       : "bg-gray-500 hover:bg-gray-600"
                   }`}

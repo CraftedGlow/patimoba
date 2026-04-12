@@ -50,15 +50,17 @@ export default function TakeoutConfirmPage() {
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase
-        .from("customers")
-        .select("last_name_kn, first_name_kn, phone, postal_code, address")
+        .from("users")
+        .select("name, phone")
         .eq("id", userId)
         .maybeSingle();
       if (cancelled || error || !data) return;
-      if (data.last_name_kn) setLastName(data.last_name_kn);
-      if (data.first_name_kn) setFirstName(data.first_name_kn);
+      if (data.name) {
+        const parts = data.name.split(/\s+/);
+        setLastName(parts[0] ?? "");
+        setFirstName(parts.slice(1).join(" ") ?? "");
+      }
       if (data.phone) setPhone(data.phone);
-      if (data.postal_code) setPostalCode(data.postal_code);
     })();
     return () => {
       cancelled = true;
@@ -66,7 +68,7 @@ export default function TakeoutConfirmPage() {
   }, [userId]);
 
   const subtotal = cartTotal;
-  const availablePoints = profile?.points ?? 0;
+  const availablePoints = 0;
 
   const usedPoints =
     pointOption === "all"
@@ -96,18 +98,12 @@ export default function TakeoutConfirmPage() {
     const result = await createOrder({
       storeId: storeIdForOrder,
       customerId: userId,
-      paymentMethod: paymentMethod === "credit" ? "credit_card" : "store",
+      paymentStatus: paymentMethod === "credit" ? "paid" : "unpaid",
       items: cartItems,
       subtotal,
-      usedPoints,
+      discountAmount: usedPoints,
       orderType: "takeout",
-      pickupTimeSlot: pickupTime || null,
-      customerInfo: {
-        lastNameKn: lastName,
-        firstNameKn: firstName,
-        phone,
-        postalCode,
-      },
+      pickupTime: pickupTime || null,
     });
 
     setSubmitting(false);
@@ -148,7 +144,7 @@ export default function TakeoutConfirmPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         onCartClick={() => setCartOpen(true)}
       />
 

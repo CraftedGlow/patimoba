@@ -22,11 +22,10 @@ export default function StoreDashboardPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const { orders, loading: ordersLoading, refetch: refetchOrders } = useOrders({
     storeId,
-    unpreparedOnly: true,
     date: selectedDate.toISOString(),
   });
   const { stats, loading: statsLoading } = useDashboardStats(storeId);
-  const { togglePrepared } = useOrderMutations();
+  const { updateOrderStatus } = useOrderMutations();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [confirmOrderId, setConfirmOrderId] = useState<string | null>(null);
@@ -41,7 +40,7 @@ export default function StoreDashboardPage() {
     if (!confirmOrderId || confirmLoading) return;
     setConfirmLoading(true);
     try {
-      await togglePrepared(confirmOrderId, true);
+      await updateOrderStatus(confirmOrderId, "ready");
       await refetchOrders();
     } finally {
       setConfirmOrderId(null);
@@ -169,18 +168,7 @@ export default function StoreDashboardPage() {
               </div>
 
               <div className="text-sm text-gray-600">
-                {order.visitTime || "-"}
-                {order.address && (
-                  <div className="text-xs text-gray-400 mt-0.5 line-clamp-2">
-                    {order.address}
-                    {order.pickupTimeSlot && (
-                      <>
-                        <br />
-                        受取時間：{order.pickupTimeSlot}
-                      </>
-                    )}
-                  </div>
-                )}
+                {order.pickupTime || "-"}
               </div>
 
               <div className="text-sm">
@@ -197,10 +185,7 @@ export default function StoreDashboardPage() {
 
               <div>
                 <div className="text-sm font-bold">
-                  &yen;{order.total.toLocaleString()}
-                  {order.shippingIncluded && (
-                    <span className="text-xs font-normal">(配送料込)</span>
-                  )}
+                  &yen;{order.totalAmount.toLocaleString()}
                 </div>
                 <div
                   className={`text-xs ${

@@ -2,7 +2,8 @@
 
 import { motion } from "framer-motion";
 import { ChartCandlestick as CandlestickChart, X } from "lucide-react";
-import type { WholeCakeProduct, CandleOption } from "@/lib/types";
+import type { WholeCakeProduct } from "@/lib/types";
+import type { CandleOption } from "@/hooks/use-whole-cakes";
 
 export interface CandleEntry {
   id: string;
@@ -87,7 +88,7 @@ export function WholeCakeBasicStep({
             <option value="">サイズを選択</option>
             {cake.sizes.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.label}（{s.servings}） &yen;{s.price.toLocaleString()}
+                {s.name} &yen;{s.price.toLocaleString()}
               </option>
             ))}
           </select>

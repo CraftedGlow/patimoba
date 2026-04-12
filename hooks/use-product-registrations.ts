@@ -8,66 +8,42 @@ export interface ProductRegistration {
   store_id: string
   name: string
   description: string
-  price: number
+  base_price: number
   image: string | null
   cross_section_image: string | null
-  product_type_id: string | null
   category_name: string | null
-  always_available: boolean
-  cur_same_day: boolean
-  preparation_days: number
-  order_start_date: string | null
-  order_end_date: string | null
-  is_ec: boolean
-  max_per_day: number
-  max_per_order: number
-  shipping_type: string | null
-  storage_type: string | null
-  ingredients: string | null
-  expiration_days: number | null
-  volume: string | null
-  sort_order: number
-  accept_orders: boolean
-  decoration: boolean
-  created_date: string | null
+  is_active: boolean
+  is_preorder_required: boolean
+  same_day_order_allowed: boolean
+  min_order_lead_minutes: number
+  tax_type: string | null
+  display_order: number
+  created_at: string | null
   updated_at: string | null
 }
 
 interface UseProductRegistrationsOptions {
   storeId?: string
-  ecOnly?: boolean
   publishedOnly?: boolean
 }
 
 function mapRow(row: any): ProductRegistration {
-  const catName = row.product_types?.product_type ?? null
   return {
     id: row.id,
     store_id: row.store_id ?? "",
     name: row.name ?? "",
     description: row.description ?? "",
-    price: row.price ?? 0,
+    base_price: row.base_price ?? 0,
     image: row.image ?? null,
     cross_section_image: row.cross_section_image ?? null,
-    product_type_id: row.product_type_id ?? null,
-    category_name: catName,
-    always_available: row.always_available ?? true,
-    cur_same_day: row.cur_same_day ?? false,
-    preparation_days: row.preparation_days ?? 0,
-    order_start_date: row.order_start_date ?? null,
-    order_end_date: row.order_end_date ?? null,
-    is_ec: row.is_ec ?? false,
-    max_per_day: row.max_per_day ?? 30,
-    max_per_order: row.max_per_order ?? 10,
-    shipping_type: row.shipping_type ?? null,
-    storage_type: row.storage_type ?? null,
-    ingredients: row.ingredients ?? null,
-    expiration_days: row.expiration_days ?? null,
-    volume: row.volume ?? null,
-    sort_order: row.sort_order ?? 0,
-    accept_orders: row.accept_orders ?? true,
-    decoration: row.decoration ?? false,
-    created_date: row.created_date ?? null,
+    category_name: row.category_name ?? null,
+    is_active: row.is_active ?? true,
+    is_preorder_required: row.is_preorder_required ?? false,
+    same_day_order_allowed: row.same_day_order_allowed ?? false,
+    min_order_lead_minutes: row.min_order_lead_minutes ?? 0,
+    tax_type: row.tax_type ?? null,
+    display_order: row.display_order ?? 0,
+    created_at: row.created_at ?? null,
     updated_at: row.updated_at ?? null,
   }
 }
@@ -89,20 +65,14 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     setError(null)
 
     let query = supabase
-      .from("product_registrations")
-      .select("*, product_types(product_type)")
+      .from("products")
+      .select("*")
       .eq("store_id", options.storeId)
-      .order("sort_order", { ascending: true })
-      .order("created_date", { ascending: true })
-
-    if (options.ecOnly === true) {
-      query = query.eq("is_ec", true)
-    } else if (options.ecOnly === false) {
-      query = query.or("is_ec.is.null,is_ec.eq.false")
-    }
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: true })
 
     if (options.publishedOnly) {
-      query = query.eq("accept_orders", true)
+      query = query.eq("is_active", true)
     }
 
     const { data, error: err } = await query
@@ -119,7 +89,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
       setCategories(["すべて", ...Array.from(categorySet)])
     }
     setLoading(false)
-  }, [options.storeId, options.ecOnly, options.publishedOnly])
+  }, [options.storeId, options.publishedOnly])
 
   useEffect(() => {
     fetchProducts()
@@ -127,34 +97,24 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
 
   const updateProduct = async (
     id: string,
-    updates: Partial<Omit<ProductRegistration, "id" | "store_id" | "category_name">>
+    updates: Partial<Omit<ProductRegistration, "id" | "store_id">>
   ) => {
     const payload: any = {}
     if (updates.name !== undefined) payload.name = updates.name
     if (updates.description !== undefined) payload.description = updates.description
-    if (updates.price !== undefined) payload.price = updates.price
+    if (updates.base_price !== undefined) payload.base_price = updates.base_price
     if (updates.image !== undefined) payload.image = updates.image
     if (updates.cross_section_image !== undefined) payload.cross_section_image = updates.cross_section_image
-    if (updates.product_type_id !== undefined) payload.product_type_id = updates.product_type_id
-    if (updates.always_available !== undefined) payload.always_available = updates.always_available
-    if (updates.cur_same_day !== undefined) payload.cur_same_day = updates.cur_same_day
-    if (updates.preparation_days !== undefined) payload.preparation_days = updates.preparation_days
-    if (updates.max_per_day !== undefined) payload.max_per_day = updates.max_per_day
-    if (updates.max_per_order !== undefined) payload.max_per_order = updates.max_per_order
-    if (updates.is_ec !== undefined) payload.is_ec = updates.is_ec
-    if (updates.accept_orders !== undefined) payload.accept_orders = updates.accept_orders
-    if (updates.decoration !== undefined) payload.decoration = updates.decoration
-    if (updates.shipping_type !== undefined) payload.shipping_type = updates.shipping_type
-    if (updates.storage_type !== undefined) payload.storage_type = updates.storage_type
-    if (updates.ingredients !== undefined) payload.ingredients = updates.ingredients
-    if (updates.expiration_days !== undefined) payload.expiration_days = updates.expiration_days
-    if (updates.volume !== undefined) payload.volume = updates.volume
-    if (updates.sort_order !== undefined) payload.sort_order = updates.sort_order
-    if (updates.order_start_date !== undefined) payload.order_start_date = updates.order_start_date
-    if (updates.order_end_date !== undefined) payload.order_end_date = updates.order_end_date
+    if (updates.category_name !== undefined) payload.category_name = updates.category_name
+    if (updates.is_active !== undefined) payload.is_active = updates.is_active
+    if (updates.is_preorder_required !== undefined) payload.is_preorder_required = updates.is_preorder_required
+    if (updates.same_day_order_allowed !== undefined) payload.same_day_order_allowed = updates.same_day_order_allowed
+    if (updates.min_order_lead_minutes !== undefined) payload.min_order_lead_minutes = updates.min_order_lead_minutes
+    if (updates.tax_type !== undefined) payload.tax_type = updates.tax_type
+    if (updates.display_order !== undefined) payload.display_order = updates.display_order
 
     const { error } = await supabase
-      .from("product_registrations")
+      .from("products")
       .update(payload)
       .eq("id", id)
 
@@ -163,8 +123,9 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
   }
 
   const deleteProduct = async (id: string) => {
+    await supabase.from("product_variants").delete().eq("product_id", id)
     const { error } = await supabase
-      .from("product_registrations")
+      .from("products")
       .delete()
       .eq("id", id)
 
@@ -198,8 +159,8 @@ export function useProductRegistration(id?: string) {
     setError(null)
 
     supabase
-      .from("product_registrations")
-      .select("*, product_types(product_type)")
+      .from("products")
+      .select("*")
       .eq("id", id)
       .maybeSingle()
       .then(({ data, error: err }) => {

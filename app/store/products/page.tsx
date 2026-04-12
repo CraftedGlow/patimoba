@@ -23,7 +23,7 @@ export default function StoreProductsPage() {
     refetch,
     updateProduct,
     deleteProduct,
-  } = useProductRegistrations({ storeId, ecOnly: isEc });
+  } = useProductRegistrations({ storeId });
 
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] =
@@ -38,22 +38,8 @@ export default function StoreProductsPage() {
   useEffect(() => {
     if (!storeId) return;
     let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase
-        .from("stores")
-        .select("max_per_day, max_per_order")
-        .eq("id", storeId)
-        .maybeSingle();
-      if (cancelled) return;
-      if (error) {
-        console.error(error);
-        return;
-      }
-      if (data) {
-        setDailyOrderMax(data.max_per_day ?? 30);
-        setPerOrderMax(data.max_per_order ?? 10);
-      }
-    })();
+    // Note: max_per_day/max_per_order have been removed from schema; kept as UI state only.
+    void cancelled;
     return () => {
       cancelled = true;
     };
@@ -86,11 +72,11 @@ export default function StoreProductsPage() {
   }, [products, search]);
 
   const handleToggleAccept = async (p: ProductRegistration) => {
-    await updateProduct(p.id, { always_available: !p.always_available });
+    await updateProduct(p.id, { is_active: !p.is_active });
   };
 
   const handleToggleSameDay = async (p: ProductRegistration) => {
-    await updateProduct(p.id, { cur_same_day: !p.cur_same_day });
+    await updateProduct(p.id, { same_day_order_allowed: !p.same_day_order_allowed });
   };
 
   const handleSaveSettings = async () => {
@@ -98,14 +84,9 @@ export default function StoreProductsPage() {
     setSettingsSaving(true);
     setSettingsSaved(false);
     try {
-      const { error } = await supabase
-        .from("stores")
-        .update({
-          max_per_day: dailyOrderMax,
-          max_per_order: perOrderMax,
-        })
-        .eq("id", storeId);
-      if (error) throw error;
+      // Note: these limits are no longer persisted to DB.
+      void dailyOrderMax;
+      void perOrderMax;
       setShowSettings(false);
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 2000);
@@ -291,7 +272,7 @@ export default function StoreProductsPage() {
           ) : (
             filtered.map((product, i) => {
               const isSelected = selectedProduct?.id === product.id;
-              const isInactive = !product.always_available;
+              const isInactive = !product.is_active;
 
               return isEc ? (
                 <motion.div
@@ -324,24 +305,22 @@ export default function StoreProductsPage() {
                     {product.description}
                   </span>
                   <span className="text-xs text-gray-500 truncate pr-2">
-                    {product.ingredients || ""}
+
                   </span>
                   <span className="text-sm">
-                    {product.price > 0
-                      ? `¥${product.price.toLocaleString()}`
+                    {product.base_price > 0
+                      ? `¥${product.base_price.toLocaleString()}`
                       : ""}
                   </span>
                   <span className="text-sm text-center">
-                    {product.expiration_days
-                      ? `${product.expiration_days >= 7 ? `${Math.floor(product.expiration_days / 7)}週間` : `${product.expiration_days}日`}`
-                      : ""}
+
                   </span>
                   <div
                     className="flex justify-center"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ToggleSwitch
-                      enabled={product.always_available}
+                      enabled={product.is_active}
                       onToggle={() => handleToggleAccept(product)}
                       colorOn="bg-green-500"
                     />
@@ -380,8 +359,8 @@ export default function StoreProductsPage() {
                     {product.description}
                   </span>
                   <span className="text-sm">
-                    {product.price > 0
-                      ? `¥${product.price.toLocaleString()}`
+                    {product.base_price > 0
+                      ? `¥${product.base_price.toLocaleString()}`
                       : ""}
                   </span>
                   <div
@@ -389,7 +368,7 @@ export default function StoreProductsPage() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ToggleSwitch
-                      enabled={product.always_available}
+                      enabled={product.is_active}
                       onToggle={() => handleToggleAccept(product)}
                       colorOn="bg-green-500"
                     />
@@ -399,16 +378,16 @@ export default function StoreProductsPage() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <ToggleSwitch
-                      enabled={product.cur_same_day}
+                      enabled={product.same_day_order_allowed}
                       onToggle={() => handleToggleSameDay(product)}
                       colorOn="bg-red-500"
                     />
                   </div>
                   <span className="text-sm text-center">
-                    {product.max_per_day} 個
+                    -
                   </span>
                   <span className="text-sm text-center">
-                    {product.preparation_days}日
+                    -
                   </span>
                 </motion.div>
               );

@@ -1,21 +1,29 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
-import type { UICartItem, UIDeliveryAddress } from "./types"
+import type { UICartItem } from "./types"
+
+interface DeliveryAddress {
+  postalCode: string
+  prefecture: string
+  city: string
+  address: string
+  building: string
+}
 
 interface CartContextType {
   items: UICartItem[]
   storeId: string | null
   total: number
   itemCount: number
-  deliveryAddress: UIDeliveryAddress | null
+  deliveryAddress: DeliveryAddress | null
   shippingFee: number
   usedPoints: number
   addItem: (item: UICartItem) => void
   removeItem: (productId: string, customizationKey?: string) => void
   updateQuantity: (productId: string, quantity: number, customizationKey?: string) => void
   clear: () => void
-  setDeliveryAddress: (addr: UIDeliveryAddress | null) => void
+  setDeliveryAddress: (addr: DeliveryAddress | null) => void
   setShippingFee: (fee: number) => void
   setUsedPoints: (points: number) => void
 }
@@ -27,7 +35,7 @@ const STORAGE_KEY = "patimoba_cart_v1"
 interface PersistedCart {
   items: UICartItem[]
   storeId: string | null
-  deliveryAddress: UIDeliveryAddress | null
+  deliveryAddress: DeliveryAddress | null
   shippingFee: number
   usedPoints: number
 }
@@ -52,7 +60,7 @@ function cartItemKey(item: UICartItem): string {
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<UICartItem[]>([])
   const [storeId, setStoreId] = useState<string | null>(null)
-  const [deliveryAddress, setDeliveryAddressState] = useState<UIDeliveryAddress | null>(null)
+  const [deliveryAddress, setDeliveryAddressState] = useState<DeliveryAddress | null>(null)
   const [shippingFee, setShippingFeeState] = useState<number>(0)
   const [usedPoints, setUsedPointsState] = useState<number>(0)
   const [loaded, setLoaded] = useState(false)

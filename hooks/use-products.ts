@@ -6,7 +6,6 @@ import { Product, ManagedProduct, toUIProduct, toUIManagedProduct } from "@/lib/
 
 interface UseProductsOptions {
   storeId?: string
-  ecOnly?: boolean
   publishedOnly?: boolean
   category?: string
 }
@@ -22,43 +21,32 @@ export function useProducts(options: UseProductsOptions = {}) {
     setError(null)
 
     let query = supabase
-      .from("product_registrations")
-      .select("*, product_types(product_type)")
+      .from("products")
+      .select("*")
 
     if (options.storeId) {
       query = query.eq("store_id", options.storeId)
     }
-    if (options.ecOnly) {
-      query = query.eq("is_ec", true)
-    }
     if (options.publishedOnly) {
-      query = query.eq("accept_orders", true)
+      query = query.eq("is_active", true)
     }
 
     const { data, error: err } = await query
-      .order("sort_order", { ascending: true })
-      .order("created_date", { ascending: true })
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: true })
     if (err) {
       setError(err.message)
     } else {
       const rows = data || []
-      setProducts(
-        rows.map((row: any) =>
-          toUIProduct(row, row.product_types?.product_type)
-        )
-      )
-      setManagedProducts(
-        rows.map((row: any) =>
-          toUIManagedProduct(row, row.product_types?.product_type)
-        )
-      )
+      setProducts(rows.map((row: any) => toUIProduct(row)))
+      setManagedProducts(rows.map((row: any) => toUIManagedProduct(row)))
     }
     setLoading(false)
   }
 
   useEffect(() => {
     fetchProducts()
-  }, [options.storeId, options.ecOnly, options.publishedOnly])
+  }, [options.storeId, options.publishedOnly])
 
   return { products, managedProducts, loading, error, refetch: fetchProducts }
 }
@@ -72,14 +60,14 @@ export function useProduct(id: string) {
     const fetch = async () => {
       setLoading(true)
       const { data, error: err } = await supabase
-        .from("product_registrations")
-        .select("*, product_types(product_type)")
+        .from("products")
+        .select("*")
         .eq("id", id)
         .single()
       if (err) {
         setError(err.message)
       } else if (data) {
-        setProduct(toUIProduct(data, (data as any).product_types?.product_type))
+        setProduct(toUIProduct(data))
       }
       setLoading(false)
     }

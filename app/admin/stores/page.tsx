@@ -134,15 +134,14 @@ export default function AdminStoresPage() {
   };
 
   const filteredStores = stores.filter((s) => {
-    if (filter.status === "active" && s.notification === false) return false;
-    if (filter.status === "risk" && s.notification !== false) return false;
-    if (filter.plan !== "all" && (s.plan ?? "standard") !== filter.plan) return false;
+    if (filter.status === "active" && s.is_active === false) return false;
+    if (filter.status === "risk" && s.is_active !== false) return false;
     return true;
   });
 
   const total = stores.length;
-  const activeCount = stores.filter((s) => s.notification !== false).length;
-  const riskCount = stores.filter((s) => s.notification === false).length;
+  const activeCount = stores.filter((s) => s.is_active !== false).length;
+  const riskCount = stores.filter((s) => s.is_active === false).length;
 
   const summaryCards = [
     { label: "総店舗数", value: `${total}店舗`, color: "text-gray-900", filterVal: "all" as const },
@@ -312,8 +311,8 @@ export default function AdminStoresPage() {
         ) : (
           <div className="space-y-3">
             {filteredStores.map((store, i) => {
-              const mrr = mrrFromPlan(store.plan);
-              const isActive = store.notification !== false;
+              const mrr = 0;
+              const isActive = store.is_active !== false;
               return (
                 <motion.div
                   key={store.id}
@@ -327,19 +326,18 @@ export default function AdminStoresPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-bold text-base">{store.name ?? "未設定"}</h3>
                         <StatusBadge active={isActive} />
-                        <PlanBadge plan={store.plan} />
                       </div>
 
                       <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-4 items-start">
                         <div>
                           <p className="text-xs text-gray-500">オーナー</p>
-                          <p className="text-sm">{store.owner_name || store.created_by || "-"}</p>
+                          <p className="text-sm">{store.name || "-"}</p>
                         </div>
                         <div className="flex items-start gap-1">
                           <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-xs text-gray-500">所在地</p>
-                            <p className="text-sm">{store.address || store.address_url || "-"}</p>
+                            <p className="text-sm">{store.address || "-"}</p>
                           </div>
                         </div>
                         <div>

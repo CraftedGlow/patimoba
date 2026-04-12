@@ -4,11 +4,7 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { Store, toUIStore } from "@/lib/types"
 
-interface UseStoresOptions {
-  ecOnly?: boolean
-}
-
-export function useStores(options: UseStoresOptions = {}) {
+export function useStores() {
   const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -16,11 +12,10 @@ export function useStores(options: UseStoresOptions = {}) {
   const fetchStores = async () => {
     setLoading(true)
     setError(null)
-    let query = supabase.from("stores").select("*")
-    if (options.ecOnly) {
-      query = query.eq("ec", true)
-    }
-    const { data, error: err } = await query
+    const { data, error: err } = await supabase
+      .from("stores")
+      .select("*")
+      .eq("is_active", true)
     if (err) {
       setError(err.message)
     } else {
@@ -31,7 +26,7 @@ export function useStores(options: UseStoresOptions = {}) {
 
   useEffect(() => {
     fetchStores()
-  }, [options.ecOnly])
+  }, [])
 
   return { stores, loading, error, refetch: fetchStores }
 }

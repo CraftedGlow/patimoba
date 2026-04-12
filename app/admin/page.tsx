@@ -33,8 +33,6 @@ import {
   fetchStoreCount,
   fetchOrderCount,
   fetchOrders,
-  computeMRR,
-  mrrFromPlan,
   type Store,
   type Order,
 } from "@/lib/admin-api";
@@ -80,7 +78,7 @@ function cumulativeStoreGrowth(stores: Store[], monthsBack: number) {
 
 function monthlyMRR(stores: Store[], monthsBack: number) {
   const growth = cumulativeStoreGrowth(stores, monthsBack);
-  const avgMRR = stores.length > 0 ? computeMRR(stores) / stores.length : 58000;
+  const avgMRR = 58000;
   return growth.map((g) => ({
     month: g.month,
     value: Math.round((g.value * avgMRR) / 10000),
@@ -120,7 +118,7 @@ export default function AdminDashboardPage() {
 
   const displayStoreCount = storeCount ?? 0;
   const displayOrderCount = orderCount ?? 0;
-  const totalMRR = computeMRR(stores);
+  const totalMRR = 0;
   const displayMRR = Math.round(totalMRR / 10000);
 
   const thirtyDaysAgo = new Date();

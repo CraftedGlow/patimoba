@@ -37,17 +37,13 @@ function RegistrationCard({ product, basePath }: { product: ProductRegistration;
               No Image
             </div>
           )}
-          {product.order_start_date && product.order_end_date && (
-            <span className="absolute top-2 left-2 bg-pink-500 text-white text-xs font-bold px-3 py-1 rounded">
-              期間限定
-            </span>
-          )}
+          {false && null}
         </div>
         <h3 className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">
           {product.name}
         </h3>
         <p className="text-sm text-gray-900">
-          &yen;{product.price.toLocaleString()}
+          &yen;{product.base_price.toLocaleString()}
         </p>
       </motion.div>
     </Link>
@@ -102,15 +98,13 @@ export default function TakeoutProductsPage() {
 
   const { products, categories, loading } = useProductRegistrations({
     storeId,
-    ecOnly: false,
   });
   const { wholeCakes, loading: cakesLoading } = useWholeCakes(storeId);
   const [selectedCategory, setSelectedCategory] = useState("すべて");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const isLimited = (p: ProductRegistration) =>
-    !!(p.order_start_date && p.order_end_date);
+  const isLimited = (_p: ProductRegistration) => false;
 
   const filtered =
     selectedCategory === "すべて"
@@ -146,7 +140,7 @@ export default function TakeoutProductsPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         onCartClick={() => setCartOpen(true)}
       />
 

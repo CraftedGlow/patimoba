@@ -106,12 +106,7 @@ export default function AdminStoreNewPage() {
         email: email,
         phone: phone || "",
         postal_code: postalCode || "",
-        prefecture: prefecture || "",
-        city: city || "",
-        address: address || "",
-        open_time: openTime,
-        close_time: closeTime,
-        plan: selectedPlan,
+        address: `${prefecture || ""}${city || ""}${address || ""}`,
         logo_url: logoUrl,
       });
       if (closedDays.length > 0) {
@@ -127,11 +122,23 @@ export default function AdminStoreNewPage() {
       if (!res.ok) throw new Error(result.error || "認証ユーザーの作成に失敗しました");
 
       if (result.userId) {
+        const { data: userRow, error: userInsertErr } = await supabase
+          .from("users")
+          .insert({
+            auth_user_id: result.userId,
+            email: email.trim().toLowerCase(),
+            name: storeName,
+            user_type: "store",
+          })
+          .select("id")
+          .single();
+        if (userInsertErr) throw userInsertErr;
         const { error: userErr } = await supabase.from("store_users").insert({
-          auth_user_id: result.userId,
+          user_id: userRow.id,
           store_id: created.id,
-          email: email.trim().toLowerCase(),
-          role: "owner",
+          permission: "owner",
+          is_active: true,
+          joined_at: new Date().toISOString(),
         });
         if (userErr) throw userErr;
       }

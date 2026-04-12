@@ -31,11 +31,11 @@ export function ProductDetailPanel({
     product.description || ""
   );
   const [price, setPrice] = useState(
-    product.price > 0 ? `¥${product.price.toLocaleString()}` : ""
+    product.base_price > 0 ? `¥${product.base_price.toLocaleString()}` : ""
   );
-  const [prepDays, setPrepDays] = useState(String(product.preparation_days));
-  const [maxPerOrder, setMaxPerOrder] = useState(String(product.max_per_order));
-  const [dailyMax, setDailyMax] = useState(String(product.max_per_day));
+  const [prepDays, setPrepDays] = useState("0");
+  const [maxPerOrder, setMaxPerOrder] = useState("10");
+  const [dailyMax, setDailyMax] = useState("30");
   const [category, setCategory] = useState("");
   const [image, setImage] = useState(product.image ?? "");
 
@@ -52,15 +52,15 @@ export function ProductDetailPanel({
     setName(product.name);
     setDescription(product.description || "");
     setPrice(
-      product.price > 0 ? `¥${product.price.toLocaleString()}` : ""
+      product.base_price > 0 ? `¥${product.base_price.toLocaleString()}` : ""
     );
-    setPrepDays(String(product.preparation_days));
-    setMaxPerOrder(String(product.max_per_order));
-    setDailyMax(String(product.max_per_day));
+    setPrepDays("0");
+    setMaxPerOrder("10");
+    setDailyMax("30");
     setImage(product.image ?? "");
 
     const typeMatch = productTypes.find(
-      (t) => t.id === String(product.product_type_id)
+      (t) => t.productType === product.category_name
     );
     setCategory(typeMatch?.productType ?? categories[0] ?? "");
     setError(null);
@@ -75,14 +75,15 @@ export function ProductDetailPanel({
     setSaving(true);
     try {
       const typeMatch = productTypes.find((t) => t.productType === category);
+      void typeMatch;
+      void prepDays;
+      void maxPerOrder;
+      void dailyMax;
       const { error: err } = await onSave(product.id, {
         name: name.trim(),
         description: description.trim(),
-        price: parsePriceValue(price),
-        preparation_days: parseInt(prepDays) || 0,
-        max_per_order: parseInt(maxPerOrder) || 10,
-        max_per_day: parseInt(dailyMax) || 30,
-        product_type_id: typeMatch?.id ?? null,
+        base_price: parsePriceValue(price),
+        category_name: category || null,
         image: image || null,
       });
       if (err) throw new Error(err);

@@ -13,7 +13,7 @@ import { Search, Loader2 } from "lucide-react";
 const ecSteps = ["店舗選択", "商品選択", "お届け先", "注文確認"];
 
 export default function ECStorePage() {
-  const { stores, loading } = useStores({ ecOnly: true });
+  const { stores, loading } = useStores();
   const { setSelectedStoreId, setSelectedStoreName, profile } = useCustomerContext();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -31,7 +31,7 @@ export default function ECStorePage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         showCart
       />
       <StepProgress currentStep={1} steps={ecSteps} />

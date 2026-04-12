@@ -22,14 +22,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "storeId は必須です" }, { status: 400 });
     }
 
-    // 1. store_users から auth_user_id を取得（後で auth.users を削除するため）
+    // 1. store_users から user_id を取得（後で auth.users を削除するため）
     const { data: storeUsers } = await admin
       .from("store_users")
-      .select("auth_user_id")
+      .select("user_id")
       .eq("store_id", storeId);
-    const authUserIds = (storeUsers ?? [])
-      .map((u) => u.auth_user_id)
+    const storeUserIds = (storeUsers ?? [])
+      .map((u) => u.user_id)
       .filter(Boolean) as string[];
+
+    // users テーブルから auth_user_id を取得
+    let authUserIds: string[] = [];
+    if (storeUserIds.length > 0) {
+      const { data: users } = await admin
+        .from("users")
+        .select("auth_user_id")
+        .in("id", storeUserIds);
+      authUserIds = (users ?? [])
+        .map((u) => u.auth_user_id)
+        .filter(Boolean) as string[];
+    }
 
     // 2. orders に紐づく子テーブルを削除
     const { data: orders } = await admin
@@ -39,7 +51,7 @@ export async function POST(req: NextRequest) {
     const orderIds = (orders ?? []).map((o) => o.id);
 
     if (orderIds.length > 0) {
-      // order_items → order_item_details
+      // order_items → order_item_options
       const { data: orderItems } = await admin
         .from("order_items")
         .select("id")
@@ -47,64 +59,48 @@ export async function POST(req: NextRequest) {
       const orderItemIds = (orderItems ?? []).map((oi) => oi.id);
 
       if (orderItemIds.length > 0) {
-        await admin.from("order_item_details").delete().in("order_item_id", orderItemIds);
+        await admin.from("order_item_options").delete().in("order_item_id", orderItemIds);
       }
       await admin.from("order_items").delete().in("order_id", orderIds);
-      await admin.from("order_customer_info").delete().in("order_id", orderIds);
-      await admin.from("point_transactions").delete().in("order_id", orderIds);
     }
 
-    // 3. whole_cake_products → sizes, options
-    const { data: wholeCakes } = await admin
-      .from("whole_cake_products")
+    // 3. products → product_variants
+    const { data: products } = await admin
+      .from("products")
       .select("id")
       .eq("store_id", storeId);
-    const wholeCakeIds = (wholeCakes ?? []).map((wc) => wc.id);
+    const productIds = (products ?? []).map((p) => p.id);
 
-    if (wholeCakeIds.length > 0) {
-      await admin.from("whole_cake_sizes").delete().in("whole_cake_product_id", wholeCakeIds);
-      await admin.from("whole_cake_options").delete().in("whole_cake_product_id", wholeCakeIds);
+    if (productIds.length > 0) {
+      await admin.from("product_variants").delete().in("product_id", productIds);
     }
 
-    // 4. coupons → customer_coupons
-    const { data: coupons } = await admin
-      .from("coupons")
-      .select("id")
-      .eq("store_id", storeId);
-    const couponIds = (coupons ?? []).map((c) => c.id);
-
-    if (couponIds.length > 0) {
-      await admin.from("customer_coupons").delete().in("coupon_id", couponIds);
-    }
-
-    // 5. store 直下の子テーブルを一括削除
+    // 4. store 直下の子テーブルを一括削除
     const directChildren = [
-      "point_transactions",
       "orders",
-      "product_registrations",
-      "whole_cake_products",
-      "candle_options",
-      "product_categories",
-      "coupons",
-      "subscriptions",
+      "products",
       "store_users",
-      "business_day_schedules",
-      "closed_day_rules",
-      "customer_store_relationships",
-      "customer_anniversaries",
-      "shipping_fees",
+      "store_business_hours",
+      "store_special_dates",
+      "store_order_rules",
+      "user_roles",
     ];
 
     for (const table of directChildren) {
       await admin.from(table).delete().eq("store_id", storeId);
     }
 
-    // 6. stores 本体を削除
+    // 5. stores 本体を削除
     const { error: storeErr } = await admin
       .from("stores")
       .delete()
       .eq("id", storeId);
     if (storeErr) throw storeErr;
+
+    // 6. 紐づいていた store スタッフの users を削除
+    if (storeUserIds.length > 0) {
+      await admin.from("users").delete().in("id", storeUserIds);
+    }
 
     // 7. 紐づいていた auth.users を削除
     for (const authUserId of authUserIds) {

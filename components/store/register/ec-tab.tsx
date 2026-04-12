@@ -7,25 +7,16 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 
-const shippingMethods = ["常温便", "冷蔵便", "冷凍便"];
-const storageMethods = ["常温保存", "冷蔵保存", "冷凍保存"];
-const expiryOptions = [
-  "1", "2", "3", "5", "7", "10", "14", "30", "60", "90",
-];
-
 interface EcProductRow {
   id: string;
-  name: string | null;
+  name: string;
   description: string | null;
-  price: number | null;
+  base_price: number;
   image: string | null;
   cross_section_image: string | null;
-  shipping_type: string | null;
-  storage_type: string | null;
-  ingredients: string | null;
-  expiration_days: number | null;
-  volume: string | null;
-  store_id: string | null;
+  store_id: string;
+  is_active: boolean;
+  category_name: string | null;
 }
 
 export function EcTab() {
@@ -38,11 +29,6 @@ export function EcTab() {
 
   const [productName, setProductName] = useState("");
   const [description, setDescription] = useState("");
-  const [shippingMethod, setShippingMethod] = useState("");
-  const [storageMethod, setStorageMethod] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [volume, setVolume] = useState("");
   const [price, setPrice] = useState("");
 
   const [mainImage, setMainImage] = useState<string | null>(null);
@@ -69,11 +55,11 @@ export function EcTab() {
     }
     setLoading(true);
     const { data } = await supabase
-      .from("product_registrations")
+      .from("products")
       .select("*")
       .eq("store_id", storeId)
-      .eq("is_ec", true)
-      .order("id", { ascending: true });
+      .eq("category_name", "ec")
+      .order("display_order", { ascending: true });
     setProducts((data ?? []) as EcProductRow[]);
     setLoading(false);
   }, [storeId]);
@@ -86,11 +72,6 @@ export function EcTab() {
     setSelectedId(null);
     setProductName("");
     setDescription("");
-    setShippingMethod("");
-    setStorageMethod("");
-    setIngredients("");
-    setExpiry("");
-    setVolume("");
     setPrice("");
     setMainImage(null);
     setCrossImage(null);
@@ -105,12 +86,7 @@ export function EcTab() {
       setSelectedId(p.id);
       setProductName(p.name ?? "");
       setDescription(p.description ?? "");
-      setShippingMethod(p.shipping_type ?? "");
-      setStorageMethod(p.storage_type ?? "");
-      setIngredients(p.ingredients ?? "");
-      setExpiry(p.expiration_days != null ? String(p.expiration_days) : "");
-      setVolume(p.volume ?? "");
-      setPrice(p.price != null ? `¥${p.price.toLocaleString()}` : "");
+      setPrice(p.base_price != null ? `¥${p.base_price.toLocaleString()}` : "");
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setExtraImage(null);
@@ -180,27 +156,23 @@ export function EcTab() {
         store_id: storeId,
         name: productName.trim(),
         description: description.trim(),
-        price: parsePriceValue(price),
-        is_ec: true,
+        base_price: parsePriceValue(price),
+        category_name: "ec",
+        is_active: true,
         image: mainImage ?? null,
         cross_section_image: crossImage ?? null,
-        shipping_type: shippingMethod || null,
-        storage_type: storageMethod || null,
-        ingredients: ingredients.trim() || null,
-        expiration_days: expiry ? parseInt(expiry, 10) : null,
-        volume: volume.trim() || null,
       };
 
       if (selectedId) {
         const { error: err } = await supabase
-          .from("product_registrations")
+          .from("products")
           .update(payload)
           .eq("id", selectedId);
         if (err) throw err;
       } else {
         const { error: err } = await supabase
-          .from("product_registrations")
-          .insert({ ...payload, created_date: new Date().toISOString() });
+          .from("products")
+          .insert(payload);
         if (err) throw err;
       }
       await fetchProducts();
@@ -221,8 +193,12 @@ export function EcTab() {
       if (mainImage) await deleteProductImage(mainImage);
       if (crossImage) await deleteProductImage(crossImage);
       if (extraImage) await deleteProductImage(extraImage);
+      await supabase
+        .from("product_variants")
+        .delete()
+        .eq("product_id", selectedId);
       const { error: err } = await supabase
-        .from("product_registrations")
+        .from("products")
         .delete()
         .eq("id", selectedId);
       if (err) throw err;
@@ -377,64 +353,6 @@ export function EcTab() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="商品説明"
           rows={4}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
-        />
-
-        <select
-          value={shippingMethod}
-          onChange={(e) => setShippingMethod(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
-        >
-          <option value="">発送方法を選択</option>
-          {shippingMethods.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={storageMethod}
-          onChange={(e) => setStorageMethod(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
-        >
-          <option value="">保存方法を選択</option>
-          {storageMethods.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          value={ingredients}
-          onChange={(e) => setIngredients(e.target.value)}
-          placeholder="原材料を選択"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
-        />
-
-        <div className="flex items-center gap-2">
-          <select
-            value={expiry}
-            onChange={(e) => setExpiry(e.target.value)}
-            className="w-[160px] border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-amber-300"
-          >
-            <option value="">賞味期限を選択</option>
-            {expiryOptions.map((e) => (
-              <option key={e} value={e}>
-                {e}日
-              </option>
-            ))}
-          </select>
-          <span className="text-sm">発送日からの日数</span>
-        </div>
-
-        <textarea
-          value={volume}
-          onChange={(e) => setVolume(e.target.value)}
-          placeholder={"内容量を入力\n例) マドレーヌ:3個\n　　フィナンシェ、ドーナツ、チョコパイ:各1個"}
-          rows={3}
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
 

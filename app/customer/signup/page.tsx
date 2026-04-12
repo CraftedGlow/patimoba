@@ -79,27 +79,18 @@ export default function CustomerSignupPage() {
         throw new Error("認証ユーザーの作成に失敗しました");
       }
 
-      const y = parseInt(birthYear) || 1990;
-      const m = parseInt(birthMonth) || 1;
-      const d = parseInt(birthDay) || 1;
+      const fullName = [lastName, firstName].filter(Boolean).join(" ");
 
       const payload = {
         auth_user_id: authUserId,
-        last_name_kn: lastName,
-        first_name_kn: firstName || null,
+        name: fullName,
         email: cleanEmail,
         phone: phone || null,
-        gender,
-        birth_year: y,
-        birth_month: m,
-        birth_day: d,
-        postal_code: zipCode || null,
-        address: address || null,
-        store_note: memo || null,
+        user_type: "customer",
       };
 
       const { error: insertErr } = await supabase
-        .from("customers")
+        .from("users")
         .insert(payload);
       if (insertErr) throw insertErr;
 

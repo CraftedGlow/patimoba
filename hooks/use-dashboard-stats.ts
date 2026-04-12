@@ -29,13 +29,13 @@ export function useDashboardStats(storeId?: string) {
     try {
       let todayQuery = supabase
         .from("orders")
-        .select("subtotal")
+        .select("total_amount")
         .gte("created_at", todayStart)
       if (storeId) todayQuery = todayQuery.eq("store_id", storeId)
 
       let monthQuery = supabase
         .from("orders")
-        .select("subtotal")
+        .select("total_amount")
         .gte("created_at", monthStart)
       if (storeId) monthQuery = monthQuery.eq("store_id", storeId)
 
@@ -45,9 +45,9 @@ export function useDashboardStats(storeId?: string) {
       const monthOrders = monthResult.data || []
 
       setStats({
-        todaySales: todayOrders.reduce((sum, o) => sum + (Number(o.subtotal) || 0), 0),
+        todaySales: todayOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
         todayOrders: todayOrders.length,
-        monthlySales: monthOrders.reduce((sum, o) => sum + (Number(o.subtotal) || 0), 0),
+        monthlySales: monthOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
       })
     } catch (e: any) {
       setError(e.message)

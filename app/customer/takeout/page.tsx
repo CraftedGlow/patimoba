@@ -118,7 +118,7 @@ export default function TakeoutStorePage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         onCartClick={() => setCartOpen(true)}
       />
       <StepProgress currentStep={1} steps={steps} />

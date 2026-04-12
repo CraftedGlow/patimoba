@@ -74,13 +74,13 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-600">小計</span>
               <span className="text-base font-bold">
-                &yen;{order.total.toLocaleString()}
+                &yen;{order.totalAmount.toLocaleString()}
               </span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-600">お支払金額</span>
               <span className="text-2xl font-bold">
-                &yen;{order.total.toLocaleString()}
+                &yen;{order.totalAmount.toLocaleString()}
               </span>
             </div>
           </div>

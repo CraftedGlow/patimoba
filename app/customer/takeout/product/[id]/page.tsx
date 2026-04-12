@@ -41,7 +41,7 @@ export default function TakeoutProductDetailPage() {
         <CustomerHeader
           userName={profile?.lineName}
           avatarUrl={profile?.avatar || undefined}
-          points={profile?.points}
+          points={0}
           onCartClick={() => setCartOpen(true)}
         />
         <StepProgress currentStep={2} steps={steps} onStepClick={handleStepClick} />
@@ -54,15 +54,15 @@ export default function TakeoutProductDetailPage() {
 
   if (!product) return null;
 
-  const isLimited = !!(product.order_start_date && product.order_end_date);
-  const limitDateStr = formatLimitDate(product.order_end_date);
-  const maxQty = product.max_per_order || 10;
+  const isLimited = false;
+  const limitDateStr: string | null = null;
+  const maxQty = 10;
 
   const handleAddToCart = () => {
     addItem({
       productId: product.id,
       name: product.name,
-      price: product.price,
+      price: product.base_price,
       image: product.image || "",
       quantity,
       storeId: product.store_id,
@@ -80,7 +80,7 @@ export default function TakeoutProductDetailPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={profile?.points}
+        points={0}
         onCartClick={() => setCartOpen(true)}
       />
 
@@ -134,19 +134,12 @@ export default function TakeoutProductDetailPage() {
             </p>
           )}
 
-          {product.ingredients && (
-            <div className="mt-5 pt-4 border-t border-gray-100 flex items-start gap-3">
-              <span className="text-xs text-gray-500 font-medium whitespace-nowrap pt-0.5">
-                アレルゲン
-              </span>
-              <span className="text-sm text-gray-700 leading-relaxed">{product.ingredients}</span>
-            </div>
-          )}
+          {false && null}
 
           <div className="flex items-end justify-between gap-4 mt-8">
             <p className="flex items-baseline gap-1">
               <span className="text-4xl font-bold text-gray-900 tabular-nums">
-                {product.price.toLocaleString()}
+                {product.base_price.toLocaleString()}
               </span>
               <span className="text-xl font-bold text-gray-900">円</span>
             </p>

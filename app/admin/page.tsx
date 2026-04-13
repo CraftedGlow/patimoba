@@ -192,8 +192,8 @@ export default function AdminDashboardPage() {
     },
     {
       icon: DollarSign,
-      label: "MRR（月次経常収益）",
-      value: `¥${displayMRR.toLocaleString()}万`,
+      label: "MRR（月次経常収益:万円）",
+      value: displayMRR.toLocaleString(),
       change: `${displayStoreCount}店舗の合計`,
       trend: "up" as const,
     },
@@ -334,7 +334,7 @@ export default function AdminDashboardPage() {
             </ResponsiveContainer>
           </ChartCard>
 
-          <ChartCard title="MRR推移（万円）" delay={0.35}>
+          <ChartCard title="MRR推移（月次経常収益:万円）" delay={0.35}>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={mrrTrend}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />

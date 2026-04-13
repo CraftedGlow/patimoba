@@ -107,7 +107,7 @@ export default function StoreOrderHistoryPage() {
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <div className="grid grid-cols-[40px_1.2fr_1.5fr_1.5fr_50px_1fr_80px] bg-[#FFF176] px-4 py-2.5 text-sm font-bold text-gray-700 items-center">
           <span />
-          <span>LINE</span>
+          <span>顧客名</span>
           <span>来店時間</span>
           <span>注文内容</span>
           <span />
@@ -159,11 +159,11 @@ export default function StoreOrderHistoryPage() {
                 <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
                   <User className="w-4 h-4 text-gray-500" />
                 </div>
-                <span className="text-sm">{order.lineName}</span>
+                <span className="text-sm">{order.customerName || order.lineName || "-"}</span>
               </div>
 
               <div className="text-sm text-gray-600">
-                {order.pickupTime && <div>{order.pickupTime}</div>}
+                {order.pickupTime && <div>{order.pickupTime.slice(0, 5)}</div>}
               </div>
 
               <div className="text-sm">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { supabase } from "@/lib/supabase"
 
 export interface SpecialDate {
@@ -137,17 +137,23 @@ export function useBusinessDays(storeId?: string) {
     await fetchSpecialDates()
   }
 
+  const businessDays = useMemo(
+    () =>
+      specialDates.map((sd) => ({
+        id: sd.id,
+        date: sd.targetDate,
+        openTime: sd.openTime,
+        closeTime: sd.closeTime,
+        isOpen: !sd.isClosed,
+        storeId: sd.storeId,
+      })),
+    [specialDates]
+  )
+
   return {
     specialDates,
     // backwards compat alias
-    businessDays: specialDates.map((sd) => ({
-      id: sd.id,
-      date: sd.targetDate,
-      openTime: sd.openTime,
-      closeTime: sd.closeTime,
-      isOpen: !sd.isClosed,
-      storeId: sd.storeId,
-    })),
+    businessDays,
     loading,
     error,
     refetch: fetchSpecialDates,

@@ -155,30 +155,30 @@ export default function AdminInsightsPage() {
   const topMetrics = [
     {
       icon: Clock,
-      label: "時間外注文率",
+      label: "時間外注文率（%）",
       badge: "営業強み",
       badgeColor: "bg-green-100 text-green-700",
-      value: `${outsideHoursPct}%`,
+      value: `${outsideHoursPct}`,
       valueColor: "text-green-600",
       description: `期間内${outsideHoursOrders}件が営業時間外注文`,
       point: "24時間受付で機会損失を防止",
     },
     {
       icon: ShoppingCart,
-      label: "平均注文単価",
+      label: "平均注文単価（円）",
       badge: "収益",
       badgeColor: "bg-blue-100 text-blue-700",
-      value: `¥${avgOrderValue.toLocaleString()}`,
+      value: `${avgOrderValue.toLocaleString()}`,
       valueColor: "text-blue-600",
       description: `期間内${totalOrders}件の平均`,
-      point: `合計売上: ¥${totalRevenue.toLocaleString()}`,
+      point: `合計売上: ${totalRevenue.toLocaleString()}円`,
     },
     {
       icon: Target,
-      label: "カスタムケーキ率",
+      label: "カスタムケーキ率（%）",
       badge: "単価UP",
       badgeColor: "bg-amber-100 text-amber-700",
-      value: `${customPct}%`,
+      value: `${customPct}`,
       valueColor: "text-amber-600",
       description: `${customOrders}件がカスタムケーキ注文`,
       point: "カスタマイズで収益を底上げ",
@@ -230,20 +230,20 @@ export default function AdminInsightsPage() {
           </div>
           <div className="flex items-center gap-6 text-sm">
             <div className="text-center">
-              <p className="text-xs text-gray-500">総注文件数</p>
+              <p className="text-xs text-gray-500">総注文件数（件）</p>
               <p className="font-bold text-lg">{totalOrders.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500">総売上</p>
-              <p className="font-bold text-lg">¥{totalRevenue.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">総売上（円）</p>
+              <p className="font-bold text-lg">{totalRevenue.toLocaleString()}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500">加盟店舗数</p>
+              <p className="text-xs text-gray-500">加盟店舗数（店）</p>
               <p className="font-bold text-lg">{stores.length}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-gray-500">MRR</p>
-              <p className="font-bold text-lg">¥{Math.round(totalMRR / 10000).toLocaleString()}万</p>
+              <p className="text-xs text-gray-500">MRR（万円）</p>
+              <p className="font-bold text-lg">{Math.round(totalMRR / 10000).toLocaleString()}</p>
             </div>
           </div>
         </div>

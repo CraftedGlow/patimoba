@@ -17,12 +17,13 @@ const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 type PointOption = "none" | "partial" | "all";
 type PaymentMethod = "credit" | "store";
 
-const pickupTimeOptions = [
-  "午前中 (8:00〜12:00)",
-  "午後 (14:00〜16:00)",
-  "午後 (16:00〜18:00)",
-  "夕方〜夜 (18:00〜20:00)",
-  "夜 (19:00〜21:00)",
+/** DB の pickup_time (PostgreSQL time) 用。value は各帯の開始時刻 */
+const pickupTimeSlots: { value: string; label: string }[] = [
+  { value: "08:00:00", label: "午前中 (8:00〜12:00)" },
+  { value: "14:00:00", label: "午後 (14:00〜16:00)" },
+  { value: "16:00:00", label: "午後 (16:00〜18:00)" },
+  { value: "18:00:00", label: "夕方〜夜 (18:00〜20:00)" },
+  { value: "19:00:00", label: "夜 (19:00〜21:00)" },
 ];
 
 export default function TakeoutConfirmPage() {
@@ -34,7 +35,8 @@ export default function TakeoutConfirmPage() {
   const [firstName, setFirstName] = useState("");
   const [phone, setPhone] = useState("");
   const [postalCode, setPostalCode] = useState("");
-  const [pickupTime, setPickupTime] = useState("");
+  /** 空 = 未選択。値は Supabase time 列向け (例 16:00:00) */
+  const [pickupTimeValue, setPickupTimeValue] = useState("");
   const [showPointModal, setShowPointModal] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [pointOption, setPointOption] = useState<PointOption>("none");
@@ -103,7 +105,7 @@ export default function TakeoutConfirmPage() {
       subtotal,
       discountAmount: usedPoints,
       orderType: "takeout",
-      pickupTime: pickupTime || null,
+      pickupTime: pickupTimeValue || null,
     });
 
     setSubmitting(false);
@@ -275,23 +277,23 @@ export default function TakeoutConfirmPage() {
         <div className="mb-5">
           <p className="text-sm font-bold mb-2">受取時間帯</p>
           <select
-            value={pickupTime}
-            onChange={(e) => setPickupTime(e.target.value)}
+            value={pickupTimeValue}
+            onChange={(e) => setPickupTimeValue(e.target.value)}
             className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent appearance-none"
             style={{
               backgroundImage:
                 "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239ca3af' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E\")",
               backgroundRepeat: "no-repeat",
               backgroundPosition: "right 12px center",
-              color: pickupTime ? undefined : "#9ca3af",
+              color: pickupTimeValue ? undefined : "#9ca3af",
             }}
           >
             <option value="" disabled>
               受取時間
             </option>
-            {pickupTimeOptions.map((t) => (
-              <option key={t} value={t} style={{ color: "#111827" }}>
-                {t}
+            {pickupTimeSlots.map(({ value, label }) => (
+              <option key={value} value={value} style={{ color: "#111827" }}>
+                {label}
               </option>
             ))}
           </select>

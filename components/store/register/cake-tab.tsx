@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Trash2, Check, ImagePlus } from "lucide-react";
+import { X, Loader2, Trash2, Check, ImagePlus, Plus } from "lucide-react";
+import type { ProductCustomOption } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useProductTypes } from "@/hooks/use-product-types";
@@ -26,6 +27,11 @@ interface ProductRow {
   min_order_lead_minutes: number | null;
   store_id: string | null;
   display_order: number | null;
+  is_takeout: boolean | null;
+  is_ec: boolean | null;
+  daily_max_quantity: number | null;
+  preparation_days: number | null;
+  custom_options: any;
 }
 
 interface CandleRow {
@@ -64,6 +70,11 @@ export function CakeTab() {
   const [orderType, setOrderType] = useState<OrderType>("always");
   const [reserveDays, setReserveDays] = useState("10");
   const [isLimited, setIsLimited] = useState(false);
+  const [isTakeout, setIsTakeout] = useState(true);
+  const [isEc, setIsEc] = useState(false);
+  const [dailyMaxQuantity, setDailyMaxQuantity] = useState("");
+  const [preparationDays, setPreparationDays] = useState("");
+  const [customOptions, setCustomOptions] = useState<ProductCustomOption[]>([]);
 
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [crossImage, setCrossImage] = useState<string | null>(null);
@@ -122,6 +133,11 @@ export function CakeTab() {
     setOrderType("always");
     setReserveDays("10");
     setIsLimited(false);
+    setIsTakeout(true);
+    setIsEc(false);
+    setDailyMaxQuantity("");
+    setPreparationDays("");
+    setCustomOptions([]);
     setMainImage(null);
     setCrossImage(null);
     setSelectedCandleId("");
@@ -142,6 +158,11 @@ export function CakeTab() {
       setOrderType(resolveOrderType(p));
       setReserveDays(String(p.min_order_lead_minutes ?? 0));
       setIsLimited(false);
+      setIsTakeout(p.is_takeout ?? true);
+      setIsEc(p.is_ec ?? false);
+      setDailyMaxQuantity(p.daily_max_quantity != null ? String(p.daily_max_quantity) : "");
+      setPreparationDays(p.preparation_days != null ? String(p.preparation_days) : "");
+      setCustomOptions(Array.isArray(p.custom_options) ? (p.custom_options as ProductCustomOption[]) : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setSelectedCandleId("");
@@ -204,6 +225,10 @@ export function CakeTab() {
       setError("店舗情報が取得できません");
       return;
     }
+    if (!isTakeout && !isEc) {
+      setError("テイクアウトまたはECのいずれかを選択してください");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -220,6 +245,11 @@ export function CakeTab() {
         min_order_lead_minutes:
           orderType === "reserveOnly" ? parseInt(reserveDays, 10) || 0 : 0,
         is_active: true,
+        is_takeout: isTakeout,
+        is_ec: isEc,
+        daily_max_quantity: dailyMaxQuantity.trim() === "" ? null : parseInt(dailyMaxQuantity, 10) || null,
+        preparation_days: preparationDays.trim() === "" ? 0 : parseInt(preparationDays, 10) || 0,
+        custom_options: customOptions,
       };
 
       if (selectedId) {
@@ -455,6 +485,214 @@ export function CakeTab() {
           placeholder="¥700"
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
+
+        {/* 販売チャネル (テイクアウト / EC) */}
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isTakeout}
+              onChange={(e) => setIsTakeout(e.target.checked)}
+              className="w-4 h-4"
+            />
+            テイクアウト
+          </label>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isEc}
+              onChange={(e) => setIsEc(e.target.checked)}
+              className="w-4 h-4"
+            />
+            EC
+          </label>
+        </div>
+
+        {/* 1日の最大数 / 準備日数 */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-gray-600 block mb-1">1日の最大数</label>
+            <input
+              type="number"
+              min={0}
+              value={dailyMaxQuantity}
+              onChange={(e) => setDailyMaxQuantity(e.target.value)}
+              placeholder="未設定"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-600 block mb-1">準備日数（日）</label>
+            <input
+              type="number"
+              min={0}
+              value={preparationDays}
+              onChange={(e) => setPreparationDays(e.target.value)}
+              placeholder="0"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+        </div>
+
+        {/* カスタムオプション */}
+        <div className="border border-amber-200 rounded-lg p-3 bg-white/60 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold">カスタムオプション</span>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomOptions((prev) => [
+                  ...prev,
+                  { name: "", type: "single", required: false, values: [] },
+                ])
+              }
+              className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              オプションを追加
+            </button>
+          </div>
+
+          {customOptions.length === 0 && (
+            <p className="text-xs text-gray-400">オプションはありません</p>
+          )}
+
+          {customOptions.map((opt, oi) => (
+            <div key={oi} className="border border-gray-200 rounded-lg p-2.5 bg-white space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={opt.name}
+                  onChange={(e) =>
+                    setCustomOptions((prev) =>
+                      prev.map((o, i) => (i === oi ? { ...o, name: e.target.value } : o))
+                    )
+                  }
+                  placeholder="オプション名 (例: サイズ)"
+                  className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm"
+                />
+                <select
+                  value={opt.type}
+                  onChange={(e) =>
+                    setCustomOptions((prev) =>
+                      prev.map((o, i) =>
+                        i === oi ? { ...o, type: e.target.value as ProductCustomOption["type"] } : o
+                      )
+                    )
+                  }
+                  className="border border-gray-300 rounded px-2 py-1 text-sm"
+                >
+                  <option value="single">単一選択</option>
+                  <option value="multiple">複数選択</option>
+                  <option value="text">自由入力</option>
+                </select>
+                <label className="flex items-center gap-1 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={opt.required}
+                    onChange={(e) =>
+                      setCustomOptions((prev) =>
+                        prev.map((o, i) => (i === oi ? { ...o, required: e.target.checked } : o))
+                      )
+                    }
+                  />
+                  必須
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCustomOptions((prev) => prev.filter((_, i) => i !== oi))
+                  }
+                  className="text-red-500 hover:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+
+              {opt.type !== "text" && (
+                <div className="pl-2 space-y-1.5">
+                  {opt.values.map((v, vi) => (
+                    <div key={vi} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={v.label}
+                        onChange={(e) =>
+                          setCustomOptions((prev) =>
+                            prev.map((o, i) =>
+                              i === oi
+                                ? {
+                                    ...o,
+                                    values: o.values.map((vv, vj) =>
+                                      vj === vi ? { ...vv, label: e.target.value } : vv
+                                    ),
+                                  }
+                                : o
+                            )
+                          )
+                        }
+                        placeholder="選択肢"
+                        className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                      />
+                      <input
+                        type="number"
+                        value={v.additional_price}
+                        onChange={(e) =>
+                          setCustomOptions((prev) =>
+                            prev.map((o, i) =>
+                              i === oi
+                                ? {
+                                    ...o,
+                                    values: o.values.map((vv, vj) =>
+                                      vj === vi
+                                        ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 }
+                                        : vv
+                                    ),
+                                  }
+                                : o
+                            )
+                          )
+                        }
+                        placeholder="+¥0"
+                        className="w-24 border border-gray-300 rounded px-2 py-1 text-xs"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCustomOptions((prev) =>
+                            prev.map((o, i) =>
+                              i === oi
+                                ? { ...o, values: o.values.filter((_, vj) => vj !== vi) }
+                                : o
+                            )
+                          )
+                        }
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCustomOptions((prev) =>
+                        prev.map((o, i) =>
+                          i === oi
+                            ? { ...o, values: [...o.values, { label: "", additional_price: 0 }] }
+                            : o
+                        )
+                      )
+                    }
+                    className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700"
+                  >
+                    <Plus className="w-3 h-3" />
+                    選択肢を追加
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* 注文タイプ */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">

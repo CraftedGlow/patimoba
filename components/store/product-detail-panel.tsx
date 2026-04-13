@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Check, Trash2, ImagePlus } from "lucide-react";
+import { X, Loader2, Check, Trash2, ImagePlus, Plus } from "lucide-react";
 import { useProductTypes } from "@/hooks/use-product-types";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
-import type { ProductRegistration } from "@/hooks/use-product-registrations";
+import type { ProductRegistration, ProductCustomOption } from "@/hooks/use-product-registrations";
 
 interface ProductDetailPanelProps {
   product: ProductRegistration;
@@ -33,9 +33,12 @@ export function ProductDetailPanel({
   const [price, setPrice] = useState(
     product.base_price > 0 ? `¥${product.base_price.toLocaleString()}` : ""
   );
-  const [prepDays, setPrepDays] = useState("0");
+  const [prepDays, setPrepDays] = useState(String(product.preparation_days ?? 0));
   const [maxPerOrder, setMaxPerOrder] = useState("10");
-  const [dailyMax, setDailyMax] = useState("30");
+  const [dailyMax, setDailyMax] = useState(product.daily_max_quantity != null ? String(product.daily_max_quantity) : "");
+  const [isTakeout, setIsTakeout] = useState(product.is_takeout);
+  const [isEc, setIsEc] = useState(product.is_ec);
+  const [customOptions, setCustomOptions] = useState<ProductCustomOption[]>(product.custom_options);
   const [category, setCategory] = useState("");
   const [image, setImage] = useState(product.image ?? "");
 
@@ -54,9 +57,12 @@ export function ProductDetailPanel({
     setPrice(
       product.base_price > 0 ? `¥${product.base_price.toLocaleString()}` : ""
     );
-    setPrepDays("0");
+    setPrepDays(String(product.preparation_days ?? 0));
     setMaxPerOrder("10");
-    setDailyMax("30");
+    setDailyMax(product.daily_max_quantity != null ? String(product.daily_max_quantity) : "");
+    setIsTakeout(product.is_takeout);
+    setIsEc(product.is_ec);
+    setCustomOptions(product.custom_options);
     setImage(product.image ?? "");
 
     const typeMatch = productTypes.find(
@@ -76,15 +82,18 @@ export function ProductDetailPanel({
     try {
       const typeMatch = productTypes.find((t) => t.productType === category);
       void typeMatch;
-      void prepDays;
       void maxPerOrder;
-      void dailyMax;
       const { error: err } = await onSave(product.id, {
         name: name.trim(),
         description: description.trim(),
         base_price: parsePriceValue(price),
         category_name: category || null,
         image: image || null,
+        preparation_days: Number(prepDays) || 0,
+        daily_max_quantity: dailyMax.trim() ? Number(dailyMax) : null,
+        is_takeout: isTakeout,
+        is_ec: isEc,
+        custom_options: customOptions as any,
       });
       if (err) throw new Error(err);
       setSaved(true);
@@ -262,6 +271,143 @@ export function ProductDetailPanel({
             min={1}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
           />
+        </div>
+
+        <div>
+          <label className="text-sm font-bold block mb-1">販売チャネル</label>
+          <div className="flex gap-3 text-sm">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isTakeout}
+                onChange={(e) => setIsTakeout(e.target.checked)}
+                className="w-4 h-4 accent-amber-500"
+              />
+              テイクアウト
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isEc}
+                onChange={(e) => setIsEc(e.target.checked)}
+                className="w-4 h-4 accent-amber-500"
+              />
+              EC
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-sm font-bold">カスタムオプション</label>
+            <button
+              type="button"
+              onClick={() =>
+                setCustomOptions((prev) => [
+                  ...prev,
+                  { name: "", type: "single", required: false, values: [] },
+                ])
+              }
+              className="text-xs text-amber-600 hover:text-amber-700 flex items-center gap-0.5"
+            >
+              <Plus className="w-3 h-3" /> 追加
+            </button>
+          </div>
+          <div className="space-y-3">
+            {customOptions.map((opt, oi) => (
+              <div key={oi} className="border border-gray-200 rounded-lg p-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={opt.name}
+                    onChange={(e) => {
+                      const next = [...customOptions];
+                      next[oi] = { ...next[oi], name: e.target.value };
+                      setCustomOptions(next);
+                    }}
+                    placeholder="オプション名"
+                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                  />
+                  <select
+                    value={opt.type}
+                    onChange={(e) => {
+                      const next = [...customOptions];
+                      next[oi] = { ...next[oi], type: e.target.value as any };
+                      setCustomOptions(next);
+                    }}
+                    className="border border-gray-300 rounded px-1 py-1 text-xs"
+                  >
+                    <option value="single">単一</option>
+                    <option value="multiple">複数</option>
+                    <option value="text">記入</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setCustomOptions(customOptions.filter((_, i) => i !== oi))}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {opt.type !== "text" && (
+                  <div className="space-y-1">
+                    {opt.values.map((v, vi) => (
+                      <div key={vi} className="flex gap-1">
+                        <input
+                          type="text"
+                          value={v.label}
+                          onChange={(e) => {
+                            const next = [...customOptions];
+                            const values = [...next[oi].values];
+                            values[vi] = { ...values[vi], label: e.target.value };
+                            next[oi] = { ...next[oi], values };
+                            setCustomOptions(next);
+                          }}
+                          placeholder="選択肢"
+                          className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-xs"
+                        />
+                        <input
+                          type="number"
+                          value={v.additional_price}
+                          onChange={(e) => {
+                            const next = [...customOptions];
+                            const values = [...next[oi].values];
+                            values[vi] = { ...values[vi], additional_price: Number(e.target.value) || 0 };
+                            next[oi] = { ...next[oi], values };
+                            setCustomOptions(next);
+                          }}
+                          placeholder="+¥"
+                          className="w-16 border border-gray-300 rounded px-1 py-0.5 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = [...customOptions];
+                            next[oi] = { ...next[oi], values: next[oi].values.filter((_, i) => i !== vi) };
+                            setCustomOptions(next);
+                          }}
+                          className="text-gray-400 hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = [...customOptions];
+                        next[oi] = { ...next[oi], values: [...next[oi].values, { label: "", additional_price: 0 }] };
+                        setCustomOptions(next);
+                      }}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      + 選択肢追加
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>

@@ -6,7 +6,6 @@ import {
   User,
   Mail,
   Phone,
-  FileText,
   Shield,
   Key,
   Bell,
@@ -56,8 +55,6 @@ type AdminProfile = {
   name: string;
   email: string;
   phone: string;
-  department: string;
-  company: string;
   notificationSettings: Record<string, boolean>;
 };
 
@@ -85,8 +82,6 @@ async function fetchAdminProfile(): Promise<AdminProfile | null> {
     name: data.name ?? "",
     email: data.email ?? "",
     phone: data.phone ?? "",
-    department: "",
-    company: "",
     notificationSettings: {},
   };
 }
@@ -102,8 +97,6 @@ export default function AdminAccountPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [department, setDepartment] = useState("");
-  const [company, setCompany] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -126,8 +119,6 @@ export default function AdminAccountPage() {
         setName(profile.name);
         setEmail(profile.email);
         setPhone(profile.phone);
-        setDepartment(profile.department);
-        setCompany(profile.company);
         setHasPassword(!!profile.authUserId);
         setIsNew(false);
         if (Object.keys(profile.notificationSettings).length > 0) {
@@ -181,8 +172,6 @@ export default function AdminAccountPage() {
         name,
         email: cleanEmail,
         phone: phone || null,
-        department: department || null,
-        company_name: company || null,
         notification_settings: notifications,
       };
 
@@ -328,7 +317,7 @@ export default function AdminAccountPage() {
                   管理者
                 </span>
               </div>
-              <p className="text-sm text-gray-500">{company || "未設定"}</p>
+              <p className="text-sm text-gray-500">{email || "未設定"}</p>
             </div>
           </div>
 
@@ -375,34 +364,6 @@ export default function AdminAccountPage() {
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1.5">
-                部署
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="営業本部"
-                  className="w-full border border-gray-300 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                />
-              </div>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm text-gray-600 mb-1.5">
-                会社名
-              </label>
-              <input
-                type="text"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                placeholder="Crafted Glow Inc."
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-              />
-            </div>
-
             {isNew && (
               <>
                 <div>

@@ -153,31 +153,31 @@ export default function AdminRevenuePage() {
 
   const kpis = [
     {
-      label: "今月のMRR",
-      value: `¥${displayMRR.toLocaleString()}万`,
+      label: "今月のMRR（万円）",
+      value: `${displayMRR.toLocaleString()}`,
       sub: `${stores.length}店舗の合計`,
       subColor: "text-green-600",
       icon: DollarSign,
     },
     {
-      label: "年間ARR予測",
-      value: `¥${arrEstimate}億`,
+      label: "年間ARR予測（億円）",
+      value: `${arrEstimate}`,
       sub: "現在のMRRで試算",
       subColor: "text-gray-500",
       icon: null,
     },
     {
-      label: "月間注文売上",
-      value: `¥${Math.round(thisMonthRevenue / 10000).toLocaleString()}万`,
+      label: "月間注文売上（万円）",
+      value: `${Math.round(thisMonthRevenue / 10000).toLocaleString()}`,
       sub: `${thisMonthOrders.length}件の注文合計`,
       subColor: "text-gray-500",
       icon: null,
     },
     {
-      label: "平均客単価",
+      label: "平均客単価（円）",
       value: thisMonthOrders.length > 0
-        ? `¥${Math.round(thisMonthRevenue / thisMonthOrders.length).toLocaleString()}`
-        : "¥0",
+        ? `${Math.round(thisMonthRevenue / thisMonthOrders.length).toLocaleString()}`
+        : "0",
       sub: "店舗注文の平均",
       subColor: "text-gray-500",
       icon: null,

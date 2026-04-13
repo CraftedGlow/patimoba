@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { toJpeg } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
 import { MonthView } from "@/components/store/business-days/month-view";
@@ -33,6 +34,52 @@ export default function BusinessDaysPage() {
   const [editOpen, setEditOpen] = useState("");
   const [editClose, setEditClose] = useState("");
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const handleExportImage = async (mode: "post" | "story") => {
+    if (!calendarRef.current) return;
+    setExporting(true);
+    setShowExportMenu(false);
+    try {
+      const width = mode === "post" ? 1080 : 1080;
+      const height = mode === "post" ? 1080 : 1920;
+      const node = calendarRef.current;
+      const scale = Math.min(width / node.offsetWidth, height / node.offsetHeight);
+      const dataUrl = await toJpeg(node, {
+        quality: 0.95,
+        backgroundColor: "#ffffff",
+        canvasWidth: width,
+        canvasHeight: height,
+        pixelRatio: 2,
+        style: {
+          transform: `scale(${scale})`,
+          transformOrigin: "top left",
+          width: `${node.offsetWidth}px`,
+          height: `${node.offsetHeight}px`,
+        },
+      });
+      const link = document.createElement("a");
+      link.download = `business-days-${year}-${month + 1}-${mode}.jpg`;
+      link.href = dataUrl;
+      link.click();
+    } catch (e) {
+      console.error(e);
+    }
+    setExporting(false);
+  };
 
   const [storeOpenTime, setStoreOpenTime] = useState("10:00");
   const [storeCloseTime, setStoreCloseTime] = useState("19:00");
@@ -269,6 +316,42 @@ export default function BusinessDaysPage() {
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
             {month + 1}月の営業日を提出
           </motion.button>
+
+          <div ref={exportMenuRef} className="relative mt-1">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowExportMenu((v) => !v)}
+              disabled={exporting}
+              className="border border-amber-500 text-amber-600 hover:bg-amber-50 font-bold px-4 py-3 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
+            >
+              {exporting && <Loader2 className="w-4 h-4 animate-spin" />}
+              Instagram用画像
+            </motion.button>
+            <AnimatePresence>
+              {showExportMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-20 w-[200px] overflow-hidden"
+                >
+                  <button
+                    onClick={() => handleExportImage("post")}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors"
+                  >
+                    投稿サイズ (1080×1080)
+                  </button>
+                  <button
+                    onClick={() => handleExportImage("story")}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors border-t border-gray-100"
+                  >
+                    ストーリーズ (1080×1920)
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="flex items-center justify-between mb-4">
@@ -304,6 +387,13 @@ export default function BusinessDaysPage() {
           </div>
         </div>
 
+        <div ref={calendarRef} className="bg-white p-4 rounded-lg">
+          <div className="text-center mb-3">
+            <h3 className="text-2xl font-bold">{year}年 {month + 1}月 営業日カレンダー</h3>
+            <div className="text-sm text-gray-600 mt-1">
+              OPEN {storeOpenTime} / CLOSE {storeCloseTime}
+            </div>
+          </div>
         {viewMode === "month" && (
           <MonthView year={year} month={month} schedules={schedules} onDayClick={handleDayClick} defaultOpenTime={storeOpenTime} closedDayRules={closedDayRules} />
         )}
@@ -313,6 +403,7 @@ export default function BusinessDaysPage() {
         {viewMode === "day" && (
           <DayView year={year} month={month} day={selectedDay} schedules={schedules} onUpdateSchedule={handleUpdateSchedule} defaultOpenTime={storeOpenTime} defaultCloseTime={storeCloseTime} closedDayRules={closedDayRules} />
         )}
+        </div>
       </div>
 
       {/* 右側編集パネル */}

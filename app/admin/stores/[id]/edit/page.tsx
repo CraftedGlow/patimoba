@@ -7,7 +7,7 @@ import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { fetchStoreById, updateStore, uploadStoreLogo, fetchClosedDays, saveClosedDays } from "@/lib/admin-api";
 
-const PLAN_MAP: Record<string, "standard" | "premium"> = { standard: "standard", premium: "premium" };
+const PLAN_MAP: Record<string, "free" | "premium"> = { free: "free", premium: "premium" };
 
 const daysOfWeek = [
   { key: "mon", label: "月" },
@@ -24,7 +24,7 @@ const hours = Array.from({ length: 24 }, (_, i) => {
   return [`${h}:00`, `${h}:30`];
 }).flat();
 
-const standardFeatures = ["予約・注文管理", "顧客管理", "売上レポート"];
+const freeFeatures = ["予約・注文管理", "顧客管理", "売上レポート"];
 const premiumFeatures = [
   "スタンダードの全機能",
   "記念日通知",
@@ -52,7 +52,7 @@ export default function AdminStoreEditPage() {
   const [openTime, setOpenTime] = useState("10:00");
   const [closeTime, setCloseTime] = useState("19:00");
   const [closedDays, setClosedDays] = useState<string[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<"standard" | "premium">("standard");
+  const [selectedPlan, setSelectedPlan] = useState<"free" | "premium">("free");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [existingLogo, setExistingLogo] = useState<string | null>(null);
@@ -69,6 +69,7 @@ export default function AdminStoreEditPage() {
         setExistingLogo(store.logo_url);
         setLogoPreview(store.logo_url);
       }
+      setSelectedPlan(PLAN_MAP[(store as any).plan ?? "free"] ?? "free");
       try {
         const days = await fetchClosedDays(storeId);
         setClosedDays(days);
@@ -120,6 +121,7 @@ export default function AdminStoreEditPage() {
         email: mail || "",
         phone: phone || "",
         address: addressUrl || "",
+        plan: selectedPlan,
       };
       if (logoUrl !== undefined) {
         updates.logo_url = logoUrl;
@@ -272,19 +274,19 @@ export default function AdminStoreEditPage() {
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
-              onClick={() => setSelectedPlan("standard")}
+              onClick={() => setSelectedPlan("free")}
               className={`text-left border-2 rounded-xl p-5 transition-all ${
-                selectedPlan === "standard"
+                selectedPlan === "free"
                   ? "border-amber-500 bg-amber-50/40 shadow-sm"
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
-              <p className="font-bold text-base mb-1">スタンダード</p>
+              <p className="font-bold text-base mb-1">フリー</p>
               <p className="text-xl font-bold mb-3">
-                月額 10,000<span className="text-base">円</span>
+                月額 0<span className="text-base">円</span>
               </p>
               <ul className="space-y-1.5">
-                {standardFeatures.map((f) => (
+                {freeFeatures.map((f) => (
                   <li key={f} className="text-xs text-gray-600">・{f}</li>
                 ))}
               </ul>

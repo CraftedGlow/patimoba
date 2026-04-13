@@ -3,6 +3,18 @@
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 
+export interface ProductCustomOptionValue {
+  label: string
+  additional_price: number
+}
+
+export interface ProductCustomOption {
+  name: string
+  type: "single" | "multiple" | "text"
+  required: boolean
+  values: ProductCustomOptionValue[]
+}
+
 export interface ProductRegistration {
   id: string
   store_id: string
@@ -18,6 +30,11 @@ export interface ProductRegistration {
   min_order_lead_minutes: number
   tax_type: string | null
   display_order: number
+  is_takeout: boolean
+  is_ec: boolean
+  daily_max_quantity: number | null
+  preparation_days: number
+  custom_options: ProductCustomOption[]
   created_at: string | null
   updated_at: string | null
 }
@@ -25,6 +42,25 @@ export interface ProductRegistration {
 interface UseProductRegistrationsOptions {
   storeId?: string
   publishedOnly?: boolean
+}
+
+function normalizeCustomOptions(raw: unknown): ProductCustomOption[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((o): o is Record<string, any> => o !== null && typeof o === "object")
+    .map((o) => ({
+      name: String(o.name ?? ""),
+      type: (o.type === "multiple" || o.type === "text") ? o.type : "single",
+      required: Boolean(o.required),
+      values: Array.isArray(o.values)
+        ? o.values
+            .filter((v: any) => v && typeof v === "object")
+            .map((v: any) => ({
+              label: String(v.label ?? ""),
+              additional_price: Number(v.additional_price) || 0,
+            }))
+        : [],
+    }))
 }
 
 function mapRow(row: any): ProductRegistration {
@@ -43,6 +79,11 @@ function mapRow(row: any): ProductRegistration {
     min_order_lead_minutes: row.min_order_lead_minutes ?? 0,
     tax_type: row.tax_type ?? null,
     display_order: row.display_order ?? 0,
+    is_takeout: row.is_takeout ?? true,
+    is_ec: row.is_ec ?? false,
+    daily_max_quantity: row.daily_max_quantity ?? null,
+    preparation_days: row.preparation_days ?? 0,
+    custom_options: normalizeCustomOptions(row.custom_options),
     created_at: row.created_at ?? null,
     updated_at: row.updated_at ?? null,
   }
@@ -112,6 +153,11 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.min_order_lead_minutes !== undefined) payload.min_order_lead_minutes = updates.min_order_lead_minutes
     if (updates.tax_type !== undefined) payload.tax_type = updates.tax_type
     if (updates.display_order !== undefined) payload.display_order = updates.display_order
+    if (updates.is_takeout !== undefined) payload.is_takeout = updates.is_takeout
+    if (updates.is_ec !== undefined) payload.is_ec = updates.is_ec
+    if (updates.daily_max_quantity !== undefined) payload.daily_max_quantity = updates.daily_max_quantity
+    if (updates.preparation_days !== undefined) payload.preparation_days = updates.preparation_days
+    if (updates.custom_options !== undefined) payload.custom_options = updates.custom_options
 
     const { error } = await supabase
       .from("products")

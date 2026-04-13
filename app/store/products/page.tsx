@@ -384,10 +384,10 @@ export default function StoreProductsPage() {
                     />
                   </div>
                   <span className="text-sm text-center">
-                    -
+                    {product.daily_max_quantity != null ? product.daily_max_quantity : "-"}
                   </span>
                   <span className="text-sm text-center">
-                    -
+                    {product.preparation_days > 0 ? `${product.preparation_days}日` : "-"}
                   </span>
                 </motion.div>
               );

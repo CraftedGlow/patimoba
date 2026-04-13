@@ -27,6 +27,18 @@ export interface Product {
   maxQuantity: number
 }
 
+export interface ProductCustomOptionValue {
+  label: string
+  additional_price: number
+}
+
+export interface ProductCustomOption {
+  name: string
+  type: "single" | "multiple" | "text"
+  required: boolean
+  values: ProductCustomOptionValue[]
+}
+
 export interface ManagedProduct {
   id: string
   name: string
@@ -41,6 +53,11 @@ export interface ManagedProduct {
   isPreorderRequired: boolean
   taxType: string
   displayOrder: number
+  isTakeout: boolean
+  isEc: boolean
+  dailyMaxQuantity: number | null
+  preparationDays: number
+  customOptions: ProductCustomOption[]
 }
 
 export interface Order {
@@ -77,6 +94,8 @@ export interface Customer {
   status: string
 }
 
+export type StorePlan = "free" | "premium"
+
 export interface Store {
   id: string
   name: string
@@ -91,6 +110,7 @@ export interface Store {
   isActive: boolean
   logoUrl: string | null
   lineOfficialAccountId: string | null
+  plan: StorePlan
 }
 
 export interface WholeCakeSize {
@@ -188,6 +208,7 @@ export function toUIStore(row: StoreRow): Store {
     isActive: row.is_active ?? true,
     logoUrl: row.logo_url,
     lineOfficialAccountId: row.line_official_account_id,
+    plan: (row.plan === "premium" ? "premium" : "free") as StorePlan,
   }
 }
 
@@ -220,7 +241,31 @@ export function toUIManagedProduct(row: ProductRow, category?: string): ManagedP
     isPreorderRequired: row.is_preorder_required ?? false,
     taxType: row.tax_type || "included",
     displayOrder: Number(row.display_order) || 0,
+    isTakeout: (row as any).is_takeout ?? true,
+    isEc: (row as any).is_ec ?? false,
+    dailyMaxQuantity: (row as any).daily_max_quantity ?? null,
+    preparationDays: Number((row as any).preparation_days) || 0,
+    customOptions: normalizeCustomOptions((row as any).custom_options),
   }
+}
+
+export function normalizeCustomOptions(raw: unknown): ProductCustomOption[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((o): o is Record<string, any> => o !== null && typeof o === "object")
+    .map((o) => ({
+      name: String(o.name ?? ""),
+      type: (o.type === "multiple" || o.type === "text") ? o.type : "single",
+      required: Boolean(o.required),
+      values: Array.isArray(o.values)
+        ? o.values
+            .filter((v: any) => v && typeof v === "object")
+            .map((v: any) => ({
+              label: String(v.label ?? ""),
+              additional_price: Number(v.additional_price) || 0,
+            }))
+        : [],
+    }))
 }
 
 export function toUIOrder(row: any): Order {

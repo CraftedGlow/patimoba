@@ -23,7 +23,7 @@ const hours = Array.from({ length: 24 }, (_, i) => {
   return [`${h}:00`, `${h}:30`];
 }).flat();
 
-const standardFeatures = ["予約・注文管理", "顧客管理", "売上レポート"];
+const freeFeatures = ["予約・注文管理", "顧客管理", "売上レポート"];
 const premiumFeatures = [
   "スタンダードの全機能",
   "記念日通知",
@@ -47,7 +47,7 @@ export default function AdminStoreNewPage() {
   const [openTime, setOpenTime] = useState("10:00");
   const [closeTime, setCloseTime] = useState("19:00");
   const [closedDays, setClosedDays] = useState<string[]>(["wed", "sun"]);
-  const [selectedPlan, setSelectedPlan] = useState<"standard" | "premium">("premium");
+  const [selectedPlan, setSelectedPlan] = useState<"free" | "premium">("free");
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [agreeTrade, setAgreeTrade] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -108,6 +108,7 @@ export default function AdminStoreNewPage() {
         postal_code: postalCode || "",
         address: `${prefecture || ""}${city || ""}${address || ""}`,
         logo_url: logoUrl,
+        plan: selectedPlan,
       });
       if (closedDays.length > 0) {
         await saveClosedDays(created.id, closedDays);
@@ -328,19 +329,19 @@ export default function AdminStoreNewPage() {
           <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
-              onClick={() => setSelectedPlan("standard")}
+              onClick={() => setSelectedPlan("free")}
               className={`text-left border-2 rounded-xl p-5 transition-all ${
-                selectedPlan === "standard"
+                selectedPlan === "free"
                   ? "border-amber-500 bg-amber-50/40 shadow-sm"
                   : "border-gray-200 hover:border-gray-300"
               }`}
             >
-              <p className="font-bold text-base mb-1">スタンダード</p>
+              <p className="font-bold text-base mb-1">フリー</p>
               <p className="text-xl font-bold mb-3">
-                月額 10,000<span className="text-base">円</span>
+                月額 0<span className="text-base">円</span>
               </p>
               <ul className="space-y-1.5">
-                {standardFeatures.map((f) => (
+                {freeFeatures.map((f) => (
                   <li key={f} className="text-xs text-gray-600">・{f}</li>
                 ))}
               </ul>

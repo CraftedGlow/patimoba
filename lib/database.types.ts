@@ -250,14 +250,19 @@ export type Database = {
           category_name: string | null
           created_at: string
           cross_section_image: string | null
+          custom_options: Json
+          daily_max_quantity: number | null
           description: string | null
           display_order: number | null
           id: string
           image: string | null
           is_active: boolean
+          is_ec: boolean
           is_preorder_required: boolean | null
+          is_takeout: boolean
           min_order_lead_minutes: number | null
           name: string
+          preparation_days: number | null
           same_day_order_allowed: boolean | null
           store_id: string
           tax_type: string | null
@@ -268,14 +273,19 @@ export type Database = {
           category_name?: string | null
           created_at?: string
           cross_section_image?: string | null
+          custom_options?: Json
+          daily_max_quantity?: number | null
           description?: string | null
           display_order?: number | null
           id?: string
           image?: string | null
           is_active?: boolean
+          is_ec?: boolean
           is_preorder_required?: boolean | null
+          is_takeout?: boolean
           min_order_lead_minutes?: number | null
           name?: string
+          preparation_days?: number | null
           same_day_order_allowed?: boolean | null
           store_id: string
           tax_type?: string | null
@@ -286,14 +296,19 @@ export type Database = {
           category_name?: string | null
           created_at?: string
           cross_section_image?: string | null
+          custom_options?: Json
+          daily_max_quantity?: number | null
           description?: string | null
           display_order?: number | null
           id?: string
           image?: string | null
           is_active?: boolean
+          is_ec?: boolean
           is_preorder_required?: boolean | null
+          is_takeout?: boolean
           min_order_lead_minutes?: number | null
           name?: string
+          preparation_days?: number | null
           same_day_order_allowed?: boolean | null
           store_id?: string
           tax_type?: string | null
@@ -515,6 +530,7 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
+          plan: string
           postal_code: string | null
           slug: string | null
           updated_at: string
@@ -532,6 +548,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          plan?: string
           postal_code?: string | null
           slug?: string | null
           updated_at?: string
@@ -549,6 +566,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          plan?: string
           postal_code?: string | null
           slug?: string | null
           updated_at?: string

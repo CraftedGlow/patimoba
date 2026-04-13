@@ -158,7 +158,7 @@ export default function StoreOrdersPage() {
               </div>
 
               <div className="text-sm text-gray-600">
-                {order.pickupTime && <div>{order.pickupTime}</div>}
+                {order.pickupTime && <div>{order.pickupTime.slice(0, 5)}</div>}
               </div>
 
               <div className="text-sm">

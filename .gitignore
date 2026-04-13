@@ -17,6 +17,7 @@
 
 # misc
 /requirements/
+/tasks/
 .DS_Store
 *.pem
 

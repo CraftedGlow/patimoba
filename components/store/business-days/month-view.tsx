@@ -76,18 +76,18 @@ export function MonthView({ year, month, schedules, onDayClick, defaultOpenTime 
               }`}>
                 {cell.d}日
               </div>
-              {cell.isCurrentMonth && isOpen && (
-                <div className={`text-[10px] px-1 py-0.5 rounded ${
-                  schedule?.openTime
-                    ? "bg-red-500 text-white"
-                    : "bg-blue-400 text-white"
-                }`}>
-                  <span className="font-bold">
-                    {schedule?.openTime ? schedule.openTime.split(":")[0] : defaultOpenTime.split(":")[0]}時
-                  </span>{" "}
-                  営業日
-                </div>
-              )}
+              {cell.isCurrentMonth && isOpen && (() => {
+                const openT = schedule?.openTime || defaultOpenTime;
+                const closeT = schedule?.closeTime || "";
+                return (
+                  <div className={`text-[10px] px-1 py-0.5 rounded leading-tight ${
+                    schedule?.openTime ? "bg-red-500 text-white" : "bg-blue-400 text-white"
+                  }`}>
+                    <div className="font-bold">営業日</div>
+                    <div>{openT}{closeT ? `〜${closeT}` : ""}</div>
+                  </div>
+                );
+              })()}
               {cell.isCurrentMonth && !isOpen && (
                 <div className="text-[10px] px-1 py-0.5 rounded bg-amber-400 text-white">
                   休業日

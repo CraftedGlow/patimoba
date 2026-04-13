@@ -19,12 +19,20 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useStoreContext } from "@/lib/store-context";
 
+interface OrderItemRow {
+  product_name_snapshot: string | null;
+  quantity: number | null;
+  subtotal: number | null;
+}
+
 interface OrderRow {
   id: string;
-  total: number | null;
+  total_amount: number | null;
   created_at: string;
   customer_id: string | null;
   order_type: string;
+  users?: { name: string | null; line_name: string | null } | null;
+  order_items?: OrderItemRow[] | null;
 }
 
 interface ProductSale {
@@ -68,7 +76,7 @@ export default function StoreReportPage() {
     (async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, total, created_at, customer_id, order_type")
+        .select("id, total_amount, created_at, customer_id, order_type, users(name, line_name), order_items(product_name_snapshot, quantity, subtotal)")
         .eq("store_id", storeId)
         .gte("created_at", start)
         .lt("created_at", end)
@@ -83,7 +91,7 @@ export default function StoreReportPage() {
 
   const stats = useMemo(() => {
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const totalRevenue = orders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
     const avgSpend = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
     const uniqueCustomers = new Set(orders.filter((o) => o.customer_id).map((o) => o.customer_id));
     return { totalOrders, totalRevenue, avgSpend, newCustomers: uniqueCustomers.size };
@@ -94,7 +102,7 @@ export default function StoreReportPage() {
     const map = new Map<number, number>();
     for (const o of orders) {
       const d = new Date(o.created_at).getDate();
-      map.set(d, (map.get(d) || 0) + (o.total || 0));
+      map.set(d, (map.get(d) || 0) + (Number(o.total_amount) || 0));
     }
     return Array.from({ length: daysInMonth }, (_, i) => ({
       day: i + 1,
@@ -112,6 +120,45 @@ export default function StoreReportPage() {
     }
     return labels.map((l, i) => ({ label: l, count: counts[i] }));
   }, [orders]);
+
+  const productRanking = useMemo(() => {
+    const map = new Map<string, { count: number; total: number }>();
+    for (const o of orders) {
+      for (const it of o.order_items ?? []) {
+        const name = it.product_name_snapshot || "（不明）";
+        const cur = map.get(name) || { count: 0, total: 0 };
+        cur.count += Number(it.quantity) || 0;
+        cur.total += Number(it.subtotal) || 0;
+        map.set(name, cur);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([name, v]) => ({ name, count: v.count, total: v.total }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [orders]);
+
+  const customerRanking = useMemo(() => {
+    const map = new Map<string, { name: string; visits: number; total: number; last: string }>();
+    for (const o of orders) {
+      if (!o.customer_id) continue;
+      const name = o.users?.name || o.users?.line_name || "-";
+      const cur = map.get(o.customer_id) || { name, visits: 0, total: 0, last: o.created_at };
+      cur.visits += 1;
+      cur.total += Number(o.total_amount) || 0;
+      if (o.created_at > cur.last) cur.last = o.created_at;
+      cur.name = name;
+      map.set(o.customer_id, cur);
+    }
+    return Array.from(map.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+  }, [orders]);
+
+  const formatDateShort = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+  };
 
   const maxDailySale = Math.max(...dailySales.map((d) => d.amount), 1);
   const maxWeekday = Math.max(...weekdayCounts.map((w) => w.count), 1);
@@ -287,26 +334,23 @@ export default function StoreReportPage() {
           className="bg-white border border-gray-200 rounded-xl p-4"
         >
           <h4 className="text-sm font-bold mb-3">商品ランキング TOP5</h4>
-          {orders.length === 0 ? (
+          {productRanking.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-8">データがありません</p>
           ) : (
             <div className="space-y-3">
-              {[
-                { rank: 1, name: "ショートケーキ（ホール）", count: 87, total: 452100, emoji: "🏆" },
-                { rank: 2, name: "チョコレートムース", count: 72, total: 324000, emoji: "🥈" },
-                { rank: 3, name: "フルーツタルト", count: 65, total: 292500, emoji: "🥉" },
-                { rank: 4, name: "モンブラン", count: 58, total: 261000 },
-                { rank: 5, name: "ティラミス", count: 51, total: 229500 },
-              ].map((item) => (
-                <div key={item.rank} className="flex items-center gap-3">
-                  <span className="text-sm w-5 shrink-0 text-center">{item.emoji || item.rank}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{item.name}</p>
-                    <p className="text-[10px] text-gray-400">{item.count}件の注文</p>
+              {productRanking.map((item, idx) => {
+                const emoji = idx === 0 ? "🏆" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : String(idx + 1);
+                return (
+                  <div key={item.name} className="flex items-center gap-3">
+                    <span className="text-sm w-5 shrink-0 text-center">{emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-[10px] text-gray-400">{item.count}件の注文</p>
+                    </div>
+                    <span className="text-sm font-bold shrink-0">¥{item.total.toLocaleString()}</span>
                   </div>
-                  <span className="text-sm font-bold shrink-0">¥{item.total.toLocaleString()}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </motion.div>
@@ -319,24 +363,18 @@ export default function StoreReportPage() {
           className="bg-white border border-gray-200 rounded-xl p-4"
         >
           <h4 className="text-sm font-bold mb-3">優良顧客リスト</h4>
-          {orders.length === 0 ? (
+          {customerRanking.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-8">データがありません</p>
           ) : (
             <div className="space-y-3">
-              {[
-                { name: "田中 花子", visits: 12, total: 148500, last: "2025/03/28" },
-                { name: "佐藤 太郎", visits: 8, total: 96200, last: "2025/03/27" },
-                { name: "鈴木 美咲", visits: 7, total: 82400, last: "2025/03/26" },
-                { name: "高橋 健", visits: 6, total: 71300, last: "2025/03/25" },
-                { name: "伊藤 愛", visits: 5, total: 64800, last: "2025/03/24" },
-              ].map((c, i) => (
+              {customerRanking.map((c, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
                     <Users className="w-3.5 h-3.5 text-amber-600" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{c.name}</p>
-                    <p className="text-[10px] text-gray-400">{c.visits}回購入 · 最終: {c.last}</p>
+                    <p className="text-[10px] text-gray-400">{c.visits}回購入 · 最終: {formatDateShort(c.last)}</p>
                   </div>
                   <span className="text-sm font-bold shrink-0">¥{c.total.toLocaleString()}</span>
                 </div>
@@ -352,32 +390,43 @@ export default function StoreReportPage() {
           transition={{ delay: 0.2 }}
           className="bg-white border border-gray-200 rounded-xl p-4"
         >
-          <h4 className="text-sm font-bold mb-3">LINE配信効果</h4>
-          <div className="space-y-4">
-            {[
-              { title: "春のケーキフェア開催中🌸", date: "2025/03/20", delivery: 1245, open: 876, click: 234, order: 67 },
-              { title: "ホワイトデー限定商品のご案内", date: "2025/03/15", delivery: 1245, open: 945, click: 312, order: 89 },
-              { title: "新商品「桜モンブラン」登場", date: "2025/03/08", delivery: 1245, open: 823, click: 198, order: 54 },
-            ].map((item, i) => (
-              <div key={i} className="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
-                <p className="text-sm font-medium">{item.title}</p>
-                <p className="text-[10px] text-gray-400 mb-2">{item.date}</p>
-                <div className="grid grid-cols-4 gap-2 text-center">
-                  {[
-                    { label: "配信", val: item.delivery },
-                    { label: "開封", val: item.open },
-                    { label: "クリック", val: item.click },
-                    { label: "注文", val: item.order },
-                  ].map((m) => (
-                    <div key={m.label}>
-                      <p className="text-xs font-bold">{m.val.toLocaleString()}</p>
-                      <p className="text-[9px] text-gray-400">{m.label}</p>
+          <h4 className="text-sm font-bold mb-3">注文タイプ内訳</h4>
+          {orders.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-8">データがありません</p>
+          ) : (
+            (() => {
+              const byType = new Map<string, { count: number; total: number }>();
+              for (const o of orders) {
+                const k = o.order_type || "-";
+                const cur = byType.get(k) || { count: 0, total: 0 };
+                cur.count += 1;
+                cur.total += Number(o.total_amount) || 0;
+                byType.set(k, cur);
+              }
+              const labelMap: Record<string, string> = {
+                takeout: "テイクアウト",
+                delivery: "配送",
+                ec: "EC",
+                "-": "その他",
+              };
+              return (
+                <div className="space-y-3">
+                  {Array.from(byType.entries()).map(([k, v]) => (
+                    <div key={k} className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                        <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{labelMap[k] || k}</p>
+                        <p className="text-[10px] text-gray-400">{v.count}件</p>
+                      </div>
+                      <span className="text-sm font-bold shrink-0">¥{v.total.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
+              );
+            })()
+          )}
         </motion.div>
       </div>
 

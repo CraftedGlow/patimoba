@@ -23,6 +23,7 @@ export default function ECProductDetailPage() {
   const [showQuantityDropdown, setShowQuantityDropdown] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -35,14 +36,21 @@ export default function ECProductDetailPage() {
   if (!product) return null;
 
   const handleAddToCart = () => {
-    addItem({
+    const res = addItem({
       productId: product.id,
       name: product.name,
       price: product.price,
       image: product.image || "",
       quantity,
       storeId: selectedStoreId || "",
+      isEc: true,
     });
+
+    if (!res.ok) {
+      setErrorMsg(res.error || "カートに追加できませんでした");
+      setTimeout(() => setErrorMsg(null), 2500);
+      return;
+    }
 
     setShowToast(true);
     setTimeout(() => {
@@ -168,6 +176,16 @@ export default function ECProductDetailPage() {
       </div>
 
       <AnimatePresence>
+        {errorMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-[90] bg-red-500 text-white text-sm px-4 py-2 rounded-lg shadow-lg"
+          >
+            {errorMsg}
+          </motion.div>
+        )}
         {showToast && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

@@ -60,6 +60,8 @@ export interface ManagedProduct {
   customOptions: ProductCustomOption[]
 }
 
+export type FulfillmentStatus = "pending" | "fulfilled"
+
 export interface Order {
   id: string
   orderNo: string
@@ -80,6 +82,9 @@ export interface Order {
   orderStatus: OrderStatus
   statusLabel: string
   orderType: string
+  fulfillmentStatus: FulfillmentStatus
+  fulfilledAt: string | null
+  fulfilledBy: string | null
   notes?: string
   createdAt: string
 }
@@ -151,6 +156,8 @@ export interface UICartItem {
   image: string
   storeId: string
   isCustomCake?: boolean
+  isEc?: boolean
+  isTakeout?: boolean
   uid?: string
   customization?: {
     sizeId?: string
@@ -305,6 +312,9 @@ export function toUIOrder(row: any): Order {
     orderStatus,
     statusLabel: formatOrderStatus(orderStatus),
     orderType: row.order_type || "pickup",
+    fulfillmentStatus: (row.fulfillment_status === "fulfilled" ? "fulfilled" : "pending") as FulfillmentStatus,
+    fulfilledAt: row.fulfilled_at || null,
+    fulfilledBy: row.fulfilled_by || null,
     notes: row.notes || undefined,
     createdAt: row.created_at || new Date().toISOString(),
   }

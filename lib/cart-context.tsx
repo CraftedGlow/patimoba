@@ -11,21 +11,35 @@ interface DeliveryAddress {
   building: string
 }
 
+export type CartChannel = "ec" | "takeout" | null
+
+interface AddItemResult {
+  ok: boolean
+  error?: string
+}
+
 interface CartContextType {
   items: UICartItem[]
   storeId: string | null
+  channel: CartChannel
   total: number
   itemCount: number
   deliveryAddress: DeliveryAddress | null
   shippingFee: number
   usedPoints: number
-  addItem: (item: UICartItem) => void
+  addItem: (item: UICartItem) => AddItemResult
   removeItem: (productId: string, customizationKey?: string) => void
   updateQuantity: (productId: string, quantity: number, customizationKey?: string) => void
   clear: () => void
   setDeliveryAddress: (addr: DeliveryAddress | null) => void
   setShippingFee: (fee: number) => void
   setUsedPoints: (points: number) => void
+}
+
+function itemChannel(item: UICartItem): CartChannel {
+  if (item.isEc) return "ec"
+  if (item.isTakeout) return "takeout"
+  return null
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -93,7 +107,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, storeId, deliveryAddress, shippingFee, usedPoints, loaded])
 
-  const addItem = useCallback((item: UICartItem) => {
+  const addItem = useCallback((item: UICartItem): AddItemResult => {
+    const incomingCh = itemChannel(item)
+    const currentCh = items.reduce<CartChannel>((acc, it) => acc ?? itemChannel(it), null)
+    const sameStore = storeId == null || storeId === item.storeId
+    if (sameStore && currentCh && incomingCh && currentCh !== incomingCh) {
+      return {
+        ok: false,
+        error: "EC商品とテイクアウト商品は同じカートに追加できません",
+      }
+    }
+
     setItems((prev) => {
       if (storeId != null && storeId !== item.storeId) {
         setStoreId(item.storeId)
@@ -109,7 +133,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, item]
     })
     if (storeId == null) setStoreId(item.storeId)
-  }, [storeId])
+    return { ok: true }
+  }, [storeId, items])
+
+  const channel: CartChannel = items.reduce<CartChannel>((acc, it) => acc ?? itemChannel(it), null)
 
   const removeItem = useCallback((productId: string, customizationKey?: string) => {
     setItems((prev) =>
@@ -165,6 +192,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       value={{
         items,
         storeId,
+        channel,
         total,
         itemCount,
         deliveryAddress,

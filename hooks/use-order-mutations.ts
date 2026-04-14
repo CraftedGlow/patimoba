@@ -16,6 +16,17 @@ interface CreateOrderInput {
   orderType?: string
 }
 
+function deriveOrderType(items: UICartItem[], fallback?: string): { type: string; error: string | null } {
+  const hasEc = items.some((i) => i.isEc === true)
+  const hasTakeout = items.some((i) => i.isTakeout === true && i.isEc !== true)
+  if (hasEc && hasTakeout) {
+    return { type: "", error: "EC商品とテイクアウト商品は同時に注文できません" }
+  }
+  if (hasEc) return { type: "ec", error: null }
+  if (hasTakeout) return { type: fallback ?? "takeout", error: null }
+  return { type: fallback ?? "pickup", error: null }
+}
+
 interface CreateOrderResult {
   orderId: string
   error: string | null
@@ -25,12 +36,17 @@ export function useOrderMutations() {
   const createOrder = async (input: CreateOrderInput): Promise<CreateOrderResult> => {
     const totalAmount = input.subtotal - (input.discountAmount ?? 0)
 
+    const derived = deriveOrderType(input.items, input.orderType)
+    if (derived.error) {
+      return { orderId: "", error: derived.error }
+    }
+
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .insert({
         store_id: input.storeId,
         customer_id: input.customerId,
-        order_type: input.orderType ?? "pickup",
+        order_type: derived.type,
         order_status: "pending",
         payment_status: input.paymentStatus ?? "unpaid",
         subtotal: input.subtotal,
@@ -164,5 +180,19 @@ export function useOrderMutations() {
     return { error: error?.message || null }
   }
 
-  return { createOrder, updateOrderStatus, deleteOrder }
+  const updateFulfillmentStatus = async (
+    orderId: string,
+    toFulfilled: boolean,
+    staffUserId?: string | null,
+  ) => {
+    const payload: any = {
+      fulfillment_status: toFulfilled ? "fulfilled" : "pending",
+      fulfilled_at: toFulfilled ? new Date().toISOString() : null,
+      fulfilled_by: toFulfilled ? staffUserId ?? null : null,
+    }
+    const { error } = await supabase.from("orders").update(payload).eq("id", orderId)
+    return { error: error?.message || null }
+  }
+
+  return { createOrder, updateOrderStatus, updateFulfillmentStatus, deleteOrder }
 }

@@ -73,27 +73,43 @@ export function StoreSidebar() {
                   <motion.div
                     className={`px-5 py-3 text-sm transition-colors relative ${
                       isActive
-                        ? "font-bold text-gray-900 bg-gray-50"
+                        ? "font-bold text-amber-700 bg-amber-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                     whileHover={{ x: 2 }}
                     transition={{ duration: 0.15 }}
                   >
-                    {item.hasNotification && (
+                    {isActive && (
+                      <span className="absolute left-0 top-0 bottom-0 w-1 bg-amber-400 rounded-r" />
+                    )}
+                    {isActive && (
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                    )}
+                    {item.hasNotification && !isActive && (
                       <span className="absolute left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full" />
                     )}
-                    {item.label}
+                    <span className={isActive ? "pl-3" : ""}>{item.label}</span>
                   </motion.div>
                 </Link>
                 {isActive && item.children && (
-                  <div className="flex flex-col">
-                    {item.children.map((child) => (
-                      <Link key={child.href} href={child.href}>
-                        <div className="px-8 py-1.5 text-xs text-gray-500 hover:text-gray-800 transition-colors">
-                          {child.label}
-                        </div>
-                      </Link>
-                    ))}
+                  <div className="flex flex-col bg-amber-50/40">
+                    {item.children.map((child) => {
+                      const childActive = pathname === child.href;
+                      return (
+                        <Link key={child.href} href={child.href}>
+                          <div
+                            className={`px-8 py-1.5 text-xs transition-colors ${
+                              childActive
+                                ? "font-bold text-amber-700 bg-amber-100"
+                                : "text-gray-600 hover:text-gray-900 hover:bg-amber-100/60"
+                            }`}
+                          >
+                            {childActive && "● "}
+                            {child.label}
+                          </div>
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
               </div>

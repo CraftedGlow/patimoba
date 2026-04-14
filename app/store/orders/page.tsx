@@ -3,17 +3,17 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Loader2 } from "lucide-react";
-import { useOrders } from "@/hooks/use-orders";
+import { useOrders, type OrderChannel } from "@/hooks/use-orders";
 import { useStoreContext } from "@/lib/store-context";
+import { useAuth } from "@/lib/auth-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { DatePickerPopup } from "@/components/store/date-picker-popup";
 
 const daysOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
 
-const orderTypeOptions = [
+const channelTabs: { label: string; value: "" | OrderChannel }[] = [
   { label: "すべて", value: "" },
   { label: "テイクアウト", value: "takeout" },
-  { label: "クリスマス", value: "christmas" },
   { label: "EC", value: "ec" },
 ];
 
@@ -25,21 +25,34 @@ function formatDate(date: Date) {
   return `${y}年${m}月${d}日(${day})`;
 }
 
+function formatFulfilledAt(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${y}/${m}/${day} ${hh}:${mm}`;
+}
+
 type ConfirmAction = {
   orderId: string;
-  toReady: boolean;
+  toFulfilled: boolean;
+  isEc: boolean;
 };
 
 export default function StoreOrdersPage() {
   const { storeId } = useStoreContext();
-  const [productType, setProductType] = useState("");
+  const { user } = useAuth();
+  const [channel, setChannel] = useState<"" | OrderChannel>("");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const { orders, loading: ordersLoading, refetch: refetchOrders } = useOrders({
     storeId,
-    orderType: productType || undefined,
+    channel: channel || undefined,
     date: selectedDate.toISOString(),
   });
-  const { updateOrderStatus } = useOrderMutations();
+  const { updateFulfillmentStatus } = useOrderMutations();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
@@ -60,7 +73,11 @@ export default function StoreOrdersPage() {
     if (!confirmAction || confirmLoading) return;
     setConfirmLoading(true);
     try {
-      await updateOrderStatus(confirmAction.orderId, confirmAction.toReady ? "ready" : "pending");
+      await updateFulfillmentStatus(
+        confirmAction.orderId,
+        confirmAction.toFulfilled,
+        user?.id ?? null,
+      );
       await refetchOrders();
     } finally {
       setConfirmAction(null);
@@ -78,18 +95,23 @@ export default function StoreOrdersPage() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-end gap-4 mb-6">
-        <select
-          value={productType}
-          onChange={(e) => setProductType(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-[200px] bg-white"
-        >
-          {orderTypeOptions.map((opt) => (
-            <option key={opt.label} value={opt.value}>
-              {opt.label}
-            </option>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex gap-2">
+          {channelTabs.map((t) => (
+            <button
+              key={t.label}
+              onClick={() => setChannel(t.value)}
+              className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
+                channel === t.value
+                  ? "bg-amber-400 text-white border-amber-400"
+                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {t.label}
+            </button>
           ))}
-        </select>
+        </div>
+        <div className="flex items-center gap-4">
         <div ref={dateRef} className="relative">
           <button
             onClick={() => setShowDatePicker(!showDatePicker)}
@@ -114,16 +136,18 @@ export default function StoreOrdersPage() {
             )}
           </AnimatePresence>
         </div>
+        </div>
       </div>
 
       <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[1.2fr_1.5fr_1.5fr_50px_1fr_100px] bg-[#FFF176] px-4 py-2.5 text-sm font-bold text-gray-700 items-center">
+        <div className="grid grid-cols-[1fr_1fr_1.3fr_1.3fr_50px_1fr_130px] bg-[#FFF176] px-4 py-2.5 text-sm font-bold text-gray-700 items-center">
+          <span>区分</span>
           <span>顧客名</span>
-          <span>来店時間</span>
+          <span>来店/発送</span>
           <span>注文内容</span>
           <span />
           <span>合計金額</span>
-          <span className="text-center">準備状況</span>
+          <span className="text-center">提供状況</span>
         </div>
 
         {orders.length === 0 && (
@@ -133,8 +157,9 @@ export default function StoreOrdersPage() {
         )}
 
         {orders.map((order, i) => {
-          const isPrepared = order.orderStatus === "ready" || order.orderStatus === "completed";
-          const isDelivery = order.orderType === "delivery";
+          const isEc = order.orderType === "ec";
+          const isFulfilled = order.fulfillmentStatus === "fulfilled";
+          const fulfilledLabel = isEc ? "出荷済" : "受渡済";
 
           return (
             <motion.div
@@ -142,14 +167,20 @@ export default function StoreOrdersPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.03 }}
-              className={`grid grid-cols-[1.2fr_1.5fr_1.5fr_50px_1fr_100px] px-4 py-3 items-center border-t border-gray-100 ${
-                isPrepared
-                  ? "bg-white"
-                  : isDelivery
-                  ? "bg-pink-50"
-                  : "bg-white"
+              className={`grid grid-cols-[1fr_1fr_1.3fr_1.3fr_50px_1fr_130px] px-4 py-3 items-center border-t border-gray-100 ${
+                isFulfilled ? "bg-white" : isEc ? "bg-blue-50" : "bg-amber-50/40"
               }`}
             >
+              <div>
+                <span
+                  className={`inline-block text-xs font-bold px-2 py-0.5 rounded ${
+                    isEc ? "bg-blue-500 text-white" : "bg-amber-500 text-white"
+                  }`}
+                >
+                  {isEc ? "EC" : "テイクアウト"}
+                </span>
+              </div>
+
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
                   <User className="w-4 h-4 text-gray-500" />
@@ -159,6 +190,7 @@ export default function StoreOrdersPage() {
 
               <div className="text-sm text-gray-600">
                 {order.pickupTime && <div>{order.pickupTime.slice(0, 5)}</div>}
+                {order.pickupDate && <div className="text-xs text-gray-500">{order.pickupDate}</div>}
               </div>
 
               <div className="text-sm">
@@ -191,24 +223,30 @@ export default function StoreOrdersPage() {
                 </div>
               </div>
 
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-1">
                 <motion.button
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() =>
                     setConfirmAction({
                       orderId: order.id,
-                      toReady: !isPrepared,
+                      toFulfilled: !isFulfilled,
+                      isEc,
                     })
                   }
-                  className={`min-w-[56px] text-sm font-bold px-3 py-2 rounded-lg transition-colors ${
-                    isPrepared
-                      ? "bg-amber-400 hover:bg-amber-500 text-white"
+                  className={`min-w-[100px] text-xs font-bold px-3 py-2 rounded-lg transition-colors ${
+                    isFulfilled
+                      ? "bg-green-500 hover:bg-green-600 text-white"
                       : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                   }`}
                 >
-                  {isPrepared ? "済" : "未"}
+                  {isFulfilled ? fulfilledLabel : "未提供"}
                 </motion.button>
+                {isFulfilled && order.fulfilledAt && (
+                  <span className="text-[10px] text-gray-500">
+                    {formatFulfilledAt(order.fulfilledAt)}
+                  </span>
+                )}
               </div>
             </motion.div>
           );
@@ -233,14 +271,16 @@ export default function StoreOrdersPage() {
               className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-[60] p-6 w-[90%] max-w-sm"
             >
               <h3 className="text-base font-bold text-center mb-2">
-                {confirmAction.toReady
-                  ? "準備完了にします"
-                  : "準備未完了に戻す"}
+                {confirmAction.toFulfilled
+                  ? confirmAction.isEc
+                    ? "出荷済にします"
+                    : "受渡済にします"
+                  : "未提供に戻す"}
               </h3>
               <p className="text-xs text-gray-500 text-center mb-5">
-                {confirmAction.toReady
-                  ? "この注文を準備完了にしますか？"
-                  : "この注文を未準備に戻しますか？"}
+                {confirmAction.toFulfilled
+                  ? "この注文を提供済にしますか？提供日時が記録されます。"
+                  : "この注文を未提供に戻しますか？"}
               </p>
               <div className="flex gap-3">
                 <button
@@ -256,8 +296,8 @@ export default function StoreOrdersPage() {
                   disabled={confirmLoading}
                   onClick={handleConfirm}
                   className={`flex-1 font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 disabled:opacity-60 text-white ${
-                    confirmAction.toReady
-                      ? "bg-amber-400 hover:bg-amber-500"
+                    confirmAction.toFulfilled
+                      ? "bg-green-500 hover:bg-green-600"
                       : "bg-gray-500 hover:bg-gray-600"
                   }`}
                 >

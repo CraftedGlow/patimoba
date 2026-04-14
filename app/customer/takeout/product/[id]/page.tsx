@@ -59,14 +59,19 @@ export default function TakeoutProductDetailPage() {
   const maxQty = 10;
 
   const handleAddToCart = () => {
-    addItem({
+    const res = addItem({
       productId: product.id,
       name: product.name,
       price: product.base_price,
       image: product.image || "",
       quantity,
       storeId: product.store_id,
+      isTakeout: true,
     });
+    if (!res.ok) {
+      alert(res.error || "カートに追加できませんでした");
+      return;
+    }
 
     setShowToast(true);
     setTimeout(() => {

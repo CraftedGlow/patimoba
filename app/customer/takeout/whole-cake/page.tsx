@@ -138,14 +138,16 @@ export default function WholeCakePage() {
   const handleAddToCart = () => {
     const item = buildCartItem();
     if (!item) return;
-    addItem(item);
+    const res = addItem({ ...item, isTakeout: true });
+    if (!res.ok) { alert(res.error || "カートに追加できませんでした"); return; }
     router.push("/customer/takeout/products");
   };
 
   const handleProceedToDateTime = () => {
     const item = buildCartItem();
     if (!item) return;
-    addItem(item);
+    const res = addItem({ ...item, isTakeout: true });
+    if (!res.ok) { alert(res.error || "カートに追加できませんでした"); return; }
     router.push("/customer/takeout/pickup");
   };
 

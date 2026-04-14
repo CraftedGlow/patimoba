@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { Order, OrderStatus, toUIOrder } from "@/lib/types"
 
+export type OrderChannel = "takeout" | "ec"
+
 interface UseOrdersOptions {
   storeId?: string
   customerId?: string
@@ -13,7 +15,11 @@ interface UseOrdersOptions {
   from?: string
   to?: string
   orderType?: string
+  channel?: OrderChannel
+  fulfillmentStatus?: "pending" | "fulfilled"
 }
+
+const TAKEOUT_ORDER_TYPES = ["takeout", "pickup", "delivery"]
 
 export function useOrders(options: UseOrdersOptions = {}) {
   const [orders, setOrders] = useState<Order[]>([])
@@ -52,6 +58,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
     if (options.orderType) {
       query = query.eq("order_type", options.orderType)
     }
+    if (options.channel === "ec") {
+      query = query.eq("order_type", "ec")
+    } else if (options.channel === "takeout") {
+      query = query.in("order_type", TAKEOUT_ORDER_TYPES)
+    }
+    if (options.fulfillmentStatus) {
+      query = query.eq("fulfillment_status", options.fulfillmentStatus)
+    }
     if (options.from) query = query.gte("created_at", options.from)
     if (options.to) query = query.lte("created_at", options.to)
 
@@ -83,6 +97,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
     Array.isArray(options.status) ? options.status.join(",") : options.status,
     options.excludeStatus?.join(","),
     options.orderType,
+    options.channel,
+    options.fulfillmentStatus,
   ])
 
   return { orders, loading, error, refetch: fetchOrders }

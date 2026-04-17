@@ -21,6 +21,10 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
 
 const CUTOFF_OPTIONS = ["1", "1.5", "2", "2.5", "3", "3.5", "4"];
 
+const PREP_TIME_OPTIONS = ["0.5", "1", "1.5", "2", "2.5", "3"];
+
+const MIN_FUTURE_DAYS_OPTIONS = Array.from({ length: 14 }, (_, i) => String(i + 1));
+
 const WEEKDAYS = [
   { label: "日", value: 0 },
   { label: "月", value: 1 },
@@ -31,7 +35,7 @@ const WEEKDAYS = [
   { label: "土", value: 6 },
 ];
 
-type ModalKind = "hours" | "cutoff" | "holidays" | "saved" | null;
+type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "holidays" | "saved" | null;
 
 async function fetchStoreForUser(storeIdHint: string | null): Promise<StoreRow | null> {
   if (storeIdHint) {
@@ -94,10 +98,15 @@ export default function StoreAccountPage() {
   const [openTime, setOpenTime] = useState("10:00");
   const [closeTime, setCloseTime] = useState("19:00");
   const [cutoffHours, setCutoffHours] = useState("3");
+  const [prepTimeHours, setPrepTimeHours] = useState("1.5");
+  const [minFutureDays, setMinFutureDays] = useState("2");
+  const [sameDayOrderAllowed, setSameDayOrderAllowed] = useState(true);
 
   const [modalOpenTime, setModalOpenTime] = useState(openTime);
   const [modalCloseTime, setModalCloseTime] = useState(closeTime);
   const [modalCutoff, setModalCutoff] = useState(cutoffHours);
+  const [modalPrepTime, setModalPrepTime] = useState(prepTimeHours);
+  const [modalMinFutureDays, setModalMinFutureDays] = useState(minFutureDays);
 
   const [modal, setModal] = useState<ModalKind>(null);
   const [holidays, setHolidays] = useState<{ day: string; freq: string; dayOfWeek: number }[]>([]);
@@ -122,11 +131,24 @@ export default function StoreAccountPage() {
         // store_order_rules から当日受付設定を取得
         const { data: orderRules } = await supabase
           .from("store_order_rules")
-          .select("default_cutoff_time, default_lead_time_minutes")
+          .select("default_cutoff_time, default_lead_time_minutes, same_day_order_allowed, min_future_days")
           .eq("store_id", store.id)
           .maybeSingle();
         if (orderRules?.default_lead_time_minutes != null) {
           setCutoffHours(String(Math.round(orderRules.default_lead_time_minutes / 60)));
+        }
+        if (orderRules?.default_cutoff_time != null) {
+          // default_cutoff_time に準備時間（分）を文字列で保存
+          const prepMin = Number(orderRules.default_cutoff_time);
+          if (!isNaN(prepMin) && prepMin > 0) {
+            setPrepTimeHours(String(prepMin / 60));
+          }
+        }
+        if (orderRules?.same_day_order_allowed != null) {
+          setSameDayOrderAllowed(orderRules.same_day_order_allowed);
+        }
+        if (orderRules?.min_future_days != null) {
+          setMinFutureDays(String(orderRules.min_future_days));
         }
 
         // store_business_hours から通常営業時間を取得（最初の営業日を基準に）
@@ -171,6 +193,16 @@ export default function StoreAccountPage() {
     setModal("cutoff");
   }, [cutoffHours]);
 
+  const openPrepTimeModal = useCallback(() => {
+    setModalPrepTime(prepTimeHours);
+    setModal("prep_time");
+  }, [prepTimeHours]);
+
+  const openMinFutureDaysModal = useCallback(() => {
+    setModalMinFutureDays(minFutureDays);
+    setModal("min_future_days");
+  }, [minFutureDays]);
+
   const saveHours = useCallback(async () => {
     setSaving(true);
     try {
@@ -194,33 +226,60 @@ export default function StoreAccountPage() {
     }
   }, [modalOpenTime, modalCloseTime, storeId]);
 
-  const saveCutoff = useCallback(async () => {
+  const upsertOrderRules = useCallback(async (updates: Record<string, unknown>) => {
     if (!storeId) return;
     setSaving(true);
     try {
-      // store_order_rules に保存（upsert）
       const { data: existing } = await supabase
         .from("store_order_rules")
         .select("id")
         .eq("store_id", storeId)
         .maybeSingle();
       if (existing) {
-        await supabase
-          .from("store_order_rules")
-          .update({ default_lead_time_minutes: Number(modalCutoff) * 60 })
-          .eq("id", existing.id);
+        await supabase.from("store_order_rules").update(updates).eq("id", existing.id);
       } else {
-        await supabase
-          .from("store_order_rules")
-          .insert({ store_id: storeId, default_lead_time_minutes: Number(modalCutoff) * 60 });
+        await supabase.from("store_order_rules").insert({ store_id: storeId, ...updates });
       }
-      setCutoffHours(modalCutoff);
       setModal("saved");
       setTimeout(() => setModal(null), 1500);
     } finally {
       setSaving(false);
     }
-  }, [modalCutoff, storeId]);
+  }, [storeId]);
+
+  const saveCutoff = useCallback(async () => {
+    await upsertOrderRules({ default_lead_time_minutes: Number(modalCutoff) * 60 });
+    setCutoffHours(modalCutoff);
+  }, [modalCutoff, upsertOrderRules]);
+
+  const savePrepTime = useCallback(async () => {
+    const minutes = Number(modalPrepTime) * 60;
+    await upsertOrderRules({ default_cutoff_time: String(minutes) });
+    setPrepTimeHours(modalPrepTime);
+  }, [modalPrepTime, upsertOrderRules]);
+
+  const saveMinFutureDays = useCallback(async () => {
+    await upsertOrderRules({ min_future_days: Number(modalMinFutureDays) });
+    setMinFutureDays(modalMinFutureDays);
+  }, [modalMinFutureDays, upsertOrderRules]);
+
+  const toggleSameDayOrder = useCallback(async (value: boolean) => {
+    if (!storeId) return;
+    setSameDayOrderAllowed(value);
+    const { data: existing } = await supabase
+      .from("store_order_rules")
+      .select("id")
+      .eq("store_id", storeId)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from("store_order_rules")
+        .update({ same_day_order_allowed: value })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("store_order_rules")
+        .insert({ store_id: storeId, same_day_order_allowed: value });
+    }
+  }, [storeId]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -428,7 +487,7 @@ export default function StoreAccountPage() {
           </div>
 
           <div>
-            <p className="text-sm text-gray-500 mb-2">受付終了時刻</p>
+            <p className="text-sm text-gray-500 mb-2">当日注文受付終了（CLOSE前）</p>
             <div className="flex items-center gap-3">
               <span className="text-xl font-semibold">
                 CLOSEから -{cutoffHours}{" "}
@@ -443,6 +502,67 @@ export default function StoreAccountPage() {
               >
                 変更
               </motion.button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500 mb-2">当日注文の準備時間</p>
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-semibold">
+                {prepTimeHours}{" "}
+                <span className="text-sm font-normal text-gray-500">時間</span>
+              </span>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={openPrepTimeModal}
+                className="px-4 py-1.5 rounded-md bg-amber-400 text-white text-sm font-bold hover:bg-amber-500 transition-colors"
+              >
+                変更
+              </motion.button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">注文から受取まで最低限必要な時間</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500 mb-2">予約注文の最低事前日数</p>
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-semibold">
+                {minFutureDays}{" "}
+                <span className="text-sm font-normal text-gray-500">日前から</span>
+              </span>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={openMinFutureDaysModal}
+                className="px-4 py-1.5 rounded-md bg-amber-400 text-white text-sm font-bold hover:bg-amber-500 transition-colors"
+              >
+                変更
+              </motion.button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500 mb-2">当日注文機能</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => toggleSameDayOrder(!sameDayOrderAllowed)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  sameDayOrderAllowed ? "bg-amber-400" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    sameDayOrderAllowed ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <span className="text-sm text-gray-700">
+                {sameDayOrderAllowed ? "ON（受け付ける）" : "OFF（受け付けない）"}
+              </span>
             </div>
           </div>
 
@@ -600,8 +720,9 @@ export default function StoreAccountPage() {
         {modal === "cutoff" && (
           <Modal key="cutoff" onClose={() => setModal(null)}>
             <h2 className="text-lg font-bold text-center mb-6">
-              受付終了時刻の変更
+              当日注文受付終了の変更
             </h2>
+            <p className="text-sm text-gray-500 text-center mb-4">CLOSEの何時間前まで受け付けるか</p>
             <div className="flex items-center justify-center gap-3 mb-6">
               <select
                 value={modalCutoff}
@@ -622,8 +743,81 @@ export default function StoreAccountPage() {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={saveCutoff}
-                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors"
+                disabled={saving}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                保存
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modal === "prep_time" && (
+          <Modal key="prep_time" onClose={() => setModal(null)}>
+            <h2 className="text-lg font-bold text-center mb-6">
+              準備時間の変更
+            </h2>
+            <p className="text-sm text-gray-500 text-center mb-4">注文から受取まで最低限必要な時間</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <select
+                value={modalPrepTime}
+                onChange={(e) => setModalPrepTime(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                {PREP_TIME_OPTIONS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-500">時間</span>
+            </div>
+            <div className="flex justify-center">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={savePrepTime}
+                disabled={saving}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                保存
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modal === "min_future_days" && (
+          <Modal key="min_future_days" onClose={() => setModal(null)}>
+            <h2 className="text-lg font-bold text-center mb-6">
+              予約最低事前日数の変更
+            </h2>
+            <p className="text-sm text-gray-500 text-center mb-4">今日から何日後以降に予約できるか</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <select
+                value={modalMinFutureDays}
+                onChange={(e) => setModalMinFutureDays(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                {MIN_FUTURE_DAYS_OPTIONS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}日後
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-center">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={saveMinFutureDays}
+                disabled={saving}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 保存
               </motion.button>
             </div>

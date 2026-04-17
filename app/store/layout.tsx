@@ -10,9 +10,13 @@ export default function StoreLayout({
 }) {
   return (
     <StoreProvider>
-      <div className="flex min-h-screen bg-white">
+      <div className="flex h-screen overflow-hidden bg-white">
         <StoreSidebar />
-        <main className="flex-1 overflow-auto store-scope">{children}</main>
+        <main className="flex-1 overflow-y-auto store-scope pt-0 lg:pt-0">
+          {/* モバイルでハンバーガーボタン分の余白 */}
+          <div className="h-12 lg:hidden" />
+          {children}
+        </main>
       </div>
     </StoreProvider>
   );

@@ -20,8 +20,13 @@ import { useStoreContext } from "@/lib/store-context";
 import { useBusinessDays } from "@/hooks/use-business-days";
 import { supabase } from "@/lib/supabase";
 
+const EN_MONTHS = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December",
+];
+
 export default function BusinessDaysPage() {
-  const { storeId, storeName } = useStoreContext();
+  const { storeId, storeName, storeLogo } = useStoreContext();
   const { businessDays, loading, addBusinessDay, updateBusinessDay } = useBusinessDays(storeId);
 
   const today = new Date();
@@ -62,59 +67,59 @@ export default function BusinessDaysPage() {
     setSaveError(null);
     try {
       const node = calendarRef.current;
-      const w = Math.max(node.offsetWidth, 1);
-      const h = Math.max(node.offsetHeight, 1);
 
-      const optsBase = {
-        quality: 0.95 as const,
+      // まず自然サイズで高解像度キャプチャ
+      const rawDataUrl = await toJpeg(node, {
+        quality: 0.95,
         backgroundColor: "#ffffff",
-        pixelRatio: 2 as const,
-      };
-
-      let dataUrl: string;
-      let filenameSuffix: string;
+        pixelRatio: format === "natural" ? 2 : 3,
+      });
 
       if (format === "natural") {
-        dataUrl = await toJpeg(node, {
-          ...optsBase,
-        });
-        filenameSuffix = "natural";
+        const link = document.createElement("a");
+        link.download = `calendar-${year}-${month + 1}-natural.jpg`;
+        link.href = rawDataUrl;
+        link.click();
       } else {
-        let canvasWidth: number;
-        let canvasHeight: number;
-        let scale: number;
-        if (format === "square") {
-          canvasWidth = canvasHeight = 1080;
-          scale = 1080 / Math.max(w, h, 1);
-          filenameSuffix = "1080-square";
-        } else if (format === "landscape") {
-          canvasWidth = 1920;
-          canvasHeight = 1080;
-          scale = Math.min(1920 / w, 1080 / h);
-          filenameSuffix = "1920x1080";
-        } else {
-          canvasWidth = 1080;
-          canvasHeight = 1920;
-          scale = Math.min(1080 / w, 1920 / h);
-          filenameSuffix = "1080x1920";
-        }
-        dataUrl = await toJpeg(node, {
-          ...optsBase,
-          canvasWidth,
-          canvasHeight,
-          style: {
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
-            width: `${w}px`,
-            height: `${h}px`,
-          },
-        });
-      }
+        const targets: Record<string, [number, number]> = {
+          square: [1080, 1080],
+          landscape: [1920, 1080],
+          portrait: [1080, 1920],
+        };
+        const suffixes: Record<string, string> = {
+          square: "1080x1080",
+          landscape: "1920x1080",
+          portrait: "1080x1920",
+        };
+        const [targetW, targetH] = targets[format];
 
-      const link = document.createElement("a");
-      link.download = `business-days-${year}-${month + 1}-${filenameSuffix}.jpg`;
-      link.href = dataUrl;
-      link.click();
+        // 白キャンバスにセンタリング配置
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, targetW, targetH);
+
+        const img = new Image();
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.src = rawDataUrl;
+        });
+
+        const scale = Math.min(targetW / img.width, targetH / img.height);
+        const drawW = img.width * scale;
+        const drawH = img.height * scale;
+        const x = (targetW - drawW) / 2;
+        const y = (targetH - drawH) / 2;
+        ctx.drawImage(img, x, y, drawW, drawH);
+
+        const finalDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        const link = document.createElement("a");
+        link.download = `calendar-${year}-${month + 1}-${suffixes[format]}.jpg`;
+        link.href = finalDataUrl;
+        link.click();
+      }
     } catch (e) {
       console.error(e);
       setSaveError("画像の保存に失敗しました。もう一度お試しください。");
@@ -355,7 +360,7 @@ export default function BusinessDaysPage() {
   }
 
   return (
-    <div className="p-6 relative flex gap-6">
+    <div className="p-4 lg:p-6 relative flex flex-col lg:flex-row gap-6">
       <div className="flex-1">
         <div className="flex items-start gap-8 mb-6">
           <div>
@@ -393,7 +398,7 @@ export default function BusinessDaysPage() {
               className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
             >
               {exporting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {month + 1}月の営業日を提出
+              カレンダーを保存
             </motion.button>
             <AnimatePresence>
               {showExportMenu && !exporting && (
@@ -408,28 +413,28 @@ export default function BusinessDaysPage() {
                     onClick={() => void handleExportImage("square")}
                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors"
                   >
-                    正方形 1080×1080
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleExportImage("landscape")}
-                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors border-t border-gray-100"
-                  >
-                    横長 1920×1080
+                    Instagramフィード用 (1080×1080)
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleExportImage("portrait")}
                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors border-t border-gray-100"
                   >
-                    縦長 1080×1920
+                    Instagramストーリー用 (1080×1920)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleExportImage("landscape")}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors border-t border-gray-100"
+                  >
+                    Xポスト用 (1920×1080)
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleExportImage("natural")}
                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors border-t border-gray-100 text-gray-700"
                   >
-                    画面サイズのまま（高解像度）
+                    原寸出力 (高解像度)
                   </button>
                 </motion.div>
               )}
@@ -470,16 +475,41 @@ export default function BusinessDaysPage() {
           </div>
         </div>
 
-        <div ref={calendarRef} className="bg-white p-4 rounded-lg">
-          <div className="text-center mb-3">
-            {storeName ? (
-              <p className="text-lg font-bold text-gray-800 mb-1">{storeName}</p>
-            ) : null}
-            <h3 className="text-2xl font-bold">{year}年 {month + 1}月 営業日カレンダー</h3>
-            <div className="text-base text-gray-600 mt-1 font-medium tabular-nums">
-              {formatTimeRange(storeOpenTime, storeCloseTime)}
+        <div ref={calendarRef} className="bg-white rounded-lg border border-gray-200 max-w-[480px] mx-auto">
+          {/* ヘッダー: 左スペーサー | 中央月数字 | 右ロゴ+営業時間 — 下揃え */}
+          <div className="flex items-end px-8 pt-8 pb-5 gap-4">
+            {/* 左スペーサー (右列と同幅を確保して月数字を真ん中に) */}
+            <div className="flex-1" />
+
+            {/* 中央: 月数字 + April | 2026 */}
+            <div className="text-center shrink-0">
+              <div className="text-[76px] font-black leading-none text-gray-800 tabular-nums">
+                {String(month + 1).padStart(2, "0")}
+              </div>
+              <div className="text-base font-medium text-gray-500 mt-1 whitespace-nowrap">
+                {EN_MONTHS[month]} | {year}
+              </div>
+            </div>
+
+            {/* 右: ロゴ + 営業時間 (下揃え = April | 2026 行と同じベースライン) */}
+            <div className="flex-1 flex flex-col items-end justify-end">
+              {storeLogo ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={storeLogo}
+                  alt={storeName || ""}
+                  style={{ maxHeight: 44, maxWidth: 110, objectFit: "contain" }}
+                  crossOrigin="anonymous"
+                />
+              ) : storeName ? (
+                <span className="text-sm font-bold text-gray-700">{storeName}</span>
+              ) : null}
+              <div className="text-xs text-gray-700 mt-1 tabular-nums whitespace-nowrap">
+                営業時間 : {storeOpenTime} - {storeCloseTime}
+              </div>
             </div>
           </div>
+          <div className="px-4 pb-5">
         {viewMode === "month" && (
           <MonthView
             year={year}
@@ -497,6 +527,7 @@ export default function BusinessDaysPage() {
         {viewMode === "day" && (
           <DayView year={year} month={month} day={selectedDay} schedules={schedules} onUpdateSchedule={handleUpdateSchedule} defaultOpenTime={storeOpenTime} defaultCloseTime={storeCloseTime} closedDayRules={closedDayRules} />
         )}
+          </div>
         </div>
       </div>
 
@@ -507,9 +538,9 @@ export default function BusinessDaysPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="w-[280px] shrink-0"
+            className="w-full lg:w-[280px] shrink-0"
           >
-            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-lg relative">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-lg relative sticky top-6">
               <button
                 onClick={() => setShowEditPanel(false)}
                 className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"

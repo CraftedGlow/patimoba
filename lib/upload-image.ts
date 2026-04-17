@@ -31,12 +31,12 @@ export async function deleteProductImage(
   return { error: error?.message || null }
 }
 
-export async function uploadStoreLogo(
+export async function uploadDecorationImage(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
   const ext = file.name.split(".").pop() || "jpg"
-  const path = `${storeId}/logo-${Date.now()}.${ext}`
+  const path = `${storeId}/decoration-${Date.now()}.${ext}`
 
   const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
     cacheControl: "3600",
@@ -46,5 +46,25 @@ export async function uploadStoreLogo(
   if (error) return { url: null, error: error.message }
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
+const LOGO_BUCKET = "store-logos"
+
+export async function uploadStoreLogo(
+  file: File,
+  storeId: string
+): Promise<{ url: string | null; error: string | null }> {
+  const ext = file.name.split(".").pop() || "jpg"
+  const path = `${storeId}/logo-${Date.now()}.${ext}`
+
+  const { error } = await supabase.storage.from(LOGO_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  })
+
+  if (error) return { url: null, error: error.message }
+
+  const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path)
   return { url: data.publicUrl, error: null }
 }

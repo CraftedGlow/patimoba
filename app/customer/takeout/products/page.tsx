@@ -93,8 +93,10 @@ export default function TakeoutProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeParam = searchParams.get("store");
+  const orderTypeParam = searchParams.get("type") ?? "reservation";
   const { selectedStoreId, selectedStoreName, profile } = useCustomerContext();
   const storeId = selectedStoreId || storeParam || undefined;
+  const pickupPath = `/customer/takeout/pickup?store=${storeId ?? ""}&type=${orderTypeParam}`;
 
   const { products, categories, loading } = useProductRegistrations({
     storeId,
@@ -239,7 +241,7 @@ export default function TakeoutProductsPage() {
         )}
       </div>
 
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} proceedPath={pickupPath} />
     </div>
   );
 }

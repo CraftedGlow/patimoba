@@ -141,7 +141,13 @@ export default function AdminStoreNewPage() {
         router.push("/admin/stores");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登録に失敗しました");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: unknown }).message)
+          : JSON.stringify(err);
+      setError(msg || "登録に失敗しました");
     } finally {
       setSaving(false);
     }

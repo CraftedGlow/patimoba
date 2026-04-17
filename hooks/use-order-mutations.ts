@@ -124,7 +124,7 @@ export function useOrderMutations() {
           if (!op.wholeCakeOptionId) continue
           options.push({
             order_item_id: insertedId,
-            option_group_name_snapshot: "オプション",
+            option_group_name_snapshot: op.groupName ?? "デコレーション",
             option_item_name_snapshot: op.name,
             price_delta: op.price,
           })

@@ -13,6 +13,7 @@ interface CustomerContextType {
   userId: string | null
   setUserId: (id: string | null) => void
   profile: CustomerProfile | null
+  points: number
   selectedStoreId: string | null
   setSelectedStoreId: (id: string | null) => void
   selectedStoreName: string
@@ -48,6 +49,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
+  const [points, setPoints] = useState<number>(0)
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
   const [selectedStoreName, setSelectedStoreName] = useState<string>("")
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
@@ -62,6 +64,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     if (!user || user.userType !== "customer") {
       setProfile(null)
       setUserId(null)
+      setPoints(0)
       return
     }
 
@@ -72,7 +75,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
 
       const { data: userRow } = await supabase
         .from("users")
-        .select("name, line_name, name_kana, avatar_url")
+        .select("name, line_name, name_kana, avatar_url, points")
         .eq("id", user.id)
         .maybeSingle()
 
@@ -81,6 +84,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
         avatar: userRow?.avatar_url || null,
         nameKana: userRow?.name_kana || null,
       })
+      setPoints(Number(userRow?.points) || 0)
     }
 
     fetchProfile()
@@ -114,6 +118,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
         userId,
         setUserId,
         profile,
+        points,
         selectedStoreId,
         setSelectedStoreId,
         selectedStoreName,

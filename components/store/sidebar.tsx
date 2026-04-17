@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import { Menu, X as XIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
 
@@ -16,14 +18,11 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { label: "ダッシュボード", href: "/store/dashboard" },
-  {
-    label: "予約管理",
-    href: "/store/orders",
-    children: [{ label: "注文履歴", href: "/store/orders/history" }],
-  },
+  { label: "予約管理", href: "/store/orders" },
   { label: "顧客管理", href: "/store/customers" },
   { label: "商品管理", href: "/store/products" },
   { label: "商品登録", href: "/store/register" },
+  { label: "デコレーション", href: "/store/decorations" },
   { label: "営業日設定", href: "/store/business-days", hasNotification: true },
   { label: "レポート", href: "/store/report" },
 ];
@@ -36,8 +35,9 @@ export function StoreSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
-  const { storeName } = useStoreContext();
+  const { storeName, storeLogo } = useStoreContext();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -45,11 +45,61 @@ export function StoreSidebar() {
   };
 
   return (
-    <aside className="w-[200px] min-h-screen border-r border-gray-200 bg-white flex flex-col shrink-0">
+    <>
+      {/* モバイル: ハンバーガーボタン */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed top-3 left-3 z-[60] p-2 rounded-lg bg-white shadow border border-gray-200"
+        aria-label="メニューを開く"
+      >
+        <Menu className="w-5 h-5 text-gray-600" />
+      </button>
+
+      {/* モバイル: オーバーレイ */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="lg:hidden fixed inset-0 bg-black/40 z-40"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+    <aside className={`
+      h-screen border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto
+      fixed lg:sticky top-0 left-0 z-50
+      w-[240px] lg:w-[200px]
+      transition-transform duration-300
+      ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+    `}>
+      {/* モバイル: 閉じるボタン */}
+      <button
+        onClick={() => setMobileOpen(false)}
+        className="lg:hidden absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600"
+        aria-label="メニューを閉じる"
+      >
+        <XIcon className="w-5 h-5" />
+      </button>
+
       <Link href="/store/dashboard" className="flex items-center justify-center px-4 py-5 border-b border-gray-100">
-        <span className="text-lg font-bold text-amber-600 text-center break-words leading-tight">
-          {storeName || "パティモバ"}
-        </span>
+        {storeLogo ? (
+          <Image
+            src={storeLogo}
+            alt={storeName || "店舗ロゴ"}
+            width={120}
+            height={60}
+            className="object-contain max-h-[60px]"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+            <span className="text-2xl font-bold text-amber-600">
+              {(storeName || "P").charAt(0)}
+            </span>
+          </div>
+        )}
       </Link>
 
       <nav className="flex flex-col flex-1">
@@ -58,7 +108,7 @@ export function StoreSidebar() {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/") || (item.children?.some((c) => pathname === c.href));
             return (
               <div key={item.href}>
-                <Link href={item.href} className="relative">
+                <Link href={item.href} className="relative" onClick={() => setMobileOpen(false)}>
                   <motion.div
                     className={`px-5 py-3 text-base transition-colors relative ${
                       isActive
@@ -182,5 +232,6 @@ export function StoreSidebar() {
         </AnimatePresence>
       </nav>
     </aside>
+    </>
   );
 }

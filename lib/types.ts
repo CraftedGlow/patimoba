@@ -148,6 +148,33 @@ export interface CartCakeOptionEntry {
   wholeCakeOptionId: string
   name: string
   price: number
+  groupName?: string
+}
+
+// デコレーション関連UI型
+export interface DecorationItem {
+  id: string
+  name: string
+  description: string | null
+  imageUrl: string | null
+  category: string
+  price: number
+  isSeasonal: boolean
+  seasonStart: string | null
+  seasonEnd: string | null
+  displayOrder: number
+}
+
+export interface DecorationGroupWithItems {
+  id: string
+  storeId: string
+  name: string
+  description: string | null
+  selectionType: 'single' | 'multiple'
+  maxSelections: number | null
+  required: boolean
+  displayOrder: number
+  items: DecorationItem[]
 }
 
 export interface UICartItem {

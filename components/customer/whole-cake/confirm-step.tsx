@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { WholeCakeProduct, WholeCakeSize } from "@/lib/types";
+import type { WholeCakeProduct, WholeCakeSize, DecorationGroupWithItems } from "@/lib/types";
 import type { CandleOption } from "@/hooks/use-whole-cakes";
 import type { CandleEntry } from "./basic-step";
 
@@ -11,7 +11,8 @@ interface ConfirmStepProps {
   selectedSize: WholeCakeSize;
   candles: CandleEntry[];
   messageText: string;
-  selectedOptionIds: string[];
+  decorationGroups: DecorationGroupWithItems[];
+  selectedDecorations: Record<string, string[]>;
   allergyNote: string;
   onAllergyChange: (note: string) => void;
   total: number;
@@ -25,19 +26,28 @@ export function WholeCakeConfirmStep({
   selectedSize,
   candles,
   messageText,
-  selectedOptionIds,
+  decorationGroups,
+  selectedDecorations,
   allergyNote,
   onAllergyChange,
   total,
   onAddToCart,
   onProceedToDateTime,
 }: ConfirmStepProps) {
-  const selectedOptions: { id: string; name: string; price: number }[] = [];
-  void selectedOptionIds;
-
   const validCandles = candles.filter(
     (c) => c.candleOptionId && Number(c.quantity) > 0
   );
+
+  // グループごとに選択済みデコレーションを収集
+  const selectedDecorationsByGroup = decorationGroups
+    .map((group) => {
+      const ids = selectedDecorations[group.id] ?? [];
+      const items = ids
+        .map((did) => group.items.find((item) => item.id === did))
+        .filter((item): item is NonNullable<typeof item> => !!item);
+      return items.length > 0 ? { group, items } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
   return (
     <div className="px-4 pb-8">
@@ -54,44 +64,36 @@ export function WholeCakeConfirmStep({
         </div>
 
         <div className="space-y-3">
+          {/* サイズ */}
           <div className="flex justify-between items-start">
             <div>
               <span className="text-sm font-bold">サイズ：</span>
-              <span className="text-sm">
-                {selectedSize.name}
-              </span>
+              <span className="text-sm">{selectedSize.name}</span>
             </div>
-            <span className="text-sm">
-              &yen;{selectedSize.price.toLocaleString()}
-            </span>
+            <span className="text-sm">&yen;{selectedSize.price.toLocaleString()}</span>
           </div>
 
+          {/* ろうそく */}
           {validCandles.length > 0 && (
             <div>
               <span className="text-sm font-bold">ろうそく：</span>
               {validCandles.map((c) => {
-                const opt = candleOptions.find(
-                  (o) => o.id === c.candleOptionId
-                );
+                const opt = candleOptions.find((o) => o.id === c.candleOptionId);
                 if (!opt) return null;
                 const qty = Number(c.quantity);
                 return (
-                  <div
-                    key={c.id}
-                    className="flex justify-between items-center"
-                  >
+                  <div key={c.id} className="flex justify-between items-center">
                     <span className="text-sm">
                       {opt.name} x{qty}本
                     </span>
-                    <span className="text-sm">
-                      &yen;{(opt.price * qty).toLocaleString()}
-                    </span>
+                    <span className="text-sm">&yen;{(opt.price * qty).toLocaleString()}</span>
                   </div>
                 );
               })}
             </div>
           )}
 
+          {/* メッセージ */}
           {messageText && (
             <div>
               <span className="text-sm font-bold">メッセージ：</span>
@@ -99,28 +101,25 @@ export function WholeCakeConfirmStep({
             </div>
           )}
 
-          {selectedOptions.length > 0 && (
-            <div>
-              <span className="text-sm font-bold">オプション：</span>
-              {selectedOptions.map((opt) => (
-                <div
-                  key={opt.id}
-                  className="flex justify-between items-center"
-                >
-                  <span className="text-sm">{opt.name}</span>
+          {/* デコレーション */}
+          {selectedDecorationsByGroup.map(({ group, items }) => (
+            <div key={group.id}>
+              <span className="text-sm font-bold">{group.name}：</span>
+              {items.map((item) => (
+                <div key={item.id} className="flex justify-between items-center">
+                  <span className="text-sm">{item.name}</span>
                   <span className="text-sm">
-                    &yen;{opt.price.toLocaleString()}
+                    {item.price === 0 ? "無料" : `+¥${item.price.toLocaleString()}`}
                   </span>
                 </div>
               ))}
             </div>
-          )}
+          ))}
 
+          {/* 合計 */}
           <div className="flex justify-end items-baseline gap-1 pt-3 border-t border-gray-200">
             <span className="text-sm font-bold">合計</span>
-            <span className="text-2xl font-bold">
-              &yen;{total.toLocaleString()}
-            </span>
+            <span className="text-2xl font-bold">&yen;{total.toLocaleString()}</span>
           </div>
         </div>
       </div>

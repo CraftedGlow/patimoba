@@ -276,6 +276,8 @@ export type Database = {
           is_ec: boolean
           is_preorder_required: boolean | null
           is_takeout: boolean
+          limited_from: string | null
+          limited_until: string | null
           min_order_lead_minutes: number | null
           name: string
           preparation_days: number | null
@@ -299,6 +301,8 @@ export type Database = {
           is_ec?: boolean
           is_preorder_required?: boolean | null
           is_takeout?: boolean
+          limited_from?: string | null
+          limited_until?: string | null
           min_order_lead_minutes?: number | null
           name?: string
           preparation_days?: number | null
@@ -322,6 +326,8 @@ export type Database = {
           is_ec?: boolean
           is_preorder_required?: boolean | null
           is_takeout?: boolean
+          limited_from?: string | null
+          limited_until?: string | null
           min_order_lead_minutes?: number | null
           name?: string
           preparation_days?: number | null
@@ -336,6 +342,184 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decorations: {
+        Row: {
+          id: string
+          store_id: string
+          name: string
+          description: string | null
+          image_url: string | null
+          category: string
+          price: number
+          is_active: boolean
+          is_seasonal: boolean
+          season_start: string | null
+          season_end: string | null
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          name: string
+          description?: string | null
+          image_url?: string | null
+          category?: string
+          price?: number
+          is_active?: boolean
+          is_seasonal?: boolean
+          season_start?: string | null
+          season_end?: string | null
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          name?: string
+          description?: string | null
+          image_url?: string | null
+          category?: string
+          price?: number
+          is_active?: boolean
+          is_seasonal?: boolean
+          season_start?: string | null
+          season_end?: string | null
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decorations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decoration_groups: {
+        Row: {
+          id: string
+          store_id: string
+          name: string
+          description: string | null
+          selection_type: string
+          max_selections: number | null
+          required: boolean
+          display_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          name: string
+          description?: string | null
+          selection_type?: string
+          max_selections?: number | null
+          required?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          name?: string
+          description?: string | null
+          selection_type?: string
+          max_selections?: number | null
+          required?: boolean
+          display_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decoration_groups_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decoration_group_items: {
+        Row: {
+          id: string
+          group_id: string
+          decoration_id: string
+          display_order: number
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          decoration_id: string
+          display_order?: number
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          decoration_id?: string
+          display_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decoration_group_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "decoration_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decoration_group_items_decoration_id_fkey"
+            columns: ["decoration_id"]
+            isOneToOne: false
+            referencedRelation: "decorations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_decoration_groups: {
+        Row: {
+          id: string
+          product_id: string
+          group_id: string
+          display_order: number
+        }
+        Insert: {
+          id?: string
+          product_id: string
+          group_id: string
+          display_order?: number
+        }
+        Update: {
+          id?: string
+          product_id?: string
+          group_id?: string
+          display_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_decoration_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_decoration_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "decoration_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -650,6 +834,7 @@ export type Database = {
           name: string
           name_kana: string | null
           phone: string | null
+          points: number
           status: string
           updated_at: string
           user_type: string
@@ -666,6 +851,7 @@ export type Database = {
           name?: string
           name_kana?: string | null
           phone?: string | null
+          points?: number
           status?: string
           updated_at?: string
           user_type?: string
@@ -682,6 +868,7 @@ export type Database = {
           name?: string
           name_kana?: string | null
           phone?: string | null
+          points?: number
           status?: string
           updated_at?: string
           user_type?: string

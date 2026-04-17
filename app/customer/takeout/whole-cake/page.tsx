@@ -12,15 +12,17 @@ import { WholeCakeOptionsStep } from "@/components/customer/whole-cake/options-s
 import { WholeCakeConfirmStep } from "@/components/customer/whole-cake/confirm-step";
 import type { CandleEntry } from "@/components/customer/whole-cake/basic-step";
 import { useWholeCakes } from "@/hooks/use-whole-cakes";
+import { useProductDecorationGroups } from "@/hooks/use-decoration-groups";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import type {
   UICartItem,
   CartCandleEntry,
   CartCakeOptionEntry,
+  DecorationGroupWithItems,
 } from "@/lib/types";
 
-const wholeCakeSteps = ["基本選択", "オプション", "内容確認"];
+const wholeCakeSteps = ["基本選択", "デコレーション", "内容確認"];
 
 export default function WholeCakePage() {
   const router = useRouter();
@@ -38,7 +40,8 @@ export default function WholeCakePage() {
   const [selectedSizeId, setSelectedSizeId] = useState("");
   const [candles, setCandles] = useState<CandleEntry[]>([]);
   const [messageText, setMessageText] = useState("");
-  const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
+  // グループID → 選択済みデコレーションID[]
+  const [selectedDecorations, setSelectedDecorations] = useState<Record<string, string[]>>({});
   const [allergyNote, setAllergyNote] = useState("");
 
   const selectedCake = useMemo(() => {
@@ -47,6 +50,11 @@ export default function WholeCakePage() {
     }
     return wholeCakes[0] ?? null;
   }, [wholeCakes, cakeIdParam]);
+
+  // 選択中のケーキに紐付いたデコレーショングループを取得
+  const { groups: decorationGroups, loading: groupsLoading } = useProductDecorationGroups(
+    selectedCake?.id
+  );
 
   if (loading) {
     return (
@@ -82,13 +90,16 @@ export default function WholeCakePage() {
     return sum + (opt?.price ?? 0) * qty;
   }, 0);
 
-  const cakeOptionsList: { id: string; name: string; price: number }[] = [];
-  const optionTotal = selectedOptionIds.reduce((sum, oid) => {
-    const opt = cakeOptionsList.find((o) => o.id === oid);
-    return sum + (opt?.price ?? 0);
+  // selectedDecorations から合計金額を計算
+  const decorationTotal = decorationGroups.reduce((sum, group) => {
+    const ids = selectedDecorations[group.id] ?? [];
+    return sum + ids.reduce((s, did) => {
+      const dec = group.items.find((item) => item.id === did);
+      return s + (dec?.price ?? 0);
+    }, 0);
   }, 0);
 
-  const total = sizePrice + candleTotal + optionTotal;
+  const total = sizePrice + candleTotal + decorationTotal;
 
   const buildCartItem = (): UICartItem | null => {
     if (!selectedSize) return null;
@@ -105,14 +116,23 @@ export default function WholeCakePage() {
         };
       });
 
-    const cakeOptions: CartCakeOptionEntry[] = selectedOptionIds
-      .map((oid) => cakeOptionsList.find((o) => o.id === oid))
-      .filter((o): o is NonNullable<typeof o> => !!o)
-      .map((o) => ({
-        wholeCakeOptionId: o.id,
-        name: o.name,
-        price: Number(o.price) || 0,
-      }));
+    // selectedDecorations をフラット化して CartCakeOptionEntry[] に変換
+    const cakeOptions: CartCakeOptionEntry[] = decorationGroups.flatMap((group) => {
+      const ids = selectedDecorations[group.id] ?? [];
+      const entries: CartCakeOptionEntry[] = [];
+      for (const did of ids) {
+        const dec = group.items.find((item) => item.id === did);
+        if (dec) {
+          entries.push({
+            wholeCakeOptionId: did,
+            name: dec.name,
+            price: dec.price,
+            groupName: group.name,
+          });
+        }
+      }
+      return entries;
+    });
 
     return {
       productId: selectedCake.id,
@@ -150,6 +170,11 @@ export default function WholeCakePage() {
     if (!res.ok) { alert(res.error || "カートに追加できませんでした"); return; }
     router.push("/customer/takeout/pickup");
   };
+
+  // 必須グループが未選択の場合は次へ進めない
+  const hasRequiredUnfilled = decorationGroups.some(
+    (g) => g.required && (selectedDecorations[g.id] ?? []).length === 0
+  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -199,9 +224,12 @@ export default function WholeCakePage() {
       {step === 2 && (
         <WholeCakeOptionsStep
           cake={selectedCake}
-          selectedOptionIds={selectedOptionIds}
-          onOptionsChange={setSelectedOptionIds}
+          decorationGroups={decorationGroups}
+          groupsLoading={groupsLoading}
+          selectedDecorations={selectedDecorations}
+          onDecorationsChange={setSelectedDecorations}
           total={total}
+          hasRequiredUnfilled={hasRequiredUnfilled}
           onNext={() => setStep(3)}
         />
       )}
@@ -213,7 +241,8 @@ export default function WholeCakePage() {
           selectedSize={selectedSize}
           candles={candles}
           messageText={messageText}
-          selectedOptionIds={selectedOptionIds}
+          decorationGroups={decorationGroups}
+          selectedDecorations={selectedDecorations}
           allergyNote={allergyNote}
           onAllergyChange={setAllergyNote}
           total={total}

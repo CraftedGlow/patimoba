@@ -11,6 +11,8 @@ import { useProductCategories } from "@/hooks/use-product-categories";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { ProductCustomOptionPresetChips } from "@/components/store/product-custom-option-preset-chips";
 import { PRODUCT_CUSTOM_OPTION_PRESET_METAS } from "@/lib/constants/product-custom-option-presets";
+import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
+import Link from "next/link";
 
 type OrderType = "always" | "sameDay" | "manual" | "reserveOnly" | "todayOnly";
 
@@ -32,6 +34,8 @@ interface ProductRow {
   is_ec: boolean | null;
   daily_max_quantity: number | null;
   preparation_days: number | null;
+  limited_from: string | null;
+  limited_until: string | null;
   custom_options: any;
 }
 
@@ -58,11 +62,14 @@ export function CakeTab() {
   const [orderType, setOrderType] = useState<OrderType>("always");
   const [reserveDays, setReserveDays] = useState("10");
   const [isLimited, setIsLimited] = useState(false);
+  const [limitedFrom, setLimitedFrom] = useState("");
+  const [limitedUntil, setLimitedUntil] = useState("");
   const [isTakeout, setIsTakeout] = useState(true);
   const [isEc, setIsEc] = useState(false);
   const [dailyMaxQuantity, setDailyMaxQuantity] = useState("");
   const [preparationDays, setPreparationDays] = useState("");
   const [customOptions, setCustomOptions] = useState<ProductCustomOption[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
 
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [crossImage, setCrossImage] = useState<string | null>(null);
@@ -79,6 +86,8 @@ export function CakeTab() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isHole = category === "ホール";
+
+  const { groups: allDecorationGroups } = useDecorationGroups(storeId ?? undefined);
 
   // ホールカテゴリ選択時、未登録ならカスタムオプションにホール用プリセットを自動投入
   useEffect(() => {
@@ -103,7 +112,27 @@ export function CakeTab() {
       .select("*")
       .eq("store_id", storeId)
       .order("display_order", { ascending: true });
-    setProducts((data ?? []) as ProductRow[]);
+    const rows = (data ?? []) as ProductRow[];
+
+    // 期間限定商品の自動オフ: 受取終了日 - 準備日数 <= 今日 なら is_active を false に
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const toDeactivate = rows.filter((p) => {
+      if (!p.is_active || !p.limited_until) return false;
+      const prepDays = p.preparation_days ?? 0;
+      const cutoff = new Date(p.limited_until);
+      cutoff.setDate(cutoff.getDate() - prepDays);
+      return cutoff <= today;
+    });
+    if (toDeactivate.length > 0) {
+      await supabase
+        .from("products")
+        .update({ is_active: false })
+        .in("id", toDeactivate.map((p) => p.id));
+      for (const p of toDeactivate) p.is_active = false;
+    }
+
+    setProducts(rows);
     setLoading(false);
   }, [storeId]);
 
@@ -120,11 +149,14 @@ export function CakeTab() {
     setOrderType("always");
     setReserveDays("10");
     setIsLimited(false);
+    setLimitedFrom("");
+    setLimitedUntil("");
     setIsTakeout(true);
     setIsEc(false);
     setDailyMaxQuantity("");
     setPreparationDays("");
     setCustomOptions([]);
+    setSelectedGroupIds([]);
     setMainImage(null);
     setCrossImage(null);
     setError(null);
@@ -141,7 +173,9 @@ export function CakeTab() {
       setPrice(p.base_price != null ? `¥${p.base_price.toLocaleString()}` : "");
       setOrderType(resolveOrderType(p));
       setReserveDays(String(p.min_order_lead_minutes ?? 0));
-      setIsLimited(false);
+      setIsLimited(p.limited_until != null || p.limited_from != null);
+      setLimitedFrom(p.limited_from ?? "");
+      setLimitedUntil(p.limited_until ?? "");
       setIsTakeout(p.is_takeout ?? true);
       setIsEc(p.is_ec ?? false);
       setDailyMaxQuantity(p.daily_max_quantity != null ? String(p.daily_max_quantity) : "");
@@ -150,6 +184,8 @@ export function CakeTab() {
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setError(null);
+      // デコレーショングループ紐付けを取得
+      getProductGroupIds(p.id).then((ids) => setSelectedGroupIds(ids));
     },
     [products, productTypes]
   );
@@ -222,8 +258,11 @@ export function CakeTab() {
         daily_max_quantity: dailyMaxQuantity.trim() === "" ? null : parseInt(dailyMaxQuantity, 10) || null,
         preparation_days: preparationDays.trim() === "" ? 0 : parseInt(preparationDays, 10) || 0,
         custom_options: customOptions,
+        limited_from: isLimited && limitedFrom ? limitedFrom : null,
+        limited_until: isLimited && limitedUntil ? limitedUntil : null,
       };
 
+      let savedProductId = selectedId
       if (selectedId) {
         const { error: err } = await supabase
           .from("products")
@@ -231,12 +270,18 @@ export function CakeTab() {
           .eq("id", selectedId);
         if (err) throw err;
       } else {
-        const { error: err } = await supabase
+        const { data: newProduct, error: err } = await supabase
           .from("products")
           .insert(payload)
           .select("id")
           .single();
         if (err) throw err;
+        savedProductId = newProduct?.id ?? null;
+      }
+
+      // デコレーショングループ紐付けを保存
+      if (savedProductId) {
+        await setProductDecorationGroups(savedProductId, selectedGroupIds);
       }
 
       await fetchProducts();
@@ -780,15 +825,54 @@ export function CakeTab() {
           </motion.div>
         )}
 
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={isLimited}
-            onChange={(e) => setIsLimited(e.target.checked)}
-            className="w-4 h-4"
-          />
-          期間限定
-        </label>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isLimited}
+              onChange={(e) => {
+                setIsLimited(e.target.checked);
+                if (!e.target.checked) { setLimitedFrom(""); setLimitedUntil(""); }
+              }}
+              className="w-4 h-4"
+            />
+            期間限定
+          </label>
+          <AnimatePresence>
+            {isLimited && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex flex-col gap-2 pl-6"
+              >
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500 w-[80px] shrink-0">受取開始日</label>
+                  <input
+                    type="date"
+                    value={limitedFrom}
+                    onChange={(e) => setLimitedFrom(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500 w-[80px] shrink-0">受取終了日</label>
+                  <input
+                    type="date"
+                    value={limitedUntil}
+                    onChange={(e) => setLimitedUntil(e.target.value)}
+                    min={limitedFrom || new Date().toISOString().split("T")[0]}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
+                  />
+                </div>
+                <p className="text-xs text-gray-400">
+                  準備日数が設定されている場合、受取終了日の準備日数前に自動で受付停止になります
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <AnimatePresence>
           {error && (
@@ -802,6 +886,53 @@ export function CakeTab() {
             </motion.p>
           )}
         </AnimatePresence>
+
+        {/* デコレーション設定 */}
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-bold text-gray-700">デコレーション設定</label>
+            <Link
+              href="/store/decorations"
+              className="text-xs text-amber-600 hover:text-amber-700 underline"
+            >
+              デコレーション管理 ↗
+            </Link>
+          </div>
+          {allDecorationGroups.length === 0 ? (
+            <p className="text-xs text-gray-400">
+              グループが未登録です。{" "}
+              <Link href="/store/decorations" className="text-amber-600 underline">
+                デコレーション管理
+              </Link>
+              から作成してください。
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {allDecorationGroups.map((group) => (
+                <label key={group.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedGroupIds.includes(group.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedGroupIds((prev) => [...prev, group.id]);
+                      } else {
+                        setSelectedGroupIds((prev) => prev.filter((id) => id !== group.id));
+                      }
+                    }}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  <span>{group.name}</span>
+                  <span className="text-xs text-gray-400">
+                    ({group.selectionType === "single" ? "単一" : "複数"}
+                    {group.required ? "/必須" : "/任意"}
+                    · {group.items.length}種)
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
 
         <motion.button
           whileHover={{ scale: 1.02 }}

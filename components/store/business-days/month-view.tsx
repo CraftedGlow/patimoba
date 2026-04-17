@@ -1,10 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { weekdayLabels, formatDateKey, isClosedByRule, formatTimeRange } from "./types";
+import { formatDateKey, isClosedByRule } from "./types";
 import type { DaySchedule, ClosedDayRule } from "./types";
 
-/** 日・土をやや狭くし、平日列を確保（曜日行と日付グリッドで共通） */
+const EN_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 const MONTH_GRID_COLS =
   "[grid-template-columns:minmax(0,0.88fr)_repeat(5,minmax(0,1fr))_minmax(0,0.88fr)]";
 
@@ -29,9 +29,7 @@ export function MonthView({
 }: MonthViewProps) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
   const prevMonthDays = new Date(year, month, 0).getDate();
-  const nextMonthStart = 1;
 
   const cells: Array<{ y: number; m: number; d: number; isCurrentMonth: boolean }> = [];
 
@@ -48,24 +46,27 @@ export function MonthView({
     for (let d = 0; d < remaining; d++) {
       const nm = month === 11 ? 0 : month + 1;
       const ny = month === 11 ? year + 1 : year;
-      cells.push({ y: ny, m: nm, d: nextMonthStart + d, isCurrentMonth: false });
+      cells.push({ y: ny, m: nm, d: 1 + d, isCurrentMonth: false });
     }
   }
 
   return (
-    <div className="border border-gray-300 rounded-lg overflow-hidden">
-      <div className={`grid bg-gray-100 border-b border-gray-300 ${MONTH_GRID_COLS}`}>
-        {weekdayLabels.map((label, i) => (
+    <div className="border border-gray-300 rounded-sm overflow-hidden">
+      {/* 曜日ヘッダー */}
+      <div className={`grid ${MONTH_GRID_COLS} border-b border-gray-300`}>
+        {EN_WEEKDAYS.map((label, i) => (
           <div
             key={label}
-            className={`text-center text-xs font-bold py-1 px-0.5 leading-none ${
-              i === 0 ? "text-red-500" : i === 6 ? "text-sky-600" : "text-gray-600"
+            className={`text-center text-sm font-semibold py-2 ${
+              i === 0 ? "text-orange-500" : "text-gray-600"
             }`}
           >
             {label}
           </div>
         ))}
       </div>
+
+      {/* 日付グリッド */}
       <div className={`grid ${MONTH_GRID_COLS}`}>
         {cells.map((cell, i) => {
           const key = formatDateKey(cell.y, cell.m, cell.d);
@@ -76,50 +77,46 @@ export function MonthView({
           const isSunday = dayOfWeek === 0;
 
           return (
-            <motion.div
+            <div
               key={i}
-              whileHover={{ backgroundColor: "#e0f2fe" }}
-              onClick={() => onDayClick(cell.y, cell.m, cell.d)}
-              className={`border-b border-r border-gray-200 min-h-[118px] p-1.5 cursor-pointer transition-colors flex flex-col ${
-                cell.isCurrentMonth ? "" : "opacity-40"
-              } ${isSunday && cell.isCurrentMonth ? "bg-sky-50/50" : ""}`}
+              onClick={() => cell.isCurrentMonth && onDayClick(cell.y, cell.m, cell.d)}
+              className={`border-b border-r border-gray-200 min-h-[80px] p-2 flex flex-col ${
+                cell.isCurrentMonth ? "cursor-pointer hover:bg-gray-50 transition-colors" : "opacity-20 pointer-events-none"
+              }`}
             >
-              <div
-                className={`text-sm font-semibold mb-1 tabular-nums ${
-                  isSunday ? "text-red-500" : dayOfWeek === 6 ? "text-sky-600" : "text-gray-800"
-                }`}
-              >
-                {cell.d}日
-              </div>
-              {cell.isCurrentMonth && isOpen && (() => {
-                const range = formatTimeRange(
-                  schedule?.openTime ?? defaultOpenTime,
-                  schedule?.closeTime ?? defaultCloseTime,
-                  defaultOpenTime,
-                  defaultCloseTime
-                );
-                return (
-                  <div className="text-xs px-1.5 py-1 rounded-md leading-snug shrink-0 bg-sky-500 text-white shadow-sm">
-                    <div className="font-bold">営業日</div>
-                    <div className="tabular-nums font-medium">{range}</div>
+              {cell.isCurrentMonth && !isOpen ? (
+                /* 休業日: 丸枠日付 + 「休み」小さめ黒 */
+                <>
+                  <div className="self-start">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-gray-600 text-xs font-medium text-gray-700 tabular-nums">
+                      {cell.d}
+                    </span>
                   </div>
-                );
-              })()}
-              {cell.isCurrentMonth && !isOpen && (
-                <div className="text-xs px-1.5 py-1 rounded-md bg-amber-400 text-white shrink-0 font-semibold">
-                  休業日
-                </div>
+                  <div className="flex-1 flex items-center justify-center">
+                    <span className="text-sm font-medium text-gray-800">休み</span>
+                  </div>
+                </>
+              ) : (
+                /* 営業日: 日付 + カスタム営業時間があれば表示 */
+                <>
+                  <div className={`text-sm font-medium tabular-nums ${isSunday && cell.isCurrentMonth ? "text-orange-500" : "text-gray-700"}`}>
+                    {cell.d}
+                  </div>
+                  {cell.isCurrentMonth && schedule && isOpen && (
+                    schedule.openTime !== defaultOpenTime || schedule.closeTime !== defaultCloseTime
+                  ) && (
+                    <p className="text-[10px] text-gray-500 mt-0.5 tabular-nums leading-none">
+                      {schedule.openTime.slice(0, 5)}〜{schedule.closeTime.slice(0, 5)}
+                    </p>
+                  )}
+                  {cell.isCurrentMonth && schedule?.dailyNote?.trim() ? (
+                    <p className="text-xs mt-1 text-gray-500 leading-snug line-clamp-2">
+                      {schedule.dailyNote.trim()}
+                    </p>
+                  ) : null}
+                </>
               )}
-              {cell.isCurrentMonth && schedule?.dailyNote?.trim() ? (
-                <p
-                  className={`text-[11px] mt-1 leading-snug line-clamp-2 flex-1 min-h-0 ${
-                    isOpen ? "text-gray-700" : "text-amber-900"
-                  }`}
-                >
-                  {schedule.dailyNote.trim()}
-                </p>
-              ) : null}
-            </motion.div>
+            </div>
           );
         })}
       </div>

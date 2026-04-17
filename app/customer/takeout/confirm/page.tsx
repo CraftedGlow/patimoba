@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -28,7 +28,7 @@ const pickupTimeSlots: { value: string; label: string }[] = [
 
 export default function TakeoutConfirmPage() {
   const router = useRouter();
-  const { userId, selectedStoreId, profile } = useCustomerContext();
+  const { userId, selectedStoreId, profile, points: userPoints } = useCustomerContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
   const { createOrder } = useOrderMutations();
   const [lastName, setLastName] = useState("");
@@ -46,6 +46,18 @@ export default function TakeoutConfirmPage() {
   const [showOrderComplete, setShowOrderComplete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(5);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // pickup pageからsessionStorageで渡された日時を読み込む
+  const [pickupDate, setPickupDate] = useState("");
+  const [pickupTime, setPickupTime] = useState("");
+  useEffect(() => {
+    const d = sessionStorage.getItem("patimoba_pickup_date") ?? "";
+    const t = sessionStorage.getItem("patimoba_pickup_time") ?? "";
+    setPickupDate(d);
+    setPickupTime(t);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -71,7 +83,7 @@ export default function TakeoutConfirmPage() {
   }, [userId]);
 
   const subtotal = cartTotal;
-  const availablePoints = 0;
+  const availablePoints = userPoints;
 
   const usedPoints =
     pointOption === "all"
@@ -106,7 +118,8 @@ export default function TakeoutConfirmPage() {
       subtotal,
       discountAmount: usedPoints,
       orderType: "takeout",
-      pickupTime: pickupTimeValue || null,
+      pickupDate: pickupDate || null,
+      pickupTime: pickupTime || pickupTimeValue || null,
     });
 
     setSubmitting(false);
@@ -116,9 +129,39 @@ export default function TakeoutConfirmPage() {
       return;
     }
 
+    // LINE通知を非同期で送信（失敗しても続行）
+    if (result.orderId) {
+      fetch("/api/line/send-order-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: result.orderId }),
+      }).catch(() => {});
+    }
+
     clearCart();
+    sessionStorage.removeItem("patimoba_pickup_date");
+    sessionStorage.removeItem("patimoba_pickup_time");
+    sessionStorage.removeItem("patimoba_order_type");
     setShowOrderComplete(true);
+    setCountdown(5);
+    // 5秒後に自動遷移
+    countdownRef.current = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          router.push(continueShoppingHref);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
 
   const continueShoppingHref = selectedStoreId || cartStoreId
     ? `/customer/takeout/products?store=${selectedStoreId || cartStoreId}`
@@ -473,23 +516,40 @@ export default function TakeoutConfirmPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed left-6 right-6 top-[30%] bg-white rounded-2xl shadow-2xl z-[70] p-8 text-center"
+              className="fixed left-6 right-6 top-[25%] bg-white rounded-2xl shadow-2xl z-[70] p-8 text-center"
             >
-              <p className="text-base leading-relaxed text-gray-900">
-                ご注文ありがとうございます。
-                <br />
-                来店時にLINEに送信された
-                <br />
-                メッセージをお見せください。
+              <button
+                onClick={() => {
+                  if (countdownRef.current) clearInterval(countdownRef.current);
+                  router.push(continueShoppingHref);
+                }}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="text-4xl mb-3">🎉</div>
+              <p className="text-base leading-relaxed text-gray-900 font-bold mb-2">
+                ご注文ありがとうございます！
               </p>
-
+              <p className="text-sm text-gray-500 leading-relaxed mb-1">
+                注文情報がLINEに届いています。
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                来店時にLINEのメッセージをお見せください。
+              </p>
+              <p className="text-xs text-gray-400 mb-4">
+                {countdown}秒後に自動で商品一覧に戻ります
+              </p>
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => router.push("/customer/takeout")}
-                className="mt-6 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 px-10 rounded-lg text-base transition-colors"
+                onClick={() => {
+                  if (countdownRef.current) clearInterval(countdownRef.current);
+                  router.push(continueShoppingHref);
+                }}
+                className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base transition-colors"
               >
-                トップに戻る
+                商品一覧に戻る
               </motion.button>
             </motion.div>
           </>

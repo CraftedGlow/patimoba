@@ -118,7 +118,7 @@ export default function StoreProductsPage() {
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">
       <div className="flex-1 overflow-auto p-6">
         {/* ヘッダー: 検索 + 注文設定 */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -246,7 +246,8 @@ export default function StoreProductsPage() {
         </div>
 
         {/* 商品テーブル */}
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+        <div className="min-w-[700px] border border-gray-200 rounded-lg overflow-hidden">
           {/* ヘッダー行 */}
           {isEc ? (
             <div className="grid grid-cols-[1.2fr_70px_1.5fr_0.8fr_0.6fr_80px_80px] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
@@ -402,6 +403,7 @@ export default function StoreProductsPage() {
               );
             })
           )}
+        </div>
         </div>
       </div>
 

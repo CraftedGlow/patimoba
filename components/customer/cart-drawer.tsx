@@ -32,6 +32,8 @@ interface CartDrawerProps {
   onClose: () => void;
   proceedPath?: string;
   proceedLabel?: string;
+  readOnly?: boolean;
+  hideProceed?: boolean;
 }
 
 export function CartDrawer({
@@ -39,6 +41,8 @@ export function CartDrawer({
   onClose,
   proceedPath = "/customer/takeout/pickup",
   proceedLabel = "日時選択に進む",
+  readOnly = false,
+  hideProceed = false,
 }: CartDrawerProps) {
   const router = useRouter();
   const { items, itemCount, total, updateQuantity, removeItem, clear } = useCart();
@@ -195,7 +199,7 @@ export function CartDrawer({
                               </p>
 
                               <div className="flex items-center gap-1">
-                                {item.isCustomCake ? (
+                                {readOnly || item.isCustomCake ? (
                                   <span className="px-2.5 py-1 text-sm font-bold text-gray-900">
                                     ×{item.quantity}
                                   </span>
@@ -222,12 +226,14 @@ export function CartDrawer({
                                     </button>
                                   </div>
                                 )}
+                                {!readOnly && (
                                 <button
                                   onClick={() => removeItem(item.productId, key)}
                                   className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -239,12 +245,14 @@ export function CartDrawer({
 
                 <div className="border-t border-gray-100 px-5 pt-4 pb-6 bg-white">
                   <div className="flex items-center justify-between mb-4">
+                    {!readOnly ? (
                     <button
                       onClick={clear}
                       className="text-xs text-gray-400 hover:text-red-500 transition-colors underline"
                     >
                       カートを空にする
                     </button>
+                    ) : <div />}
                     <div className="flex items-baseline gap-1">
                       <span className="text-sm text-gray-500">合計</span>
                       <span className="text-2xl font-bold text-gray-900">
@@ -253,6 +261,7 @@ export function CartDrawer({
                     </div>
                   </div>
 
+                  {!hideProceed && (
                   <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
@@ -261,6 +270,7 @@ export function CartDrawer({
                   >
                     {proceedLabel}
                   </motion.button>
+                  )}
                 </div>
               </>
             )}

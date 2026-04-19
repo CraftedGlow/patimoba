@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { User, ShoppingCart } from "lucide-react";
+import { User, ShoppingCart, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/cart-context";
+import { useRouter } from "next/navigation";
 
 interface CustomerHeaderProps {
   shopName?: string;
@@ -12,6 +13,8 @@ interface CustomerHeaderProps {
   points?: number;
   showCart?: boolean;
   onCartClick?: () => void;
+  showBack?: boolean;
+  backHref?: string;
 }
 
 export function CustomerHeader({
@@ -21,17 +24,30 @@ export function CustomerHeader({
   points,
   showCart = true,
   onCartClick,
+  showBack = false,
+  backHref,
 }: CustomerHeaderProps) {
   const { itemCount } = useCart();
+  const router = useRouter();
+
+  const handleBack = () => {
+    if (backHref) router.push(backHref);
+    else router.back();
+  };
 
   return (
     <motion.header
       initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="bg-[#FFEB3B] px-4 py-3 flex items-center justify-between sticky top-0 z-50"
+      className="bg-[#ffff9d] px-4 py-3 flex items-center justify-between sticky top-0 z-50"
     >
       <div className="flex items-center gap-2.5 min-w-0">
+        {showBack ? (
+          <button onClick={handleBack} className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full hover:bg-yellow-400 transition-colors">
+            <ArrowLeft className="w-5 h-5 text-gray-900" />
+          </button>
+        ) : (
         <Link href="/customer/profile" className="flex-shrink-0">
           {avatarUrl ? (
             <img
@@ -45,6 +61,7 @@ export function CustomerHeader({
             </div>
           )}
         </Link>
+        )}
         <span className="font-bold text-gray-900 text-sm truncate">
           {userName || shopName || "ゲスト"}
         </span>

@@ -22,6 +22,7 @@ export interface Product {
   id: string
   name: string
   price: number
+  minVariantPrice?: number
   image: string
   category: string
   description: string
@@ -76,7 +77,8 @@ export interface Order {
   orderDate: string
   pickupDate: string
   pickupTime: string
-  items: { name: string; quantity: number; totalAmount: number }[]
+  items: { name: string; quantity: number; totalAmount: number; variantName?: string | null }[]
+  hasWholeCake: boolean
   subtotal: number
   discountAmount: number
   totalAmount: number
@@ -97,6 +99,7 @@ export interface Customer {
   email: string
   phone: string
   lineName: string
+  avatarUrl: string | null
   userType: string
   status: string
 }
@@ -218,7 +221,7 @@ const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
 
 const PAYMENT_STATUS_LABEL: Record<string, string> = {
   paid: "決済済み",
-  unpaid: "未払い",
+  unpaid: "店頭支払い",
   refunded: "返金済み",
 }
 
@@ -253,11 +256,18 @@ export function toUIStore(row: StoreRow): Store {
   }
 }
 
-export function toUIProduct(row: ProductRow, category?: string): Product {
+export function toUIProduct(row: ProductRow & { product_variants?: any[] }, category?: string): Product {
+  const variants: any[] = row.product_variants ?? [];
+  const activePrices = variants
+    .filter((v) => v.is_active !== false)
+    .map((v) => Number(v.price) || 0)
+    .filter((p) => p > 0);
+  const minVariantPrice = activePrices.length > 0 ? Math.min(...activePrices) : undefined;
   return {
     id: row.id,
     name: row.name || "",
     price: Number(row.base_price) || 0,
+    minVariantPrice,
     image: row.image || "",
     category: category || row.category_name || "その他",
     description: row.description || "",
@@ -317,10 +327,11 @@ export function toUIOrder(row: any): Order {
   const formatDate = (d: Date) =>
     `${d.getFullYear()}年 ${d.getMonth() + 1}月 ${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`
 
-  const items: { name: string; quantity: number; totalAmount: number }[] = (row.order_items || []).map((it: any) => ({
+  const items: { name: string; quantity: number; totalAmount: number; variantName?: string | null }[] = (row.order_items || []).map((it: any) => ({
     name: it.product_name_snapshot || "不明",
     quantity: Number(it.quantity) || 1,
     totalAmount: Number(it.subtotal) || 0,
+    variantName: it.variant_name_snapshot ?? null,
   }))
 
   const user = row.users || {}
@@ -339,6 +350,7 @@ export function toUIOrder(row: any): Order {
     pickupDate,
     pickupTime,
     items,
+    hasWholeCake: (row.order_items || []).some((it: any) => !!it.variant_name_snapshot || (it.order_item_options?.length ?? 0) > 0),
     subtotal: Number(row.subtotal) || 0,
     discountAmount: Number(row.discount_amount) || 0,
     totalAmount: Number(row.total_amount) || 0,
@@ -361,6 +373,7 @@ export function toUICustomer(row: UserRow): Customer {
     email: row.email || "",
     phone: row.phone || "",
     lineName: row.line_name || "",
+    avatarUrl: (row as any).avatar_url || null,
     userType: row.user_type || "customer",
     status: row.status || "active",
   }

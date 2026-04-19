@@ -12,6 +12,7 @@ interface UseOrdersOptions {
   status?: OrderStatus | OrderStatus[]
   excludeStatus?: OrderStatus[]
   date?: string
+  pickupDate?: string
   from?: string
   to?: string
   orderType?: string
@@ -35,7 +36,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       .select(`
         *,
         users:users!orders_customer_id_fkey(id, name, line_name, phone, email),
-        order_items(id, product_name_snapshot, quantity, unit_price, subtotal, product_id)
+        order_items(id, product_name_snapshot, quantity, unit_price, subtotal, product_id, variant_name_snapshot, order_item_options(id))
       `)
       .order("created_at", { ascending: false })
 
@@ -76,6 +77,9 @@ export function useOrders(options: UseOrdersOptions = {}) {
       end.setHours(23, 59, 59, 999)
       query = query.gte("created_at", start.toISOString()).lte("created_at", end.toISOString())
     }
+    if (options.pickupDate) {
+      query = query.eq("pickup_date", options.pickupDate)
+    }
 
     const { data, error: err } = await query
     if (err) {
@@ -92,6 +96,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
     options.storeId,
     options.customerId,
     options.date,
+    options.pickupDate,
     options.from,
     options.to,
     Array.isArray(options.status) ? options.status.join(",") : options.status,

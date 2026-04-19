@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { X, Loader2, Key, Check, Camera } from "lucide-react";
+import { X, Loader2, Key, Check, Camera, Link2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -114,6 +114,7 @@ export default function StoreAccountPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [ecLinkCopied, setEcLinkCopied] = useState(false);
 
   const [modalHolidays, setModalHolidays] = useState<{ dayOfWeek: number; rule: string }[]>([]);
 
@@ -407,6 +408,26 @@ export default function StoreAccountPage() {
   return (
     <div className="p-6 md:p-10 max-w-5xl">
       <h1 className="text-xl font-bold mb-8">登録情報確認</h1>
+
+      {storeId && (
+        <div className="mb-8 flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-lg px-4 py-3">
+          <Link2 className="w-4 h-4 text-sky-500 shrink-0" />
+          <p className="text-xs text-sky-700 flex-1 truncate font-mono">
+            {typeof window !== "undefined" ? window.location.origin : ""}/customer/ec/products?store={storeId}
+          </p>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/customer/ec/products?store=${storeId}`;
+              navigator.clipboard.writeText(url);
+              setEcLinkCopied(true);
+              setTimeout(() => setEcLinkCopied(false), 2000);
+            }}
+            className="shrink-0 flex items-center gap-1 bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold px-3 py-1.5 rounded-md transition-colors"
+          >
+            {ecLinkCopied ? <><Check className="w-3 h-3" />コピー済み</> : <>コピー</>}
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-6">
         <div className="space-y-5">

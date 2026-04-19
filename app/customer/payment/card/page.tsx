@@ -39,8 +39,22 @@ export default function CardAddPage() {
     return digits.replace(/(.{4})/g, "$1 ").trim();
   };
 
+  const detectBrand = (num: string): string => {
+    const d = num.replace(/\s/g, "");
+    if (/^4/.test(d)) return "Visa";
+    if (/^3[47]/.test(d)) return "AmericanExpress";
+    if (/^(5[1-5]|2[2-7])/.test(d)) return "MasterCard";
+    if (/^35(2[89]|[3-8])/.test(d)) return "JCB";
+    return "カード";
+  };
+
   const handleSubmit = () => {
     if (!canSubmit) return;
+    const digits = cardNumber.replace(/\s/g, "");
+    const last4 = digits.slice(-4);
+    const brand = detectBrand(digits);
+    sessionStorage.setItem("patimoba_has_card", "1");
+    sessionStorage.setItem("patimoba_card_label", `${brand} ****${last4}`);
     router.back();
   };
 

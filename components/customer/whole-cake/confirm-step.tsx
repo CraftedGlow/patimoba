@@ -81,10 +81,12 @@ export function WholeCakeConfirmStep({
                 const opt = candleOptions.find((o) => o.id === c.candleOptionId);
                 if (!opt) return null;
                 const qty = Number(c.quantity);
+                const isNumber = opt.name === "ナンバーキャンドル";
+                const label = isNumber && c.digit ? `${opt.name}(${c.digit})` : opt.name;
                 return (
                   <div key={c.id} className="flex justify-between items-center">
                     <span className="text-sm">
-                      {opt.name} x{qty}本
+                      {label} x{qty}本
                     </span>
                     <span className="text-sm">&yen;{(opt.price * qty).toLocaleString()}</span>
                   </div>

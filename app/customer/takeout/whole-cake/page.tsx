@@ -108,9 +108,11 @@ export default function WholeCakePage() {
       .filter((c) => c.candleOptionId && Number(c.quantity) > 0)
       .map((c) => {
         const opt = candleOptions.find((o) => o.id === c.candleOptionId);
+        const isNumber = opt?.name === "ナンバーキャンドル";
+        const name = isNumber && c.digit ? `${opt?.name}(${c.digit})` : opt?.name || "";
         return {
           candleOptionId: c.candleOptionId,
-          name: opt?.name || "",
+          name,
           price: Number(opt?.price) || 0,
           quantity: Number(c.quantity) || 0,
         };

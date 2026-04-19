@@ -12,8 +12,29 @@ import { useProductRegistrations, type ProductRegistration } from "@/hooks/use-p
 import { useWholeCakes } from "@/hooks/use-whole-cakes";
 import type { WholeCakeProduct } from "@/lib/types";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useCart } from "@/lib/cart-context";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
+
+function ProductBadge({ product }: { product: ProductRegistration }) {
+  const isLimited = !!(product.limited_from || product.limited_until);
+  const isSameDayOnly = !product.is_active && product.same_day_order_allowed;
+  if (isLimited) {
+    return (
+      <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none" style={{ backgroundColor: "#fe85e0" }}>
+        期間限定
+      </span>
+    );
+  }
+  if (isSameDayOnly) {
+    return (
+      <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none" style={{ backgroundColor: "#febc2f" }}>
+        本日限定
+      </span>
+    );
+  }
+  return null;
+}
 
 function RegistrationCard({ product, basePath }: { product: ProductRegistration; basePath: string }) {
   const href = `${basePath}/product/${product.id}`;
@@ -37,7 +58,7 @@ function RegistrationCard({ product, basePath }: { product: ProductRegistration;
               No Image
             </div>
           )}
-          {false && null}
+          <ProductBadge product={product} />
         </div>
         <h3 className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">
           {product.name}
@@ -74,7 +95,7 @@ function WholeCakeCard({ cake }: { cake: WholeCakeProduct }) {
               No Image
             </div>
           )}
-          <span className="absolute top-2 left-2 bg-amber-400 text-white text-xs font-bold px-3 py-1 rounded">
+          <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none" style={{ backgroundColor: "#f59e0b" }}>
             ホールケーキ
           </span>
         </div>
@@ -93,7 +114,8 @@ export default function TakeoutProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeParam = searchParams.get("store");
-  const orderTypeParam = searchParams.get("type") ?? "reservation";
+  const typeParam = searchParams.get("type");
+  const orderTypeParam = typeParam ?? "reservation";
   const { selectedStoreId, selectedStoreName, profile } = useCustomerContext();
   const storeId = selectedStoreId || storeParam || undefined;
   const pickupPath = `/customer/takeout/pickup?store=${storeId ?? ""}&type=${orderTypeParam}`;
@@ -102,20 +124,29 @@ export default function TakeoutProductsPage() {
     storeId,
   });
   const { wholeCakes, loading: cakesLoading } = useWholeCakes(storeId);
+  const { itemCount } = useCart();
   const [selectedCategory, setSelectedCategory] = useState("すべて");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const isLimited = (_p: ProductRegistration) => false;
+  const isLimited = (p: ProductRegistration) => !!(p.limited_from || p.limited_until);
+  const isSameDayOnly = (p: ProductRegistration) => !p.is_active && p.same_day_order_allowed;
+  // ホールケーキ(is_preorder_required)は wholeCakes に出るので除外。typeパラメータがある時だけフィルタ
+  const visibleProducts = (typeParam === "sameday"
+    ? products.filter((p) => p.same_day_order_allowed)
+    : typeParam === "reservation"
+    ? products.filter((p) => p.is_active)
+    : products.filter((p) => p.is_active || isSameDayOnly(p))
+  ).filter((p) => !p.is_preorder_required);
 
   const filtered =
     selectedCategory === "すべて"
-      ? products
+      ? visibleProducts
       : selectedCategory === "期間限定"
-        ? products.filter(isLimited)
+        ? visibleProducts.filter(isLimited)
         : selectedCategory === "ホールケーキ"
           ? []
-          : products.filter((p) => p.category_name === selectedCategory);
+          : visibleProducts.filter((p) => p.category_name === selectedCategory);
 
   const visibleWholeCakes =
     selectedCategory === "すべて" || selectedCategory === "ホールケーキ"
@@ -148,7 +179,7 @@ export default function TakeoutProductsPage() {
 
       <StepProgress currentStep={2} steps={steps} onStepClick={handleStepClick} />
 
-      <div className="px-4 md:px-8 lg:px-12 pb-8 flex-1">
+      <div className="px-4 md:px-8 lg:px-12 pb-8 flex-1" style={{ paddingBottom: itemCount > 0 ? "6rem" : "2rem" }}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">商品一覧</h2>
@@ -242,6 +273,31 @@ export default function TakeoutProductsPage() {
       </div>
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} proceedPath={pickupPath} />
+
+      {/* カートバナー */}
+      {itemCount > 0 && (
+        <div className="fixed bottom-0 inset-x-0 z-50 px-4 pb-5">
+          <div className="flex items-center gap-2 max-w-lg mx-auto">
+            <div className="relative">
+              <button
+                onClick={() => setCartOpen(true)}
+                className="bg-white border border-gray-200 rounded-full px-5 py-3 shadow-lg text-sm font-bold text-gray-800 whitespace-nowrap"
+              >
+                カートを見る
+              </button>
+              <span className="absolute -top-1.5 -left-1.5 min-w-[20px] h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none shadow">
+                {itemCount > 99 ? "99+" : itemCount}
+              </span>
+            </div>
+            <button
+              onClick={() => router.push(pickupPath)}
+              className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm transition-colors shadow-lg shadow-amber-200/60"
+            >
+              日時選択に進む
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

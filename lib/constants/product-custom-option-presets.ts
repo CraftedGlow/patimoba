@@ -5,8 +5,6 @@ export type ProductCustomOptionPresetId =
   | "size"
   | "candles"
   | "message"
-  | "allergy_note"
-  | "decoration"
 
 export interface ProductCustomOptionPresetMeta {
   id: ProductCustomOptionPresetId
@@ -56,32 +54,6 @@ export const PRODUCT_CUSTOM_OPTION_PRESET_METAS: ProductCustomOptionPresetMeta[]
       type: "text",
       required: false,
       values: [],
-    }),
-  },
-  {
-    id: "allergy_note",
-    label: "アレルギー",
-    defaultGroupName: "アレルギー・ご要望",
-    create: () => ({
-      name: "アレルギー・ご要望",
-      type: "text",
-      required: false,
-      values: [],
-    }),
-  },
-  {
-    id: "decoration",
-    label: "デコレーション",
-    defaultGroupName: "デコレーション",
-    create: () => ({
-      name: "デコレーション",
-      type: "single",
-      required: false,
-      values: [
-        { label: "なし", additional_price: 0 },
-        { label: "シンプル", additional_price: 200 },
-        { label: "華やか", additional_price: 500 },
-      ],
     }),
   },
 ]

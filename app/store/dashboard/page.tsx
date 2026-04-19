@@ -6,10 +6,11 @@ import {
   DollarSign,
   Users,
   Building2,
-  User,
   Loader2,
   Bell,
 } from "lucide-react";
+import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
+import type { Order } from "@/lib/types";
 import { useOrders } from "@/hooks/use-orders";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { useStoreContext } from "@/lib/store-context";
@@ -49,16 +50,27 @@ export default function StoreDashboardPage() {
   const { storeId } = useStoreContext();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const defaultDate = useRef(new Date());
-  const { orders, loading: ordersLoading, refetch: refetchOrders } = useOrders({
+  const pickupDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+  const { orders: takeoutOrders, loading: takeoutLoading, refetch: refetchTakeout } = useOrders({
     storeId,
-    date: selectedDate.toISOString(),
+    pickupDate: pickupDateStr,
+    channel: "takeout",
   });
-  const { stats, loading: statsLoading } = useDashboardStats(storeId);
-  const { updateOrderStatus } = useOrderMutations();
+  const { orders: ecOrders, loading: ecLoading, refetch: refetchEc } = useOrders({
+    storeId,
+    channel: "ec",
+    fulfillmentStatus: "pending",
+  });
+  const ordersLoading = takeoutLoading || ecLoading;
+  const orders = [...takeoutOrders, ...ecOrders];
+  const refetchOrders = async () => { await Promise.all([refetchTakeout(), refetchEc()]); };
+  const { stats, loading: statsLoading, refetch: refetchStats } = useDashboardStats(storeId);
+  const { updateOrderStatus, updateFulfillmentStatus } = useOrderMutations();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
   const [newOrderAlert, setNewOrderAlert] = useState(false);
   const audioLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dateRef = useRef<HTMLDivElement>(null);
@@ -104,6 +116,7 @@ export default function StoreDashboardPage() {
         () => {
           setNewOrderAlert(true);
           refetchOrders();
+          refetchStats();
           // 音声ループ開始
           playNotificationSound();
           if (!audioLoopRef.current) {
@@ -136,19 +149,17 @@ export default function StoreDashboardPage() {
     if (!confirmAction || confirmLoading) return;
     setConfirmLoading(true);
     try {
-      await updateOrderStatus(
-        confirmAction.orderId,
-        confirmAction.toReady ? "ready" : "pending"
-      );
-      // 配送ECで発送完了にする場合、通知APIを呼ぶ
-      if (confirmAction.isEc && confirmAction.toReady) {
-        await fetch("/api/line/send-ship-notification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: confirmAction.orderId }),
-        }).catch(() => {
-          // 通知失敗しても続行
-        });
+      if (confirmAction.isEc) {
+        await updateFulfillmentStatus(confirmAction.orderId, confirmAction.toReady, null);
+        if (confirmAction.toReady) {
+          await fetch("/api/line/send-ship-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: confirmAction.orderId }),
+          }).catch(() => {});
+        }
+      } else {
+        await updateOrderStatus(confirmAction.orderId, confirmAction.toReady ? "ready" : "pending");
       }
       await refetchOrders();
     } finally {
@@ -166,6 +177,26 @@ export default function StoreDashboardPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const todaySales = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+  const todayOrders = orders.length;
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const parsePickupMinutes = (t: string | null | undefined): number => {
+    if (!t) return Infinity;
+    const [h, m] = t.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+  const sortedOrders = [...orders].sort((a, b) => {
+    const ta = parsePickupMinutes(a.pickupTime);
+    const tb = parsePickupMinutes(b.pickupTime);
+    const aFuture = ta >= nowMinutes;
+    const bFuture = tb >= nowMinutes;
+    if (aFuture && !bFuture) return -1;
+    if (!aFuture && bFuture) return 1;
+    return ta - tb;
+  });
 
   if (ordersLoading || statsLoading) {
     return (
@@ -212,7 +243,7 @@ export default function StoreDashboardPage() {
             本日の売上速報
           </div>
           <p className="text-2xl font-bold">
-            &yen;{stats.todaySales.toLocaleString()}
+            &yen;{todaySales.toLocaleString()}
           </p>
         </motion.div>
 
@@ -226,7 +257,7 @@ export default function StoreDashboardPage() {
             <Users className="w-4 h-4 text-amber-500" />
             今日の注文件数
           </div>
-          <p className="text-2xl font-bold">{stats.todayOrders}件</p>
+          <p className="text-2xl font-bold">{todayOrders}件</p>
         </motion.div>
 
         <motion.div
@@ -245,26 +276,25 @@ export default function StoreDashboardPage() {
         </motion.div>
       </div>
 
-      <div className="overflow-x-auto">
-      <div className="min-w-[640px] border border-gray-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[1fr_1fr_1.5fr_auto_1fr_80px] bg-[#FFF176] px-4 py-2.5 text-sm font-bold text-gray-700 items-center">
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="grid grid-cols-[130px_80px_minmax(0,1fr)_100px_64px] bg-[#FFF176] px-3 py-2.5 text-xs font-bold text-gray-700 items-center">
           <span>顧客名</span>
           <span>来店時間</span>
           <span>注文内容</span>
-          <span />
           <span>合計金額</span>
           <span className="text-center">準備</span>
         </div>
 
-        {orders.length === 0 ? (
+        {sortedOrders.length === 0 ? (
           <div className="px-4 py-10 text-center text-sm text-gray-400 bg-white">
             表示する注文はありません
           </div>
         ) : (
-          orders.map((order, i) => {
-            const isPrepared =
-              order.orderStatus === "ready" || order.orderStatus === "completed";
+          sortedOrders.map((order, i) => {
             const isEc = order.orderType === "ec";
+            const isPrepared = isEc
+              ? order.fulfillmentStatus === "fulfilled"
+              : order.orderStatus === "ready" || order.orderStatus === "completed";
 
             return (
             <motion.div
@@ -273,34 +303,35 @@ export default function StoreDashboardPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
               transition={{ delay: i * 0.05 }}
-              className={`grid grid-cols-[1fr_1fr_1.5fr_auto_1fr_80px] px-4 py-3 items-center border-t border-gray-100 ${
-                isEc ? "bg-red-50" : "bg-white"
+              className={`grid grid-cols-[130px_80px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
+                isEc ? "bg-amber-50" : "bg-white"
               }`}
             >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center">
-                  <User className="w-4 h-4 text-gray-500" />
-                </div>
-                <span className="text-sm">{order.customerName || "-"}</span>
+              <div>
+                <span className="text-xs text-gray-900">{order.customerName || order.lineName || "-"}</span>
               </div>
 
-              <div className="text-sm text-gray-600">
-                {order.pickupTime ? (
-                  <div>{order.pickupTime.slice(0, 5)}</div>
-                ) : (
-                  "-"
-                )}
+              <div className="text-xs text-gray-600">
+                {isEc
+                  ? <span className="text-[10px] leading-tight line-clamp-2">{order.notes?.split("　配送時間")[0] || "-"}</span>
+                  : (order.pickupTime ? order.pickupTime.slice(0, 5) : "-")}
               </div>
 
-              <div className="text-sm">
+              <div className="text-sm min-w-0">
                 {order.items.map((item, j) => (
-                  <div key={j}>{item.name}</div>
-                ))}
-              </div>
-
-              <div className="text-sm text-gray-500 px-2">
-                {order.items.map((item, j) => (
-                  <div key={j}>&times;{item.quantity}</div>
+                  <div key={j} className="flex items-center gap-1.5 truncate">
+                    <span className="truncate">{item.name}</span>
+                    {item.variantName ? (
+                      <button
+                        onClick={() => setWholeCakeDetailOrder(order)}
+                        className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                      >
+                        詳細
+                      </button>
+                    ) : (
+                      <span className="shrink-0 text-gray-400 text-xs">×{item.quantity}</span>
+                    )}
+                  </div>
                 ))}
               </div>
 
@@ -347,7 +378,15 @@ export default function StoreDashboardPage() {
           })
         )}
       </div>
-      </div>
+
+      <AnimatePresence>
+        {wholeCakeDetailOrder && (
+          <WholeCakeDetailModal
+            order={wholeCakeDetailOrder}
+            onClose={() => setWholeCakeDetailOrder(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* 新規注文通知ポップアップ */}
       <AnimatePresence>

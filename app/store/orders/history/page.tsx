@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Download } from "lucide-react";
+import { Download } from "lucide-react";
+import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
 import { useOrders, type OrderChannel } from "@/hooks/use-orders";
 import { useStoreContext } from "@/lib/store-context";
 import type { Order } from "@/lib/types";
@@ -144,6 +145,7 @@ export default function StoreOrderHistoryPage() {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
   const fromRef = useRef<HTMLDivElement>(null);
   const toRef = useRef<HTMLDivElement>(null);
 
@@ -255,10 +257,10 @@ export default function StoreOrderHistoryPage() {
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[140px_180px_170px_minmax(260px,2fr)_150px_160px] bg-[#FFF176] px-4 py-3 text-base font-bold text-gray-700 items-center">
-          <span>区分</span>
-          <span>顧客名</span>
+      <div className="overflow-x-auto">
+      <div className="min-w-[760px] border border-gray-200 rounded-lg overflow-hidden">
+        <div className="grid grid-cols-[180px_170px_minmax(260px,2fr)_150px_160px] bg-[#FFF176] pl-1 pr-4 py-3 text-xs font-bold text-gray-700 items-center">
+          <span className="pl-3">顧客名</span>
           <span>受取/発送</span>
           <span>注文内容</span>
           <span>合計金額</span>
@@ -284,35 +286,33 @@ export default function StoreOrderHistoryPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.02 }}
-              className={`grid grid-cols-[140px_180px_170px_minmax(260px,2fr)_150px_160px] px-4 py-4 items-center border-t border-gray-100 cursor-pointer transition-colors ${
-                isFulfilled ? "bg-white hover:bg-gray-50" : isEc ? "bg-blue-50 hover:bg-blue-100" : "bg-amber-50/40 hover:bg-amber-50"
+              className={`grid grid-cols-[180px_170px_minmax(260px,2fr)_150px_160px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
+                isFulfilled
+                  ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                  : isEc
+                  ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
+                  : "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
               }`}
               onClick={() => setSelectedOrder(order)}
             >
-              <div>
-                <span
-                  className={`inline-block text-sm font-bold px-2.5 py-1 rounded ${
-                    isEc ? "bg-blue-500 text-white" : "bg-amber-500 text-white"
-                  }`}
-                >
-                  {isEc ? "EC" : "テイクアウト"}
-                </span>
+              <div className="flex items-center pl-3">
+                <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4 text-gray-500" />
-                </div>
-                <span className="text-base">{order.customerName || order.lineName || "-"}</span>
-              </div>
-
-              <div className="text-base text-gray-700">
+              <div className="text-sm text-gray-700">
                 {order.pickupDate && <div className="font-medium">{order.pickupDate}</div>}
                 {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
               </div>
 
-              <div className="text-base leading-relaxed">
-                {order.items.map((item, j) => (
+              <div className="text-sm leading-relaxed">
+                {order.hasWholeCake ? (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                    className="inline-flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-white text-xs font-bold px-2.5 py-1 rounded transition-colors"
+                  >
+                    詳細
+                  </button>
+                ) : order.items.map((item, j) => (
                   <div key={j}>
                     {item.name} <span className="text-gray-500">×{item.quantity}</span>
                   </div>
@@ -320,7 +320,7 @@ export default function StoreOrderHistoryPage() {
               </div>
 
               <div>
-                <div className="text-base font-bold">¥{order.totalAmount.toLocaleString()}</div>
+                <div className="text-sm font-bold">¥{order.totalAmount.toLocaleString()}</div>
                 <div
                   className={`text-xs ${
                     order.paymentStatus === "決済済み"
@@ -352,10 +352,20 @@ export default function StoreOrderHistoryPage() {
           );
         })}
       </div>
+      </div>
 
       <AnimatePresence>
         {selectedOrder && (
           <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {wholeCakeDetailOrder && (
+          <WholeCakeDetailModal
+            order={wholeCakeDetailOrder}
+            onClose={() => setWholeCakeDetailOrder(null)}
+          />
         )}
       </AnimatePresence>
     </div>

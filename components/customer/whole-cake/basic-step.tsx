@@ -9,6 +9,7 @@ export interface CandleEntry {
   id: string;
   candleOptionId: string;
   quantity: string;
+  digit?: string;
 }
 
 interface BasicStepProps {
@@ -49,11 +50,14 @@ export function WholeCakeBasicStep({
     onCandlesChange(candles.filter((c) => c.id !== id));
   };
 
-  const updateCandle = (id: string, field: "candleOptionId" | "quantity", value: string) => {
+  const updateCandle = (id: string, field: "candleOptionId" | "quantity" | "digit", value: string) => {
     onCandlesChange(
       candles.map((c) => (c.id === id ? { ...c, [field]: value } : c))
     );
   };
+
+  const isNumberCandle = (candleOptionId: string) =>
+    candleOptions.find((o) => o.id === candleOptionId)?.name === "ナンバーキャンドル";
 
   return (
     <div className="px-4 pb-8">
@@ -123,20 +127,30 @@ export function WholeCakeBasicStep({
                 </button>
               </div>
               {candle.candleOptionId && (
-                <div className="flex items-center gap-2 mt-2 ml-auto justify-end">
+                <div className="flex items-center gap-2 mt-2">
+                  {isNumberCandle(candle.candleOptionId) && (
+                    <select
+                      value={candle.digit ?? ""}
+                      onChange={(e) => updateCandle(candle.id, "digit", e.target.value)}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                    >
+                      <option value="">数字を選択</option>
+                      {["0","1","2","3","4","5","6","7","8","9"].map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  )}
                   <select
                     value={candle.quantity}
                     onChange={(e) => updateCandle(candle.id, "quantity", e.target.value)}
-                    className="w-32 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   >
                     <option value="">本数を選択</option>
                     {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={String(n)}>
-                        {n}
-                      </option>
+                      <option key={n} value={String(n)}>{n}</option>
                     ))}
                   </select>
-                  <span className="text-sm font-medium">本</span>
+                  <span className="text-sm font-medium shrink-0">本</span>
                 </div>
               )}
             </div>

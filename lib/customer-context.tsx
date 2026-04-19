@@ -26,6 +26,8 @@ interface CustomerContextType {
 
 const FAVORITES_KEY = "patimoba_favorites"
 const VIEWED_KEY = "patimoba_viewed_stores"
+const SELECTED_STORE_ID_KEY = "patimoba_selected_store_id"
+const SELECTED_STORE_NAME_KEY = "patimoba_selected_store_name"
 
 function loadSet(key: string): Set<string> {
   try {
@@ -50,8 +52,28 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
   const [points, setPoints] = useState<number>(0)
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
-  const [selectedStoreName, setSelectedStoreName] = useState<string>("")
+  const [selectedStoreId, setSelectedStoreIdState] = useState<string | null>(() => {
+    try { return localStorage.getItem(SELECTED_STORE_ID_KEY) || null } catch { return null }
+  })
+  const [selectedStoreName, setSelectedStoreNameState] = useState<string>(() => {
+    try { return localStorage.getItem(SELECTED_STORE_NAME_KEY) || "" } catch { return "" }
+  })
+
+  const setSelectedStoreId = (id: string | null) => {
+    setSelectedStoreIdState(id)
+    try {
+      if (id) localStorage.setItem(SELECTED_STORE_ID_KEY, id)
+      else localStorage.removeItem(SELECTED_STORE_ID_KEY)
+    } catch { /* ignore */ }
+  }
+
+  const setSelectedStoreName = (name: string) => {
+    setSelectedStoreNameState(name)
+    try {
+      if (name) localStorage.setItem(SELECTED_STORE_NAME_KEY, name)
+      else localStorage.removeItem(SELECTED_STORE_NAME_KEY)
+    } catch { /* ignore */ }
+  }
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [viewedStoreIds, setViewedStoreIds] = useState<string[]>([])
 

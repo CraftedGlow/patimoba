@@ -49,6 +49,21 @@ export async function uploadDecorationImage(
   return { url: data.publicUrl, error: null }
 }
 
+export async function uploadNoshiImage(
+  file: File,
+  storeId: string
+): Promise<{ url: string | null; error: string | null }> {
+  const ext = file.name.split(".").pop() || "jpg"
+  const path = `${storeId}/noshi-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  })
+  if (error) return { url: null, error: error.message }
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
 const LOGO_BUCKET = "store-logos"
 
 export async function uploadStoreLogo(

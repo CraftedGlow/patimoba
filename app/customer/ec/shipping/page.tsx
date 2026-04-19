@@ -137,7 +137,13 @@ export default function ECShippingPage() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => router.push("/customer/ec/confirm")}
+          onClick={() => {
+            sessionStorage.setItem("ec_shipping_address", JSON.stringify({
+              postalCode, prefecture, city, address, building,
+            }));
+            sessionStorage.setItem("ec_delivery_time", selectedTimeSlot);
+            router.push("/customer/ec/confirm");
+          }}
           className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors"
         >
           注文内容の確認へ

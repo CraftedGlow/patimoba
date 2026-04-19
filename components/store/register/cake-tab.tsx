@@ -12,6 +12,7 @@ import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { ProductCustomOptionPresetChips } from "@/components/store/product-custom-option-preset-chips";
 import { PRODUCT_CUSTOM_OPTION_PRESET_METAS } from "@/lib/constants/product-custom-option-presets";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
+import { useNoshi } from "@/hooks/use-noshi";
 import Link from "next/link";
 
 type OrderType = "always" | "sameDay" | "manual" | "reserveOnly" | "todayOnly";
@@ -37,6 +38,8 @@ interface ProductRow {
   limited_from: string | null;
   limited_until: string | null;
   custom_options: any;
+  noshi_enabled: boolean | null;
+  noshi_ids: string[] | null;
 }
 
 function resolveOrderType(row: ProductRow): OrderType {
@@ -85,20 +88,36 @@ export function CakeTab() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const [noshiEnabled, setNoshiEnabled] = useState(false);
+  const [noshiIds, setNoshiIds] = useState<string[]>([]);
+  // ホール用サイズ (product_variants)
+  const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
+
   const isHole = category === "ホール";
 
+  const PREDEFINED_SIZES = [
+    { name: "4号", desc: "2〜4名分" },
+    { name: "5号", desc: "4〜6名分" },
+    { name: "6号", desc: "6〜8名分" },
+    { name: "7号", desc: "8〜10名分" },
+  ];
+
   const { groups: allDecorationGroups } = useDecorationGroups(storeId ?? undefined);
+  const { noshiList } = useNoshi(storeId ?? undefined);
 
   // ホールカテゴリ選択時、未登録ならカスタムオプションにホール用プリセットを自動投入
   useEffect(() => {
-    if (!isHole || selectedId) return;
-    setCustomOptions((prev) => {
-      if (prev.length > 0) return prev;
-      const ids = ["size", "candles", "message"] as const;
-      return PRODUCT_CUSTOM_OPTION_PRESET_METAS
-        .filter((m) => ids.includes(m.id as any))
-        .map((m) => m.create());
-    });
+    if (selectedId) return;
+    if (isHole) {
+      setCustomOptions((prev) => {
+        if (prev.length > 0) return prev;
+        return PRODUCT_CUSTOM_OPTION_PRESET_METAS.map((m) => m.create());
+      });
+    } else {
+      // ホール以外はカスタムオプション・デコレーション不要なのでリセット
+      setCustomOptions([]);
+      setSelectedGroupIds([]);
+    }
   }, [isHole, selectedId]);
 
   const fetchProducts = useCallback(async () => {
@@ -112,7 +131,7 @@ export function CakeTab() {
       .select("*")
       .eq("store_id", storeId)
       .order("display_order", { ascending: true });
-    const rows = (data ?? []) as ProductRow[];
+    const rows = (data ?? []) as unknown as ProductRow[];
 
     // 期間限定商品の自動オフ: 受取終了日 - 準備日数 <= 今日 なら is_active を false に
     const today = new Date();
@@ -157,6 +176,9 @@ export function CakeTab() {
     setPreparationDays("");
     setCustomOptions([]);
     setSelectedGroupIds([]);
+    setNoshiEnabled(false);
+    setNoshiIds([]);
+    setSizes([]);
     setMainImage(null);
     setCrossImage(null);
     setError(null);
@@ -181,11 +203,29 @@ export function CakeTab() {
       setDailyMaxQuantity(p.daily_max_quantity != null ? String(p.daily_max_quantity) : "");
       setPreparationDays(p.preparation_days != null ? String(p.preparation_days) : "");
       setCustomOptions(Array.isArray(p.custom_options) ? (p.custom_options as ProductCustomOption[]) : []);
+      setNoshiEnabled(p.noshi_enabled ?? false);
+      setNoshiIds(Array.isArray(p.noshi_ids) ? p.noshi_ids : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setError(null);
       // デコレーショングループ紐付けを取得
       getProductGroupIds(p.id).then((ids) => setSelectedGroupIds(ids));
+      // サイズ (product_variants) を取得
+      setSizes([]);
+      supabase
+        .from("product_variants")
+        .select("id, name, price")
+        .eq("product_id", p.id)
+        .order("display_order", { ascending: true })
+        .then(({ data: variants }) => {
+          setSizes(
+            (variants || []).map((v: any) => ({
+              id: v.id,
+              name: v.name ?? "",
+              price: String(v.price ?? ""),
+            }))
+          );
+        });
     },
     [products, productTypes]
   );
@@ -225,7 +265,7 @@ export function CakeTab() {
       setError("商品名を入力してください");
       return;
     }
-    if (!price.trim()) {
+    if (!isHole && !price.trim()) {
       setError("金額を入力してください");
       return;
     }
@@ -233,18 +273,13 @@ export function CakeTab() {
       setError("店舗情報が取得できません");
       return;
     }
-    if (!isTakeout && !isEc) {
-      setError("テイクアウトまたはECのいずれかを選択してください");
-      return;
-    }
-
     setSaving(true);
     try {
       const payload: any = {
         store_id: storeId,
         name: productName.trim(),
         description: description.trim(),
-        base_price: parsePriceValue(price),
+        base_price: isHole ? 0 : parsePriceValue(price),
         category_name: category || null,
         image: mainImage ?? null,
         cross_section_image: crossImage ?? null,
@@ -253,13 +288,15 @@ export function CakeTab() {
         min_order_lead_minutes:
           orderType === "reserveOnly" ? parseInt(reserveDays, 10) || 0 : 0,
         is_active: true,
-        is_takeout: isTakeout,
-        is_ec: isEc,
+        is_takeout: true,
+        is_ec: false,
         daily_max_quantity: dailyMaxQuantity.trim() === "" ? null : parseInt(dailyMaxQuantity, 10) || null,
         preparation_days: preparationDays.trim() === "" ? 0 : parseInt(preparationDays, 10) || 0,
         custom_options: customOptions,
         limited_from: isLimited && limitedFrom ? limitedFrom : null,
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
+        noshi_enabled: noshiEnabled,
+        noshi_ids: noshiEnabled ? noshiIds : [],
       };
 
       let savedProductId = selectedId
@@ -282,6 +319,23 @@ export function CakeTab() {
       // デコレーショングループ紐付けを保存
       if (savedProductId) {
         await setProductDecorationGroups(savedProductId, selectedGroupIds);
+      }
+
+      // ホールケーキのサイズ (product_variants) を保存
+      if (isHole && savedProductId) {
+        await supabase.from("product_variants").delete().eq("product_id", savedProductId);
+        const validSizes = sizes.filter((s) => s.name.trim());
+        if (validSizes.length > 0) {
+          await (supabase as any).from("product_variants").insert(
+            validSizes.map((s, idx) => ({
+              product_id: savedProductId,
+              name: s.name.trim(),
+              price: parseInt(s.price, 10) || 0,
+              is_active: true,
+              display_order: idx,
+            }))
+          );
+        }
       }
 
       await fetchProducts();
@@ -494,36 +548,16 @@ export function CakeTab() {
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
 
-        {/* 金額 */}
-        <input
-          type="text"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="¥700"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
-        />
-
-        {/* 販売チャネル (テイクアウト / EC) */}
-        <div className="flex items-center gap-6">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isTakeout}
-              onChange={(e) => setIsTakeout(e.target.checked)}
-              className="w-4 h-4"
-            />
-            テイクアウト
-          </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isEc}
-              onChange={(e) => setIsEc(e.target.checked)}
-              className="w-4 h-4"
-            />
-            EC
-          </label>
-        </div>
+        {/* 金額（ホール以外のみ。ホールはサイズ別価格で管理） */}
+        {!isHole && (
+          <input
+            type="text"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="¥700"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
+          />
+        )}
 
         {/* 1日の最大数 / 準備日数 */}
         <div className="grid grid-cols-2 gap-3">
@@ -551,8 +585,51 @@ export function CakeTab() {
           </div>
         </div>
 
-        {/* カスタムオプション */}
-        <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-4">
+        {/* カスタムオプション（ホールのみ） */}
+        {/* ホールケーキ サイズ管理 */}
+        {isHole && (
+          <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-3">
+            <span className="text-base font-bold text-amber-800">サイズ設定</span>
+            {PREDEFINED_SIZES.map((ps) => {
+              const existing = sizes.find((s) => s.name === ps.name);
+              const checked = !!existing;
+              return (
+                <div key={ps.name} className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer min-w-[110px]">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSizes((prev) => [...prev, { name: ps.name, price: "" }]);
+                        } else {
+                          setSizes((prev) => prev.filter((s) => s.name !== ps.name));
+                        }
+                      }}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    <span className="text-sm font-medium text-gray-800">{ps.name}</span>
+                    <span className="text-xs text-gray-500">({ps.desc})</span>
+                  </label>
+                  {checked && (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        value={existing?.price ?? ""}
+                        onChange={(e) => setSizes((prev) => prev.map((s) => s.name === ps.name ? { ...s, price: e.target.value } : s))}
+                        placeholder="金額"
+                        className="w-24 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
+                      />
+                      <span className="text-sm text-gray-500">円</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {isHole && <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-base font-bold text-amber-800">カスタムオプション</span>
             <button
@@ -784,7 +861,7 @@ export function CakeTab() {
               </div>
             );
           })}
-        </div>
+        </div>}
 
         {/* 注文タイプ */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -887,52 +964,105 @@ export function CakeTab() {
           )}
         </AnimatePresence>
 
-        {/* デコレーション設定 */}
-        <div className="space-y-2 pt-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-bold text-gray-700">デコレーション設定</label>
-            <Link
-              href="/store/decorations"
-              className="text-xs text-amber-600 hover:text-amber-700 underline"
-            >
-              デコレーション管理 ↗
-            </Link>
-          </div>
-          {allDecorationGroups.length === 0 ? (
-            <p className="text-xs text-gray-400">
-              グループが未登録です。{" "}
-              <Link href="/store/decorations" className="text-amber-600 underline">
-                デコレーション管理
+        {/* デコレーション設定（ホールのみ） */}
+        {isHole && (
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-bold text-gray-700">デコレーション設定</label>
+              <Link
+                href="/store/decorations"
+                className="text-xs text-amber-600 hover:text-amber-700 underline"
+              >
+                デコレーション管理 ↗
               </Link>
-              から作成してください。
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {allDecorationGroups.map((group) => (
-                <label key={group.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedGroupIds.includes(group.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedGroupIds((prev) => [...prev, group.id]);
-                      } else {
-                        setSelectedGroupIds((prev) => prev.filter((id) => id !== group.id));
-                      }
-                    }}
-                    className="w-4 h-4 accent-amber-500"
-                  />
-                  <span>{group.name}</span>
-                  <span className="text-xs text-gray-400">
-                    ({group.selectionType === "single" ? "単一" : "複数"}
-                    {group.required ? "/必須" : "/任意"}
-                    · {group.items.length}種)
-                  </span>
-                </label>
-              ))}
             </div>
-          )}
-        </div>
+            {allDecorationGroups.length === 0 ? (
+              <p className="text-xs text-gray-400">
+                グループが未登録です。{" "}
+                <Link href="/store/decorations" className="text-amber-600 underline">
+                  デコレーション管理
+                </Link>
+                から作成してください。
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {allDecorationGroups.map((group) => (
+                  <label key={group.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedGroupIds.includes(group.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedGroupIds((prev) => [...prev, group.id]);
+                        } else {
+                          setSelectedGroupIds((prev) => prev.filter((id) => id !== group.id));
+                        }
+                      }}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    <span>{group.name}</span>
+                    <span className="text-xs text-gray-400">
+                      ({group.selectionType === "single" ? "単一" : "複数"}
+                      {group.required ? "/必須" : "/任意"}
+                      · {group.items.length}種)
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* のし設定 */}
+        <div className="space-y-2 pt-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={noshiEnabled}
+                onChange={(e) => {
+                  setNoshiEnabled(e.target.checked);
+                  if (!e.target.checked) setNoshiIds([]);
+                }}
+                className="w-4 h-4 accent-amber-500"
+              />
+              のしを使用する
+            </label>
+            {noshiEnabled && (
+              <div className="pl-6 space-y-1.5">
+                {noshiList.length === 0 ? (
+                  <p className="text-xs text-gray-400">
+                    のしが未登録です。{" "}
+                    <Link href="/store/register" className="text-amber-600 underline">
+                      のし管理
+                    </Link>
+                    タブから登録してください。
+                  </p>
+                ) : (
+                  noshiList.map((n) => (
+                    <label key={n.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={noshiIds.includes(n.id)}
+                        onChange={(e) => {
+                          setNoshiIds((prev) =>
+                            e.target.checked ? [...prev, n.id] : prev.filter((id) => id !== n.id)
+                          );
+                        }}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      {n.imageUrl && (
+                        <img src={n.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
+                      )}
+                      <span>{n.name}</span>
+                      {n.price > 0 && (
+                        <span className="text-xs text-gray-400">+¥{n.price.toLocaleString()}</span>
+                      )}
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
 
         <motion.button
           whileHover={{ scale: 1.02 }}

@@ -81,9 +81,10 @@ export function MonthView({
               key={i}
               onClick={() => cell.isCurrentMonth && onDayClick(cell.y, cell.m, cell.d)}
               className={`border-b border-r border-gray-200 min-h-[80px] p-2 flex flex-col ${
-                cell.isCurrentMonth ? "cursor-pointer hover:bg-gray-50 transition-colors" : "opacity-20 pointer-events-none"
+                cell.isCurrentMonth ? "cursor-pointer hover:bg-gray-50 transition-colors" : "pointer-events-none"
               }`}
             >
+            <div className={cell.isCurrentMonth ? "" : "opacity-20"}>
               {cell.isCurrentMonth && !isOpen ? (
                 /* 休業日: 丸枠日付 + 「休み」小さめ黒 */
                 <>
@@ -116,6 +117,7 @@ export function MonthView({
                   ) : null}
                 </>
               )}
+            </div>
             </div>
           );
         })}

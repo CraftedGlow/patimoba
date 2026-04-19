@@ -318,7 +318,9 @@ export default function StoreProductsPage() {
 
                   </span>
                   <span className="text-sm">
-                    {product.base_price > 0
+                    {product.is_preorder_required && product.minVariantPrice != null
+                      ? `¥${product.minVariantPrice.toLocaleString()}~`
+                      : product.base_price > 0
                       ? `¥${product.base_price.toLocaleString()}`
                       : ""}
                   </span>
@@ -369,7 +371,9 @@ export default function StoreProductsPage() {
                     {product.description}
                   </span>
                   <span className="text-sm">
-                    {product.base_price > 0
+                    {product.is_preorder_required && product.minVariantPrice != null
+                      ? `¥${product.minVariantPrice.toLocaleString()}~`
+                      : product.base_price > 0
                       ? `¥${product.base_price.toLocaleString()}`
                       : ""}
                   </span>

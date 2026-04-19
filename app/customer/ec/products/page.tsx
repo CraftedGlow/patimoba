@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2, ShoppingCart } from "lucide-react";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
@@ -10,12 +11,27 @@ import { ProductCard } from "@/components/customer/product-card";
 import { useProducts } from "@/hooks/use-products";
 import { useProductTypes } from "@/hooks/use-product-types";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useCart } from "@/lib/cart-context";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
 export default function ECProductsPage() {
-  const { selectedStoreId, selectedStoreName, profile } = useCustomerContext();
-  const { products, loading: productsLoading } = useProducts({ storeId: selectedStoreId ?? undefined });
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const storeFromUrl = searchParams.get("store");
+  const { selectedStoreId, setSelectedStoreId, selectedStoreName, profile } = useCustomerContext();
+
+  // URLパラメータからstoreIdをセット（直リンク対応）
+  useEffect(() => {
+    if (storeFromUrl && !selectedStoreId) {
+      setSelectedStoreId(storeFromUrl);
+    }
+  }, [storeFromUrl, selectedStoreId, setSelectedStoreId]);
+
+  const effectiveStoreId = selectedStoreId ?? storeFromUrl;
+  const { itemCount } = useCart();
+  const { products, loading: productsLoading } = useProducts({ storeId: effectiveStoreId ?? undefined, ecOnly: true, publishedOnly: true });
+
   const { categories, loading: categoriesLoading } = useProductTypes();
   const [selectedCategory, setSelectedCategory] = useState("すべて");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -48,7 +64,7 @@ export default function ECProductsPage() {
 
       <StepProgress currentStep={2} steps={ecSteps} />
 
-      <div className="px-4 pb-8">
+      <div className="px-4 pb-28">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold">EC商品一覧</h2>
@@ -117,6 +133,28 @@ export default function ECProductsPage() {
             </motion.div>
           ))}
         </div>
+      </div>
+
+      {/* 下部固定バー */}
+      <div className="fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-100 px-4 py-3 flex gap-3">
+        <button
+          onClick={() => setCartOpen(true)}
+          className="relative flex-1 flex items-center justify-center gap-2 border-2 border-amber-400 text-amber-500 font-bold py-3 rounded-full text-sm hover:bg-amber-50 transition-colors"
+        >
+          {itemCount > 0 && (
+            <span className="absolute -top-2 left-2 bg-red-500 text-white text-[11px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1 leading-none">
+              {itemCount > 99 ? "99+" : itemCount}
+            </span>
+          )}
+          <ShoppingCart className="w-4 h-4" />
+          カートを見る
+        </button>
+        <button
+          onClick={() => router.push("/customer/ec/shipping")}
+          className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm transition-colors"
+        >
+          住所入力に進む
+        </button>
       </div>
 
       <CartDrawer

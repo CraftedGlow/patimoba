@@ -33,7 +33,9 @@ export function ProductCard({ product, basePath }: ProductCardProps) {
           {product.name}
         </h3>
         <p className="text-sm text-gray-900">
-          &yen;{product.price.toLocaleString()}
+          {product.minVariantPrice != null
+            ? `¥${product.minVariantPrice.toLocaleString()}~`
+            : `¥${product.price.toLocaleString()}`}
         </p>
       </motion.div>
     </Link>

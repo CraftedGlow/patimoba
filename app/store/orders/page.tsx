@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import { useOrders, type OrderChannel } from "@/hooks/use-orders";
 import { useStoreContext } from "@/lib/store-context";
 import { useAuth } from "@/lib/auth-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { DatePickerPopup } from "@/components/store/date-picker-popup";
 import { OrderDetailModal } from "@/components/store/order-detail-modal";
+import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
 import { supabase } from "@/lib/supabase";
 import type { FulfillmentStatus, Order } from "@/lib/types";
 
@@ -256,12 +257,36 @@ export default function StoreOrdersPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const dateRef = useRef<HTMLDivElement>(null);
 
-  const { orders: manageOrders, loading: manageLoading, refetch: refetchManage } = useOrders({
+  const { orders: rawManageOrders, loading: manageLoading, refetch: refetchManage } = useOrders({
     storeId,
     channel: manageChannel || undefined,
     fulfillmentStatus: manageFulfillment || undefined,
     from: toISODate(selectedDate),
   });
+
+  const manageOrders = (() => {
+    const now = new Date();
+    const nowMs = now.getTime();
+    const getPickupMs = (o: Order): number => {
+      if (!o.pickupDate) return Infinity;
+      const [h, m] = (o.pickupTime || "00:00").split(":").map(Number);
+      const d = new Date(o.pickupDate);
+      d.setHours(h || 0, m || 0, 0, 0);
+      return d.getTime();
+    };
+    return rawManageOrders
+      .filter((o) => !(o.orderType === "ec" && o.fulfillmentStatus === "fulfilled"))
+      .sort((a, b) => {
+        const ta = getPickupMs(a);
+        const tb = getPickupMs(b);
+        const aFuture = ta >= nowMs;
+        const bFuture = tb >= nowMs;
+        if (aFuture && !bFuture) return -1;
+        if (!aFuture && bFuture) return 1;
+        if (aFuture && bFuture) return ta - tb;
+        return tb - ta;
+      });
+  })();
 
   // ── 注文履歴タブ state ──
   const today = new Date();
@@ -275,6 +300,7 @@ export default function StoreOrdersPage() {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
   const [csvExporting, setCsvExporting] = useState(false);
   const fromRef = useRef<HTMLDivElement>(null);
   const toRef = useRef<HTMLDivElement>(null);
@@ -484,13 +510,11 @@ export default function StoreOrdersPage() {
           </div>
 
           <div className="overflow-x-auto">
-          <div className="min-w-[960px] border border-gray-200 rounded-lg overflow-hidden">
-            <div className="grid grid-cols-[140px_180px_170px_minmax(260px,2fr)_70px_150px_160px] bg-[#FFF176] px-4 py-3 text-base font-bold text-gray-700 items-center">
-              <span>区分</span>
-              <span>顧客名</span>
+          <div className="min-w-[640px] border border-gray-200 rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] bg-[#FFF176] pl-1 pr-4 py-3 text-xs font-bold text-gray-700 items-center">
+              <span className="pl-3">顧客名</span>
               <span>来店/発送</span>
               <span>注文内容</span>
-              <span className="text-center">数量</span>
               <span>合計金額</span>
               <span className="text-center">提供状況</span>
             </div>
@@ -515,49 +539,60 @@ export default function StoreOrdersPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  className={`grid grid-cols-[140px_180px_170px_minmax(260px,2fr)_70px_150px_160px] px-4 py-4 items-center border-t border-gray-100 ${
-                    isFulfilled ? "bg-white" : isEc ? "bg-red-50" : "bg-amber-50/40"
+                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 ${
+                    isFulfilled
+                      ? "bg-gray-50 border-l-gray-300"
+                      : isEc
+                      ? "bg-amber-50 border-l-amber-400"
+                      : "bg-white border-l-gray-200"
                   }`}
                 >
-                  <div>
-                    <span className={`inline-block text-sm font-bold px-2.5 py-1 rounded ${isEc ? "bg-blue-500 text-white" : "bg-amber-500 text-white"}`}>
-                      {isEc ? "EC" : "テイクアウト"}
-                    </span>
+                  <div className="pl-3">
+                    <span className="text-xs">{order.customerName || "-"}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                      <User className="w-4 h-4 text-gray-500" />
-                    </div>
-                    <span className="text-base">{order.customerName || "-"}</span>
+                  <div className="text-sm text-gray-700">
+                    {isEc ? (
+                      <div className="text-xs text-gray-500 leading-tight line-clamp-2">
+                        {order.notes?.split("　配送時間")[0] || "-"}
+                      </div>
+                    ) : (
+                      <>
+                        {order.pickupTime && <div className="font-medium">{order.pickupTime.slice(0, 5)}</div>}
+                        {order.pickupDate && <div className="text-xs text-gray-500">{order.pickupDate}</div>}
+                      </>
+                    )}
                   </div>
-                  <div className="text-base text-gray-700">
-                    {order.pickupTime && <div className="font-medium">{order.pickupTime.slice(0, 5)}</div>}
-                    {order.pickupDate && <div className="text-xs text-gray-500">{order.pickupDate}</div>}
-                  </div>
-                  <div className="text-base leading-relaxed">
+                  <div className="text-sm leading-relaxed">
                     {order.items.map((item, j) => (
-                      <div key={j}>{item.name}</div>
+                      <div key={j} className="flex items-center gap-1.5">
+                        <span>{item.name}</span>
+                        {item.variantName ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                            className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                          >
+                            詳細
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-xs shrink-0">×{item.quantity}</span>
+                        )}
+                      </div>
                     ))}
                   </div>
-                  <div className="text-base text-gray-500 text-center leading-relaxed">
-                    {order.items.map((item, j) => (
-                      <div key={j}>&times;{item.quantity}</div>
-                    ))}
-                  </div>
                   <div>
-                    <div className="text-base font-bold">&yen;{order.totalAmount.toLocaleString()}</div>
+                    <div className="text-sm font-bold">&yen;{order.totalAmount.toLocaleString()}</div>
                     <div className={`text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
                       {order.paymentStatus}
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <motion.button
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.96 }}
+                      whileHover={{ scale: 1.08 }}
+                      whileTap={{ scale: 0.92 }}
                       onClick={() => setConfirmAction({ orderId: order.id, toFulfilled: !isFulfilled, isEc })}
-                      className={`min-w-[120px] text-sm font-bold px-3 py-2 rounded-lg transition-colors ${isFulfilled ? "bg-green-500 hover:bg-green-600 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-700"}`}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${isFulfilled ? "bg-amber-400 hover:bg-amber-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-700"}`}
                     >
-                      {isFulfilled ? fulfilledLabel : "未提供"}
+                      {isFulfilled ? "済" : "未"}
                     </motion.button>
                     {order.fulfilledAt && (
                       <div className="flex flex-col items-center">
@@ -676,10 +711,9 @@ export default function StoreOrdersPage() {
           </div>
 
           <div className="overflow-x-auto">
-          <div className="min-w-[900px] border border-gray-200 rounded-lg overflow-hidden">
-            <div className="grid grid-cols-[140px_180px_170px_minmax(260px,2fr)_150px_160px] bg-[#FFF176] px-4 py-3 text-base font-bold text-gray-700 items-center">
-              <span>区分</span>
-              <span>顧客名</span>
+          <div className="min-w-[640px] border border-gray-200 rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] bg-[#FFF176] pl-1 pr-4 py-3 text-xs font-bold text-gray-700 items-center">
+              <span className="pl-3">顧客名</span>
               <span>受取/発送</span>
               <span>注文内容</span>
               <span>合計金額</span>
@@ -704,40 +738,48 @@ export default function StoreOrdersPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.02 }}
-                  className={`grid grid-cols-[140px_180px_170px_minmax(260px,2fr)_150px_160px] px-4 py-4 items-center border-t border-gray-100 cursor-pointer transition-colors ${
-                    isFulfilled ? "bg-white hover:bg-gray-50" : isEc ? "bg-blue-50 hover:bg-blue-100" : "bg-amber-50/40 hover:bg-amber-50"
+                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
+                    isFulfilled
+                      ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                      : isEc
+                      ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
+                      : "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
                   }`}
                   onClick={() => setSelectedOrder(order)}
                 >
-                  <div>
-                    <span className={`inline-block text-sm font-bold px-2.5 py-1 rounded ${isEc ? "bg-blue-500 text-white" : "bg-amber-500 text-white"}`}>
-                      {isEc ? "EC" : "テイクアウト"}
-                    </span>
+                  <div className="pl-3">
+                    <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                      <User className="w-4 h-4 text-gray-500" />
-                    </div>
-                    <span className="text-base">{order.customerName || order.lineName || "-"}</span>
-                  </div>
-                  <div className="text-base text-gray-700">
+                  <div className="text-sm text-gray-700">
                     {order.pickupDate && <div className="font-medium">{order.pickupDate}</div>}
                     {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
                   </div>
-                  <div className="text-base leading-relaxed">
+                  <div className="text-sm leading-relaxed">
                     {order.items.map((item, j) => (
-                      <div key={j}>{item.name} <span className="text-gray-500">×{item.quantity}</span></div>
+                      <div key={j} className="flex items-center gap-1.5">
+                        <span>{item.name}</span>
+                        {item.variantName ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                            className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                          >
+                            詳細
+                          </button>
+                        ) : (
+                          <span className="text-gray-500 text-xs shrink-0">×{item.quantity}</span>
+                        )}
+                      </div>
                     ))}
                   </div>
                   <div>
-                    <div className="text-base font-bold">¥{order.totalAmount.toLocaleString()}</div>
+                    <div className="text-sm font-bold">¥{order.totalAmount.toLocaleString()}</div>
                     <div className={`text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
                       {order.paymentStatus}
                     </div>
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <span className={`min-w-[120px] text-sm font-bold px-3 py-2 rounded-lg text-center ${isFulfilled ? "bg-green-500 text-white" : "bg-gray-200 text-gray-700"}`}>
-                      {isFulfilled ? fulfilledLabel : "未提供"}
+                    <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ${isFulfilled ? "bg-amber-400 text-white" : "bg-gray-200 text-gray-700"}`}>
+                      {isFulfilled ? "済" : "未"}
                     </span>
                     {isFulfilled && order.fulfilledAt && (
                       <span className="text-xs text-gray-500">{formatFulfilledAt(order.fulfilledAt)}</span>
@@ -806,6 +848,15 @@ export default function StoreOrdersPage() {
       <AnimatePresence>
         {selectedOrder && (
           <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {wholeCakeDetailOrder && (
+          <WholeCakeDetailModal
+            order={wholeCakeDetailOrder}
+            onClose={() => setWholeCakeDetailOrder(null)}
+          />
         )}
       </AnimatePresence>
     </div>

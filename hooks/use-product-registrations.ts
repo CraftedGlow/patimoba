@@ -35,6 +35,16 @@ export interface ProductRegistration {
   daily_max_quantity: number | null
   preparation_days: number
   custom_options: ProductCustomOption[]
+  noshi_enabled: boolean
+  noshi_ids: string[]
+  minVariantPrice?: number
+  shipping_method: string | null
+  storage_method: string | null
+  ingredients: string | null
+  best_before_days: number | null
+  content_quantity: string | null
+  limited_from: string | null
+  limited_until: string | null
   created_at: string | null
   updated_at: string | null
 }
@@ -64,6 +74,12 @@ function normalizeCustomOptions(raw: unknown): ProductCustomOption[] {
 }
 
 function mapRow(row: any): ProductRegistration {
+  const variants: any[] = row.product_variants ?? [];
+  const activePrices = variants
+    .filter((v) => v.is_active !== false)
+    .map((v) => Number(v.price) || 0)
+    .filter((p) => p > 0);
+  const minVariantPrice = activePrices.length > 0 ? Math.min(...activePrices) : undefined;
   return {
     id: row.id,
     store_id: row.store_id ?? "",
@@ -84,6 +100,16 @@ function mapRow(row: any): ProductRegistration {
     daily_max_quantity: row.daily_max_quantity ?? null,
     preparation_days: row.preparation_days ?? 0,
     custom_options: normalizeCustomOptions(row.custom_options),
+    noshi_enabled: row.noshi_enabled ?? false,
+    noshi_ids: Array.isArray(row.noshi_ids) ? row.noshi_ids : [],
+    minVariantPrice,
+    shipping_method: row.shipping_method ?? null,
+    storage_method: row.storage_method ?? null,
+    ingredients: row.ingredients ?? null,
+    best_before_days: row.best_before_days ?? null,
+    content_quantity: row.content_quantity ?? null,
+    limited_from: row.limited_from ?? null,
+    limited_until: row.limited_until ?? null,
     created_at: row.created_at ?? null,
     updated_at: row.updated_at ?? null,
   }
@@ -107,7 +133,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
 
     let query = supabase
       .from("products")
-      .select("*")
+      .select("*, product_variants(id, price, is_active)")
       .eq("store_id", options.storeId)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true })

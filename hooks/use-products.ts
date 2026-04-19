@@ -8,6 +8,8 @@ interface UseProductsOptions {
   storeId?: string
   publishedOnly?: boolean
   category?: string
+  ecOnly?: boolean
+  takeoutOnly?: boolean
 }
 
 export function useProducts(options: UseProductsOptions = {}) {
@@ -22,13 +24,19 @@ export function useProducts(options: UseProductsOptions = {}) {
 
     let query = supabase
       .from("products")
-      .select("*")
+      .select("*, product_variants(id, price, is_active)")
 
     if (options.storeId) {
       query = query.eq("store_id", options.storeId)
     }
     if (options.publishedOnly) {
       query = query.eq("is_active", true)
+    }
+    if (options.ecOnly) {
+      query = query.eq("is_ec", true)
+    }
+    if (options.takeoutOnly) {
+      query = query.eq("is_takeout", true)
     }
 
     const { data, error: err } = await query

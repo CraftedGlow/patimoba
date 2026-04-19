@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, User, X, Loader2 } from "lucide-react";
+
 import { useCustomers } from "@/hooks/use-customers";
 import { useStoreContext } from "@/lib/store-context";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +13,7 @@ interface CustomerDetail {
   id: string;
   name: string;
   lineName: string;
+  avatarUrl: string | null;
   phone: string;
   email: string;
   points: number;
@@ -42,7 +44,7 @@ export default function StoreCustomersPage() {
       // ユーザー詳細（ポイント・記念日）
       const { data: user } = await supabase
         .from("users")
-        .select("points, anniversaries, email, phone, name, line_name")
+        .select("points, anniversaries, email, phone, name, line_name, avatar_url")
         .eq("id", customer.id)
         .maybeSingle();
 
@@ -84,6 +86,7 @@ export default function StoreCustomersPage() {
         id: customer.id,
         name: user?.name || customer.name,
         lineName: user?.line_name || customer.lineName,
+        avatarUrl: (user as any)?.avatar_url || customer.avatarUrl || null,
         phone: user?.phone || customer.phone,
         email: user?.email || customer.email,
         points: Number(user?.points) || 0,
@@ -118,9 +121,8 @@ export default function StoreCustomersPage() {
       </div>
 
       <div className="overflow-x-auto">
-      <div className="min-w-[560px] border border-gray-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[1.5fr_1.5fr_1.2fr_1.2fr] bg-[#FFF176] px-4 py-2.5 text-sm font-bold text-gray-700">
-          <span>お名前</span>
+      <div className="min-w-[480px] border border-gray-200 rounded-lg overflow-hidden">
+        <div className="grid grid-cols-[2fr_1.3fr_1.5fr] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
           <span>LINEアカウント名</span>
           <span>電話番号</span>
           <span>メール</span>
@@ -133,15 +135,18 @@ export default function StoreCustomersPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
             onClick={() => handleRowClick(customer)}
-            className="grid grid-cols-[1.5fr_1.5fr_1.2fr_1.2fr] px-4 py-3 items-center border-t border-gray-100 hover:bg-amber-50 transition-colors cursor-pointer"
+            className="grid grid-cols-[2fr_1.3fr_1.5fr] px-4 py-3 items-center border-t border-gray-100 hover:bg-amber-50 transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                <User className="w-4 h-4 text-gray-400" />
-              </div>
-              <span className="text-sm">{customer.name}</span>
+            <div className="flex items-center gap-2">
+              {customer.avatarUrl ? (
+                <img src={customer.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              )}
+              <span className="text-sm font-medium">{customer.lineName || customer.name || "-"}</span>
             </div>
-            <span className="text-sm">{customer.lineName}</span>
             <span className="text-sm text-gray-600">{customer.phone}</span>
             <span className="text-sm text-gray-600">{customer.email}</span>
           </motion.div>
@@ -191,16 +196,23 @@ export default function StoreCustomersPage() {
 
                   {/* 基本情報 */}
                   <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                      <User className="w-8 h-8 text-gray-400" />
-                    </div>
+                    {selectedCustomer.avatarUrl ? (
+                      <img src={selectedCustomer.avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-[#06C755] flex items-center justify-center shrink-0">
+                        <User className="w-8 h-8 text-white" />
+                      </div>
+                    )}
                     <div>
-                      <p className="text-lg font-bold">{selectedCustomer.name}</p>
-                      <p className="text-sm text-gray-500">{selectedCustomer.lineName}</p>
+                      <p className="text-lg font-bold">{selectedCustomer.lineName || "-"}</p>
+                      {selectedCustomer.name && selectedCustomer.name !== selectedCustomer.lineName && (
+                        <p className="text-xs text-gray-400">{selectedCustomer.name}</p>
+                      )}
                     </div>
                   </div>
 
                   <div className="space-y-4 mb-6">
+                    <DetailRow label="本名" value={selectedCustomer.name || "未登録"} />
                     <DetailRow label="電話番号" value={selectedCustomer.phone || "未登録"} />
                     <DetailRow label="メール" value={selectedCustomer.email || "未登録"} />
                     <DetailRow

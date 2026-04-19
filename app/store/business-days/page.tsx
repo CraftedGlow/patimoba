@@ -68,11 +68,29 @@ export default function BusinessDaysPage() {
     try {
       const node = calendarRef.current;
 
-      // まず自然サイズで高解像度キャプチャ
+      // DOMレイアウト確定を待つ
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+      const nodeW = node.offsetWidth;
+      const nodeH = node.offsetHeight;
+      const pixelRatio = format === "natural" ? 2 : 3;
+
+      // style オプションで幅を明示固定（html-to-image がキャプチャ時に
+      // max-width 制約を失い要素が画面幅まで拡張されるバグを回避）
+      const captureStyle: Partial<CSSStyleDeclaration> = {
+        width: `${nodeW}px`,
+        maxWidth: `${nodeW}px`,
+        margin: "0",
+      };
+
       const rawDataUrl = await toJpeg(node, {
         quality: 0.95,
         backgroundColor: "#ffffff",
-        pixelRatio: format === "natural" ? 2 : 3,
+        pixelRatio,
+        width: nodeW,
+        height: nodeH,
+        style: captureStyle,
       });
 
       if (format === "natural") {
@@ -80,46 +98,49 @@ export default function BusinessDaysPage() {
         link.download = `calendar-${year}-${month + 1}-natural.jpg`;
         link.href = rawDataUrl;
         link.click();
-      } else {
-        const targets: Record<string, [number, number]> = {
-          square: [1080, 1080],
-          landscape: [1920, 1080],
-          portrait: [1080, 1920],
-        };
-        const suffixes: Record<string, string> = {
-          square: "1080x1080",
-          landscape: "1920x1080",
-          portrait: "1080x1920",
-        };
-        const [targetW, targetH] = targets[format];
-
-        // 白キャンバスにセンタリング配置
-        const canvas = document.createElement("canvas");
-        canvas.width = targetW;
-        canvas.height = targetH;
-        const ctx = canvas.getContext("2d")!;
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, targetW, targetH);
-
-        const img = new Image();
-        await new Promise<void>((resolve) => {
-          img.onload = () => resolve();
-          img.src = rawDataUrl;
-        });
-
-        const scale = Math.min(targetW / img.width, targetH / img.height);
-        const drawW = img.width * scale;
-        const drawH = img.height * scale;
-        const x = (targetW - drawW) / 2;
-        const y = (targetH - drawH) / 2;
-        ctx.drawImage(img, x, y, drawW, drawH);
-
-        const finalDataUrl = canvas.toDataURL("image/jpeg", 0.95);
-        const link = document.createElement("a");
-        link.download = `calendar-${year}-${month + 1}-${suffixes[format]}.jpg`;
-        link.href = finalDataUrl;
-        link.click();
+        return;
       }
+
+      const targets: Record<string, [number, number]> = {
+        square: [1080, 1080],
+        landscape: [1920, 1080],
+        portrait: [1080, 1920],
+      };
+      const suffixes: Record<string, string> = {
+        square: "1080x1080",
+        landscape: "1920x1080",
+        portrait: "1080x1920",
+      };
+      const [targetW, targetH] = targets[format];
+
+      const img = new Image();
+      img.src = rawDataUrl;
+      await img.decode();
+
+      const iw = img.naturalWidth || nodeW * pixelRatio;
+      const ih = img.naturalHeight || nodeH * pixelRatio;
+
+      const scale = Math.min(targetW / iw, targetH / ih);
+      const drawW = Math.round(iw * scale);
+      const drawH = Math.round(ih * scale);
+      const x = Math.round((targetW - drawW) / 2);
+      const y = Math.round((targetH - drawH) / 2);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetW;
+      canvas.height = targetH;
+      const ctx = canvas.getContext("2d")!;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, targetW, targetH);
+      ctx.drawImage(img, x, y, drawW, drawH);
+
+      const finalDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+      const link = document.createElement("a");
+      link.download = `calendar-${year}-${month + 1}-${suffixes[format]}.jpg`;
+      link.href = finalDataUrl;
+      link.click();
     } catch (e) {
       console.error(e);
       setSaveError("画像の保存に失敗しました。もう一度お試しください。");
@@ -367,11 +388,11 @@ export default function BusinessDaysPage() {
             <div className="flex items-center gap-8 mb-1">
               <div>
                 <span className="text-xs text-gray-500 block">OPEN</span>
-                <span className="text-3xl font-bold">{storeOpenTime}</span>
+                <span className="text-3xl font-normal block mt-1">{storeOpenTime}</span>
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">CLOSE</span>
-                <span className="text-3xl font-bold">{storeCloseTime}</span>
+                <span className="text-3xl font-normal block mt-1">{storeCloseTime}</span>
               </div>
             </div>
             <div className="mt-1">
@@ -483,7 +504,7 @@ export default function BusinessDaysPage() {
 
             {/* 中央: 月数字 + April | 2026 */}
             <div className="text-center shrink-0">
-              <div className="text-[76px] font-black leading-none text-gray-800 tabular-nums">
+              <div className="text-[72px] font-normal leading-none text-gray-800 tabular-nums relative top-1">
                 {String(month + 1).padStart(2, "0")}
               </div>
               <div className="text-base font-medium text-gray-500 mt-1 whitespace-nowrap">
@@ -505,7 +526,7 @@ export default function BusinessDaysPage() {
                 <span className="text-sm font-bold text-gray-700">{storeName}</span>
               ) : null}
               <div className="text-xs text-gray-700 mt-1 tabular-nums whitespace-nowrap">
-                営業時間 : {storeOpenTime} - {storeCloseTime}
+                {storeOpenTime} - {storeCloseTime}
               </div>
             </div>
           </div>

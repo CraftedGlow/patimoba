@@ -13,14 +13,15 @@ interface MenuItem {
   label: string;
   href: string;
   hasNotification?: boolean;
+  offsetLabel?: boolean;
   children?: { label: string; href: string }[];
 }
 
 const menuItems: MenuItem[] = [
-  { label: "ダッシュボード", href: "/store/dashboard" },
-  { label: "予約管理", href: "/store/orders" },
-  { label: "顧客管理", href: "/store/customers" },
-  { label: "商品管理", href: "/store/products" },
+  { label: "ダッシュボード", href: "/store/dashboard", offsetLabel: true },
+  { label: "予約管理", href: "/store/orders", offsetLabel: true },
+  { label: "顧客管理", href: "/store/customers", offsetLabel: true },
+  { label: "商品管理", href: "/store/products", offsetLabel: true },
   { label: "商品登録", href: "/store/register" },
   { label: "デコレーション", href: "/store/decorations" },
   { label: "営業日設定", href: "/store/business-days", hasNotification: true },
@@ -110,7 +111,9 @@ export function StoreSidebar() {
               <div key={item.href}>
                 <Link href={item.href} className="relative" onClick={() => setMobileOpen(false)}>
                   <motion.div
-                    className={`px-5 py-3 text-base transition-colors relative ${
+                    className={`px-5 text-base transition-colors relative ${
+                      item.offsetLabel ? "pt-4 pb-2" : "py-3"
+                    } ${
                       isActive
                         ? "font-bold text-amber-700 bg-amber-50"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"

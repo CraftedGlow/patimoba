@@ -32,13 +32,14 @@ function toGroupWithItems(row: any): DecorationGroupWithItems {
     selectionType: row.selection_type === "multiple" ? "multiple" : "single",
     maxSelections: row.max_selections ?? null,
     required: Boolean(row.required),
+    preparationDays: row.preparation_days != null ? Number(row.preparation_days) : null,
     displayOrder: Number(row.display_order) || 0,
     items,
   }
 }
 
 const GROUP_SELECT = `
-  id, store_id, name, description, selection_type, max_selections, required, display_order,
+  id, store_id, name, description, selection_type, max_selections, required, preparation_days, display_order,
   decoration_group_items (
     id, display_order, decoration_id,
     decorations ( id, name, description, image_url, category, price, is_seasonal, season_start, season_end, display_order )
@@ -71,6 +72,7 @@ export function useDecorationGroups(storeId?: string) {
       selectionType: "single" | "multiple"
       maxSelections?: number | null
       required?: boolean
+      preparationDays?: number | null
     }
   ): Promise<{ id: string | null; error: string | null }> => {
     const { data: row, error } = await supabase
@@ -82,6 +84,7 @@ export function useDecorationGroups(storeId?: string) {
         selection_type: data.selectionType,
         max_selections: data.maxSelections ?? null,
         required: data.required ?? false,
+        preparation_days: data.preparationDays ?? null,
       })
       .select("id")
       .single()
@@ -97,6 +100,7 @@ export function useDecorationGroups(storeId?: string) {
       selectionType: "single" | "multiple"
       maxSelections: number | null
       required: boolean
+      preparationDays: number | null
     }>
   ): Promise<{ error: string | null }> => {
     const payload: any = { updated_at: new Date().toISOString() }
@@ -105,6 +109,7 @@ export function useDecorationGroups(storeId?: string) {
     if (data.selectionType !== undefined) payload.selection_type = data.selectionType
     if (data.maxSelections !== undefined) payload.max_selections = data.maxSelections
     if (data.required !== undefined) payload.required = data.required
+    if (data.preparationDays !== undefined) payload.preparation_days = data.preparationDays
     const { error } = await supabase.from("decoration_groups").update(payload).eq("id", id)
     if (!error) await fetchGroups()
     return { error: error?.message ?? null }

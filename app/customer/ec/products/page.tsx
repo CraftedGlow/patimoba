@@ -64,7 +64,7 @@ export default function ECProductsPage() {
 
       <StepProgress currentStep={2} steps={ecSteps} />
 
-      <div className="px-4 pb-28">
+      <div className={`px-4 ${itemCount > 0 ? "pb-28" : "pb-8"}`}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold">EC商品一覧</h2>
@@ -136,26 +136,26 @@ export default function ECProductsPage() {
       </div>
 
       {/* 下部固定バー */}
-      <div className="fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-100 px-4 py-3 flex gap-3">
-        <button
-          onClick={() => setCartOpen(true)}
-          className="relative flex-1 flex items-center justify-center gap-2 border-2 border-amber-400 text-amber-500 font-bold py-3 rounded-full text-sm hover:bg-amber-50 transition-colors"
-        >
-          {itemCount > 0 && (
+      {itemCount > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-100 px-4 py-3 flex gap-3">
+          <button
+            onClick={() => setCartOpen(true)}
+            className="relative flex-1 flex items-center justify-center gap-2 border-2 border-amber-400 text-amber-500 font-bold py-3 rounded-full text-sm hover:bg-amber-50 transition-colors"
+          >
             <span className="absolute -top-2 left-2 bg-red-500 text-white text-[11px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1 leading-none">
               {itemCount > 99 ? "99+" : itemCount}
             </span>
-          )}
-          <ShoppingCart className="w-4 h-4" />
-          カートを見る
-        </button>
-        <button
-          onClick={() => router.push("/customer/ec/shipping")}
-          className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm transition-colors"
-        >
-          住所入力に進む
-        </button>
-      </div>
+            <ShoppingCart className="w-4 h-4" />
+            カートを見る
+          </button>
+          <button
+            onClick={() => router.push("/customer/ec/shipping")}
+            className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm transition-colors"
+          >
+            住所入力に進む
+          </button>
+        </div>
+      )}
 
       <CartDrawer
         open={cartOpen}

@@ -90,6 +90,7 @@ export interface Order {
   fulfilledAt: string | null
   fulfilledBy: string | null
   notes?: string
+  printPhotoUrl?: string | null
   createdAt: string
 }
 
@@ -176,6 +177,7 @@ export interface DecorationGroupWithItems {
   selectionType: 'single' | 'multiple'
   maxSelections: number | null
   required: boolean
+  preparationDays: number | null
   displayOrder: number
   items: DecorationItem[]
 }
@@ -199,6 +201,7 @@ export interface UICartItem {
     options?: CartCakeOptionEntry[]
     messagePlate?: string
     allergyNote?: string
+    printPhotoUrl?: string
     customOptions?: {
       name: string
       values: string[]
@@ -362,6 +365,7 @@ export function toUIOrder(row: any): Order {
     fulfilledAt: row.fulfilled_at || null,
     fulfilledBy: row.fulfilled_by || null,
     notes: row.notes || undefined,
+    printPhotoUrl: row.print_photo_url || null,
     createdAt: row.created_at || new Date().toISOString(),
   }
 }

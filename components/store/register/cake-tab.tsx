@@ -15,8 +15,6 @@ import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } f
 import { useNoshi } from "@/hooks/use-noshi";
 import Link from "next/link";
 
-type OrderType = "always" | "sameDay" | "manual" | "reserveOnly" | "todayOnly";
-
 interface ProductRow {
   id: string;
   name: string | null;
@@ -42,12 +40,6 @@ interface ProductRow {
   noshi_ids: string[] | null;
 }
 
-function resolveOrderType(row: ProductRow): OrderType {
-  if (row.same_day_order_allowed) return "sameDay";
-  if (row.is_preorder_required) return "reserveOnly";
-  return "always";
-}
-
 export function CakeTab() {
   const { user } = useAuth();
   const storeId = user?.storeId ?? null;
@@ -62,8 +54,6 @@ export function CakeTab() {
   const [productName, setProductName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [orderType, setOrderType] = useState<OrderType>("always");
-  const [reserveDays, setReserveDays] = useState("10");
   const [isLimited, setIsLimited] = useState(false);
   const [limitedFrom, setLimitedFrom] = useState("");
   const [limitedUntil, setLimitedUntil] = useState("");
@@ -165,8 +155,6 @@ export function CakeTab() {
     setProductName("");
     setDescription("");
     setPrice("");
-    setOrderType("always");
-    setReserveDays("10");
     setIsLimited(false);
     setLimitedFrom("");
     setLimitedUntil("");
@@ -193,8 +181,6 @@ export function CakeTab() {
       setProductName(p.name ?? "");
       setDescription(p.description ?? "");
       setPrice(p.base_price != null ? `¥${p.base_price.toLocaleString()}` : "");
-      setOrderType(resolveOrderType(p));
-      setReserveDays(String(p.min_order_lead_minutes ?? 0));
       setIsLimited(p.limited_until != null || p.limited_from != null);
       setLimitedFrom(p.limited_from ?? "");
       setLimitedUntil(p.limited_until ?? "");
@@ -283,10 +269,9 @@ export function CakeTab() {
         category_name: category || null,
         image: mainImage ?? null,
         cross_section_image: crossImage ?? null,
-        same_day_order_allowed: orderType === "sameDay",
-        is_preorder_required: isHole || orderType === "reserveOnly",
-        min_order_lead_minutes:
-          orderType === "reserveOnly" ? parseInt(reserveDays, 10) || 0 : 0,
+        same_day_order_allowed: false,
+        is_preorder_required: isHole,
+        min_order_lead_minutes: 0,
         is_active: true,
         is_takeout: true,
         is_ec: false,
@@ -862,45 +847,6 @@ export function CakeTab() {
             );
           })}
         </div>}
-
-        {/* 注文タイプ */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-          {([
-            { value: "always" as const, label: "常に注文を受け付ける" },
-            { value: "sameDay" as const, label: "当日注文を受け付ける" },
-            { value: "manual" as const, label: "注文を手動で受け付ける" },
-            { value: "reserveOnly" as const, label: "予約のみ受け付ける" },
-            { value: "todayOnly" as const, label: "本日限定受付" },
-          ] as const).map((opt) => (
-            <label key={opt.value} className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="radio"
-                name="orderType"
-                checked={orderType === opt.value}
-                onChange={() => setOrderType(opt.value)}
-                className="accent-blue-600 w-4 h-4"
-              />
-              {opt.label}
-            </label>
-          ))}
-        </div>
-
-        {orderType === "reserveOnly" && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="flex items-center gap-2"
-          >
-            <input
-              type="number"
-              value={reserveDays}
-              onChange={(e) => setReserveDays(e.target.value)}
-              min={1}
-              className="w-[100px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
-            />
-            <span className="text-sm">日前</span>
-          </motion.div>
-        )}
 
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm cursor-pointer">

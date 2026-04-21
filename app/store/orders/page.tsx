@@ -1,19 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, Loader2 } from "lucide-react";
 import { useOrders, type OrderChannel } from "@/hooks/use-orders";
 import { useStoreContext } from "@/lib/store-context";
 import { useAuth } from "@/lib/auth-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
-import { DatePickerPopup } from "@/components/store/date-picker-popup";
 import { OrderDetailModal } from "@/components/store/order-detail-modal";
 import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
 import { supabase } from "@/lib/supabase";
 import type { FulfillmentStatus, Order } from "@/lib/types";
-
-const daysOfWeek = ["日", "月", "火", "水", "木", "金", "土"];
 
 const channelTabs: { label: string; value: "" | OrderChannel }[] = [
   { label: "すべて", value: "" },
@@ -27,14 +24,6 @@ const fulfillmentOptions: { label: string; value: FulfillmentFilter }[] = [
   { label: "準備中", value: "pending" },
   { label: "準備完了", value: "fulfilled" },
 ];
-
-function formatDate(date: Date) {
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-  const day = daysOfWeek[date.getDay()];
-  return `${y}年${m}月${d}日(${day})`;
-}
 
 function formatFulfilledAt(iso: string | null): string {
   if (!iso) return "";
@@ -251,85 +240,45 @@ export default function StoreOrdersPage() {
   // ── 当日管理タブ state ──
   const [manageChannel, setManageChannel] = useState<"" | OrderChannel>("");
   const [manageFulfillment, setManageFulfillment] = useState<FulfillmentFilter>("");
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const dateRef = useRef<HTMLDivElement>(null);
+
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
 
   const { orders: rawManageOrders, loading: manageLoading, refetch: refetchManage } = useOrders({
     storeId,
     channel: manageChannel || undefined,
     fulfillmentStatus: manageFulfillment || undefined,
-    from: toISODate(selectedDate),
+    pickupDateFrom: todayStr,
+    sortBy: "pickup_date",
+    sortAsc: true,
   });
 
-  const manageOrders = (() => {
-    const now = new Date();
-    const nowMs = now.getTime();
-    const getPickupMs = (o: Order): number => {
-      if (!o.pickupDate) return Infinity;
-      const [h, m] = (o.pickupTime || "00:00").split(":").map(Number);
-      const d = new Date(o.pickupDate);
-      d.setHours(h || 0, m || 0, 0, 0);
-      return d.getTime();
-    };
-    return rawManageOrders
-      .filter((o) => !(o.orderType === "ec" && o.fulfillmentStatus === "fulfilled"))
-      .sort((a, b) => {
-        const ta = getPickupMs(a);
-        const tb = getPickupMs(b);
-        const aFuture = ta >= nowMs;
-        const bFuture = tb >= nowMs;
-        if (aFuture && !bFuture) return -1;
-        if (!aFuture && bFuture) return 1;
-        if (aFuture && bFuture) return ta - tb;
-        return tb - ta;
-      });
-  })();
+  const manageOrders = rawManageOrders.filter(
+    (o) => !(o.orderType === "ec" && o.fulfillmentStatus === "fulfilled")
+  );
 
   // ── 注文履歴タブ state ──
-  const today = new Date();
-  const defaultFrom = new Date(today);
-  defaultFrom.setMonth(today.getMonth() - 1);
-
   const [historyChannel, setHistoryChannel] = useState<"" | OrderChannel>("");
   const [historyFulfillment, setHistoryFulfillment] = useState<FulfillmentFilter>("");
-  const [fromDate, setFromDate] = useState<Date>(defaultFrom);
-  const [toDate, setToDate] = useState<Date>(today);
-  const [showFromPicker, setShowFromPicker] = useState(false);
-  const [showToPicker, setShowToPicker] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
   const [csvExporting, setCsvExporting] = useState(false);
-  const fromRef = useRef<HTMLDivElement>(null);
-  const toRef = useRef<HTMLDivElement>(null);
 
   const { orders: historyOrders, loading: historyLoading } = useOrders({
     storeId,
-    from: toISODate(fromDate),
-    to: toISODate(toDate, true),
+    pickupDateTo: todayStr,
     channel: historyChannel || undefined,
     fulfillmentStatus: historyFulfillment || undefined,
+    sortBy: "pickup_date",
+    sortAsc: false,
   });
 
   const { updateFulfillmentStatus } = useOrderMutations();
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dateRef.current && !dateRef.current.contains(e.target as Node)) {
-        setShowDatePicker(false);
-      }
-      if (fromRef.current && !fromRef.current.contains(e.target as Node)) {
-        setShowFromPicker(false);
-      }
-      if (toRef.current && !toRef.current.contains(e.target as Node)) {
-        setShowToPicker(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const handleConfirm = async () => {
     if (!confirmAction || confirmLoading) return;
@@ -357,7 +306,7 @@ export default function StoreOrdersPage() {
       const orderIds = historyOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
       const slug = (storeName || "store").replace(/\s+/g, "_");
-      const filename = `orders_${slug}_${yyyymmdd(fromDate)}_${yyyymmdd(toDate)}.csv`;
+      const filename = `orders_history_${slug}_${yyyymmdd(new Date())}.csv`;
       downloadCSV(filename, buildCSV(historyOrders, optionsMap));
     } finally {
       setCsvExporting(false);
@@ -375,7 +324,7 @@ export default function StoreOrdersPage() {
       const orderIds = manageOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
       const slug = (storeName || "store").replace(/\s+/g, "_");
-      const filename = `orders_${slug}_${yyyymmdd(selectedDate)}_以降.csv`;
+      const filename = `orders_${slug}_${todayStr}以降.csv`;
       downloadCSV(filename, buildCSV(manageOrders, optionsMap));
     } finally {
       setManageCsvExporting(false);
@@ -393,7 +342,7 @@ export default function StoreOrdersPage() {
       const orderIds = manageOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
       const slug = (storeName || "store").replace(/\s+/g, "_");
-      printOrdersPDF(manageOrders, optionsMap, `予約管理 ${slug} ${yyyymmdd(selectedDate)}〜`);
+      printOrdersPDF(manageOrders, optionsMap, `予約管理 ${slug} ${todayStr}〜`);
     } finally {
       setManagePdfExporting(false);
     }
@@ -410,7 +359,7 @@ export default function StoreOrdersPage() {
       const orderIds = historyOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
       const slug = (storeName || "store").replace(/\s+/g, "_");
-      printOrdersPDF(historyOrders, optionsMap, `注文履歴 ${slug} ${yyyymmdd(fromDate)}〜${yyyymmdd(toDate)}`);
+      printOrdersPDF(historyOrders, optionsMap, `注文履歴 ${slug} 〜${todayStr}`);
     } finally {
       setPdfExporting(false);
     }
@@ -466,24 +415,6 @@ export default function StoreOrdersPage() {
               </select>
             </div>
             <div className="flex items-center gap-2">
-              <div ref={dateRef} className="relative">
-                <button
-                  onClick={() => setShowDatePicker(!showDatePicker)}
-                  className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 min-w-[200px] text-left hover:border-gray-400 transition-colors"
-                >
-                  {formatDate(selectedDate)}
-                </button>
-                <AnimatePresence>
-                  {showDatePicker && (
-                    <DatePickerPopup
-                      selectedDate={selectedDate}
-                      onSelect={(date) => { setSelectedDate(date); setShowDatePicker(false); }}
-                      onClear={() => { setSelectedDate(new Date()); setShowDatePicker(false); }}
-                      onClose={() => setShowDatePicker(false)}
-                    />
-                  )}
-                </AnimatePresence>
-              </div>
               <div className="flex gap-2">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -667,46 +598,6 @@ export default function StoreOrdersPage() {
                   {t.label}
                 </button>
               ))}
-            </div>
-            <div className="flex items-center gap-2 ml-auto">
-              <span className="text-xs text-gray-500">期間</span>
-              <div ref={fromRef} className="relative">
-                <button
-                  onClick={() => setShowFromPicker(!showFromPicker)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 min-w-[180px] text-left hover:border-gray-400"
-                >
-                  {formatDate(fromDate)}
-                </button>
-                <AnimatePresence>
-                  {showFromPicker && (
-                    <DatePickerPopup
-                      selectedDate={fromDate}
-                      onSelect={(d) => { setFromDate(d); setShowFromPicker(false); }}
-                      onClear={() => { setFromDate(defaultFrom); setShowFromPicker(false); }}
-                      onClose={() => setShowFromPicker(false)}
-                    />
-                  )}
-                </AnimatePresence>
-              </div>
-              <span className="text-xs text-gray-500">〜</span>
-              <div ref={toRef} className="relative">
-                <button
-                  onClick={() => setShowToPicker(!showToPicker)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 min-w-[180px] text-left hover:border-gray-400"
-                >
-                  {formatDate(toDate)}
-                </button>
-                <AnimatePresence>
-                  {showToPicker && (
-                    <DatePickerPopup
-                      selectedDate={toDate}
-                      onSelect={(d) => { setToDate(d); setShowToPicker(false); }}
-                      onClear={() => { setToDate(new Date()); setShowToPicker(false); }}
-                      onClose={() => setShowToPicker(false)}
-                    />
-                  )}
-                </AnimatePresence>
-              </div>
             </div>
           </div>
 

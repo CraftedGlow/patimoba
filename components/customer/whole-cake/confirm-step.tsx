@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { motion } from "framer-motion";
+import { ImagePlus, X, Loader2, Download } from "lucide-react";
 import type { WholeCakeProduct, WholeCakeSize, DecorationGroupWithItems } from "@/lib/types";
 import type { CandleOption } from "@/hooks/use-whole-cakes";
 import type { CandleEntry } from "./basic-step";
@@ -16,6 +18,11 @@ interface ConfirmStepProps {
   allergyNote: string;
   onAllergyChange: (note: string) => void;
   total: number;
+  showPrintPhotoUpload: boolean;
+  printPhotoUrl: string | null;
+  uploadingPrintPhoto: boolean;
+  onPrintPhotoUpload: (file: File) => Promise<void>;
+  onPrintPhotoRemove: () => void;
   onAddToCart: () => void;
   onProceedToDateTime: () => void;
 }
@@ -31,9 +38,15 @@ export function WholeCakeConfirmStep({
   allergyNote,
   onAllergyChange,
   total,
+  showPrintPhotoUpload,
+  printPhotoUrl,
+  uploadingPrintPhoto,
+  onPrintPhotoUpload,
+  onPrintPhotoRemove,
   onAddToCart,
   onProceedToDateTime,
 }: ConfirmStepProps) {
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const validCandles = candles.filter(
     (c) => c.candleOptionId && Number(c.quantity) > 0
   );
@@ -125,6 +138,46 @@ export function WholeCakeConfirmStep({
           </div>
         </div>
       </div>
+
+      {showPrintPhotoUpload && (
+        <div className="mb-6 border border-amber-200 rounded-xl p-4 bg-amber-50/40">
+          <p className="text-sm font-bold text-amber-800 mb-1">プリント用写真のアップロード</p>
+          <p className="text-xs text-gray-500 mb-3">ケーキにプリントしたい写真を1枚アップロードしてください</p>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void onPrintPhotoUpload(f);
+              e.target.value = "";
+            }}
+          />
+          {printPhotoUrl ? (
+            <div className="relative w-full max-w-[200px] rounded-lg overflow-hidden border border-amber-300 group">
+              <img src={printPhotoUrl} alt="プリント用写真" className="w-full object-cover" />
+              <button
+                onClick={onPrintPhotoRemove}
+                className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadingPrintPhoto}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-amber-400 text-amber-600 text-sm font-bold hover:bg-amber-50 transition-colors disabled:opacity-50"
+            >
+              {uploadingPrintPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+              {uploadingPrintPhoto ? "アップロード中..." : "写真を選択"}
+            </motion.button>
+          )}
+        </div>
+      )}
 
       <div className="mb-8">
         <textarea

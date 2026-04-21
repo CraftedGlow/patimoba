@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Printer, Loader2 } from "lucide-react";
+import { X, Printer, Loader2, Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Order } from "@/lib/types";
 
@@ -64,11 +64,11 @@ export function WholeCakeDetailModal({ order, onClose }: Props) {
     const html = `<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">
 <title>ホールケーキ注文詳細</title>
 <style>
-body{font-family:"Hiragino Kaku Gothic Pro",sans-serif;font-size:12px;margin:15mm;color:#111}
-h2{font-size:14px;margin:0 0 6px}p.sub{font-size:11px;color:#555;margin:0 0 12px}
+body{font-family:"Hiragino Kaku Gothic Pro",sans-serif;font-size:15px;margin:15mm;color:#111}
+h2{font-size:18px;margin:0 0 8px}p.sub{font-size:13px;color:#555;margin:0 0 14px}
 table{width:100%;border-collapse:collapse}
-th{background:#fffde7;text-align:left;padding:5px 8px;border:1px solid #ccc;font-size:11px}
-td{padding:5px 8px;border:1px solid #ddd;font-size:12px}
+th{background:#fffde7;text-align:left;padding:9px 12px;border:1px solid #ccc;font-size:13px}
+td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
 @media print{@page{margin:10mm}}
 </style></head><body>
 <h2>ホールケーキ注文詳細</h2>
@@ -99,7 +99,7 @@ td{padding:5px 8px;border:1px solid #ddd;font-size:12px}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2 }}
         style={{ x: "-50%", y: "-50%" }}
-        className="fixed left-1/2 top-1/2 bg-white rounded-2xl shadow-2xl z-[120] w-[92%] max-w-md max-h-[80vh] flex flex-col"
+        className="fixed left-1/2 top-1/2 bg-white rounded-2xl shadow-2xl z-[120] w-[92%] max-w-[85vw] max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ヘッダー */}
@@ -130,7 +130,7 @@ td{padding:5px 8px;border:1px solid #ddd;font-size:12px}
           ) : (
             <div className="space-y-2">
               {options.map((o, i) => (
-                <div key={i} className="flex items-start justify-between py-2 border-b border-gray-50 last:border-0">
+                <div key={i} className="flex items-start justify-between py-3 border-b border-gray-50 last:border-0">
                   <div>
                     <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded mr-2">
                       {o.group}
@@ -145,6 +145,39 @@ td{padding:5px 8px;border:1px solid #ddd;font-size:12px}
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {order.printPhotoUrl && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs font-bold text-amber-700 mb-2">プリント用写真</p>
+              <div className="relative rounded-lg overflow-hidden border border-amber-200 mb-2">
+                <img src={order.printPhotoUrl} alt="プリント用写真" className="w-full object-contain max-h-48" />
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(order.printPhotoUrl!);
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    const ext = order.printPhotoUrl!.split("?")[0].split(".").pop() || "jpg";
+                    a.download = `print_photo.${ext}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  } catch {
+                    alert("ダウンロードに失敗しました");
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-sm text-amber-700 font-bold hover:text-amber-800"
+              >
+                <Download className="w-4 h-4" />
+                写真をダウンロード
+              </button>
             </div>
           )}
         </div>

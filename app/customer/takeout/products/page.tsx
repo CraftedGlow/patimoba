@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Check, Loader2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { useWholeCakes } from "@/hooks/use-whole-cakes";
 import type { WholeCakeProduct } from "@/lib/types";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
+import { supabase } from "@/lib/supabase";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
@@ -66,6 +67,23 @@ function RegistrationCard({ product, basePath }: { product: ProductRegistration;
         <p className="text-sm text-gray-900">
           &yen;{product.base_price.toLocaleString()}
         </p>
+      </motion.div>
+    </Link>
+  );
+}
+
+function PrintDecorationCard({ price }: { price: number }) {
+  return (
+    <Link href="/customer/takeout/whole-cake?mode=print">
+      <motion.div className="group cursor-pointer" whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+        <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+          <img src="/print-decoration-default.jpg" alt="プリントデコレーション" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+          <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none" style={{ backgroundColor: "#f59e0b" }}>
+            ホールケーキ
+          </span>
+        </div>
+        <h3 className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">プリントデコレーション</h3>
+        <p className="text-sm text-amber-600 font-bold">+&yen;{price.toLocaleString()}〜</p>
       </motion.div>
     </Link>
   );
@@ -125,33 +143,84 @@ export default function TakeoutProductsPage() {
   });
   const { wholeCakes, loading: cakesLoading } = useWholeCakes(storeId);
   const { itemCount } = useCart();
+
+  const [printDecoData, setPrintDecoData] = useState<{ price: number; image: string } | null>(null);
+
+  useEffect(() => {
+    if (!storeId || cakesLoading || wholeCakes.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data: groups } = await supabase
+        .from("decoration_groups")
+        .select("id, decoration_group_items(decorations(price))")
+        .eq("store_id", storeId)
+        .ilike("name", "%プリントデコレーション%")
+        .limit(1);
+      const group = groups?.[0];
+      if (!group || cancelled) return;
+      const { data: links } = await supabase
+        .from("product_decoration_groups")
+        .select("product_id")
+        .eq("group_id", group.id);
+      const cakeIds = (links ?? []).map((l: any) => String(l.product_id));
+      const hasCakes = wholeCakes.some((c) => cakeIds.includes(c.id));
+      if (!hasCakes || cancelled) return;
+      const price = (group.decoration_group_items as any[])?.[0]?.decorations?.price || 0;
+      const firstCake = wholeCakes.find((c) => cakeIds.includes(c.id));
+      if (!cancelled) setPrintDecoData({ price, image: "" });
+    })();
+    return () => { cancelled = true; };
+  }, [storeId, cakesLoading, wholeCakes.length]);
   const [selectedCategory, setSelectedCategory] = useState("すべて");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
   const isLimited = (p: ProductRegistration) => !!(p.limited_from || p.limited_until);
   const isSameDayOnly = (p: ProductRegistration) => !p.is_active && p.same_day_order_allowed;
-  // ホールケーキ(is_preorder_required)は wholeCakes に出るので除外。typeパラメータがある時だけフィルタ
+  // ホールケーキ(is_preorder_required)は wholeCakes に出るので除外。ECのみ商品も除外。
   const visibleProducts = (typeParam === "sameday"
     ? products.filter((p) => p.same_day_order_allowed)
     : typeParam === "reservation"
     ? products.filter((p) => p.is_active)
     : products.filter((p) => p.is_active || isSameDayOnly(p))
-  ).filter((p) => !p.is_preorder_required);
+  ).filter((p) => !p.is_preorder_required && !p.is_ec);
 
+  const limitedProducts = visibleProducts.filter(isLimited);
+  const nonLimitedProducts = visibleProducts.filter((p) => !isLimited(p));
+
+  // カテゴリ優先順
+  const CATEGORY_ORDER = ["生菓子", "焼き菓子"];
+  const knownCategories = new Set(CATEGORY_ORDER);
+  const extraCategories = Array.from(new Set(nonLimitedProducts.map((p) => p.category_name).filter(Boolean)))
+    .filter((c) => !knownCategories.has(c!)) as string[];
+  const orderedCategories = [...CATEGORY_ORDER, ...extraCategories];
+
+  // "すべて"表示用: 期間限定→ホールケーキ→生菓子→焼き菓子→その他 を一本の配列に
+  type GridItem =
+    | { kind: "product"; data: ProductRegistration }
+    | { kind: "wholecake"; data: WholeCakeProduct }
+    | { kind: "printdeco"; price: number };
+
+  const allGridItems: GridItem[] = [
+    ...limitedProducts.map((p) => ({ kind: "product" as const, data: p })),
+    ...wholeCakes.map((c) => ({ kind: "wholecake" as const, data: c })),
+    ...(printDecoData ? [{ kind: "printdeco" as const, price: printDecoData.price }] : []),
+    ...orderedCategories.flatMap((cat) =>
+      nonLimitedProducts.filter((p) => p.category_name === cat).map((p) => ({ kind: "product" as const, data: p }))
+    ),
+    ...nonLimitedProducts.filter((p) => !p.category_name).map((p) => ({ kind: "product" as const, data: p })),
+  ];
+
+  // 特定カテゴリ選択時のフィルタ（"すべて"以外）
   const filtered =
-    selectedCategory === "すべて"
-      ? visibleProducts
-      : selectedCategory === "期間限定"
-        ? visibleProducts.filter(isLimited)
-        : selectedCategory === "ホールケーキ"
-          ? []
-          : visibleProducts.filter((p) => p.category_name === selectedCategory);
+    selectedCategory === "期間限定"
+      ? visibleProducts.filter(isLimited)
+      : selectedCategory === "ホールケーキ"
+      ? []
+      : visibleProducts.filter((p) => p.category_name === selectedCategory);
 
   const visibleWholeCakes =
-    selectedCategory === "すべて" || selectedCategory === "ホールケーキ"
-      ? wholeCakes
-      : [];
+    selectedCategory === "ホールケーキ" ? wholeCakes : [];
 
   const displayCategories = (() => {
     const base = categories.some((c) => c === "期間限定")
@@ -242,6 +311,25 @@ export default function TakeoutProductsPage() {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
           </div>
+        ) : selectedCategory === "すべて" ? (
+          allGridItems.length === 0 ? (
+            <div className="text-center py-20 text-gray-400 text-sm">商品が見つかりませんでした</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
+              {allGridItems.map((item, i) => (
+                <motion.div
+                  key={item.kind === "product" ? item.data.id : item.kind === "wholecake" ? `wc-${item.data.id}` : "print-deco"}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                >
+                  {item.kind === "product" && <RegistrationCard product={item.data} basePath="/customer/takeout" />}
+                  {item.kind === "wholecake" && <WholeCakeCard cake={item.data} />}
+                  {item.kind === "printdeco" && <PrintDecorationCard price={item.price} />}
+                </motion.div>
+              ))}
+            </div>
+          )
         ) : filtered.length === 0 && visibleWholeCakes.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-sm">
             商品が見つかりませんでした
@@ -249,22 +337,17 @@ export default function TakeoutProductsPage() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
             {visibleWholeCakes.map((cake, i) => (
-              <motion.div
-                key={`wc-${cake.id}`}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-              >
+              <motion.div key={`wc-${cake.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <WholeCakeCard cake={cake} />
               </motion.div>
             ))}
+            {printDecoData && selectedCategory === "ホールケーキ" && (
+              <motion.div key="print-deco" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: visibleWholeCakes.length * 0.04 }}>
+                <PrintDecorationCard price={printDecoData.price} />
+              </motion.div>
+            )}
             {filtered.map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (i + visibleWholeCakes.length) * 0.04 }}
-              >
+              <motion.div key={product.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (i + visibleWholeCakes.length) * 0.04 }}>
                 <RegistrationCard product={product} basePath="/customer/takeout" />
               </motion.div>
             ))}
@@ -276,22 +359,20 @@ export default function TakeoutProductsPage() {
 
       {/* カートバナー */}
       {itemCount > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-50 px-4 pb-5">
-          <div className="flex items-center gap-2 max-w-lg mx-auto">
-            <div className="relative">
-              <button
-                onClick={() => setCartOpen(true)}
-                className="bg-white border border-gray-200 rounded-full px-5 py-3 shadow-lg text-sm font-bold text-gray-800 whitespace-nowrap"
-              >
-                カートを見る
-              </button>
-              <span className="absolute -top-1.5 -left-1.5 min-w-[20px] h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none shadow">
+        <div className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-gray-100 px-4 py-3">
+          <div className="flex gap-3 max-w-lg mx-auto">
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative flex-1 flex items-center justify-center gap-2 border-2 border-amber-400 text-amber-500 font-bold py-3 rounded-full text-sm hover:bg-amber-50 transition-colors"
+            >
+              <span className="absolute -top-2 left-2 min-w-[20px] h-5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
                 {itemCount > 99 ? "99+" : itemCount}
               </span>
-            </div>
+              カートを見る
+            </button>
             <button
               onClick={() => router.push(pickupPath)}
-              className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm transition-colors shadow-lg shadow-amber-200/60"
+              className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm transition-colors"
             >
               日時選択に進む
             </button>

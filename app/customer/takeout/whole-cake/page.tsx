@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -15,11 +15,14 @@ import { useWholeCakes } from "@/hooks/use-whole-cakes";
 import { useProductDecorationGroups } from "@/hooks/use-decoration-groups";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
+import { uploadPrintPhoto } from "@/lib/upload-image";
+import { supabase } from "@/lib/supabase";
 import type {
   UICartItem,
   CartCandleEntry,
   CartCakeOptionEntry,
   DecorationGroupWithItems,
+  WholeCakeProduct,
 } from "@/lib/types";
 
 const wholeCakeSteps = ["基本選択", "デコレーション", "内容確認"];
@@ -28,60 +31,102 @@ export default function WholeCakePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cakeIdParam = searchParams.get("cakeId");
+  const mode = searchParams.get("mode");
+  const isPrintMode = mode === "print";
+
   const { selectedStoreId, profile } = useCustomerContext();
   const { addItem } = useCart();
   const [step, setStep] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const { wholeCakes, candleOptions, loading } = useWholeCakes(
-    selectedStoreId ?? ""
-  );
+  const { wholeCakes, candleOptions, loading } = useWholeCakes(selectedStoreId ?? "");
 
-  const [selectedSizeId, setSelectedSizeId] = useState("");
-  const [candles, setCandles] = useState<CandleEntry[]>([]);
-  const [messageText, setMessageText] = useState("");
-  // グループID → 選択済みデコレーションID[]
-  const [selectedDecorations, setSelectedDecorations] = useState<Record<string, string[]>>({});
-  const [allergyNote, setAllergyNote] = useState("");
+  // Print mode: store data about the プリントデコレーション group
+  const [printGroupData, setPrintGroupData] = useState<{
+    groupId: string;
+    itemId: string;
+    price: number;
+    cakeIds: string[];
+  } | null>(null);
+  const [printGroupLoading, setPrintGroupLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isPrintMode || !selectedStoreId || loading) return;
+    setPrintGroupLoading(true);
+    (async () => {
+      const { data: groups } = await supabase
+        .from("decoration_groups")
+        .select(`id, decoration_group_items(decorations(id, price))`)
+        .eq("store_id", selectedStoreId)
+        .ilike("name", "%プリントデコレーション%")
+        .limit(1);
+      const group = groups?.[0];
+      if (!group) { setPrintGroupLoading(false); return; }
+      const firstDeco = (group.decoration_group_items?.[0] as any)?.decorations;
+      if (!firstDeco) { setPrintGroupLoading(false); return; }
+      const { data: links } = await supabase
+        .from("product_decoration_groups")
+        .select("product_id")
+        .eq("group_id", group.id);
+      const cakeIds = (links ?? []).map((l: any) => String(l.product_id));
+      setPrintGroupData({
+        groupId: String(group.id),
+        itemId: String(firstDeco.id),
+        price: Number(firstDeco.price) || 0,
+        cakeIds,
+      });
+      setPrintGroupLoading(false);
+    })();
+  }, [isPrintMode, selectedStoreId, loading]);
+
+  // Print mode: filter to cakes that have the print group
+  const printCakes = useMemo(() => {
+    if (!isPrintMode || !printGroupData) return [];
+    return wholeCakes.filter((c) => printGroupData.cakeIds.includes(c.id));
+  }, [isPrintMode, printGroupData, wholeCakes]);
+
+  // Selected cake
+  const [selectedCakeIdForPrint, setSelectedCakeIdForPrint] = useState<string | null>(null);
 
   const selectedCake = useMemo(() => {
+    if (isPrintMode) {
+      return wholeCakes.find((c) => c.id === selectedCakeIdForPrint) ?? null;
+    }
     if (cakeIdParam) {
       return wholeCakes.find((c) => c.id === cakeIdParam) ?? null;
     }
     return wholeCakes[0] ?? null;
-  }, [wholeCakes, cakeIdParam]);
+  }, [isPrintMode, selectedCakeIdForPrint, wholeCakes, cakeIdParam]);
 
-  // 選択中のケーキに紐付いたデコレーショングループを取得
+  const [selectedSizeId, setSelectedSizeId] = useState("");
+  const [candles, setCandles] = useState<CandleEntry[]>([]);
+  const [messageText, setMessageText] = useState("");
+  const [selectedDecorations, setSelectedDecorations] = useState<Record<string, string[]>>({});
+  const [allergyNote, setAllergyNote] = useState("");
+  const [printPhotoUrl, setPrintPhotoUrl] = useState<string | null>(null);
+  const [uploadingPrintPhoto, setUploadingPrintPhoto] = useState(false);
+
+  // Reset size when cake changes in print mode
+  useEffect(() => {
+    setSelectedSizeId("");
+  }, [selectedCakeIdForPrint]);
+
   const { groups: decorationGroups, loading: groupsLoading } = useProductDecorationGroups(
     selectedCake?.id
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
-      </div>
-    );
-  }
+  // Auto-select the print decoration item when groups load (print mode)
+  useEffect(() => {
+    if (!isPrintMode || !printGroupData || decorationGroups.length === 0) return;
+    const printGroup = decorationGroups.find((g) => g.id === printGroupData.groupId);
+    if (!printGroup) return;
+    setSelectedDecorations((prev) => ({
+      ...prev,
+      [printGroupData.groupId]: [printGroupData.itemId],
+    }));
+  }, [isPrintMode, printGroupData?.groupId, printGroupData?.itemId, decorationGroups]);
 
-  if (!selectedCake) {
-    return (
-      <div className="min-h-screen bg-white">
-        <CustomerHeader
-          userName={profile?.lineName}
-          avatarUrl={profile?.avatar || undefined}
-          points={0}
-          onCartClick={() => setCartOpen(true)}
-        />
-        <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
-          ホールケーキが見つかりません
-        </div>
-        <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
-      </div>
-    );
-  }
-
-  const selectedSize = selectedCake.sizes.find((s) => s.id === selectedSizeId);
+  const selectedSize = selectedCake?.sizes.find((s) => s.id === selectedSizeId);
   const sizePrice = selectedSize?.price ?? 0;
 
   const candleTotal = candles.reduce((sum, c) => {
@@ -90,7 +135,6 @@ export default function WholeCakePage() {
     return sum + (opt?.price ?? 0) * qty;
   }, 0);
 
-  // selectedDecorations から合計金額を計算
   const decorationTotal = decorationGroups.reduce((sum, group) => {
     const ids = selectedDecorations[group.id] ?? [];
     return sum + ids.reduce((s, did) => {
@@ -101,8 +145,17 @@ export default function WholeCakePage() {
 
   const total = sizePrice + candleTotal + decorationTotal;
 
+  const handlePrintPhotoUpload = async (file: File) => {
+    if (!selectedStoreId) return;
+    setUploadingPrintPhoto(true);
+    const { url, error } = await uploadPrintPhoto(file, selectedStoreId);
+    setUploadingPrintPhoto(false);
+    if (error) { alert(`写真のアップロードに失敗しました: ${error}`); return; }
+    setPrintPhotoUrl(url);
+  };
+
   const buildCartItem = (): UICartItem | null => {
-    if (!selectedSize) return null;
+    if (!selectedSize || !selectedCake) return null;
 
     const validCandles: CartCandleEntry[] = candles
       .filter((c) => c.candleOptionId && Number(c.quantity) > 0)
@@ -118,22 +171,18 @@ export default function WholeCakePage() {
         };
       });
 
-    // selectedDecorations をフラット化して CartCakeOptionEntry[] に変換
     const cakeOptions: CartCakeOptionEntry[] = decorationGroups.flatMap((group) => {
       const ids = selectedDecorations[group.id] ?? [];
-      const entries: CartCakeOptionEntry[] = [];
-      for (const did of ids) {
+      return ids.flatMap((did) => {
         const dec = group.items.find((item) => item.id === did);
-        if (dec) {
-          entries.push({
-            wholeCakeOptionId: did,
-            name: dec.name,
-            price: dec.price,
-            groupName: group.name,
-          });
-        }
-      }
-      return entries;
+        if (!dec) return [];
+        return [{
+          wholeCakeOptionId: did,
+          name: dec.name,
+          price: dec.price,
+          groupName: group.name,
+        }];
+      });
     });
 
     return {
@@ -153,6 +202,7 @@ export default function WholeCakePage() {
         options: cakeOptions,
         messagePlate: messageText || undefined,
         allergyNote: allergyNote || undefined,
+        printPhotoUrl: printPhotoUrl || undefined,
       },
     };
   };
@@ -173,10 +223,54 @@ export default function WholeCakePage() {
     router.push("/customer/takeout/pickup");
   };
 
-  // 必須グループが未選択の場合は次へ進めない
-  const hasRequiredUnfilled = decorationGroups.some(
-    (g) => g.required && (selectedDecorations[g.id] ?? []).length === 0
+  // Required groups check: exclude print group in print mode
+  const hasRequiredUnfilled = decorationGroups
+    .filter((g) => !isPrintMode || g.id !== printGroupData?.groupId)
+    .some((g) => g.required && (selectedDecorations[g.id] ?? []).length === 0);
+
+  // Non-print regular decoration check for confirm step upload
+  const hasPrintDecorationFromRegularMode = !isPrintMode && decorationGroups.some(
+    (g) => g.name.includes("プリント") && (selectedDecorations[g.id] ?? []).length > 0
   );
+
+  // Step 1 can proceed
+  const canProceedStep1 = isPrintMode
+    ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messageText.trim() !== "")
+    : (selectedSizeId !== "" && messageText.trim() !== "");
+
+  const isPageLoading = loading || (isPrintMode && printGroupLoading);
+
+  if (isPageLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isPrintMode && !selectedCake) {
+    return (
+      <div className="min-h-screen bg-white">
+        <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={0} onCartClick={() => setCartOpen(true)} />
+        <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
+          ホールケーキが見つかりません
+        </div>
+        <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      </div>
+    );
+  }
+
+  if (isPrintMode && printCakes.length === 0 && !printGroupLoading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={0} onCartClick={() => setCartOpen(true)} />
+        <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
+          プリントデコレーション対象のケーキが見つかりません
+        </div>
+        <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -205,6 +299,12 @@ export default function WholeCakePage() {
         )}
       </div>
 
+      {isPrintMode && (
+        <div className="px-4 pb-1">
+          <p className="text-base font-bold">プリントデコレーション</p>
+        </div>
+      )}
+
       <StepProgress currentStep={step} steps={wholeCakeSteps} />
 
       {step === 1 && (
@@ -218,12 +318,20 @@ export default function WholeCakePage() {
           messageText={messageText}
           onMessageChange={setMessageText}
           total={total}
-          canProceed={selectedSizeId !== "" && messageText.trim() !== ""}
+          canProceed={canProceedStep1}
           onNext={() => setStep(2)}
+          isPrintMode={isPrintMode}
+          printCakes={printCakes}
+          selectedCakeIdForPrint={selectedCakeIdForPrint}
+          onCakeSelectForPrint={setSelectedCakeIdForPrint}
+          printPhotoUrl={printPhotoUrl}
+          uploadingPrintPhoto={uploadingPrintPhoto}
+          onPrintPhotoUpload={handlePrintPhotoUpload}
+          onPrintPhotoRemove={() => setPrintPhotoUrl(null)}
         />
       )}
 
-      {step === 2 && (
+      {step === 2 && selectedCake && (
         <WholeCakeOptionsStep
           cake={selectedCake}
           decorationGroups={decorationGroups}
@@ -232,11 +340,12 @@ export default function WholeCakePage() {
           onDecorationsChange={setSelectedDecorations}
           total={total}
           hasRequiredUnfilled={hasRequiredUnfilled}
+          excludeGroupIds={isPrintMode && printGroupData ? [printGroupData.groupId] : undefined}
           onNext={() => setStep(3)}
         />
       )}
 
-      {step === 3 && selectedSize && (
+      {step === 3 && selectedSize && selectedCake && (
         <WholeCakeConfirmStep
           cake={selectedCake}
           candleOptions={candleOptions}
@@ -248,6 +357,11 @@ export default function WholeCakePage() {
           allergyNote={allergyNote}
           onAllergyChange={setAllergyNote}
           total={total}
+          showPrintPhotoUpload={hasPrintDecorationFromRegularMode}
+          printPhotoUrl={printPhotoUrl}
+          uploadingPrintPhoto={uploadingPrintPhoto}
+          onPrintPhotoUpload={handlePrintPhotoUpload}
+          onPrintPhotoRemove={() => setPrintPhotoUrl(null)}
           onAddToCart={handleAddToCart}
           onProceedToDateTime={handleProceedToDateTime}
         />

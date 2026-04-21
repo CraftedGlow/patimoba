@@ -13,11 +13,15 @@ interface UseOrdersOptions {
   excludeStatus?: OrderStatus[]
   date?: string
   pickupDate?: string
+  pickupDateFrom?: string
+  pickupDateTo?: string
   from?: string
   to?: string
   orderType?: string
   channel?: OrderChannel
   fulfillmentStatus?: "pending" | "fulfilled"
+  sortBy?: "pickup_date" | "created_at"
+  sortAsc?: boolean
 }
 
 const TAKEOUT_ORDER_TYPES = ["takeout", "pickup", "delivery"]
@@ -31,6 +35,9 @@ export function useOrders(options: UseOrdersOptions = {}) {
     setLoading(true)
     setError(null)
 
+    const sortColumn = options.sortBy ?? "created_at"
+    const sortAscending = options.sortAsc ?? false
+
     let query = supabase
       .from("orders")
       .select(`
@@ -38,7 +45,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
         users:users!orders_customer_id_fkey(id, name, line_name, phone, email),
         order_items(id, product_name_snapshot, quantity, unit_price, subtotal, product_id, variant_name_snapshot, order_item_options(id))
       `)
-      .order("created_at", { ascending: false })
+      .order(sortColumn, { ascending: sortAscending })
 
     if (options.storeId) {
       query = query.eq("store_id", options.storeId)
@@ -80,6 +87,12 @@ export function useOrders(options: UseOrdersOptions = {}) {
     if (options.pickupDate) {
       query = query.eq("pickup_date", options.pickupDate)
     }
+    if (options.pickupDateFrom) {
+      query = query.gte("pickup_date", options.pickupDateFrom)
+    }
+    if (options.pickupDateTo) {
+      query = query.lt("pickup_date", options.pickupDateTo)
+    }
 
     const { data, error: err } = await query
     if (err) {
@@ -97,6 +110,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
     options.customerId,
     options.date,
     options.pickupDate,
+    options.pickupDateFrom,
+    options.pickupDateTo,
     options.from,
     options.to,
     Array.isArray(options.status) ? options.status.join(",") : options.status,
@@ -104,6 +119,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
     options.orderType,
     options.channel,
     options.fulfillmentStatus,
+    options.sortBy,
+    options.sortAsc,
   ])
 
   return { orders, loading, error, refetch: fetchOrders }

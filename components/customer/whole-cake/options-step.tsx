@@ -20,6 +20,7 @@ interface OptionsStepProps {
   onDecorationsChange: (d: Record<string, string[]>) => void;
   total: number;
   hasRequiredUnfilled: boolean;
+  excludeGroupIds?: string[];
   onNext: () => void;
 }
 
@@ -31,8 +32,12 @@ export function WholeCakeOptionsStep({
   onDecorationsChange,
   total,
   hasRequiredUnfilled,
+  excludeGroupIds,
   onNext,
 }: OptionsStepProps) {
+  const visibleGroups = excludeGroupIds?.length
+    ? decorationGroups.filter((g) => !excludeGroupIds.includes(g.id))
+    : decorationGroups;
   const handleSelect = (groupId: string, decorationId: string, group: DecorationGroupWithItems) => {
     const current = selectedDecorations[groupId] ?? [];
 
@@ -80,13 +85,13 @@ export function WholeCakeOptionsStep({
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
           </div>
-        ) : decorationGroups.length === 0 ? (
+        ) : visibleGroups.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-400">
             このケーキにはデコレーションオプションがありません
           </div>
         ) : (
           <div className="space-y-6 mb-8">
-            {decorationGroups.map((group) => {
+            {visibleGroups.map((group) => {
               const selected = selectedDecorations[group.id] ?? [];
               const atMax = isAtMax(group);
 

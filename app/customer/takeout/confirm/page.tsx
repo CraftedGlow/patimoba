@@ -94,6 +94,8 @@ export default function TakeoutConfirmPage() {
     setSubmitting(true);
     setSubmitError(null);
 
+    const printPhotoUrl = cartItems.find((i) => i.customization?.printPhotoUrl)?.customization?.printPhotoUrl ?? null;
+
     const result = await createOrder({
       storeId: storeIdForOrder,
       customerId: userId,
@@ -104,6 +106,7 @@ export default function TakeoutConfirmPage() {
       orderType: "takeout",
       pickupDate: pickupDate || null,
       pickupTime: pickupTime || null,
+      printPhotoUrl,
     });
 
     setSubmitting(false);

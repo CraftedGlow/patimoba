@@ -234,7 +234,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
 // ────────────────────────────────────────────
 interface GroupFormProps {
   initial?: DecorationGroupWithItems
-  onSave: (data: { name: string; description: string; selectionType: "single" | "multiple"; maxSelections: number | null; required: boolean }) => Promise<{ error: string | null }>
+  onSave: (data: { name: string; description: string; selectionType: "single" | "multiple"; maxSelections: number | null; required: boolean; preparationDays: number | null }) => Promise<{ error: string | null }>
   onClose: () => void
 }
 
@@ -244,6 +244,7 @@ function GroupForm({ initial, onSave, onClose }: GroupFormProps) {
   const [selectionType, setSelectionType] = useState<"single" | "multiple">(initial?.selectionType ?? "single")
   const [maxSelections, setMaxSelections] = useState(String(initial?.maxSelections ?? ""))
   const [required, setRequired] = useState(initial?.required ?? false)
+  const [preparationDays, setPreparationDays] = useState(String(initial?.preparationDays ?? ""))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -257,6 +258,7 @@ function GroupForm({ initial, onSave, onClose }: GroupFormProps) {
       selectionType,
       maxSelections: selectionType === "multiple" && maxSelections ? parseInt(maxSelections, 10) || null : null,
       required,
+      preparationDays: preparationDays ? parseInt(preparationDays, 10) || null : null,
     })
     setSaving(false)
     if (err) { setError(err); return }
@@ -304,6 +306,15 @@ function GroupForm({ initial, onSave, onClose }: GroupFormProps) {
         <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} className="w-4 h-4" />
         必須選択にする
       </label>
+      <div>
+        <label className="text-xs font-medium text-gray-600 block mb-1">準備日数（任意）</label>
+        <div className="flex items-center gap-2">
+          <input type="number" value={preparationDays} onChange={(e) => setPreparationDays(e.target.value)} min={0}
+            placeholder="例: 3"
+            className="w-24 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300" />
+          <span className="text-xs text-gray-400">日前まで（空欄 = 制限なし）</span>
+        </div>
+      </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <div className="flex gap-2 pt-2">
         <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
@@ -647,7 +658,7 @@ export default function DecorationsPage() {
               <GroupForm
                 initial={editingGroup}
                 onSave={async (data) => {
-                  if (editingGroup) return updateGroup(editingGroup.id, { ...data, selectionType: data.selectionType })
+                  if (editingGroup) return updateGroup(editingGroup.id, data)
                   return (await createGroup(storeId, data)).error !== null
                     ? { error: "作成に失敗しました" }
                     : { error: null }

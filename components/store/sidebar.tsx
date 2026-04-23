@@ -220,7 +220,7 @@ export function StoreSidebar() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
-                  className="px-8 py-2 rounded-lg bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors"
+                  className="w-28 py-2 rounded-lg bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors"
                 >
                   はい
                 </motion.button>
@@ -228,7 +228,7 @@ export function StoreSidebar() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="px-8 py-2 rounded-lg border border-gray-300 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-colors"
+                  className="w-28 py-2 rounded-lg border border-gray-300 text-gray-600 font-bold text-sm hover:bg-gray-50 transition-colors"
                 >
                   キャンセル
                 </motion.button>

@@ -99,7 +99,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2 }}
         style={{ x: "-50%", y: "-50%" }}
-        className="fixed left-1/2 top-1/2 bg-white rounded-2xl shadow-2xl z-[120] w-[92%] max-w-[85vw] max-h-[80vh] flex flex-col"
+        className="fixed left-1/2 top-1/2 bg-white rounded-2xl shadow-2xl z-[120] w-auto max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ヘッダー */}
@@ -131,17 +131,17 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
             <div className="space-y-2">
               {options.map((o, i) => (
                 <div key={i} className="flex items-start justify-between py-3 border-b border-gray-50 last:border-0">
-                  <div>
+                  <div className="flex-1">
                     <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded mr-2">
                       {o.group}
                     </span>
                     <span className="text-sm text-gray-900">
                       {o.item}
-                      {o.quantity != null && ` ×${o.quantity}`}
+                      {o.quantity != null && o.group !== "メッセージ" && ` ×${o.quantity}`}
                     </span>
                   </div>
                   {o.price > 0 && (
-                    <span className="text-xs text-gray-500 shrink-0 ml-2">+¥{o.price.toLocaleString()}</span>
+                    <span className="text-xs text-gray-500 shrink-0 ml-8">+¥{o.price.toLocaleString()}</span>
                   )}
                 </div>
               ))}
@@ -150,34 +150,35 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
 
           {order.printPhotoUrl && (
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-xs font-bold text-amber-700 mb-2">プリント用写真</p>
-              <div className="relative rounded-lg overflow-hidden border border-amber-200 mb-2">
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-xs font-bold text-amber-700">プリント用写真</p>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(order.printPhotoUrl!);
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      const ext = order.printPhotoUrl!.split("?")[0].split(".").pop() || "jpg";
+                      a.download = `print_photo.${ext}`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      alert("ダウンロードに失敗しました");
+                    }
+                  }}
+                  className="text-amber-700 hover:text-amber-800"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <div className="relative rounded-lg overflow-hidden border border-amber-200">
                 <img src={order.printPhotoUrl} alt="プリント用写真" className="w-full object-contain max-h-48" />
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const res = await fetch(order.printPhotoUrl!);
-                    const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    const ext = order.printPhotoUrl!.split("?")[0].split(".").pop() || "jpg";
-                    a.download = `print_photo.${ext}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                  } catch {
-                    alert("ダウンロードに失敗しました");
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 text-sm text-amber-700 font-bold hover:text-amber-800"
-              >
-                <Download className="w-4 h-4" />
-                写真をダウンロード
-              </button>
             </div>
           )}
         </div>

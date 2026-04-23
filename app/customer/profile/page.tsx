@@ -546,19 +546,21 @@ export default function CustomerProfilePage() {
             入力内容はお店にのみ共有されます
           </p>
 
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-            className="w-full mt-4 border-2 border-gray-300 text-gray-600 font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            ログアウト
-          </motion.button>
+          <div className="flex justify-center mt-4">
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                logout();
+                router.push("/");
+              }}
+              className="border-2 border-gray-300 text-gray-600 font-bold py-2.5 px-8 rounded-full text-sm flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              ログアウト
+            </motion.button>
+          </div>
 
           {!isNew && userId && (
             <motion.button

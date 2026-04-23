@@ -223,10 +223,8 @@ export default function WholeCakePage() {
     router.push("/customer/takeout/pickup");
   };
 
-  // Required groups check: exclude print group in print mode
-  const hasRequiredUnfilled = decorationGroups
-    .filter((g) => !isPrintMode || g.id !== printGroupData?.groupId)
-    .some((g) => g.required && (selectedDecorations[g.id] ?? []).length === 0);
+  // デコレーションは任意なので常にfalse
+  const hasRequiredUnfilled = false;
 
   // Non-print regular decoration check for confirm step upload
   const hasPrintDecorationFromRegularMode = !isPrintMode && decorationGroups.some(
@@ -235,7 +233,7 @@ export default function WholeCakePage() {
 
   // Step 1 can proceed
   const canProceedStep1 = isPrintMode
-    ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messageText.trim() !== "")
+    ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messageText.trim() !== "" && !!printPhotoUrl)
     : (selectedSizeId !== "" && messageText.trim() !== "");
 
   const isPageLoading = loading || (isPrintMode && printGroupLoading);

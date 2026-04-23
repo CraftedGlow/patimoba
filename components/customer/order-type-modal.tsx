@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CalendarDays, X } from "lucide-react";
+import { Clock, CalendarDays } from "lucide-react";
 import type { Store } from "@/lib/types";
 
 interface OrderTypeModalProps {
@@ -227,76 +227,74 @@ export function OrderTypeModal({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 80, scale: 0.95 }}
             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="fixed inset-x-3 top-[6%] bg-white rounded-2xl shadow-2xl z-[70] max-h-[88vh] overflow-y-auto"
+            className="fixed inset-x-0 mx-auto top-[6%] w-[calc(100%-24px)] max-w-sm bg-white rounded-2xl shadow-2xl z-[70] max-h-[88vh] overflow-y-auto"
           >
-            <div className="px-5 pt-7 pb-6 relative">
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
-
-              <h2 className="text-lg font-bold text-gray-900 text-center leading-snug">
+            <div className="px-5 pt-6 pb-6 relative">
+              <h2 className="text-base font-bold text-gray-900 text-center leading-snug">
                 ご注文方法を選択してください
               </h2>
-              <p className="text-xs text-gray-400 text-center mt-1.5">
+              <p className="text-xs text-gray-400 text-center mt-1">
                 シーンに合わせてお選びいただけます
               </p>
 
-              <div className="flex items-center justify-center gap-3 mt-5 mb-6">
-                <div className="w-10 h-10 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+              <div className="flex items-center justify-center gap-2 mt-4 mb-5">
+                <div className="w-8 h-8 rounded-md bg-gray-50 border border-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
                   {store.logoUrl || store.image ? (
                     <img
                       src={store.logoUrl || store.image}
                       alt={store.name}
-                      className="w-full h-full object-contain p-0.5"
+                      className="w-full h-full object-contain"
                     />
                   ) : (
-                    <span className="text-[8px] text-gray-400 font-medium leading-tight text-center">
+                    <span className="text-[7px] text-gray-400 font-medium leading-tight text-center px-0.5">
                       {store.name.slice(0, 4)}
                     </span>
                   )}
                 </div>
-                <span className="font-bold text-base text-gray-900">{store.name}</span>
+                <span className="font-semibold text-sm text-gray-800">{store.name}</span>
               </div>
 
+              {/* 当日受取注文 */}
               <button
                 onClick={sameDayOk ? onSelectSameDay : undefined}
                 disabled={!sameDayOk}
-                className={`w-full border rounded-xl p-5 mb-3 text-left transition-shadow relative overflow-hidden ${
+                className={`w-full border rounded-xl p-4 mb-3 text-left transition-shadow ${
                   sameDayOk
-                    ? "border-gray-200 hover:shadow-md bg-white"
+                    ? "border-gray-200 hover:shadow-md bg-white active:bg-gray-50"
                     : "border-gray-200 bg-white cursor-default"
                 }`}
               >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${sameDayOk ? "bg-amber-50" : "bg-gray-100"}`}>
-                    <Clock className={`w-[18px] h-[18px] ${sameDayOk ? "text-amber-500" : "text-gray-400"}`} />
+                <div className="flex items-center gap-3 mb-1.5">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sameDayOk ? "bg-amber-100" : "bg-gray-100"}`}>
+                    <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-400"}`} />
                   </div>
-                  <span className={`text-base font-bold ${sameDayOk ? "text-gray-900" : "text-gray-400"}`}>
+                  <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-400"}`}>
                     当日受取注文
                   </span>
                 </div>
-                <p className={`text-sm ml-12 leading-relaxed ${sameDayOk ? "text-gray-600" : "text-gray-400"}`}>
+                <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-400"}`}>
                   本日お店に並んでいる商品からご注文いただけます。
                 </p>
+                {sameDayOk && sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
+                  <p className="text-xs mt-1.5 font-bold text-amber-500">
+                    {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}の間で受付しています。
+                  </p>
+                )}
                 {!sameDayOk && (
-                  <div className="mt-3 ml-12 bg-[#FFF9C4] rounded-lg px-4 py-3">
+                  <div className="mt-2 bg-amber-50 rounded-lg px-3 py-2">
                     {sameDayStatus.reason === "closed_today" ? (
-                      <p className="text-sm text-gray-800 leading-relaxed">
-                        本日は定休日のため、当日注文は受け付けていません。
+                      <p className="text-xs text-gray-700">
+                        本日は定休日のため受け付けていません。
                       </p>
                     ) : (
-                      <p className="text-sm text-gray-800 leading-relaxed">
+                      <p className="text-xs text-gray-700">
                         ただいま当日注文は受け付けていません。
                       </p>
                     )}
                     {sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
-                      <p className="text-sm text-gray-800 leading-relaxed">
-                        営業日の
-                        <span className="font-bold text-red-500">
-                          {sameDayStatus.acceptStart}~{sameDayStatus.acceptEnd}
+                      <p className="text-xs text-gray-700 mt-0.5">
+                        <span className="font-bold text-amber-500">
+                          {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}
                         </span>
                         の間で受付しています。
                       </p>
@@ -305,25 +303,25 @@ export function OrderTypeModal({
                 )}
               </button>
 
+              {/* 予約注文 */}
               <button
                 onClick={onSelectReservation}
-                className="w-full border border-gray-200 rounded-xl p-5 text-left hover:shadow-md transition-shadow bg-white"
+                className="w-full border border-gray-200 rounded-xl p-4 text-left hover:shadow-md transition-shadow bg-white active:bg-gray-50"
               >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-                    <CalendarDays className="w-[18px] h-[18px] text-orange-500" />
+                <div className="flex items-center gap-3 mb-1.5">
+                  <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                    <CalendarDays className="w-4 h-4 text-red-400" />
                   </div>
-                  <span className="text-base font-bold text-gray-900">予約注文</span>
+                  <span className="text-sm font-bold text-gray-900">予約注文</span>
                 </div>
-                <p className="text-sm text-gray-600 ml-12 leading-relaxed">
+                <p className="text-xs text-gray-500 leading-relaxed">
                   24時間ご予約を受付しています。
                 </p>
-                <p className="text-sm text-gray-600 ml-12 leading-relaxed">
+                <p className="text-xs text-gray-500 leading-relaxed">
                   本日から2営業日後以降からご予約いただけます。
                 </p>
-
-                <div className="mt-3 ml-12 bg-red-50 rounded-lg px-4 py-2.5">
-                  <p className="text-sm text-red-500 font-bold">
+                <div className="mt-2 bg-red-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-red-400 font-bold">
                     ホールケーキなどのご注文はこちら
                   </p>
                 </div>

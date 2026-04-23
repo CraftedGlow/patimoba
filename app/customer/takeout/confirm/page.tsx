@@ -358,6 +358,7 @@ export default function TakeoutConfirmPage() {
               <div className="text-right">
                 <span className="text-2xl font-bold">{total.toLocaleString()}</span>
                 <span className="text-base ml-0.5">円</span>
+                <span className="ml-1 text-gray-400" style={{ fontSize: 11 }}>(税込)</span>
               </div>
             </div>
             <div className="flex justify-between items-start">

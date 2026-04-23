@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, Loader2 } from "lucide-react";
 import { useOrders, type OrderChannel } from "@/hooks/use-orders";
@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { OrderDetailModal } from "@/components/store/order-detail-modal";
 import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
+import { DatePickerPopup } from "@/components/store/date-picker-popup";
 import { supabase } from "@/lib/supabase";
 import type { FulfillmentStatus, Order } from "@/lib/types";
 
@@ -242,6 +243,27 @@ export default function StoreOrdersPage() {
   const [manageFulfillment, setManageFulfillment] = useState<FulfillmentFilter>("");
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [managePickupDate, setManagePickupDate] = useState<Date | null>(null);
+  const [showManageDatePicker, setShowManageDatePicker] = useState(false);
+  const manageDateRef = useRef<HTMLDivElement>(null);
+
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+  const manageDateStr = managePickupDate
+    ? `${managePickupDate.getFullYear()}年${managePickupDate.getMonth() + 1}月${managePickupDate.getDate()}日(${dayNames[managePickupDate.getDay()]})`
+    : "今日以降";
+  const managePickupDateStr = managePickupDate
+    ? `${managePickupDate.getFullYear()}-${String(managePickupDate.getMonth() + 1).padStart(2, "0")}-${String(managePickupDate.getDate()).padStart(2, "0")}`
+    : null;
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (manageDateRef.current && !manageDateRef.current.contains(e.target as Node)) {
+        setShowManageDatePicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const todayStr = (() => {
     const d = new Date();
@@ -252,7 +274,7 @@ export default function StoreOrdersPage() {
     storeId,
     channel: manageChannel || undefined,
     fulfillmentStatus: manageFulfillment || undefined,
-    pickupDateFrom: todayStr,
+    ...(managePickupDateStr ? { pickupDate: managePickupDateStr } : { pickupDateFrom: todayStr }),
     sortBy: "pickup_date",
     sortAsc: true,
   });
@@ -414,7 +436,31 @@ export default function StoreOrdersPage() {
                 ))}
               </select>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <div className="relative" ref={manageDateRef}>
+                <button
+                  onClick={() => setShowManageDatePicker(!showManageDatePicker)}
+                  className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  {manageDateStr}
+                </button>
+                <AnimatePresence>
+                  {showManageDatePicker && (
+                    <DatePickerPopup
+                      selectedDate={managePickupDate ?? new Date()}
+                      onSelect={(date) => {
+                        setManagePickupDate(date);
+                        setShowManageDatePicker(false);
+                      }}
+                      onClear={() => {
+                        setManagePickupDate(null);
+                        setShowManageDatePicker(false);
+                      }}
+                      onClose={() => setShowManageDatePicker(false)}
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
               <div className="flex gap-2">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -463,6 +509,8 @@ export default function StoreOrdersPage() {
               const isEc = order.orderType === "ec";
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
               const fulfilledLabel = isEc ? "出荷済" : "受渡済";
+              const prevOrder = i > 0 ? manageOrders[i - 1] : null;
+              const isDateChanged = prevOrder !== null && prevOrder.pickupDate !== order.pickupDate;
 
               return (
                 <motion.div
@@ -470,7 +518,9 @@ export default function StoreOrdersPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 ${
+                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-l-4 ${
+                    isDateChanged ? "border-t-2 border-t-gray-300" : "border-t border-gray-100"
+                  } ${
                     isFulfilled
                       ? "bg-gray-50 border-l-gray-300"
                       : isEc

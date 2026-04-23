@@ -44,7 +44,7 @@ function itemChannel(item: UICartItem): CartChannel {
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
 
-const STORAGE_KEY = "patimoba_cart_v1"
+const DEFAULT_STORAGE_KEY = "patimoba_cart_v1"
 
 interface PersistedCart {
   items: UICartItem[]
@@ -75,7 +75,7 @@ function cartItemKey(item: UICartItem): string {
   ].join(":")
 }
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children, storageKey = DEFAULT_STORAGE_KEY }: { children: ReactNode; storageKey?: string }) {
   const [items, setItems] = useState<UICartItem[]>([])
   const [storeId, setStoreId] = useState<string | null>(null)
   const [deliveryAddress, setDeliveryAddressState] = useState<DeliveryAddress | null>(null)
@@ -85,7 +85,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
+      const raw = localStorage.getItem(storageKey)
       if (raw) {
         const parsed: PersistedCart = JSON.parse(raw)
         setItems(parsed.items || [])
@@ -99,17 +99,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoaded(true)
     }
-  }, [])
+  }, [storageKey])
 
   useEffect(() => {
     if (!loaded) return
     const payload: PersistedCart = { items, storeId, deliveryAddress, shippingFee, usedPoints }
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+      localStorage.setItem(storageKey, JSON.stringify(payload))
     } catch {
       /* ignore */
     }
-  }, [items, storeId, deliveryAddress, shippingFee, usedPoints, loaded])
+  }, [items, storeId, deliveryAddress, shippingFee, usedPoints, loaded, storageKey])
 
   const addItem = useCallback((item: UICartItem): AddItemResult => {
     const incomingCh = itemChannel(item)

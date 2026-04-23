@@ -359,6 +359,7 @@ export type Database = {
           is_seasonal: boolean
           season_start: string | null
           season_end: string | null
+          preparation_days: number | null
           display_order: number
           created_at: string
           updated_at: string
@@ -375,6 +376,7 @@ export type Database = {
           is_seasonal?: boolean
           season_start?: string | null
           season_end?: string | null
+          preparation_days?: number | null
           display_order?: number
           created_at?: string
           updated_at?: string
@@ -391,6 +393,7 @@ export type Database = {
           is_seasonal?: boolean
           season_start?: string | null
           season_end?: string | null
+          preparation_days?: number | null
           display_order?: number
           created_at?: string
           updated_at?: string

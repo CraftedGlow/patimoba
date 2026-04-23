@@ -124,13 +124,30 @@ export default function TakeoutPickupPage() {
 
         // カート内商品の制約
         const productIds = cartItems.map((i) => i.productId).filter(Boolean);
+        // カート内デコレーションIDを取得
+        const decorationIds = cartItems
+          .flatMap((i) => (i.customization?.options ?? []).map((o) => o.wholeCakeOptionId))
+          .filter(Boolean);
         if (productIds.length > 0) {
           const { data: productRows } = await supabase
             .from("products")
             .select("id, preparation_days, limited_from, limited_until")
             .in("id", productIds);
           if (productRows && productRows.length > 0) {
-            const maxDays = Math.max(...productRows.map((p: any) => Number(p.preparation_days) || 0));
+            let maxDays = Math.max(...productRows.map((p: any) => Number(p.preparation_days) || 0));
+
+            // デコレーションの準備日数も加味する
+            if (decorationIds.length > 0) {
+              const { data: decoRows } = await supabase
+                .from("decorations")
+                .select("id, preparation_days")
+                .in("id", decorationIds);
+              if (decoRows && decoRows.length > 0) {
+                const maxDecoDays = Math.max(...decoRows.map((d: any) => Number(d.preparation_days) || 0));
+                maxDays = Math.max(maxDays, maxDecoDays);
+              }
+            }
+
             setMaxPreparationDays(Math.max(maxDays, minFuture));
 
             const froms = productRows.filter((p: any) => p.limited_from).map((p: any) => new Date(p.limited_from));
@@ -268,6 +285,7 @@ export default function TakeoutPickupPage() {
       <CustomerHeader
         shopName={selectedStoreName || "パティモバ"}
         showBack
+        backHref={`/customer/takeout/products?store=${storeId ?? ""}&type=${orderType}`}
         onCartClick={() => setCartOpen(true)}
       />
 

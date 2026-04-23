@@ -177,11 +177,12 @@ export default function TakeoutProductDetailPage() {
 
       <div className="px-5 pb-56 flex-1 max-w-lg mx-auto w-full">
         {/* 商品画像 */}
+        <div className="flex justify-center mb-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-square shadow-[0_8px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 mb-6"
+          className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-square shadow-[0_8px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 w-4/5"
         >
           {product.image ? (
             <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
@@ -194,6 +195,7 @@ export default function TakeoutProductDetailPage() {
             </span>
           )}
         </motion.div>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}

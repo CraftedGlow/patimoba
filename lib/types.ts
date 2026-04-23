@@ -166,6 +166,7 @@ export interface DecorationItem {
   isSeasonal: boolean
   seasonStart: string | null
   seasonEnd: string | null
+  preparationDays: number | null
   displayOrder: number
 }
 

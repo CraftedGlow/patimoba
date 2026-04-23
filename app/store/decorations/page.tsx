@@ -39,6 +39,7 @@ interface DecorationFormProps {
   onSave: (data: {
     name: string; description: string; imageUrl: string | null; category: string
     price: number; isSeasonal: boolean; seasonStart: string | null; seasonEnd: string | null
+    preparationDays: number | null
   }) => Promise<{ error: string | null }>
   onClose: () => void
 }
@@ -52,6 +53,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
   const [isSeasonal, setIsSeasonal] = useState(initial?.isSeasonal ?? false)
   const [seasonStart, setSeasonStart] = useState(initial?.seasonStart ?? "")
   const [seasonEnd, setSeasonEnd] = useState(initial?.seasonEnd ?? "")
+  const [preparationDays, setPreparationDays] = useState<number | null>(initial?.preparationDays ?? null)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,6 +85,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
       isSeasonal,
       seasonStart: isSeasonal && seasonStart ? seasonStart : null,
       seasonEnd: isSeasonal && seasonEnd ? seasonEnd : null,
+      preparationDays,
     })
     setSaving(false)
     if (err) { setError(err); return }
@@ -199,6 +202,21 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
             </motion.div>
           )}
         </AnimatePresence>
+      </div>
+
+      {/* 準備日数 */}
+      <div>
+        <label className="text-xs font-medium text-gray-600 block mb-1">準備日数（任意）</label>
+        <select
+          value={preparationDays ?? ""}
+          onChange={(e) => setPreparationDays(e.target.value === "" ? null : Number(e.target.value))}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
+        >
+          <option value="">制限なし</option>
+          {[1, 2, 3, 4, 5, 6, 7, 10, 14].map((d) => (
+            <option key={d} value={d}>{d}日前まで</option>
+          ))}
+        </select>
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
@@ -619,6 +637,7 @@ export default function DecorationsPage() {
                         imageUrl: data.imageUrl, category: data.category, price: data.price,
                         isSeasonal: data.isSeasonal,
                         seasonStart: data.seasonStart, seasonEnd: data.seasonEnd,
+                        preparationDays: data.preparationDays,
                       })
                     } else {
                       return createDecoration(storeId, {
@@ -626,6 +645,7 @@ export default function DecorationsPage() {
                         imageUrl: data.imageUrl ?? undefined, category: data.category,
                         price: data.price, isSeasonal: data.isSeasonal,
                         seasonStart: data.seasonStart, seasonEnd: data.seasonEnd,
+                        preparationDays: data.preparationDays,
                       })
                     }
                   }}

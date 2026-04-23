@@ -223,12 +223,17 @@ export default function TakeoutProductsPage() {
     selectedCategory === "ホールケーキ" ? wholeCakes : [];
 
   const displayCategories = (() => {
-    const base = categories.some((c) => c === "期間限定")
-      ? categories
-      : [...categories, "期間限定"];
-    return wholeCakes.length > 0 && !base.includes("ホールケーキ")
-      ? [...base, "ホールケーキ"]
-      : base;
+    // visibleProductsに存在するカテゴリのみ（EC商品カテゴリを除外）、"ホール"はホールケーキと重複するため除外
+    const visibleCatSet = new Set(
+      visibleProducts.map((p) => p.category_name).filter(Boolean) as string[]
+    );
+    const base = categories.filter(
+      (c) => c === "すべて" || (visibleCatSet.has(c) && c !== "ホール")
+    );
+    const withLimited = base.includes("期間限定") ? base : [...base, "期間限定"];
+    return wholeCakes.length > 0 && !withLimited.includes("ホールケーキ")
+      ? [...withLimited, "ホールケーキ"]
+      : withLimited;
   })();
 
   const handleStepClick = (step: number) => {
@@ -249,7 +254,7 @@ export default function TakeoutProductsPage() {
       <StepProgress currentStep={2} steps={steps} onStepClick={handleStepClick} />
 
       <div className="px-4 md:px-8 lg:px-12 pb-8 flex-1" style={{ paddingBottom: itemCount > 0 ? "6rem" : "2rem" }}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <div>
             <h2 className="text-lg font-bold text-gray-900">商品一覧</h2>
             <div className="h-1 w-16 bg-amber-400 rounded-full mt-1" />
@@ -306,6 +311,7 @@ export default function TakeoutProductsPage() {
             </AnimatePresence>
           </div>
         </div>
+        <p className="text-right mb-3" style={{ fontSize: 11 }}>表示価格は全て税込です</p>
 
         {loading || cakesLoading ? (
           <div className="flex items-center justify-center py-20">

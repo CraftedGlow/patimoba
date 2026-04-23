@@ -15,6 +15,7 @@ function toDecorationItem(row: any): DecorationItem {
     isSeasonal: Boolean(row.is_seasonal),
     seasonStart: row.season_start ?? null,
     seasonEnd: row.season_end ?? null,
+    preparationDays: row.preparation_days != null ? Number(row.preparation_days) : null,
     displayOrder: Number(row.display_order) || 0,
   }
 }

@@ -240,9 +240,10 @@ export function WholeCakeBasicStep({
             </div>
 
             <div className="mb-6">
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                メッセージプレートの文字を入力(任意)
-              </p>
+              <div className="flex items-center gap-1.5 mb-2">
+                <p className="text-sm font-medium text-gray-700">メッセージプレートの文字を入力</p>
+                <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">必須</span>
+              </div>
               <input
                 type="text"
                 placeholder="例）Happy birthday!!"
@@ -250,7 +251,7 @@ export function WholeCakeBasicStep({
                 onChange={(e) => onMessageChange(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
               />
-              <p className="text-xs text-red-500 mt-1.5">
+              <p className="text-xs text-gray-400 mt-1.5">
                 メッセージが必要ない方は「なし」とご入力ください
               </p>
             </div>
@@ -258,9 +259,10 @@ export function WholeCakeBasicStep({
             {/* プリント写真アップロード（プリントモードのみ） */}
             {isPrintMode && (
               <div className="mb-8">
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  プリントしたい画像の選択(任意)
-                </p>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-sm font-medium text-gray-700">プリントしたい画像の選択</p>
+                  <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">必須</span>
+                </div>
                 <input
                   ref={photoInputRef}
                   type="file"

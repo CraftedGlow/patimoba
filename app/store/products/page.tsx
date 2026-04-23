@@ -76,9 +76,10 @@ export default function StoreProductsPage() {
   }, [products]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return products;
-    return products.filter((p) => p.name.includes(search));
-  }, [products, search]);
+    let list = tab === "ec" ? products.filter((p) => p.is_ec) : products.filter((p) => p.is_takeout);
+    if (!search.trim()) return list;
+    return list.filter((p) => p.name.includes(search));
+  }, [products, search, tab]);
 
   const handleToggleAccept = async (p: ProductRegistration) => {
     await updateProduct(p.id, { is_active: !p.is_active });
@@ -231,7 +232,7 @@ export default function StoreProductsPage() {
                 : "bg-gray-50 text-gray-400 border-transparent hover:text-gray-600"
             }`}
           >
-            ケーキ登録
+            テイクアウト
           </button>
           <button
             onClick={() => setTab("ec")}

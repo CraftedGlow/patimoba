@@ -129,6 +129,8 @@ export type Database = {
           fulfilled_at: string | null
           fulfilled_by: string | null
           fulfillment_status: string
+          customer_name_snapshot: string | null
+          guest_email: string | null
           id: string
           notes: string | null
           order_no: string | null
@@ -151,7 +153,9 @@ export type Database = {
           discount_amount?: number | null
           fulfilled_at?: string | null
           fulfilled_by?: string | null
+          customer_name_snapshot?: string | null
           fulfillment_status?: string
+          guest_email?: string | null
           id?: string
           notes?: string | null
           order_no?: string | null
@@ -171,10 +175,12 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           customer_id?: string | null
+          customer_name_snapshot?: string | null
           discount_amount?: number | null
           fulfilled_at?: string | null
           fulfilled_by?: string | null
           fulfillment_status?: string
+          guest_email?: string | null
           id?: string
           notes?: string | null
           order_no?: string | null

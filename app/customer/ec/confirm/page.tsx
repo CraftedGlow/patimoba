@@ -9,7 +9,6 @@ import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
-import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { supabase } from "@/lib/supabase";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
@@ -35,12 +34,12 @@ export default function ECConfirmPage() {
   const router = useRouter();
   const { userId, selectedStoreId, selectedStoreName, profile, points: userPoints } = useCustomerContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
-  const { createOrder } = useOrderMutations();
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [lastName, setLastName] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [lastName, setLastName] = useState(() => { try { return sessionStorage.getItem("ec_customer_last_name") ?? "" } catch { return "" } });
+  const [firstName, setFirstName] = useState(() => { try { return sessionStorage.getItem("ec_customer_first_name") ?? "" } catch { return "" } });
+  const [phone, setPhone] = useState(() => { try { return sessionStorage.getItem("ec_customer_phone") ?? "" } catch { return "" } });
+  const [email, setEmail] = useState(() => { try { return sessionStorage.getItem("ec_customer_email") ?? "" } catch { return "" } });
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [deliveryTime, setDeliveryTime] = useState("");
   const [hasCardInfo, setHasCardInfo] = useState(false);
@@ -66,6 +65,16 @@ export default function ECConfirmPage() {
       setCardLabel(sessionStorage.getItem("patimoba_card_label") || "");
     } catch { /* ignore */ }
   }, []);
+
+  // 名前・電話番号・メールをsessionStorageに保存（カード入力ページ遷移後も維持）
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("ec_customer_last_name", lastName);
+      sessionStorage.setItem("ec_customer_first_name", firstName);
+      sessionStorage.setItem("ec_customer_phone", phone);
+      sessionStorage.setItem("ec_customer_email", email);
+    } catch { /* ignore */ }
+  }, [lastName, firstName, phone, email]);
 
   // ログイン済みならユーザー情報を事前入力
   useEffect(() => {
@@ -112,18 +121,31 @@ export default function ECConfirmPage() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const result = await createOrder({
-      storeId: storeIdForOrder,
-      customerId: userId,
-      paymentStatus: hasCardInfo ? "paid" : "unpaid",
-      items: cartItems,
-      subtotal,
-      discountAmount: usedPoints,
-      orderType: "ec",
-      notes: shippingAddress
-        ? `〒${shippingAddress.postalCode} ${shippingAddress.prefecture}${shippingAddress.city}${shippingAddress.address}${shippingAddress.building ? " " + shippingAddress.building : ""}　配送時間:${deliveryTime}`
-        : undefined,
+    const notesStr = shippingAddress
+      ? `〒${shippingAddress.postalCode} ${shippingAddress.prefecture}${shippingAddress.city}${shippingAddress.address}${shippingAddress.building ? " " + shippingAddress.building : ""}　配送時間:${deliveryTime}`
+      : undefined;
+    const guestEmailVal = !profile && email.trim() ? email.trim() : null;
+
+    // EC注文は常にサーバーAPI経由（RLSをバイパス）
+    const res = await fetch("/api/ec/create-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        storeId: storeIdForOrder,
+        customerId: userId ?? null,
+        paymentStatus: hasCardInfo ? "paid" : "unpaid",
+        items: cartItems,
+        subtotal,
+        discountAmount: usedPoints,
+        notes: notesStr,
+        guestEmail: guestEmailVal,
+        customerName: `${lastName} ${firstName}`.trim() || null,
+      }),
     });
+    const json = await res.json();
+    const result: { orderId: string; error: string | null } = res.ok
+      ? { orderId: json.orderId, error: null }
+      : { orderId: "", error: json.error || "注文の作成に失敗しました" };
 
     setSubmitting(false);
     if (result.error) { setSubmitError(result.error); return; }
@@ -140,6 +162,28 @@ export default function ECConfirmPage() {
     clearCart();
     sessionStorage.removeItem("ec_shipping_address");
     sessionStorage.removeItem("ec_delivery_time");
+    sessionStorage.removeItem("ec_customer_last_name");
+    sessionStorage.removeItem("ec_customer_first_name");
+    sessionStorage.removeItem("ec_customer_phone");
+    sessionStorage.removeItem("ec_customer_email");
+
+    fetch("/api/email/send-ec-order-confirmation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: result.orderId,
+        customerName: `${lastName} ${firstName}`.trim(),
+        customerPhone: phone,
+        shippingAddress,
+        deliveryTime,
+        guestEmail: guestEmailVal,
+      }),
+    })
+      .then(async (r) => {
+        const data = await r.json();
+        console.log("[メール送信]", r.status, data);
+      })
+      .catch((e) => console.error("[メール送信エラー]", e));
 
     setShowOrderComplete(true);
     setCountdown(5);
@@ -216,6 +260,20 @@ export default function ECConfirmPage() {
             className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
           <p className="text-xs text-gray-400 mt-1">※日中に連絡の取れる電話番号</p>
         </div>
+
+        {/* メールアドレス（ゲスト注文時のみ：名前→電話番号→メールの順） */}
+        {!profile && (
+          <div className="mb-4">
+            <div className="flex items-center gap-1 mb-2">
+              <span className="text-sm font-bold">メールアドレス</span>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@email.com"
+              className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
+            <p className="text-xs text-gray-400 mt-1">※注文確認・発送通知をお送りします</p>
+          </div>
+        )}
 
         {/* ポイント利用 */}
         <div className="mb-4">
@@ -357,10 +415,10 @@ export default function ECConfirmPage() {
             買い物を続ける
           </motion.button>
           <motion.button
-            whileHover={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() ? undefined : { scale: 1.02 }}
-            whileTap={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() ? undefined : { scale: 0.98 }}
+            whileHover={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim()) ? undefined : { scale: 1.02 }}
+            whileTap={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim()) ? undefined : { scale: 0.98 }}
             onClick={handleConfirmOrder}
-            disabled={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim()}
+            disabled={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim())}
             className="flex-1 bg-amber-400 hover:bg-amber-500 disabled:bg-amber-200 disabled:cursor-not-allowed text-white font-bold py-3 rounded-md text-sm transition-colors">
             {submitting ? "処理中..." : "注文を確定する"}
           </motion.button>

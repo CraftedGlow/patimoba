@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
@@ -24,15 +25,13 @@ export default function CardAddPage() {
   const [expYear, setExpYear] = useState("");
   const [securityCode, setSecurityCode] = useState("");
   const [holderName, setHolderName] = useState("");
-  const [email, setEmail] = useState("");
 
   const canSubmit =
     cardNumber.replace(/\s/g, "").length >= 13 &&
     expMonth &&
     expYear &&
     securityCode.length >= 3 &&
-    holderName.trim().length > 0 &&
-    email.trim().length > 0;
+    holderName.trim().length > 0;
 
   const formatCardNumber = (v: string) => {
     const digits = v.replace(/\D/g, "").slice(0, 16);
@@ -65,6 +64,12 @@ export default function CardAddPage() {
         avatarUrl={profile?.avatar || undefined}
         points={0}
       />
+
+      <div className="px-4 pt-2">
+        <button onClick={() => router.back()} className="inline-flex items-center text-gray-600 mb-1">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      </div>
 
       <StepProgress currentStep={4} steps={steps} />
 
@@ -182,7 +187,7 @@ export default function CardAddPage() {
           />
         </div>
 
-        <div className="mb-4">
+        <div className="mb-6">
           <div className="flex items-center gap-1 mb-1.5">
             <span className="text-sm font-bold">名義人</span>
             <span className="text-xs text-red-500 font-bold">必須</span>
@@ -192,20 +197,6 @@ export default function CardAddPage() {
             value={holderName}
             onChange={(e) => setHolderName(e.target.value)}
             placeholder="TARO YAMADA"
-            className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent placeholder:text-gray-300"
-          />
-        </div>
-
-        <div className="mb-6">
-          <div className="flex items-center gap-1 mb-1.5">
-            <span className="text-sm font-bold">メールアドレス</span>
-            <span className="text-xs text-red-500 font-bold">必須</span>
-          </div>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="メールアドレス"
             className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent placeholder:text-gray-300"
           />
         </div>

@@ -270,18 +270,33 @@ export default function StoreOrdersPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   })();
 
-  const { orders: rawManageOrders, loading: manageLoading, refetch: refetchManage } = useOrders({
+  // テイクアウト注文（日付フィルターあり）
+  const { orders: manageTakeoutOrders, loading: manageTakeoutLoading, refetch: refetchManageTakeout } = useOrders({
     storeId,
-    channel: manageChannel || undefined,
+    channel: "takeout",
     fulfillmentStatus: manageFulfillment || undefined,
     ...(managePickupDateStr ? { pickupDate: managePickupDateStr } : { pickupDateFrom: todayStr }),
     sortBy: "pickup_date",
     sortAsc: true,
   });
 
-  const manageOrders = rawManageOrders.filter(
-    (o) => !(o.orderType === "ec" && o.fulfillmentStatus === "fulfilled")
-  );
+  // EC注文（pickup_dateがないため日付フィルターなし、デフォルトpending）
+  const { orders: manageEcOrders, loading: manageEcLoading, refetch: refetchManageEc } = useOrders({
+    storeId,
+    channel: "ec",
+    fulfillmentStatus: manageFulfillment || "pending",
+    sortBy: "created_at",
+    sortAsc: false,
+  });
+
+  const manageLoading = manageTakeoutLoading || manageEcLoading;
+  const refetchManage = async () => { await Promise.all([refetchManageTakeout(), refetchManageEc()]); };
+
+  const manageOrders = (() => {
+    if (manageChannel === "takeout") return manageTakeoutOrders;
+    if (manageChannel === "ec") return manageEcOrders;
+    return [...manageEcOrders, ...manageTakeoutOrders];
+  })();
 
   // ── 注文履歴タブ state ──
   const [historyChannel, setHistoryChannel] = useState<"" | OrderChannel>("");
@@ -311,6 +326,19 @@ export default function StoreOrdersPage() {
         confirmAction.toFulfilled,
         user?.id ?? null,
       );
+      if (confirmAction.isEc && confirmAction.toFulfilled) {
+        const targetOrder = manageOrders.find((o) => o.id === confirmAction.orderId);
+        const customerName = targetOrder?.customerName || targetOrder?.lineName || "";
+        const shipRes = await fetch("/api/line/send-ship-notification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: confirmAction.orderId, customerName }),
+        }).catch((e) => { console.error("[発送通知エラー]", e); return null; });
+        if (shipRes) {
+          const shipData = await shipRes.json().catch(() => ({}));
+          console.log("[発送通知]", shipRes.status, shipData);
+        }
+      }
       await refetchManage();
     } finally {
       setConfirmAction(null);
@@ -745,23 +773,36 @@ export default function StoreOrdersPage() {
               className="fixed inset-0 bg-black z-50"
               onClick={() => !confirmLoading && setConfirmAction(null)}
             />
+            <div className="fixed inset-0 flex items-center justify-center z-[60] pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.18 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-[60] p-6 w-[90%] max-w-sm"
+              className="bg-white rounded-2xl shadow-2xl p-6 w-[90%] max-w-sm pointer-events-auto"
             >
-              <h3 className="text-base font-bold text-center mb-2">
-                {confirmAction.toFulfilled
-                  ? confirmAction.isEc ? "出荷済にします" : "受渡済にします"
-                  : "未提供に戻す"}
-              </h3>
-              <p className="text-xs text-gray-500 text-center mb-5">
-                {confirmAction.toFulfilled
-                  ? "この注文を提供済にしますか？提供日時が記録されます。"
-                  : "この注文を未提供に戻しますか？"}
-              </p>
+              {confirmAction.isEc && confirmAction.toFulfilled ? (
+                <>
+                  <h3 className="text-base font-bold text-center mb-2">商品を発送しましたか？</h3>
+                  <p className="text-xs text-gray-500 text-center mb-5">
+                    「はい」を押すと顧客に発送通知が送信されます
+                  </p>
+                </>
+              ) : confirmAction.toFulfilled ? (
+                <>
+                  <h3 className="text-base font-bold text-center mb-2">準備完了にします</h3>
+                  <p className="text-xs text-gray-500 text-center mb-5">
+                    この注文を準備完了にしますか？
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-base font-bold text-center mb-2">準備未完了に戻す</h3>
+                  <p className="text-xs text-gray-500 text-center mb-5">
+                    この注文を準備未完了に戻しますか？
+                  </p>
+                </>
+              )}
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -775,13 +816,14 @@ export default function StoreOrdersPage() {
                   type="button"
                   disabled={confirmLoading}
                   onClick={handleConfirm}
-                  className={`flex-1 font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 disabled:opacity-60 text-white ${confirmAction.toFulfilled ? "bg-green-500 hover:bg-green-600" : "bg-gray-500 hover:bg-gray-600"}`}
+                  className={`flex-1 font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 disabled:opacity-60 text-white ${confirmAction.toFulfilled ? "bg-amber-400 hover:bg-amber-500" : "bg-gray-500 hover:bg-gray-600"}`}
                 >
                   {confirmLoading && <Loader2 className="w-4 h-4 animate-spin" />}
                   はい
                 </button>
               </div>
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>

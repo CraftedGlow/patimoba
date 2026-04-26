@@ -27,6 +27,7 @@ export default function ECShippingPage() {
   const [address, setAddress] = useState("");
   const [building, setBuilding] = useState("");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="min-h-screen bg-white">
@@ -51,9 +52,10 @@ export default function ECShippingPage() {
 
         <div className="space-y-3 mb-8">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              郵便番号
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="block text-sm font-medium text-gray-700">郵便番号</label>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
             <input
               type="text"
               value={postalCode}
@@ -63,9 +65,10 @@ export default function ECShippingPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              都道府県
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="block text-sm font-medium text-gray-700">都道府県</label>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
             <input
               type="text"
               value={prefecture}
@@ -75,9 +78,10 @@ export default function ECShippingPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              市区町村
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="block text-sm font-medium text-gray-700">市区町村</label>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
             <input
               type="text"
               value={city}
@@ -87,9 +91,10 @@ export default function ECShippingPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              番地
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="block text-sm font-medium text-gray-700">番地</label>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
             <input
               type="text"
               value={address}
@@ -134,10 +139,16 @@ export default function ECShippingPage() {
           ))}
         </div>
 
+        {error && <p className="text-xs text-red-500 text-center mb-3">{error}</p>}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => {
+            if (!postalCode.trim() || !prefecture.trim() || !city.trim() || !address.trim()) {
+              setError("郵便番号・都道府県・市区町村・番地は必須です");
+              return;
+            }
+            setError(null);
             sessionStorage.setItem("ec_shipping_address", JSON.stringify({
               postalCode, prefecture, city, address, building,
             }));

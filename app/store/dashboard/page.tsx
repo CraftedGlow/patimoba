@@ -435,12 +435,13 @@ export default function StoreDashboardPage() {
               className="fixed inset-0 bg-black z-50"
               onClick={() => !confirmLoading && setConfirmAction(null)}
             />
+            <div className="fixed inset-0 flex items-center justify-center z-[60] pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.18 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-[60] p-6 w-[90%] max-w-sm"
+              className="bg-white rounded-2xl shadow-2xl p-6 w-[90%] max-w-sm pointer-events-auto"
             >
               {confirmAction.isEc && confirmAction.toReady ? (
                 <>
@@ -489,6 +490,7 @@ export default function StoreDashboardPage() {
                 </button>
               </div>
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>

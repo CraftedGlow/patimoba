@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useStores } from "@/hooks/use-stores";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useCart } from "@/lib/cart-context";
 import { Store } from "@/lib/types";
 import { Search, Loader2 } from "lucide-react";
 
@@ -14,7 +15,23 @@ const ecSteps = ["店舗選択", "商品選択", "お届け先", "注文確認"]
 
 export default function ECStorePage() {
   const { stores, loading } = useStores();
-  const { setSelectedStoreId, setSelectedStoreName, profile } = useCustomerContext();
+  const { setSelectedStoreId, setSelectedStoreName, profile, userId } = useCustomerContext();
+  const { clear: clearCart } = useCart();
+
+  // ゲストがリンクから入り直したときはカートをリセット
+  useEffect(() => {
+    if (userId) return;
+    clearCart();
+    // フロー中のsessionStorageもクリア
+    try {
+      sessionStorage.removeItem("ec_shipping_address");
+      sessionStorage.removeItem("ec_delivery_time");
+      sessionStorage.removeItem("ec_customer_last_name");
+      sessionStorage.removeItem("ec_customer_first_name");
+      sessionStorage.removeItem("ec_customer_phone");
+      sessionStorage.removeItem("ec_customer_email");
+    } catch { /* ignore */ }
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredStores = stores.filter((s) =>

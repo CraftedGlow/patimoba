@@ -15,6 +15,7 @@ interface CreateOrderInput {
   notes?: string
   orderType?: string
   printPhotoUrl?: string | null
+  guestEmail?: string | null
 }
 
 function deriveOrderType(items: UICartItem[], fallback?: string): { type: string; error: string | null } {
@@ -57,6 +58,7 @@ export function useOrderMutations() {
         pickup_time: input.pickupTime ?? null,
         notes: input.notes ?? "",
         print_photo_url: input.printPhotoUrl ?? null,
+        guest_email: input.guestEmail ?? null,
       })
       .select("id")
       .single()

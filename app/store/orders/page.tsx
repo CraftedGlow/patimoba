@@ -248,9 +248,8 @@ export default function StoreOrdersPage() {
   const manageDateRef = useRef<HTMLDivElement>(null);
 
   const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
-  const manageDateStr = managePickupDate
-    ? `${managePickupDate.getFullYear()}年${managePickupDate.getMonth() + 1}月${managePickupDate.getDate()}日(${dayNames[managePickupDate.getDay()]})`
-    : "今日以降";
+  const manageDateBase = managePickupDate ?? new Date();
+  const manageDateStr = `${manageDateBase.getFullYear()}年${manageDateBase.getMonth() + 1}月${manageDateBase.getDate()}日(${dayNames[manageDateBase.getDay()]})`;
   const managePickupDateStr = managePickupDate
     ? `${managePickupDate.getFullYear()}-${String(managePickupDate.getMonth() + 1).padStart(2, "0")}-${String(managePickupDate.getDate()).padStart(2, "0")}`
     : null;
@@ -557,7 +556,7 @@ export default function StoreOrdersPage() {
                   }`}
                 >
                   <div className="pl-3">
-                    <span className="text-xs">{order.customerName || "-"}</span>
+                    <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
                   </div>
                   <div className="text-sm text-gray-700">
                     {isEc ? (

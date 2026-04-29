@@ -346,7 +346,7 @@ export function toUIOrder(row: any): Order {
     orderNo: row.order_no || "",
     storeId: row.store_id,
     customerId: row.customer_id,
-    customerName: user.name || "",
+    customerName: user.name || row.customer_name_snapshot || "",
     lineName: user.line_name || "",
     customerAvatar: undefined,
     phone: user.phone || "",

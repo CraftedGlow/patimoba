@@ -277,10 +277,10 @@ export default function StoreDashboardPage() {
       </div>
 
       <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[130px_80px_minmax(0,1fr)_100px_64px] bg-[#FFF176] px-3 py-2.5 text-xs font-bold text-gray-700 items-center">
+        <div className="grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] bg-[#FFF176] px-3 py-2.5 text-xs font-bold text-gray-700 items-center">
           <span>顧客名</span>
-          <span>来店時間</span>
-          <span>注文内容</span>
+          <span>来店/発送</span>
+          <span className="pl-3">注文内容</span>
           <span>合計金額</span>
           <span className="text-center">準備</span>
         </div>
@@ -303,7 +303,7 @@ export default function StoreDashboardPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
               transition={{ delay: i * 0.05 }}
-              className={`grid grid-cols-[130px_80px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
+              className={`grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
                 isEc ? "bg-amber-50" : "bg-white"
               }`}
             >
@@ -317,7 +317,7 @@ export default function StoreDashboardPage() {
                   : (order.pickupTime ? order.pickupTime.slice(0, 5) : "-")}
               </div>
 
-              <div className="text-sm min-w-0">
+              <div className="text-sm min-w-0 pl-3 pt-1">
                 {order.items.map((item, j) => (
                   <div key={j} className="flex items-center gap-1.5 truncate">
                     <span className="truncate">{item.name}</span>

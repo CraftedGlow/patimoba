@@ -1,26 +1,128 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { LineLoginScreen } from "@/components/auth/line-login-screen";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { PasswordInput } from "@/components/ui/password-input";
 
 export default function CustomerLoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [liffLoading, setLiffLoading] = useState(false);
 
-  const handleLineLogin = () => {
-    setIsLoading(true);
+  const loginWithLiff = useCallback(async (liff: any) => {
+    const idToken = liff.getIDToken();
+    if (!idToken) throw new Error("IDトークンを取得できませんでした");
+
+    const res = await fetch("/api/line/liff-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "ログインに失敗しました");
+    }
+
+    const result = await res.json();
+
+    if (result.action === "register") {
+      sessionStorage.removeItem("liff_login_pending");
+      router.push("/customer/line-register");
+      return;
+    }
+
+    if (result.action === "signup") {
+      sessionStorage.removeItem("liff_login_pending");
+      sessionStorage.setItem("liff_signup_link_user_id", result.userId);
+      router.push("/customer/signup");
+      return;
+    }
+
+    const { user, otp } = result;
+
+    if (otp) {
+      const { supabase } = await import("@/lib/supabase");
+      await supabase.auth.verifyOtp({
+        email: otp.email,
+        token: otp.token,
+        type: "magiclink",
+      });
+    }
+
+    const nameParts = (user.name || user.line_name || "").split(" ");
+    const authUser = {
+      id: user.id,
+      email: user.email ?? "",
+      userType: "customer" as const,
+      firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
+      lastName: nameParts[0] ?? "",
+      storeId: null,
+      raw: user,
+    };
+
+    sessionStorage.removeItem("liff_login_pending");
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+    router.push("/customer/takeout");
+  }, [router]);
+
+  useEffect(() => {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId || !sessionStorage.getItem("liff_login_pending")) return;
+
+    setLiffLoading(true);
+    (async () => {
+      try {
+        const liff = (await import("@line/liff")).default;
+        await liff.init({ liffId });
+        if (liff.isLoggedIn()) {
+          await loginWithLiff(liff);
+        } else {
+          sessionStorage.removeItem("liff_login_pending");
+          setLiffLoading(false);
+        }
+      } catch (err: any) {
+        sessionStorage.removeItem("liff_login_pending");
+        setError(err.message || "LINEログインに失敗しました");
+        setLiffLoading(false);
+      }
+    })();
+  }, [loginWithLiff]);
+
+  const handleLineLogin = async () => {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) {
+      setError("LIFFが設定されていません");
+      return;
+    }
+
+    setLiffLoading(true);
+    setError("");
+
+    try {
+      const liff = (await import("@line/liff")).default;
+      await liff.init({ liffId });
+
+      if (!liff.isLoggedIn()) {
+        sessionStorage.setItem("liff_login_pending", "1");
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+
+      await loginWithLiff(liff);
+    } catch (err: any) {
+      setError(err.message || "LINEログインに失敗しました");
+      setLiffLoading(false);
+    }
   };
 
   const handleEmailLogin = async (e?: React.FormEvent) => {
@@ -41,21 +143,6 @@ export default function CustomerLoginPage() {
 
   return (
     <AnimatePresence mode="wait">
-      {isLoading ? (
-        <motion.div
-          key="loading"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <LineLoginScreen
-            redirectTo="/customer/takeout"
-            onBack={() => setIsLoading(false)}
-            backLabel="戻る"
-          />
-        </motion.div>
-      ) : (
         <motion.div
           key="login"
           initial={{ opacity: 0 }}
@@ -115,18 +202,23 @@ export default function CustomerLoginPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.35 }}
-                whileHover={{ scale: 1.02, boxShadow: "0 8px 25px rgba(6, 199, 85, 0.3)" }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: liffLoading ? 1 : 1.02, boxShadow: liffLoading ? "none" : "0 8px 25px rgba(6, 199, 85, 0.3)" }}
+                whileTap={{ scale: liffLoading ? 1 : 0.97 }}
                 onClick={handleLineLogin}
-                className="w-full flex items-center justify-center gap-3 bg-[#06C755] hover:bg-[#05b34d] text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl transition-colors duration-200 shadow-lg shadow-green-200/50"
+                disabled={liffLoading}
+                className="w-full flex items-center justify-center gap-3 bg-[#06C755] hover:bg-[#05b34d] text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl transition-colors duration-200 shadow-lg shadow-green-200/50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="w-5 h-5 sm:w-6 sm:h-6 fill-current"
-                >
-                  <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.271.173-.508.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
-                </svg>
+                {liffLoading ? (
+                  <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    className="w-5 h-5 sm:w-6 sm:h-6 fill-current"
+                  >
+                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.271.173-.508.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314" />
+                  </svg>
+                )}
                 LINEでログイン
               </motion.button>
 
@@ -230,7 +322,6 @@ export default function CustomerLoginPage() {
             </motion.div>
           </div>
         </motion.div>
-      )}
     </AnimatePresence>
   );
 }

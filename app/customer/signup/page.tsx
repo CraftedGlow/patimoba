@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -16,6 +16,7 @@ const dayLabels = Array.from({ length: 31 }, (_, i) => `${i + 1}日`);
 export default function CustomerSignupPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const [linkUserId, setLinkUserId] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -34,6 +35,28 @@ export default function CustomerSignupPage() {
   const [zipCode, setZipCode] = useState("");
   const [address, setAddress] = useState("");
   const [memo, setMemo] = useState("");
+
+  useEffect(() => {
+    const id = sessionStorage.getItem("liff_signup_link_user_id");
+    if (!id) return;
+    setLinkUserId(id);
+
+    (async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("name, line_name, email, phone")
+        .eq("id", id)
+        .maybeSingle();
+      if (!data) return;
+
+      const displayName = data.name || data.line_name || "";
+      const parts = displayName.trim().split(/\s+/);
+      if (parts[0]) setLastName(parts[0]);
+      if (parts[1]) setFirstName(parts.slice(1).join(" "));
+      if (data.email) setEmail(data.email);
+      if (data.phone) setPhone(data.phone);
+    })();
+  }, []);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -81,23 +104,23 @@ export default function CustomerSignupPage() {
 
       const fullName = [lastName, firstName].filter(Boolean).join(" ");
 
-      const payload = {
-        auth_user_id: authUserId,
-        name: fullName,
-        email: cleanEmail,
-        phone: phone || null,
-        user_type: "customer",
-      };
-
-      const { error: insertErr } = await supabase
-        .from("users")
-        .insert(payload);
-      if (insertErr) throw insertErr;
+      if (linkUserId) {
+        const { error: updateErr } = await supabase
+          .from("users")
+          .update({ auth_user_id: authUserId, name: fullName, email: cleanEmail, phone: phone || null })
+          .eq("id", linkUserId);
+        if (updateErr) throw updateErr;
+        sessionStorage.removeItem("liff_signup_link_user_id");
+      } else {
+        const { error: insertErr } = await supabase
+          .from("users")
+          .insert({ auth_user_id: authUserId, name: fullName, email: cleanEmail, phone: phone || null, user_type: "customer" });
+        if (insertErr) throw insertErr;
+      }
 
       try {
         await login(cleanEmail, password, "customer");
       } catch {
-        /* ログイン失敗時は手動ログインへ */
         router.push("/customer/login");
         return;
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -14,7 +14,7 @@ import {
   Loader2,
   MessageCircle,
 } from "lucide-react";
-import { useAuth, type UserType } from "@/lib/auth-context";
+import { useAuth, type UserType, STORAGE_KEY } from "@/lib/auth-context";
 import { PasswordInput } from "@/components/ui/password-input";
 
 type Role = "store" | "admin" | "customer" | null;
@@ -63,8 +63,117 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [liffLoading, setLiffLoading] = useState(false);
 
   const currentRole = roles.find((r) => r.id === selectedRole);
+
+  const loginWithLiff = useCallback(async (liff: any) => {
+    const idToken = liff.getIDToken()
+    if (!idToken) throw new Error("IDトークンを取得できませんでした")
+
+    const res = await fetch("/api/line/liff-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    })
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error || "ログインに失敗しました")
+    }
+
+    const result = await res.json()
+
+    if (result.action === "register") {
+      sessionStorage.removeItem("liff_login_pending")
+      router.push("/customer/line-register")
+      return
+    }
+
+    if (result.action === "signup") {
+      sessionStorage.removeItem("liff_login_pending")
+      sessionStorage.setItem("liff_signup_link_user_id", result.userId)
+      router.push("/customer/signup")
+      return
+    }
+
+    const { user, otp } = result
+
+    if (otp) {
+      const { supabase } = await import("@/lib/supabase")
+      await supabase.auth.verifyOtp({
+        email: otp.email,
+        token: otp.token,
+        type: "magiclink",
+      })
+    }
+
+    const nameParts = (user.name || user.line_name || "").split(" ")
+    const authUser = {
+      id: user.id,
+      email: user.email ?? "",
+      userType: "customer" as const,
+      firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
+      lastName: nameParts[0] ?? "",
+      storeId: null,
+      raw: user,
+    }
+
+    sessionStorage.removeItem("liff_login_pending")
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+    router.push("/customer/takeout")
+  }, [router])
+
+  // LINEからのリダイレクト戻りを処理
+  useEffect(() => {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID
+    if (!liffId || !sessionStorage.getItem("liff_login_pending")) return
+
+    setLiffLoading(true)
+    ;(async () => {
+      try {
+        const liff = (await import("@line/liff")).default
+        await liff.init({ liffId })
+        if (liff.isLoggedIn()) {
+          await loginWithLiff(liff)
+        } else {
+          sessionStorage.removeItem("liff_login_pending")
+          setLiffLoading(false)
+        }
+      } catch (err: any) {
+        sessionStorage.removeItem("liff_login_pending")
+        setError(err.message || "LINEログインに失敗しました")
+        setLiffLoading(false)
+      }
+    })()
+  }, [loginWithLiff])
+
+  const handleCustomerLogin = async () => {
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID
+    if (!liffId) {
+      setError("LIFFが設定されていません")
+      return
+    }
+
+    setLiffLoading(true)
+    setError("")
+
+    try {
+      const liff = (await import("@line/liff")).default
+      await liff.init({ liffId })
+
+      if (!liff.isLoggedIn()) {
+        sessionStorage.setItem("liff_login_pending", "1")
+        liff.login({ redirectUri: window.location.href })
+        return
+      }
+
+      await loginWithLiff(liff)
+    } catch (err: any) {
+      setError(err.message || "LINEログインに失敗しました")
+      setLiffLoading(false)
+    }
+  }
 
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -128,6 +237,19 @@ export default function LoginPage() {
                 アカウントの種類を選択してください
               </p>
 
+              <AnimatePresence>
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="text-sm text-red-500 text-center mb-4"
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
               <div className="space-y-3">
                 {roles.map((role, i) => (
                   <motion.button
@@ -137,13 +259,14 @@ export default function LoginPage() {
                     transition={{ duration: 0.3, delay: i * 0.08 }}
                     onClick={() => {
                       if (role.id === "customer") {
-                        router.push("/customer/login");
-                        return;
+                        handleCustomerLogin()
+                        return
                       }
-                      setSelectedRole(role.id);
-                      setError("");
+                      setSelectedRole(role.id)
+                      setError("")
                     }}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 ${role.color}`}
+                    disabled={liffLoading}
+                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 ${role.color} disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
                     <div
                       className={`w-11 h-11 rounded-lg flex items-center justify-center ${role.iconBg}`}
@@ -159,10 +282,14 @@ export default function LoginPage() {
                       </div>
                     </div>
                     {role.id === "customer" ? (
-                      <span className="flex items-center gap-1 text-xs text-[#06C755] font-medium">
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        LINE
-                      </span>
+                      liffLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#06C755]" />
+                      ) : (
+                        <span className="flex items-center gap-1 text-xs text-[#06C755] font-medium">
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          LINE
+                        </span>
+                      )
                     ) : (
                       <ChevronRight className="w-4 h-4 text-gray-400" />
                     )}

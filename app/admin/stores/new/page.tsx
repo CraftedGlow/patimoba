@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { createStore, uploadStoreLogo, saveClosedDays } from "@/lib/admin-api";
+import { createStore, uploadStoreLogo, uploadStoreImage, saveClosedDays } from "@/lib/admin-api";
 import { supabase } from "@/lib/supabase";
 import type { StorePlanSlug } from "@/lib/store-plans";
 import { StorePlanPicker } from "@/components/admin/store-plan-picker";
@@ -44,6 +44,8 @@ export default function AdminStoreNewPage() {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -54,6 +56,15 @@ export default function AdminStoreNewPage() {
     setLogoFile(file);
     const reader = new FileReader();
     reader.onload = () => setLogoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -101,6 +112,11 @@ export default function AdminStoreNewPage() {
         logo_url: logoUrl,
         plan: selectedPlan,
       });
+
+      if (imageFile) {
+        const imageUrl = await uploadStoreImage(imageFile, created.id);
+        await supabase.from("stores").update({ image: imageUrl }).eq("id", created.id);
+      }
       if (closedDays.length > 0) {
         await saveClosedDays(created.id, closedDays);
       }
@@ -270,6 +286,36 @@ export default function AdminStoreNewPage() {
                   <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">ロゴをアップロード</p>
                   <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP対応</p>
+                </div>
+              )}
+            </label>
+          </Field>
+
+          <Field label="店舗外観写真">
+            <p className="text-xs text-gray-400 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
+            <label className="block">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              {imagePreview ? (
+                <div className="relative border-2 border-amber-400 rounded-xl overflow-hidden cursor-pointer hover:border-amber-500 transition-colors">
+                  <img
+                    src={imagePreview}
+                    alt="外観プレビュー"
+                    className="w-full h-44 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <p className="text-white text-sm font-bold bg-black/50 px-3 py-1 rounded-full">クリックして変更</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                  <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">外観写真をアップロード</p>
+                  <p className="text-xs text-gray-400 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
                 </div>
               )}
             </label>

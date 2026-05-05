@@ -8,7 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
-import { uploadStoreLogo } from "@/lib/upload-image";
+import { uploadStoreLogo, uploadStoreImage } from "@/lib/upload-image";
 import type { Database } from "@/lib/database.types";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
@@ -86,6 +86,7 @@ export default function StoreAccountPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [storeImageUrl, setStoreImageUrl] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -113,7 +114,9 @@ export default function StoreAccountPage() {
   const [saving, setSaving] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [ecLinkCopied, setEcLinkCopied] = useState(false);
 
   const [modalHolidays, setModalHolidays] = useState<{ dayOfWeek: number; rule: string }[]>([]);
@@ -128,6 +131,7 @@ export default function StoreAccountPage() {
         setPhone(store.phone ?? "");
         setEmail(store.email ?? "");
         setLogoUrl(store.logo_url ?? null);
+        setStoreImageUrl((store as any).image ?? null);
 
         // store_order_rules から当日受付設定を取得
         const { data: orderRules } = await supabase
@@ -281,6 +285,25 @@ export default function StoreAccountPage() {
         .insert({ store_id: storeId, same_day_order_allowed: value });
     }
   }, [storeId]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storeId) return;
+    setImageUploading(true);
+    try {
+      const { url, error } = await uploadStoreImage(file, storeId);
+      if (error) throw new Error(error);
+      if (url) {
+        await supabase.from("stores").update({ image: url }).eq("id", storeId);
+        setStoreImageUrl(url);
+      }
+    } catch (err) {
+      console.error("Store image upload failed:", err);
+    } finally {
+      setImageUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -484,6 +507,55 @@ export default function StoreAccountPage() {
               {logoUploading && logoUrl && (
                 <div className="absolute inset-0 bg-white/60 rounded-lg flex items-center justify-center">
                   <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+                </div>
+              )}
+            </motion.button>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500 mb-2">店舗外観写真</p>
+            <p className="text-xs text-gray-400 mb-3">顧客向けTOPページのヒーロー画像として表示されます</p>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              onClick={() => imageInputRef.current?.click()}
+              disabled={imageUploading}
+              className="relative group w-full max-w-sm"
+            >
+              {storeImageUrl ? (
+                <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                  <img
+                    src={storeImageUrl}
+                    alt="店舗外観"
+                    className="w-full h-36 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Camera className="w-5 h-5 text-white" />
+                  </div>
+                  {imageUploading && (
+                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="w-full h-36 max-w-sm rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors">
+                  {imageUploading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Camera className="w-5 h-5 mb-1" />
+                      <span>外観写真を追加</span>
+                    </>
+                  )}
                 </div>
               )}
             </motion.button>

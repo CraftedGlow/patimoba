@@ -49,7 +49,7 @@ export default function TakeoutPickupPage() {
   const storeParam = searchParams.get("store") ?? "";
   const isSameDay = orderType === "sameday";
 
-  const { selectedStoreName, selectedStoreId } = useCustomerContext();
+  const { selectedStoreName, selectedStoreId, profile } = useCustomerContext();
   const { items: cartItems, storeId: cartStoreId } = useCart();
   const storeId = selectedStoreId || cartStoreId || storeParam || null;
 
@@ -283,7 +283,8 @@ export default function TakeoutPickupPage() {
   return (
     <div className="min-h-screen bg-white">
       <CustomerHeader
-        shopName={selectedStoreName || "パティモバ"}
+        userName={profile?.lineName}
+        avatarUrl={profile?.avatar || undefined}
         showBack
         backHref={`/customer/takeout/products?store=${storeId ?? ""}&type=${orderType}`}
         onCartClick={() => setCartOpen(true)}

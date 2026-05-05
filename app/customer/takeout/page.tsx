@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
-import { OrderTypeModal } from "@/components/customer/order-type-modal";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useStores } from "@/hooks/use-stores";
+import { useAuth } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
 import { Store } from "@/lib/types";
 import { Search, Heart, Loader2 } from "lucide-react";
@@ -66,21 +67,46 @@ function StoreCard({
 
 export default function TakeoutStorePage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const {
-    setSelectedStoreId,
-    setSelectedStoreName,
     profile,
     favorites,
     toggleFavorite,
     viewedStoreIds,
-    addViewedStore,
   } = useCustomerContext();
   const { stores, loading } = useStores();
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("店舗一覧");
   const [searchQuery, setSearchQuery] = useState("");
   const [favSearchQuery, setFavSearchQuery] = useState("");
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+
+  // LINEログイン（未ログイン時のみ）
+  const [progress, setProgress] = useState(0);
+  const [loginDone, setLoginDone] = useState(false);
+  const animStarted = useRef(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (user) {
+      setLoginDone(true);
+      return;
+    }
+    if (animStarted.current) return;
+    animStarted.current = true;
+    const timer = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) { clearInterval(timer); return 100; }
+        return prev + 4;
+      });
+    }, 60);
+    return () => clearInterval(timer);
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (progress !== 100) return;
+    const t = setTimeout(() => setLoginDone(true), 600);
+    return () => clearTimeout(t);
+  }, [progress]);
 
   const filteredStores = stores.filter((s) =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -95,23 +121,50 @@ export default function TakeoutStorePage() {
     .filter((s): s is Store => !!s);
 
   const handleStoreClick = (store: Store) => {
-    setSelectedStore(store);
-    setSelectedStoreId(store.id);
-    setSelectedStoreName(store.name);
-    addViewedStore(store.id);
+    router.push(`/customer/takeout/store/${store.id}`);
   };
 
-  const handleSameDay = () => {
-    if (selectedStore) {
-      router.push(`/customer/takeout/products?store=${selectedStore.id}&type=sameday`);
-    }
-  };
-
-  const handleReservation = () => {
-    if (selectedStore) {
-      router.push(`/customer/takeout/products?store=${selectedStore.id}&type=reservation`);
-    }
-  };
+  if (!loginDone) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
+        <div className="flex-1 flex flex-col items-center justify-center px-8">
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="mb-10"
+          >
+            <Image
+              src="/スクリーンショット_2026-04-09_14.49.59.png"
+              alt="パティモバ"
+              width={280}
+              height={80}
+              className="h-14 w-auto"
+              priority
+            />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="w-full max-w-xs text-center"
+          >
+            <h2 className="text-xl font-bold text-gray-900 mb-6">LINEログイン中...</h2>
+            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3 shadow-inner">
+              <motion.div
+                className="h-full rounded-full bg-[#F9A825]"
+                initial={{ width: "0%" }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.08 }}
+              />
+            </div>
+            <p className="text-lg font-bold text-gray-900">{progress}%</p>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -298,14 +351,6 @@ export default function TakeoutStorePage() {
           )}
         </AnimatePresence>
       </div>
-
-      <OrderTypeModal
-        open={!!selectedStore}
-        store={selectedStore}
-        onClose={() => setSelectedStore(null)}
-        onSelectSameDay={handleSameDay}
-        onSelectReservation={handleReservation}
-      />
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>

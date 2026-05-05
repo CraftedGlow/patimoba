@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, MapPin, Clock } from "lucide-react";
-import Link from "next/link";
+import { MapPin, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
@@ -31,16 +30,7 @@ export default function ECShippingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader shopName={selectedStoreName || "パティモバ"} showCart />
-
-      <div className="px-4 pt-2">
-        <Link
-          href="/customer/ec/products"
-          className="inline-flex items-center text-gray-600 mb-1"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-      </div>
+      <CustomerHeader showCart showBack backHref="/customer/ec/products" />
 
       <StepProgress currentStep={3} steps={ecSteps} />
 

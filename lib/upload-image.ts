@@ -81,6 +81,24 @@ export async function uploadPrintPhoto(
 
 const LOGO_BUCKET = "store-logos"
 
+export async function uploadStoreImage(
+  file: File,
+  storeId: string
+): Promise<{ url: string | null; error: string | null }> {
+  const ext = file.name.split(".").pop() || "jpg"
+  const path = `${storeId}/exterior-${Date.now()}.${ext}`
+
+  const { error } = await supabase.storage.from(LOGO_BUCKET).upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  })
+
+  if (error) return { url: null, error: error.message }
+
+  const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
 export async function uploadStoreLogo(
   file: File,
   storeId: string

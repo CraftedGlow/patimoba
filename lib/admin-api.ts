@@ -135,6 +135,19 @@ export async function uploadStoreLogo(file: File, storeId?: string): Promise<str
   return data.publicUrl;
 }
 
+export async function uploadStoreImage(file: File, storeId: string): Promise<string> {
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const path = `${storeId}/exterior-${Date.now()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from(LOGO_BUCKET)
+    .upload(path, file, { cacheControl: "3600", upsert: false });
+  if (error) throw error;
+
+  const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function deleteStoreLogo(url: string): Promise<void> {
   const parts = url.split(`/${LOGO_BUCKET}/`);
   if (parts.length < 2) return;

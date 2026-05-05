@@ -169,11 +169,11 @@ export default function ECProductDetailPage() {
   return (
     <div className="min-h-screen bg-white">
       <CustomerHeader
-        shopName={selectedStoreName || "パティモバ"}
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
         points={0}
         onCartClick={() => setCartOpen(true)}
+        showBack
       />
 
       <StepProgress currentStep={2} steps={ecSteps} />

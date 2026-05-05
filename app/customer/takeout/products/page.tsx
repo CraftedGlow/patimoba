@@ -249,6 +249,7 @@ export default function TakeoutProductsPage() {
         avatarUrl={profile?.avatar || undefined}
         points={0}
         onCartClick={() => setCartOpen(true)}
+        showBack
       />
 
       <StepProgress currentStep={2} steps={steps} onStepClick={handleStepClick} />

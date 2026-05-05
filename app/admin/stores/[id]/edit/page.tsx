@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { fetchStoreById, updateStore, uploadStoreLogo, fetchClosedDays, saveClosedDays } from "@/lib/admin-api";
+import { fetchStoreById, updateStore, uploadStoreLogo, uploadStoreImage, fetchClosedDays, saveClosedDays } from "@/lib/admin-api";
 import type { StorePlanSlug } from "@/lib/store-plans";
 import { normalizeStorePlan } from "@/lib/store-plans";
 import { StorePlanPicker } from "@/components/admin/store-plan-picker";
@@ -46,6 +46,8 @@ export default function AdminStoreEditPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [existingLogo, setExistingLogo] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const loadStore = useCallback(async () => {
     try {
@@ -58,6 +60,9 @@ export default function AdminStoreEditPage() {
       if (store.logo_url) {
         setExistingLogo(store.logo_url);
         setLogoPreview(store.logo_url);
+      }
+      if ((store as any).image) {
+        setImagePreview((store as any).image);
       }
       setSelectedPlan(normalizeStorePlan((store as { plan?: string | null }).plan));
       try {
@@ -86,6 +91,15 @@ export default function AdminStoreEditPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
   const toggleDay = (day: string) => {
     setClosedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -106,6 +120,11 @@ export default function AdminStoreEditPage() {
         logoUrl = await uploadStoreLogo(logoFile, storeId);
       }
 
+      let storeImageUrl: string | null | undefined = undefined;
+      if (imageFile) {
+        storeImageUrl = await uploadStoreImage(imageFile, storeId);
+      }
+
       const updates: Record<string, unknown> = {
         name: storeName,
         email: mail || "",
@@ -113,9 +132,8 @@ export default function AdminStoreEditPage() {
         address: addressUrl || "",
         plan: selectedPlan,
       };
-      if (logoUrl !== undefined) {
-        updates.logo_url = logoUrl;
-      }
+      if (logoUrl !== undefined) updates.logo_url = logoUrl;
+      if (storeImageUrl !== undefined) updates.image = storeImageUrl;
       await updateStore(storeId, updates);
       await saveClosedDays(storeId, closedDays);
       setSuccess(true);
@@ -216,6 +234,36 @@ export default function AdminStoreEditPage() {
                   <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">ロゴをアップロード</p>
                   <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP対応</p>
+                </div>
+              )}
+            </label>
+          </Field>
+
+          <Field label="店舗外観写真">
+            <p className="text-xs text-gray-400 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
+            <label className="block">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
+              {imagePreview ? (
+                <div className="relative border-2 border-amber-400 rounded-xl overflow-hidden cursor-pointer hover:border-amber-500 transition-colors">
+                  <img
+                    src={imagePreview}
+                    alt="外観プレビュー"
+                    className="w-full h-44 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <p className="text-white text-sm font-bold bg-black/50 px-3 py-1 rounded-full">クリックして変更</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                  <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">外観写真をアップロード</p>
+                  <p className="text-xs text-gray-400 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
                 </div>
               )}
             </label>

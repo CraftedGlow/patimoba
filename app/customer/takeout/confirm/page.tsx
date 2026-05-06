@@ -19,7 +19,7 @@ type PaymentMethod = "credit" | "store";
 
 export default function TakeoutConfirmPage() {
   const router = useRouter();
-  const { userId, selectedStoreId, profile, points: userPoints } = useCustomerContext();
+  const { userId, selectedStoreId, profile, points: userPoints, refreshPoints } = useCustomerContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
   const { createOrder } = useOrderMutations();
   const [lastName, setLastName] = useState("");
@@ -48,7 +48,37 @@ export default function TakeoutConfirmPage() {
     setPickupTime(t);
     setHasCardInfo(!!sessionStorage.getItem("patimoba_has_card"));
     setCardLabel(sessionStorage.getItem("patimoba_card_label") || "");
+
+    // 3DS リダイレクト戻り時：カード表示を先行セット
+    try {
+      const pendingRaw = sessionStorage.getItem("patimoba_pending_3ds");
+      if (pendingRaw) {
+        const { cardLabel: pendingLabel } = JSON.parse(pendingRaw);
+        setHasCardInfo(true);
+        setCardLabel(pendingLabel);
+      }
+    } catch { /* ignore */ }
   }, []);
+
+  // LIFF 外部ブラウザで 3DS 完了後にページが再表示されたとき DB を再確認
+  useEffect(() => {
+    if (!userId) return;
+    const onVisible = async () => {
+      if (document.hidden || hasCardInfo) return;
+      const pendingRaw = (() => { try { return sessionStorage.getItem("patimoba_pending_3ds"); } catch { return null; } })();
+      if (!pendingRaw) return;
+      const { data } = await supabase.from("users").select("customer_id").eq("id", userId).maybeSingle();
+      if (data?.customer_id) {
+        const { cardLabel: pendingLabel } = JSON.parse(pendingRaw);
+        sessionStorage.setItem("patimoba_has_card", "1");
+        sessionStorage.removeItem("patimoba_pending_3ds");
+        setHasCardInfo(true);
+        setCardLabel(sessionStorage.getItem("patimoba_card_label") || pendingLabel);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [userId, hasCardInfo]);
 
   useEffect(() => {
     if (!userId) return;
@@ -56,7 +86,7 @@ export default function TakeoutConfirmPage() {
     (async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("name, name_kana, phone")
+        .select("name, name_kana, phone, customer_id")
         .eq("id", userId)
         .maybeSingle();
       if (cancelled || error || !data) return;
@@ -67,8 +97,60 @@ export default function TakeoutConfirmPage() {
         setFirstName(parts.slice(1).join(" ") ?? "");
       }
       if (data.phone) setPhone(data.phone);
+
+      // 既存カードをセッションに未格納の場合は PAY.JP から取得して表示
+      if (data.customer_id && !sessionStorage.getItem("patimoba_has_card")) {
+        const res = await fetch(`/api/payjp/cards?customer_id=${data.customer_id}`);
+        if (!res.ok || cancelled) return;
+        const cardsData = await res.json();
+        const card = cardsData.data?.[0];
+        if (!card || cancelled) return;
+        const label = `${card.brand} ****${card.last4}`;
+        sessionStorage.setItem("patimoba_has_card", "1");
+        sessionStorage.setItem("patimoba_card_label", label);
+        sessionStorage.setItem("patimoba_customer_id", data.customer_id);
+        setHasCardInfo(true);
+        setCardLabel(label);
+      }
     })();
     return () => { cancelled = true; };
+  }, [userId]);
+
+  // カード登録ページから戻った後: pending token で顧客作成 → DB 保存
+  // checkout.js iframe ワークフローは tds_finish 済みのため skip_tds_finish: true
+  // token を取得直後に sessionStorage から削除することで StrictMode の二重実行を防ぐ
+  useEffect(() => {
+    if (!userId) return;
+    const pendingToken = (() => {
+      try {
+        const t = sessionStorage.getItem("patimoba_pending_token");
+        if (t) sessionStorage.removeItem("patimoba_pending_token");
+        return t;
+      } catch { return null; }
+    })();
+    if (!pendingToken) return;
+    (async () => {
+      console.log("[takeout-confirm] finalize-card 開始, token:", pendingToken);
+      const res = await fetch("/api/payjp/finalize-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token_id: pendingToken, user_id: userId, skip_tds_finish: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("[takeout-confirm] finalize-card エラー:", data.error);
+        setSubmitError("カードの登録に失敗しました: " + (data.error?.message ?? data.error ?? ""));
+        return;
+      }
+      console.log("[takeout-confirm] finalize-card 成功, customerId:", data.customerId);
+      const label = (() => { try { return sessionStorage.getItem("patimoba_card_label") || "カード"; } catch { return "カード"; } })();
+      try {
+        sessionStorage.setItem("patimoba_has_card", "1");
+        sessionStorage.setItem("patimoba_customer_id", data.customerId);
+      } catch { /* ignore */ }
+      setHasCardInfo(true);
+      setCardLabel(label);
+    })();
   }, [userId]);
 
   const subtotal = cartTotal;
@@ -85,6 +167,7 @@ export default function TakeoutConfirmPage() {
   const earnedPoints = Math.floor(total / 200); // 100円 = 0.5pt
 
   const handleConfirmOrder = async () => {
+    console.log("[takeout-confirm] 注文を確定するボタン clicked, paymentMethod:", paymentMethod, "total:", total);
     if (submitting) return;
     const persistedStoreId = (() => { try { return localStorage.getItem("patimoba_selected_store_id") } catch { return null } })();
     const storeIdForOrder = selectedStoreId || cartStoreId || persistedStoreId;
@@ -96,6 +179,29 @@ export default function TakeoutConfirmPage() {
 
     const printPhotoUrl = cartItems.find((i) => i.customization?.printPhotoUrl)?.customization?.printPhotoUrl ?? null;
 
+    // クレジットカード払いの場合は先に PAY.JP で課金する
+    if (paymentMethod === "credit") {
+      console.log("[takeout-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", total);
+      const chargeRes = await fetch("/api/payjp/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          storeId: storeIdForOrder,
+          amount: total,
+          currency: "jpy",
+        }),
+      });
+      const chargeData = await chargeRes.json();
+      console.log("[takeout-confirm] charge →", chargeRes.status, chargeData);
+      if (!chargeRes.ok) {
+        setSubmitting(false);
+        setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
+        return;
+      }
+    }
+
+    console.log("[takeout-confirm] createOrder 開始");
     const result = await createOrder({
       storeId: storeIdForOrder,
       customerId: userId,
@@ -110,6 +216,7 @@ export default function TakeoutConfirmPage() {
     });
 
     setSubmitting(false);
+    console.log("[takeout-confirm] createOrder →", result);
 
     if (result.error) { setSubmitError(result.error); return; }
 
@@ -131,6 +238,7 @@ export default function TakeoutConfirmPage() {
       const currentPts = Number(userData?.points) || 0;
       const newPts = Math.max(0, currentPts - usedPoints + earnedPoints);
       await supabase.from("users").update({ points: newPts }).eq("id", userId);
+      await refreshPoints();
     }
 
     clearCart();
@@ -159,8 +267,8 @@ export default function TakeoutConfirmPage() {
     ? `/customer/takeout/products?store=${selectedStoreId || cartStoreId}`
     : "/customer/takeout";
 
-  const handleContinueShopping = () => router.push(continueShoppingHref);
-  const handlePointChange = () => { setPointOption(tempPointOption); setShowPointModal(false); };
+  const handleContinueShopping = () => { console.log("[takeout-confirm] 買い物を続けるボタン clicked"); router.push(continueShoppingHref); };
+  const handlePointChange = () => { console.log("[takeout-confirm] ポイント変更 確定, option:", tempPointOption); setPointOption(tempPointOption); setShowPointModal(false); };
   const pointLabel = pointOption === "none" ? "利用なし" : `${usedPoints}ポイント利用`;
 
   const handleStepClick = (step: number) => {
@@ -180,7 +288,7 @@ export default function TakeoutConfirmPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={userPoints}
         onCartClick={() => setCartOpen(true)}
       />
 
@@ -238,6 +346,7 @@ export default function TakeoutConfirmPage() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="09012345678"
+            maxLength={11}
             className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent placeholder:text-gray-300"
           />
           <p className="text-xs text-gray-400 mt-1">※日中に連絡の取れる電話番号</p>
@@ -248,7 +357,7 @@ export default function TakeoutConfirmPage() {
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-bold">ポイント利用</span>
             <button
-              onClick={() => { setTempPointOption(pointOption); setShowPointModal(true); }}
+              onClick={() => { console.log("[takeout-confirm] ポイント変更ボタン clicked"); setTempPointOption(pointOption); setShowPointModal(true); }}
               className="text-xs border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors"
             >
               変更
@@ -293,7 +402,11 @@ export default function TakeoutConfirmPage() {
           <div className="mb-4">
             <button
               type="button"
-              onClick={() => router.push("/customer/payment/card")}
+              onClick={() => {
+                console.log("[takeout-confirm] カード情報登録ボタン clicked");
+                sessionStorage.setItem("patimoba_tds_return_path", "/customer/takeout/confirm");
+                router.push("/customer/payment/card");
+              }}
               className={`w-full border-2 font-bold py-2.5 rounded-md text-sm flex items-center justify-center gap-1 transition-colors ${hasCardInfo ? "border-green-400 text-green-600 hover:bg-green-50" : "border-amber-400 text-amber-500 hover:bg-amber-50"}`}
             >
               {hasCardInfo ? `✓ ${cardLabel || "カード情報登録済み"}（変更する）` : "＋ カード情報を登録する"}
@@ -512,7 +625,7 @@ export default function TakeoutConfirmPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => { if (countdownRef.current) clearInterval(countdownRef.current); router.push(continueShoppingHref); }}
+                onClick={() => { console.log("[takeout-confirm] 商品一覧に戻るボタン clicked"); if (countdownRef.current) clearInterval(countdownRef.current); router.push(continueShoppingHref); }}
                 className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base transition-colors"
               >
                 商品一覧に戻る

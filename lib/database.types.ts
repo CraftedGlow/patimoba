@@ -742,6 +742,7 @@ export type Database = {
           line_official_account_id: string | null
           logo_url: string | null
           name: string
+          payjp_tenant_id: string | null
           phone: string | null
           plan: string
           postal_code: string | null
@@ -761,6 +762,7 @@ export type Database = {
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string
+          payjp_tenant_id?: string | null
           phone?: string | null
           plan?: string
           postal_code?: string | null
@@ -780,6 +782,7 @@ export type Database = {
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string
+          payjp_tenant_id?: string | null
           phone?: string | null
           plan?: string
           postal_code?: string | null
@@ -845,6 +848,7 @@ export type Database = {
           line_user_id: string | null
           name: string
           name_kana: string | null
+          customer_id: string | null
           phone: string | null
           points: number
           status: string
@@ -862,6 +866,7 @@ export type Database = {
           line_user_id?: string | null
           name?: string
           name_kana?: string | null
+          customer_id?: string | null
           phone?: string | null
           points?: number
           status?: string
@@ -879,6 +884,7 @@ export type Database = {
           line_user_id?: string | null
           name?: string
           name_kana?: string | null
+          customer_id?: string | null
           phone?: string | null
           points?: number
           status?: string

@@ -12,6 +12,7 @@ export interface ProductCustomOptionPresetMeta {
   label: string
   /** 追加後のオプショングループ名（重複判定に使用） */
   defaultGroupName: string
+  
   create: () => ProductCustomOption
 }
 

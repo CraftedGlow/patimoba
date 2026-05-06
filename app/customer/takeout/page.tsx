@@ -70,6 +70,7 @@ export default function TakeoutStorePage() {
   const { user, loading: authLoading } = useAuth();
   const {
     profile,
+    points,
     favorites,
     toggleFavorite,
     viewedStoreIds,
@@ -171,13 +172,13 @@ export default function TakeoutStorePage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={points}
         onCartClick={() => setCartOpen(true)}
       />
       <StepProgress currentStep={1} steps={steps} />
 
       <div className="px-4 md:px-8 lg:px-12">
-        <div className="flex border-b border-gray-200 md:max-w-md">
+        <div className="flex border-b border-gray-200">
           {tabs.map((tab) => (
             <button
               key={tab}
@@ -208,7 +209,7 @@ export default function TakeoutStorePage() {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="flex gap-2 mb-4 md:max-w-md">
+              <div className="flex gap-2 mb-4 max-w-sm">
                 <input
                   type="text"
                   placeholder="店舗名を検索"
@@ -216,10 +217,6 @@ export default function TakeoutStorePage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                 />
-                <button className="bg-amber-400 hover:bg-amber-500 text-white font-bold px-5 rounded-lg text-sm transition-colors flex items-center gap-1">
-                  <Search className="w-4 h-4" />
-                  検索
-                </button>
               </div>
 
               {loading ? (
@@ -260,7 +257,7 @@ export default function TakeoutStorePage() {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="flex gap-2 mb-4 md:max-w-md">
+              <div className="flex gap-2 mb-4 max-w-sm">
                 <input
                   type="text"
                   placeholder="店舗名を検索"
@@ -268,10 +265,6 @@ export default function TakeoutStorePage() {
                   onChange={(e) => setFavSearchQuery(e.target.value)}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                 />
-                <button className="bg-amber-400 hover:bg-amber-500 text-white font-bold px-5 rounded-lg text-sm transition-colors flex items-center gap-1">
-                  <Search className="w-4 h-4" />
-                  検索
-                </button>
               </div>
 
               {favoriteStores.length === 0 ? (

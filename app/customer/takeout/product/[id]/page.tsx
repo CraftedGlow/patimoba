@@ -19,7 +19,8 @@ const QTY_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 export default function TakeoutProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { selectedStoreId, profile } = useCustomerContext();
+  const { selectedStoreId, profile,
+    points, } = useCustomerContext();
   const { product, loading } = useProductRegistration(params.id as string);
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
@@ -63,7 +64,7 @@ export default function TakeoutProductDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
-        <CustomerHeader showBack userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={0} onCartClick={() => setCartOpen(true)} />
+        <CustomerHeader showBack userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={points} onCartClick={() => setCartOpen(true)} />
         <StepProgress currentStep={2} steps={steps} onStepClick={handleStepClick} />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
@@ -169,7 +170,7 @@ export default function TakeoutProductDetailPage() {
         showBack
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={points}
         onCartClick={() => setCartOpen(true)}
       />
 

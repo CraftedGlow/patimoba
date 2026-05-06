@@ -34,7 +34,8 @@ export default function WholeCakePage() {
   const mode = searchParams.get("mode");
   const isPrintMode = mode === "print";
 
-  const { selectedStoreId, profile } = useCustomerContext();
+  const { selectedStoreId, profile,
+    points, } = useCustomerContext();
   const { addItem } = useCart();
   const [step, setStep] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
@@ -249,7 +250,7 @@ export default function WholeCakePage() {
   if (!isPrintMode && !selectedCake) {
     return (
       <div className="min-h-screen bg-white">
-        <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={0} onCartClick={() => setCartOpen(true)} />
+        <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={points} onCartClick={() => setCartOpen(true)} />
         <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
           ホールケーキが見つかりません
         </div>
@@ -261,7 +262,7 @@ export default function WholeCakePage() {
   if (isPrintMode && printCakes.length === 0 && !printGroupLoading) {
     return (
       <div className="min-h-screen bg-white">
-        <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={0} onCartClick={() => setCartOpen(true)} />
+        <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={points} onCartClick={() => setCartOpen(true)} />
         <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
           プリントデコレーション対象のケーキが見つかりません
         </div>
@@ -275,7 +276,7 @@ export default function WholeCakePage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={points}
         onCartClick={() => setCartOpen(true)}
       />
 

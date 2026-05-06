@@ -32,7 +32,7 @@ interface ShippingAddress {
 
 export default function ECConfirmPage() {
   const router = useRouter();
-  const { userId, selectedStoreId, selectedStoreName, profile, points: userPoints } = useCustomerContext();
+  const { userId, selectedStoreId, selectedStoreName, profile, points: userPoints, refreshPoints } = useCustomerContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -54,7 +54,7 @@ export default function ECConfirmPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
 
-  // sessionStorage から配送情報を復元
+  // sessionStorage から配送情報・カード情報を復元
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem("ec_shipping_address");
@@ -63,6 +63,14 @@ export default function ECConfirmPage() {
       if (time) setDeliveryTime(time);
       setHasCardInfo(!!sessionStorage.getItem("patimoba_has_card"));
       setCardLabel(sessionStorage.getItem("patimoba_card_label") || "");
+
+      // 3DS リダイレクト戻り時：カード表示を先行セット
+      const pendingRaw = sessionStorage.getItem("patimoba_pending_3ds");
+      if (pendingRaw) {
+        const { cardLabel: pendingLabel } = JSON.parse(pendingRaw);
+        setHasCardInfo(true);
+        setCardLabel(pendingLabel);
+      }
     } catch { /* ignore */ }
   }, []);
 
@@ -76,14 +84,34 @@ export default function ECConfirmPage() {
     } catch { /* ignore */ }
   }, [lastName, firstName, phone, email]);
 
-  // ログイン済みならユーザー情報を事前入力
+  // LIFF 外部ブラウザで 3DS 完了後にページが再表示されたとき DB を再確認
+  useEffect(() => {
+    if (!userId) return;
+    const onVisible = async () => {
+      if (document.hidden || hasCardInfo) return;
+      const pendingRaw = (() => { try { return sessionStorage.getItem("patimoba_pending_3ds"); } catch { return null; } })();
+      if (!pendingRaw) return;
+      const { data } = await supabase.from("users").select("customer_id").eq("id", userId).maybeSingle();
+      if (data?.customer_id) {
+        const { cardLabel: pendingLabel } = JSON.parse(pendingRaw);
+        sessionStorage.setItem("patimoba_has_card", "1");
+        sessionStorage.removeItem("patimoba_pending_3ds");
+        setHasCardInfo(true);
+        setCardLabel(sessionStorage.getItem("patimoba_card_label") || pendingLabel);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [userId, hasCardInfo]);
+
+  // ログイン済みならユーザー情報を事前入力 + 登録済みカードを取得
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("users")
-        .select("name, name_kana, phone")
+        .select("name, name_kana, phone, customer_id")
         .eq("id", userId)
         .maybeSingle();
       if (cancelled || !data) return;
@@ -94,8 +122,60 @@ export default function ECConfirmPage() {
         setFirstName(parts.slice(1).join(" ") ?? "");
       }
       if (data.phone) setPhone(data.phone);
+
+      // 既存カードをセッションに未格納の場合は PAY.JP から取得して表示
+      if (data.customer_id && !sessionStorage.getItem("patimoba_has_card")) {
+        const res = await fetch(`/api/payjp/cards?customer_id=${data.customer_id}`);
+        if (!res.ok || cancelled) return;
+        const cardsData = await res.json();
+        const card = cardsData.data?.[0];
+        if (!card || cancelled) return;
+        const label = `${card.brand} ****${card.last4}`;
+        sessionStorage.setItem("patimoba_has_card", "1");
+        sessionStorage.setItem("patimoba_card_label", label);
+        sessionStorage.setItem("patimoba_customer_id", data.customer_id);
+        setHasCardInfo(true);
+        setCardLabel(label);
+      }
     })();
     return () => { cancelled = true; };
+  }, [userId]);
+
+  // カード登録ページから戻った後: pending token で顧客作成 → DB 保存
+  // checkout.js iframe ワークフローは tds_finish 済みのため skip_tds_finish: true
+  // token を取得直後に sessionStorage から削除することで StrictMode の二重実行を防ぐ
+  useEffect(() => {
+    if (!userId) return;
+    const pendingToken = (() => {
+      try {
+        const t = sessionStorage.getItem("patimoba_pending_token");
+        if (t) sessionStorage.removeItem("patimoba_pending_token");
+        return t;
+      } catch { return null; }
+    })();
+    if (!pendingToken) return;
+    (async () => {
+      console.log("[ec-confirm] finalize-card 開始, token:", pendingToken);
+      const res = await fetch("/api/payjp/finalize-card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token_id: pendingToken, user_id: userId, skip_tds_finish: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("[ec-confirm] finalize-card エラー:", data.error);
+        setSubmitError("カードの登録に失敗しました: " + (data.error?.message ?? data.error ?? ""));
+        return;
+      }
+      console.log("[ec-confirm] finalize-card 成功, customerId:", data.customerId);
+      const label = (() => { try { return sessionStorage.getItem("patimoba_card_label") || "カード"; } catch { return "カード"; } })();
+      try {
+        sessionStorage.setItem("patimoba_has_card", "1");
+        sessionStorage.setItem("patimoba_customer_id", data.customerId);
+      } catch { /* ignore */ }
+      setHasCardInfo(true);
+      setCardLabel(label);
+    })();
   }, [userId]);
 
   const subtotal = cartTotal;
@@ -112,6 +192,7 @@ export default function ECConfirmPage() {
   const earnedPoints = Math.floor(total / 200); // 100円 = 0.5pt
 
   const handleConfirmOrder = async () => {
+    console.log("[ec-confirm] 注文を確定するボタン clicked, total:", total, "userId:", userId);
     if (submitting) return;
     const persistedStoreId = (() => { try { return localStorage.getItem("patimoba_selected_store_id") } catch { return null } })();
     const storeIdForOrder = selectedStoreId || cartStoreId || persistedStoreId;
@@ -122,11 +203,32 @@ export default function ECConfirmPage() {
     setSubmitError(null);
 
     const notesStr = shippingAddress
-      ? `〒${shippingAddress.postalCode} ${shippingAddress.prefecture}${shippingAddress.city}${shippingAddress.address}${shippingAddress.building ? " " + shippingAddress.building : ""}　配送時間:${deliveryTime}`
+  ? `〒${shippingAddress.postalCode} ${shippingAddress.prefecture}${shippingAddress.city}${shippingAddress.address}${shippingAddress.building ? " " + shippingAddress.building : ""}　配送時間:${deliveryTime}`
       : undefined;
     const guestEmailVal = !profile && email.trim() ? email.trim() : null;
 
+    // EC はクレジットカード払いのみ → 先に PAY.JP で課金する
+    console.log("[ec-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", total);
+    const chargeRes = await fetch("/api/payjp/charge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        storeId: storeIdForOrder,
+        amount: total,
+        currency: "jpy",
+      }),
+    });
+    const chargeData = await chargeRes.json();
+    console.log("[ec-confirm] charge →", chargeRes.status, chargeData);
+    if (!chargeRes.ok) {
+      setSubmitting(false);
+      setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
+      return;
+    }
+
     // EC注文は常にサーバーAPI経由（RLSをバイパス）
+    console.log("[ec-confirm] create-order 開始");
     const res = await fetch("/api/ec/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -148,6 +250,7 @@ export default function ECConfirmPage() {
       : { orderId: "", error: json.error || "注文の作成に失敗しました" };
 
     setSubmitting(false);
+    console.log("[ec-confirm] create-order →", result);
     if (result.error) { setSubmitError(result.error); return; }
 
     // ポイント付与・消費をDBに反映
@@ -157,6 +260,7 @@ export default function ECConfirmPage() {
       const currentPts = Number(userData?.points) || 0;
       const newPts = Math.max(0, currentPts - usedPoints + earnedPoints);
       await supabase.from("users").update({ points: newPts }).eq("id", userId);
+      await refreshPoints();
     }
 
     clearCart();
@@ -203,7 +307,7 @@ export default function ECConfirmPage() {
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
-  const handlePointChange = () => { setPointOption(tempPointOption); setShowPointModal(false); };
+  const handlePointChange = () => { console.log("[ec-confirm] ポイント変更 確定, option:", tempPointOption); setPointOption(tempPointOption); setShowPointModal(false); };
   const pointLabel = pointOption === "none" ? "利用なし" : `${usedPoints}ポイント利用`;
 
   const fmtAddress = (a: ShippingAddress) =>
@@ -257,6 +361,7 @@ export default function ECConfirmPage() {
           </div>
           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
             placeholder="09012345678"
+            maxLength={11}
             className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
           <p className="text-xs text-gray-400 mt-1">※日中に連絡の取れる電話番号</p>
         </div>
@@ -303,7 +408,11 @@ export default function ECConfirmPage() {
 
         {/* カード情報 */}
         <div className="mb-4">
-          <button type="button" onClick={() => router.push("/customer/payment/card")}
+          <button type="button" onClick={() => {
+            console.log("[ec-confirm] カード情報登録ボタン clicked");
+            sessionStorage.setItem("patimoba_tds_return_path", "/customer/ec/confirm");
+            router.push("/customer/payment/card");
+          }}
             className={`w-full border-2 font-bold py-2.5 rounded-md text-sm flex items-center justify-center gap-1 transition-colors ${hasCardInfo ? "border-green-400 text-green-600 hover:bg-green-50" : "border-amber-400 text-amber-500 hover:bg-amber-50"}`}>
             {hasCardInfo ? `✓ ${cardLabel || "カード情報登録済み"}（変更する）` : "＋ カード情報を登録する"}
           </button>
@@ -410,7 +519,7 @@ export default function ECConfirmPage() {
 
         <div className="flex gap-3 mb-8">
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            onClick={() => router.back()}
+            onClick={() => { console.log("[ec-confirm] 買い物を続けるボタン clicked"); router.back(); }}
             className="flex-1 border-2 border-amber-400 text-amber-500 font-bold py-3 rounded-md text-sm hover:bg-amber-50 transition-colors">
             買い物を続ける
           </motion.button>
@@ -495,6 +604,7 @@ export default function ECConfirmPage() {
               <p className="text-xs text-gray-400 mb-4">{countdown}秒後に自動で商品一覧に戻ります</p>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={() => {
+                  console.log("[ec-confirm] 商品一覧に戻るボタン clicked");
                   if (countdownRef.current) clearInterval(countdownRef.current);
                   router.push(selectedStoreId ? `/customer/ec/products?store=${selectedStoreId}` : "/customer/ec");
                 }}

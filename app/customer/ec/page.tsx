@@ -15,7 +15,8 @@ const ecSteps = ["店舗選択", "商品選択", "お届け先", "注文確認"]
 
 export default function ECStorePage() {
   const { stores, loading } = useStores();
-  const { setSelectedStoreId, setSelectedStoreName, profile, userId } = useCustomerContext();
+  const { setSelectedStoreId, setSelectedStoreName, profile, userId,
+    points, } = useCustomerContext();
   const { clear: clearCart } = useCart();
 
   // ゲストがリンクから入り直したときはカートをリセット
@@ -48,7 +49,7 @@ export default function ECStorePage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={points}
         showCart
       />
       <StepProgress currentStep={1} steps={ecSteps} />

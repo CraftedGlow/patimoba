@@ -67,7 +67,8 @@ export default function ECProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { selectedStoreName, selectedStoreId, setSelectedStoreId, profile } = useCustomerContext();
+  const { selectedStoreName, selectedStoreId, setSelectedStoreId, profile,
+    points, } = useCustomerContext();
   const storeFromUrl = searchParams.get("store");
   const effectiveStoreId = selectedStoreId || storeFromUrl || "";
   const { product, loading } = useProduct(params.id as string);
@@ -171,7 +172,7 @@ export default function ECProductDetailPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={points}
         onCartClick={() => setCartOpen(true)}
         showBack
       />

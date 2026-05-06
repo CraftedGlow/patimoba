@@ -403,6 +403,7 @@ export default function CustomerProfilePage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="090-1234-5678"
+              maxLength={11}
               className="w-full border-b border-gray-300 pb-2 text-sm focus:outline-none focus:border-amber-400"
             />
           </div>

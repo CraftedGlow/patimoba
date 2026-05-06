@@ -14,6 +14,7 @@ interface CustomerContextType {
   setUserId: (id: string | null) => void
   profile: CustomerProfile | null
   points: number
+  refreshPoints: () => Promise<void>
   selectedStoreId: string | null
   setSelectedStoreId: (id: string | null) => void
   selectedStoreName: string
@@ -125,6 +126,13 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const refreshPoints = useCallback(async () => {
+    if (!user?.id) return
+    const { supabase } = await import("./supabase")
+    const { data } = await supabase.from("users").select("points").eq("id", user.id).maybeSingle()
+    setPoints(Number(data?.points) || 0)
+  }, [user])
+
   const addViewedStore = useCallback((storeId: string) => {
     setViewedStoreIds((prev) => {
       const filtered = prev.filter((id) => id !== storeId)
@@ -141,6 +149,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
         setUserId,
         profile,
         points,
+        refreshPoints,
         selectedStoreId,
         setSelectedStoreId,
         selectedStoreName,

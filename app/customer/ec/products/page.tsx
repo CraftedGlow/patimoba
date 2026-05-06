@@ -18,7 +18,8 @@ export default function ECProductsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const storeFromUrl = searchParams.get("store");
-  const { selectedStoreId, setSelectedStoreId, selectedStoreName, profile } = useCustomerContext();
+  const { selectedStoreId, setSelectedStoreId, selectedStoreName, profile,
+    points, } = useCustomerContext();
 
   // URLパラメータからstoreIdをセット（直リンク対応）
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function ECProductsPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={points}
         onCartClick={() => setCartOpen(true)}
         showBack
       />

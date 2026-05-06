@@ -71,6 +71,8 @@ export default function CustomerLoginPage() {
     };
 
     sessionStorage.removeItem("liff_login_pending");
+    localStorage.removeItem("patimoba_cart_takeout_v1");
+    localStorage.removeItem("patimoba_cart_ec_v1");
     localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
     router.push("/customer/takeout");
   }, [router]);
@@ -133,6 +135,8 @@ export default function CustomerLoginPage() {
     setSubmitting(true);
     try {
       await login(email, password, "customer");
+      localStorage.removeItem("patimoba_cart_takeout_v1");
+      localStorage.removeItem("patimoba_cart_ec_v1");
       router.push("/customer/takeout");
     } catch (err: any) {
       setError(err.message || "ログインに失敗しました");

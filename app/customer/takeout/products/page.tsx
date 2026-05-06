@@ -134,7 +134,8 @@ export default function TakeoutProductsPage() {
   const storeParam = searchParams.get("store");
   const typeParam = searchParams.get("type");
   const orderTypeParam = typeParam ?? "reservation";
-  const { selectedStoreId, selectedStoreName, profile } = useCustomerContext();
+  const { selectedStoreId, selectedStoreName, profile,
+    points, } = useCustomerContext();
   const storeId = selectedStoreId || storeParam || undefined;
   const pickupPath = `/customer/takeout/pickup?store=${storeId ?? ""}&type=${orderTypeParam}`;
 
@@ -247,7 +248,7 @@ export default function TakeoutProductsPage() {
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
-        points={0}
+        points={points}
         onCartClick={() => setCartOpen(true)}
         showBack
       />

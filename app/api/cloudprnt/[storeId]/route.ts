@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { buildStarPRNTReceipt } from "@/lib/star-prnt"
+import { formatPaymentStatus } from "@/lib/types"
 
 export const dynamic = "force-dynamic"
 
@@ -171,7 +172,7 @@ export async function GET(
     lineName: users.line_name ?? null,
     phone: users.phone ?? null,
     orderDate: orderDateFmt,
-    paymentStatus: order.payment_status ?? null,
+    paymentStatus: formatPaymentStatus(order.payment_status),
     items: ((order.order_items as any[]) ?? []).map((item) => ({
       name: item.product_name_snapshot,
       quantity: item.quantity,

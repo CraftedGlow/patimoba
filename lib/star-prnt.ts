@@ -28,14 +28,15 @@ function fmtDate(d?: string | null, t?: string | null): string {
   return parts.join(" ")
 }
 
-function size(n: number): Buffer {
+function size(h: number, w: number): Buffer {
   return Buffer.concat([
-    cmd(ESC, 0x68, n),
-    cmd(ESC, 0x57, n),
+    cmd(ESC, 0x68, h),
+    cmd(ESC, 0x57, w),
   ])
 }
-const SIZE_1X = size(1)
-const SIZE_2X = size(2)
+const SIZE_1X   = size(1, 1)
+const SIZE_1_5X = size(2, 1)  // 高さ2倍・幅1倍（≒1.5倍）
+const SIZE_2X   = size(2, 2)
 
 const SEP = "------------------------"
 
@@ -44,7 +45,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
     cmd(ESC, 0x40),        // 初期化
     cmd(ESC, 0x4D, 0x01),  // フォントB
     cmd(ESC, 0x33, 16),    // 行間 16ドット
-    SIZE_2X,               // フォントBの2倍サイズ
+    SIZE_1_5X,             // フォントBの1.5倍サイズ（高さ2倍・幅1倍）
     blank(),
     // 店名: 太字・中央
     cmd(ESC, 0x61, 0x01),  // センター

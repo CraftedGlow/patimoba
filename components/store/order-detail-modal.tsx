@@ -1,8 +1,24 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, Bluetooth, ClipboardList } from "lucide-react";
+import { X, Printer, Loader2, Check } from "lucide-react";
 import type { Order } from "@/lib/types";
+import { supabase } from "@/lib/supabase";
+
+interface OrderItemWithOptions {
+  id: string;
+  productName: string;
+  variantName: string | null;
+  quantity: number;
+  unitPrice: number;
+  options: {
+    groupName: string;
+    itemName: string;
+    priceDelta: number;
+    quantity: number | null;
+  }[];
+}
 
 interface OrderDetailModalProps {
   order: Order;
@@ -10,6 +26,96 @@ interface OrderDetailModalProps {
 }
 
 export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
+  const [items, setItems] = useState<OrderItemWithOptions[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [printing, setPrinting] = useState(false);
+  const [printDone, setPrintDone] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setItemsLoading(true);
+    setItems([]);
+
+    (async () => {
+      const { data } = await supabase
+        .from("order_items")
+        .select(`
+          id,
+          product_name_snapshot,
+          variant_name_snapshot,
+          quantity,
+          unit_price,
+          order_item_options (
+            option_group_name_snapshot,
+            option_item_name_snapshot,
+            price_delta,
+            quantity
+          )
+        `)
+        .eq("order_id", order.id)
+        .order("created_at", { ascending: true });
+
+      if (cancelled) return;
+
+      if (data) {
+        setItems(
+          data.map((row: any) => ({
+            id: row.id,
+            productName: row.product_name_snapshot ?? "",
+            variantName: row.variant_name_snapshot ?? null,
+            quantity: row.quantity ?? 1,
+            unitPrice: row.unit_price ?? 0,
+            options: (row.order_item_options ?? []).map((opt: any) => ({
+              groupName: opt.option_group_name_snapshot ?? "",
+              itemName: opt.option_item_name_snapshot ?? "",
+              priceDelta: opt.price_delta ?? 0,
+              quantity: opt.quantity ?? null,
+            })),
+          }))
+        );
+      }
+      setItemsLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, [order.id]);
+
+  const handlePrint = async () => {
+    if (printing) return;
+    setPrinting(true);
+    setPrintError(null);
+    setPrintDone(false);
+    try {
+      const res = await fetch("/api/print", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: order.id,
+          lineName: order.lineName || null,
+          phone: order.phone || null,
+          orderDate: order.orderDate || null,
+          paymentStatus: order.paymentStatus || null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `HTTP ${res.status}`);
+      }
+      setPrintDone(true);
+      setTimeout(() => setPrintDone(false), 3000);
+    } catch (e) {
+      setPrintError(e instanceof Error ? e.message : "印刷に失敗しました");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const pickupDisplay =
+    order.pickupDate
+      ? `${order.pickupDate}${order.pickupTime ? " " + String(order.pickupTime).slice(0, 5) : ""}`
+      : "-";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -34,79 +140,138 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
         </button>
 
         <div className="p-6 pt-8">
-          <div className="flex justify-center mb-4">
-            <span className="inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">
-              <Bluetooth className="w-3.5 h-3.5" />
-              接続
-            </span>
+          {/* 印刷ボタン */}
+          <div className="flex flex-col items-center gap-1.5 mb-4">
+            <button
+              onClick={handlePrint}
+              disabled={printing || itemsLoading}
+              className={`inline-flex items-center gap-1.5 text-white text-xs font-bold px-4 py-1.5 rounded-full transition-colors disabled:opacity-50 ${
+                printDone
+                  ? "bg-green-600"
+                  : "hover:opacity-90"
+              }`}
+              style={!printDone ? { backgroundColor: "#FEBC2F" } : undefined}
+            >
+              {printing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : printDone ? (
+                <Check className="w-3.5 h-3.5" />
+              ) : (
+                <Printer className="w-3.5 h-3.5" />
+              )}
+              {printing ? "送信中..." : printDone ? "印刷済み" : "印刷"}
+            </button>
+            {printError && (
+              <p className="text-xs text-red-500">{printError}</p>
+            )}
           </div>
 
-          <div className="bg-[#FFF9C4] rounded-lg py-2.5 px-4 text-center mb-5">
-            <p className="font-bold text-sm">注文を受け付けました</p>
-          </div>
-
-          <div className="space-y-2 mb-5">
-            <InfoRow label="名前" value={`${order.customerName}様`} />
-            <InfoRow label="LINE" value={order.lineName} />
-            <InfoRow label="電話番号" value={order.phone} />
+          {/* 顧客情報 */}
+          <div className="space-y-1.5 mb-5">
+            <InfoRow label="名前" value={`${order.customerName || "-"}様`} />
+            {order.lineName && <InfoRow label="LINE" value={order.lineName} />}
+            {order.phone && <InfoRow label="電話番号" value={order.phone} />}
             <InfoRow label="注文日時" value={order.orderDate} />
-            <InfoRow
-              label="受取日時"
-              value={order.pickupDate || "-"}
-            />
+            <InfoRow label="受取日時" value={pickupDisplay} bold />
             <InfoRow label="お支払い" value={order.paymentStatus} />
           </div>
 
-          <div className="border-t border-gray-300 pt-3 mb-4">
-            <div className="flex justify-between text-sm font-bold mb-2">
+          {/* 商品一覧 */}
+          <div className="border-t border-gray-200 pt-4 mb-4">
+            <div className="flex justify-between text-xs font-bold text-gray-500 mb-3 pb-1.5 border-b border-gray-100">
               <span>商品名</span>
               <span>個数</span>
             </div>
-            {order.items.map((item, i) => (
-              <div key={i} className="flex justify-between text-sm py-1.5">
-                <span className="pl-2">{item.name}</span>
-                <span>&times;{item.quantity}</span>
+
+            {itemsLoading ? (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
               </div>
-            ))}
+            ) : (
+              <div className="space-y-4">
+                {items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="pb-3 border-b border-dashed border-gray-100 last:border-0 last:pb-0"
+                  >
+                    {/* 商品名 + 個数 */}
+                    <div className="flex justify-between items-start">
+                      <span className="text-sm font-bold leading-tight">{item.productName}</span>
+                      <span className="text-sm font-bold ml-3 shrink-0">×{item.quantity}</span>
+                    </div>
+
+                    {/* バリアント（ホールサイズ等） */}
+                    {item.variantName && (
+                      <div className="text-xs text-gray-500 mt-0.5 ml-2">
+                        {item.variantName}
+                      </div>
+                    )}
+
+                    {/* オプション（プレート・メッセージ等） */}
+                    {item.options.length > 0 && (
+                      <div className="mt-2 ml-2 space-y-0.5">
+                        {item.options.map((opt, j) => (
+                          <div key={j} className="flex items-start gap-1 text-xs text-gray-600">
+                            <span className="text-gray-400 shrink-0 mt-px">・</span>
+                            <span className="leading-snug">
+                              {opt.groupName === "メッセージ"
+                                ? `「${opt.itemName}」`
+                                : `${opt.groupName}（${opt.itemName}）`}
+                              {opt.priceDelta > 0 && (
+                                <span className="text-gray-400 ml-1">
+                                  +¥{opt.priceDelta.toLocaleString()}
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="space-y-2 mb-5">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">小計</span>
-              <span className="text-base font-bold">
-                &yen;{order.totalAmount.toLocaleString()}
-              </span>
+          {/* 金額 */}
+          <div className="space-y-1.5 mb-5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">小計</span>
+              <span className="font-bold">¥{order.subtotal.toLocaleString()}</span>
             </div>
-            <div className="flex items-center gap-3">
+            {order.discountAmount > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">値引き</span>
+                <span className="font-bold text-red-500">
+                  -¥{order.discountAmount.toLocaleString()}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between border-t border-gray-200 pt-2 mt-1">
               <span className="text-sm text-gray-600">お支払金額</span>
-              <span className="text-2xl font-bold">
-                &yen;{order.totalAmount.toLocaleString()}
-              </span>
+              <span className="text-2xl font-bold">¥{order.totalAmount.toLocaleString()}</span>
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-2 mb-5">
-            <ClipboardList className="w-6 h-6 text-amber-500" />
-            <span className="text-base font-bold text-gray-700">パティモバ</span>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-full bg-[#FFF176] hover:bg-[#FFEE58] text-gray-800 font-bold py-3 rounded-lg transition-colors text-sm"
-          >
-            閉じる
-          </button>
         </div>
       </motion.div>
     </motion.div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoRow({
+  label,
+  value,
+  bold,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+}) {
   return (
     <p className="text-sm">
       <span className="font-bold">{label}：</span>
-      {value}
+      <span className={bold ? "font-bold" : ""}>{value}</span>
     </p>
   );
 }

@@ -17,6 +17,10 @@ export interface ReceiptData {
   pickupDate?: string | null
   pickupTime?: string | null
   customerName?: string | null
+  lineName?: string | null
+  phone?: string | null
+  orderDate?: string | null
+  paymentStatus?: string | null
   items: ReceiptItem[]
   subtotal: number
   discountAmount?: number | null
@@ -43,11 +47,11 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   const lines: string[] = []
   const push = (...s: string[]) => lines.push(...s)
 
-  // 店名 - 3倍サイズ・太字・中央揃え
+  // 店名 - 2倍サイズ・太字・中央揃え
   push(
     "[align: center]",
     "[bold: on]",
-    "[magnify: width 3; height 3]",
+    "[magnify: width 2; height 2]",
     data.storeName,
     "[magnify]",
     "[bold: off]",
@@ -55,48 +59,58 @@ export function buildReceiptMarkup(data: ReceiptData): string {
     "[align: left]",
   )
 
-  if (data.orderNo) push(`注文番号: #${data.orderNo}`)
+  if (data.customerName) push(`名前: ${data.customerName}様`)
+  if (data.lineName) push(`LINE: ${data.lineName}`)
+  if (data.phone) push(`電話番号: ${data.phone}`)
+  if (data.orderDate) push(`注文日時: ${data.orderDate}`)
 
+  // 受取日時 - 太字で目立たせる
   const dt = fmtDate(data.pickupDate, data.pickupTime)
-  if (dt) push(`受取日時: ${dt}`)
+  if (dt) {
+    push("[bold: on]")
+    push(`受取日時: ${dt}`)
+    push("[bold: off]")
+  }
 
-  if (data.customerName) push(`お名前: ${data.customerName}`)
+  if (data.paymentStatus) push(`お支払い: ${data.paymentStatus}`)
 
   push(SEP)
 
   for (const item of data.items) {
-    push(item.name)
-    push(`  x${item.quantity}  ¥${item.subtotal.toLocaleString()}`)
-    if (item.variantName) push(`  (${item.variantName})`)
+    // 商品名と個数
+    push(`${item.name}  x${item.quantity}`)
+    // バリアント（ホールサイズ等）
+    if (item.variantName) push(`  ${item.variantName}`)
+    // オプション（モーダルと同じ形式）
     for (const opt of item.options ?? []) {
       if (!opt.itemName) continue
-      const qty = (opt.quantity ?? 0) > 1 ? ` x${opt.quantity}` : ""
+      const isMessage = opt.groupName === "メッセージ"
+      const label = isMessage
+        ? `「${opt.itemName}」`
+        : `${opt.groupName}（${opt.itemName}）`
       const price =
         opt.priceDelta && opt.priceDelta !== 0
           ? `  +¥${opt.priceDelta.toLocaleString()}`
           : ""
-      push(`  ${opt.groupName}: ${opt.itemName}${qty}${price}`)
+      push(`  ・${label}${price}`)
     }
   }
 
   push(SEP)
   push(`小計: ¥${data.subtotal.toLocaleString()}`)
   if (data.discountAmount && data.discountAmount > 0) {
-    push(`ポイント利用: -¥${data.discountAmount.toLocaleString()}`)
+    push(`値引き: -¥${data.discountAmount.toLocaleString()}`)
   }
   push(SEP)
 
-  // 合計 - 3倍サイズ・太字
+  // お支払金額 - 2倍サイズ・太字
   push("[bold: on]")
-  push("[magnify: width 3; height 3]")
-  push(`合計 ¥${data.totalAmount.toLocaleString()}`)
+  push("[magnify: width 2; height 2]")
+  push(`お支払金額`)
+  push(`¥${data.totalAmount.toLocaleString()}`)
   push("[magnify]")
   push("[bold: off]")
-  push("(税込)")
 
-  push(SEP)
-  push("[align: center]")
-  push("ご利用ありがとうございました")
   push("[cut]")
 
   return lines.join("\n")

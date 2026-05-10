@@ -9,7 +9,13 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId } = await req.json()
+    const {
+      orderId,
+      lineName,
+      phone,
+      orderDate,
+      paymentStatus,
+    } = await req.json()
     if (!orderId) {
       return NextResponse.json({ error: "orderId required" }, { status: 400 })
     }
@@ -45,6 +51,10 @@ export async function POST(req: NextRequest) {
       pickupDate: order.pickup_date,
       pickupTime: order.pickup_time,
       customerName: order.customer_name_snapshot,
+      lineName: lineName ?? null,
+      phone: phone ?? null,
+      orderDate: orderDate ?? null,
+      paymentStatus: paymentStatus ?? null,
       items: ((order.order_items as any[]) ?? []).map((item) => ({
         name: item.product_name_snapshot,
         quantity: item.quantity,

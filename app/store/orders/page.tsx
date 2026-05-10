@@ -574,14 +574,15 @@ export default function StoreOrdersPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
-                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-l-4 ${
+                  onClick={() => setSelectedOrder(order)}
+                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-l-4 cursor-pointer transition-colors ${
                     isDateChanged ? "border-t-2 border-t-gray-300" : "border-t border-gray-100"
                   } ${
                     isFulfilled
-                      ? "bg-gray-50 border-l-gray-300"
+                      ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
-                      ? "bg-amber-50 border-l-amber-400"
-                      : "bg-white border-l-gray-200"
+                      ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
+                      : "bg-white border-l-gray-200 hover:bg-gray-50"
                   }`}
                 >
                   <div className="pl-3">
@@ -626,7 +627,7 @@ export default function StoreOrdersPage() {
                     <motion.button
                       whileHover={{ scale: 1.08 }}
                       whileTap={{ scale: 0.92 }}
-                      onClick={() => setConfirmAction({ orderId: order.id, toFulfilled: !isFulfilled, isEc })}
+                      onClick={(e) => { e.stopPropagation(); setConfirmAction({ orderId: order.id, toFulfilled: !isFulfilled, isEc }); }}
                       className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${isFulfilled ? "bg-amber-400 hover:bg-amber-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-700"}`}
                     >
                       {isFulfilled ? "済" : "未"}

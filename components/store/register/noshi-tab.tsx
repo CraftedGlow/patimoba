@@ -11,7 +11,7 @@ export function NoshiTab() {
   const storeId = user?.storeId ?? undefined;
   const { noshiList, loading, addNoshi, updateNoshi, deleteNoshi } = useNoshi(storeId);
 
-  const NOSHI_PRESETS = ["御祝", "内祝い", "誕生日御祝", "出産御祝", "結婚御祝", "快気祝い", "その他"];
+  const NOSHI_PRESETS = ["御祝", "内祝", "御礼", "御中元", "御歳暮", "結婚祝", "出産祝", "快気祝", "御供", "志", "その他"];
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [namePreset, setNamePreset] = useState("");

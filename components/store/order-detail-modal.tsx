@@ -222,11 +222,6 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
                             <span className="text-gray-400 shrink-0 mt-px">・</span>
                             <span className="leading-snug">
                               {`${opt.groupName}（${opt.itemName}）`}
-                              {opt.priceDelta > 0 && (
-                                <span className="text-gray-400 ml-1">
-                                  +¥{opt.priceDelta.toLocaleString()}
-                                </span>
-                              )}
                             </span>
                           </div>
                         ))}

@@ -47,11 +47,13 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   const lines: string[] = []
   const push = (...s: string[]) => lines.push(...s)
 
-  // 店名 - 太字・中央揃え（拡大なし）
+  // 店名 - 大文字・太字・中央揃え
   push(
     "[align: center]",
     "[bold: on]",
+    "[font-size: 2]",
     data.storeName,
+    "[font-size: 1]",
     "[bold: off]",
     SEP,
     "[align: left]",
@@ -105,11 +107,15 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   }
   push(SEP)
 
-  // お支払金額 - 太字
+  // お支払金額 - 大文字・太字
+  push("[align: center]")
   push("[bold: on]")
+  push("[font-size: 2]")
   push(`お支払金額`)
   push(`¥${data.totalAmount.toLocaleString()}`)
+  push("[font-size: 1]")
   push("[bold: off]")
+  push("[align: left]")
 
   push("[cut]")
 

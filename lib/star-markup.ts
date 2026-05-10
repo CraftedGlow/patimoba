@@ -47,13 +47,16 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   const lines: string[] = []
   const push = (...s: string[]) => lines.push(...s)
 
-  // 店名 - 大文字・太字・中央揃え
+  // 全体をFont B（小さめ）に設定
+  push("[font: name b]")
+
+  // 店名 - 2倍・太字・中央揃え
   push(
     "[align: center]",
     "[bold: on]",
-    "[font-size: 2]",
+    "[mag: w 2; h 2]",
     data.storeName,
-    "[font-size: 1]",
+    "[mag]",
     "[bold: off]",
     SEP,
     "[align: left]",
@@ -81,7 +84,7 @@ export function buildReceiptMarkup(data: ReceiptData): string {
     push(`${item.name}  x${item.quantity}`)
     // バリアント（ホールサイズ等）
     if (item.variantName) push(`  ${item.variantName}`)
-    // オプション
+    // オプション（金額非表示）
     for (const opt of item.options ?? []) {
       if (!opt.itemName) continue
       if (opt.groupName === "サイズ") continue
@@ -107,13 +110,13 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   }
   push(SEP)
 
-  // お支払金額 - 大文字・太字
+  // お支払金額 - 2倍・太字・中央揃え
   push("[align: center]")
   push("[bold: on]")
-  push("[font-size: 2]")
+  push("[mag: w 2; h 2]")
   push(`お支払金額`)
   push(`¥${data.totalAmount.toLocaleString()}`)
-  push("[font-size: 1]")
+  push("[mag]")
   push("[bold: off]")
   push("[align: left]")
 

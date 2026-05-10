@@ -258,11 +258,16 @@ export default function StoreReportPage() {
   const maxDailySale = Math.max(...dailySales.map((d) => d.amount), 1);
   const maxWeekday = Math.max(...weekdayCounts.map((w) => w.count), 1);
 
+  const savedMinutes = Math.floor(stats.totalOrders * 2);
+  const savedTimeLabel = savedMinutes >= 60
+    ? `約${Math.floor(savedMinutes / 60)}時間${savedMinutes % 60 > 0 ? `${savedMinutes % 60}分` : ""}`
+    : `約${savedMinutes}分`;
+
   const kpiCards = [
-    { icon: Clock, label: "営業時間外に届いた注文", value: `${Math.floor(stats.totalOrders * 0.3)}件`, sub: "あなたが寝ている間に注文が入りました" },
-    { icon: Timer, label: "削減できた対応時間", value: `約${Math.floor(stats.totalOrders * 0.8)}分`, sub: "電話対応や予約管理の時間を削減" },
-    { icon: Package, label: "オプション追加注文", value: `${Math.floor(stats.totalOrders * 0.21)}件`, sub: "ホールケーキのカスタマイズなど" },
-    { icon: Repeat, label: "リピーターからの注文", value: `${Math.floor(stats.totalOrders * 0.51)}件`, sub: `全体の51%がリピーター` },
+    { icon: Clock, label: "営業時間外に届いた注文", value: `${Math.floor(stats.totalOrders * 0.3)}件`, sub: "あなたが寝ている間に注文が入りました", note: "" },
+    { icon: Timer, label: "削減できた対応時間", value: savedTimeLabel, sub: "電話対応や予約管理の時間を削減", note: "注文1件あたり電話・手書き対応の約2分を節約できたと推定" },
+    { icon: Package, label: "オプション追加注文", value: `${Math.floor(stats.totalOrders * 0.21)}件`, sub: "ホールケーキのカスタマイズなど", note: "" },
+    { icon: Repeat, label: "リピーターからの注文", value: `${Math.floor(stats.totalOrders * 0.51)}件`, sub: `全体の51%がリピーター`, note: "" },
   ];
 
   const containerVariants = {
@@ -317,7 +322,7 @@ export default function StoreReportPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-4 gap-3 mb-8"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8"
       >
         {kpiCards.map((card, i) => (
           <motion.div
@@ -326,9 +331,12 @@ export default function StoreReportPage() {
             className="bg-white border border-gray-200 rounded-xl p-4"
           >
             <card.icon className="w-5 h-5 text-gray-400 mb-2" />
-            <p className="text-2xl font-bold">{card.value}</p>
+            <p className="text-xl sm:text-2xl font-bold">{card.value}</p>
             <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
             <p className="text-[10px] text-gray-400 mt-1">{card.sub}</p>
+            {card.note && (
+              <p className="text-[10px] text-amber-500 mt-1 leading-tight">※ {card.note}</p>
+            )}
           </motion.div>
         ))}
       </motion.div>
@@ -339,7 +347,7 @@ export default function StoreReportPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-4 gap-3 mb-8"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8"
       >
         {[
           { label: "総注文件数", value: `${stats.totalOrders}件`, change: "+12.5%", up: true },
@@ -364,7 +372,7 @@ export default function StoreReportPage() {
 
       {/* 売上分析 */}
       <h3 className="text-base font-bold mb-3">売上分析</h3>
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         {/* 日別売上 */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -422,7 +430,7 @@ export default function StoreReportPage() {
 
       {/* 詳細分析 */}
       <h3 className="text-base font-bold mb-3">詳細分析</h3>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* 商品ランキング */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}

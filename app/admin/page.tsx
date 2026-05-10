@@ -235,24 +235,24 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
+      <header className="bg-[#FFF9C4] px-4 sm:px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">経営分析ダッシュボード</h1>
+          <h1 className="text-base sm:text-lg font-bold text-gray-900">経営分析ダッシュボード</h1>
           <p className="text-xs text-gray-600">{nowStr}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-3 sm:px-4 py-2 rounded-lg transition-colors"
         >
           <FileText className="w-4 h-4" />
-          レポート出力
+          <span className="hidden sm:inline">レポート出力</span>
         </motion.button>
       </header>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Alert Cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {alerts.map((alert, i) => (
             <motion.div
               key={i}
@@ -300,7 +300,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {kpis.map((kpi, i) => (
             <motion.div
               key={kpi.label}
@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Charts 2x2 */}
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <ChartCard title="加盟店舗数推移" delay={0.3}>
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={storeGrowth}>

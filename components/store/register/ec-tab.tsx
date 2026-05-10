@@ -25,9 +25,16 @@ interface EcProductRow {
   content_quantity: string | null;
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
+  tags: string[] | null;
 }
 
 const SHIPPING_OPTIONS = ["常温", "冷蔵", "冷凍"];
+
+const PRODUCT_TAGS = [
+  "誕生日", "クリスマス", "バレンタイン", "ホワイトデー",
+  "母の日", "父の日", "こどもの日", "ハロウィン",
+  "卒業・入学", "結婚記念日", "お中元", "お歳暮",
+];
 
 export function EcTab() {
   const { user } = useAuth();
@@ -60,6 +67,7 @@ export function EcTab() {
   const crossInputRef = useRef<HTMLInputElement>(null);
   const extraInputRef = useRef<HTMLInputElement>(null);
 
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +101,7 @@ export function EcTab() {
     setContentQuantity("");
     setNoshiEnabled(false);
     setNoshiIds([]);
+    setSelectedTags([]);
     setMainImage(null);
     setCrossImage(null);
     setExtraImage(null);
@@ -114,6 +123,7 @@ export function EcTab() {
       setContentQuantity(p.content_quantity ?? "");
       setNoshiEnabled(p.noshi_enabled ?? false);
       setNoshiIds(Array.isArray(p.noshi_ids) ? p.noshi_ids : []);
+      setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setExtraImage(null);
@@ -174,6 +184,7 @@ export function EcTab() {
         content_quantity: contentQuantity.trim() || null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
+        tags: selectedTags.length > 0 ? selectedTags : null,
       };
 
       if (selectedId) {
@@ -413,6 +424,34 @@ export function EcTab() {
               />
               <span className="text-sm text-gray-500">日</span>
             </div>
+          </div>
+        </div>
+
+        {/* タグ設定 */}
+        <div className="space-y-2 pt-1">
+          <label className="block text-sm font-bold text-gray-700 mb-1.5">タグ（シーズン・用途）</label>
+          <div className="flex flex-wrap gap-2">
+            {PRODUCT_TAGS.map((tag) => {
+              const active = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() =>
+                    setSelectedTags((prev) =>
+                      active ? prev.filter((t) => t !== tag) : [...prev, tag]
+                    )
+                  }
+                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                    active
+                      ? "bg-amber-400 text-white border-amber-400"
+                      : "bg-white text-gray-500 border-gray-300 hover:border-amber-300"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
           </div>
         </div>
 

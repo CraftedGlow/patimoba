@@ -289,6 +289,7 @@ export type Database = {
           preparation_days: number | null
           same_day_order_allowed: boolean | null
           store_id: string
+          tags: Json | null
           tax_type: string | null
           updated_at: string
         }
@@ -314,6 +315,7 @@ export type Database = {
           preparation_days?: number | null
           same_day_order_allowed?: boolean | null
           store_id: string
+          tags?: Json | null
           tax_type?: string | null
           updated_at?: string
         }
@@ -339,6 +341,7 @@ export type Database = {
           preparation_days?: number | null
           same_day_order_allowed?: boolean | null
           store_id?: string
+          tags?: Json | null
           tax_type?: string | null
           updated_at?: string
         }
@@ -536,6 +539,7 @@ export type Database = {
       store_business_hours: {
         Row: {
           close_time: string | null
+          closed_week_rule: string | null
           created_at: string
           day_of_week: number
           id: string
@@ -548,6 +552,7 @@ export type Database = {
         }
         Insert: {
           close_time?: string | null
+          closed_week_rule?: string | null
           created_at?: string
           day_of_week: number
           id?: string
@@ -560,6 +565,7 @@ export type Database = {
         }
         Update: {
           close_time?: string | null
+          closed_week_rule?: string | null
           created_at?: string
           day_of_week?: number
           id?: string
@@ -745,12 +751,16 @@ export type Database = {
           payjp_tenant_id: string | null
           phone: string | null
           plan: string
+          blackout_periods: Json | null
+          plan_options: Json | null
           postal_code: string | null
           slug: string | null
+          tokusho_text: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          blackout_periods?: Json | null
           building?: string | null
           created_at?: string
           description?: string | null
@@ -765,12 +775,15 @@ export type Database = {
           payjp_tenant_id?: string | null
           phone?: string | null
           plan?: string
+          plan_options?: Json | null
           postal_code?: string | null
           slug?: string | null
+          tokusho_text?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          blackout_periods?: Json | null
           building?: string | null
           created_at?: string
           description?: string | null
@@ -785,8 +798,10 @@ export type Database = {
           payjp_tenant_id?: string | null
           phone?: string | null
           plan?: string
+          plan_options?: Json | null
           postal_code?: string | null
           slug?: string | null
+          tokusho_text?: string | null
           updated_at?: string
         }
         Relationships: []

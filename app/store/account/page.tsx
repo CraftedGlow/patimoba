@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { X, Loader2, Key, Check, Camera, Link2 } from "lucide-react";
+import { X, Loader2, Key, Check, Camera, Link2, Plus, Trash2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -35,7 +35,14 @@ const WEEKDAYS = [
   { label: "土", value: 6 },
 ];
 
-type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "holidays" | "saved" | null;
+type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "holidays" | "blackout_add" | "saved" | null;
+
+interface BlackoutPeriod {
+  id: string;
+  from: string;
+  to: string;
+  label: string;
+}
 
 async function fetchStoreForUser(storeIdHint: string | null): Promise<StoreRow | null> {
   if (storeIdHint) {
@@ -120,6 +127,10 @@ export default function StoreAccountPage() {
   const [ecLinkCopied, setEcLinkCopied] = useState(false);
 
   const [modalHolidays, setModalHolidays] = useState<{ dayOfWeek: number; rule: string }[]>([]);
+  const [blackoutPeriods, setBlackoutPeriods] = useState<BlackoutPeriod[]>([]);
+  const [newBlackoutFrom, setNewBlackoutFrom] = useState("");
+  const [newBlackoutTo, setNewBlackoutTo] = useState("");
+  const [newBlackoutLabel, setNewBlackoutLabel] = useState("");
 
   const loadStore = useCallback(async () => {
     try {
@@ -174,6 +185,11 @@ export default function StoreAccountPage() {
           freq: r.rule,
           dayOfWeek: r.dayOfWeek,
         })));
+
+        const rawBlackouts = (store as any).blackout_periods;
+        if (Array.isArray(rawBlackouts)) {
+          setBlackoutPeriods(rawBlackouts as BlackoutPeriod[]);
+        }
       }
       if (user) setHasPassword(true);
     } catch {
@@ -267,6 +283,37 @@ export default function StoreAccountPage() {
     await upsertOrderRules({ min_future_days: Number(modalMinFutureDays) });
     setMinFutureDays(modalMinFutureDays);
   }, [modalMinFutureDays, upsertOrderRules]);
+
+  const addBlackoutPeriod = useCallback(async () => {
+    if (!storeId || !newBlackoutFrom || !newBlackoutTo) return;
+    if (newBlackoutFrom > newBlackoutTo) return;
+    const newPeriod: BlackoutPeriod = {
+      id: crypto.randomUUID(),
+      from: newBlackoutFrom,
+      to: newBlackoutTo,
+      label: newBlackoutLabel.trim() || `${newBlackoutFrom}〜${newBlackoutTo}`,
+    };
+    const updated = [...blackoutPeriods, newPeriod];
+    setSaving(true);
+    try {
+      await supabase.from("stores").update({ blackout_periods: updated as any }).eq("id", storeId);
+      setBlackoutPeriods(updated);
+      setNewBlackoutFrom("");
+      setNewBlackoutTo("");
+      setNewBlackoutLabel("");
+      setModal("saved");
+      setTimeout(() => setModal(null), 1500);
+    } finally {
+      setSaving(false);
+    }
+  }, [storeId, blackoutPeriods, newBlackoutFrom, newBlackoutTo, newBlackoutLabel]);
+
+  const removeBlackoutPeriod = useCallback(async (id: string) => {
+    if (!storeId) return;
+    const updated = blackoutPeriods.filter((p) => p.id !== id);
+    await supabase.from("stores").update({ blackout_periods: updated as any }).eq("id", storeId);
+    setBlackoutPeriods(updated);
+  }, [storeId, blackoutPeriods]);
 
   const toggleSameDayOrder = useCallback(async (value: boolean) => {
     if (!storeId) return;
@@ -661,9 +708,9 @@ export default function StoreAccountPage() {
 
           <div>
             <p className="text-sm text-gray-500 mb-2">定休日</p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               {holidays.length > 0 ? (
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4 flex-wrap">
                   {holidays.map((h, i) => (
                     <span key={i} className="text-base">
                       <span className="font-semibold">{h.day}</span>{" "}
@@ -684,6 +731,44 @@ export default function StoreAccountPage() {
                 変更
               </motion.button>
             </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm text-gray-500">受付停止期間</p>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setModal("blackout_add")}
+                className="flex items-center gap-1 px-3 py-1 rounded-md bg-amber-400 text-white text-xs font-bold hover:bg-amber-500 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                期間を追加
+              </motion.button>
+            </div>
+            {blackoutPeriods.length === 0 ? (
+              <p className="text-xs text-gray-400">停止期間が設定されていません</p>
+            ) : (
+              <div className="space-y-2">
+                {blackoutPeriods.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                    <div>
+                      <p className="text-sm font-bold text-red-700">{p.label}</p>
+                      <p className="text-xs text-red-400">{p.from} 〜 {p.to}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeBlackoutPeriod(p.id)}
+                      className="p-1.5 text-red-300 hover:text-red-500 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-400 mt-1.5">この期間は顧客の予約受付を停止します</p>
           </div>
         </div>
       </div>
@@ -912,6 +997,61 @@ export default function StoreAccountPage() {
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 保存
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modal === "blackout_add" && (
+          <Modal key="blackout_add" onClose={() => setModal(null)}>
+            <h2 className="text-lg font-bold text-center mb-6">受付停止期間を追加</h2>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">期間の名前（例: クリスマス期間）</label>
+                <input
+                  type="text"
+                  value={newBlackoutLabel}
+                  onChange={(e) => setNewBlackoutLabel(e.target.value)}
+                  placeholder="クリスマス期間"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">開始日</label>
+                <input
+                  type="date"
+                  value={newBlackoutFrom}
+                  onChange={(e) => setNewBlackoutFrom(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">終了日</label>
+                <input
+                  type="date"
+                  value={newBlackoutTo}
+                  onChange={(e) => setNewBlackoutTo(e.target.value)}
+                  min={newBlackoutFrom}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                />
+              </div>
+              {newBlackoutFrom && newBlackoutTo && newBlackoutFrom <= newBlackoutTo && (
+                <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                  {newBlackoutFrom} 〜 {newBlackoutTo} の受付を停止します
+                </p>
+              )}
+            </div>
+            <div className="flex justify-center">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={addBlackoutPeriod}
+                disabled={saving || !newBlackoutFrom || !newBlackoutTo || newBlackoutFrom > newBlackoutTo}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                追加する
               </motion.button>
             </div>
           </Modal>

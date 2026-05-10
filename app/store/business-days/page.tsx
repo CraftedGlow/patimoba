@@ -168,25 +168,23 @@ export default function BusinessDaysPage() {
       // store_business_hours から営業時間と定休日を取得
       const { data: bhData } = await supabase
         .from("store_business_hours")
-        .select("day_of_week, open_time, close_time, is_closed")
+        .select("day_of_week, open_time, close_time, is_closed, closed_week_rule")
         .eq("store_id", storeId)
         .order("day_of_week", { ascending: true });
       if (cancelled) return;
       if (bhData && bhData.length > 0) {
-        // 営業日の最初のレコードからopen/close timeを取得
         const openDay = bhData.find((r: any) => !r.is_closed);
         if (openDay) {
           setStoreOpenTime(formatTimeHm(openDay.open_time) || "10:00");
           setStoreCloseTime(formatTimeHm(openDay.close_time) || "19:00");
         }
-        // 定休日を抽出
         const closed = bhData.filter((r: any) => r.is_closed);
         if (closed.length > 0) {
           setClosedDayRules(
             closed.map((r: any) => ({
               dayOfWeek: r.day_of_week,
               day: weekdayNames[r.day_of_week] ?? `${r.day_of_week}`,
-              rule: "毎週",
+              rule: r.closed_week_rule ?? "毎週",
             }))
           );
         } else {

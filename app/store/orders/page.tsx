@@ -243,21 +243,21 @@ export default function StoreOrdersPage() {
   const [manageFulfillment, setManageFulfillment] = useState<FulfillmentFilter>("");
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [managePickupDate, setManagePickupDate] = useState<Date | null>(null);
-  const [showManageDatePicker, setShowManageDatePicker] = useState(false);
+  const [managePickupDateFrom, setManagePickupDateFrom] = useState<Date | null>(null);
+  const [managePickupDateTo, setManagePickupDateTo] = useState<Date | null>(null);
+  const [showDatePickerFor, setShowDatePickerFor] = useState<"from" | "to" | null>(null);
   const manageDateRef = useRef<HTMLDivElement>(null);
 
   const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
-  const manageDateBase = managePickupDate ?? new Date();
-  const manageDateStr = `${manageDateBase.getFullYear()}年${manageDateBase.getMonth() + 1}月${manageDateBase.getDate()}日(${dayNames[manageDateBase.getDay()]})`;
-  const managePickupDateStr = managePickupDate
-    ? `${managePickupDate.getFullYear()}-${String(managePickupDate.getMonth() + 1).padStart(2, "0")}-${String(managePickupDate.getDate()).padStart(2, "0")}`
-    : null;
+  const fmtDate = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日(${dayNames[d.getDay()]})`;
+  const fmtISO = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const managePickupDateFromStr = managePickupDateFrom ? fmtISO(managePickupDateFrom) : null;
+  const managePickupDateToStr = managePickupDateTo ? fmtISO(managePickupDateTo) : null;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (manageDateRef.current && !manageDateRef.current.contains(e.target as Node)) {
-        setShowManageDatePicker(false);
+        setShowDatePickerFor(null);
       }
     };
     document.addEventListener("mousedown", handleClick);
@@ -274,7 +274,8 @@ export default function StoreOrdersPage() {
     storeId,
     channel: "takeout",
     fulfillmentStatus: manageFulfillment || undefined,
-    ...(managePickupDateStr ? { pickupDate: managePickupDateStr } : { pickupDateFrom: todayStr }),
+    pickupDateFrom: managePickupDateFromStr ?? todayStr,
+    ...(managePickupDateToStr ? { pickupDateTo: managePickupDateToStr } : {}),
     sortBy: "pickup_date",
     sortAsc: true,
   });
@@ -373,7 +374,9 @@ export default function StoreOrdersPage() {
       const orderIds = manageOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
       const slug = (storeName || "store").replace(/\s+/g, "_");
-      const filename = `orders_${slug}_${todayStr}以降.csv`;
+      const fromLabel = managePickupDateFromStr ?? todayStr;
+      const toLabel = managePickupDateToStr ? `_${managePickupDateToStr}` : "以降";
+      const filename = `orders_${slug}_${fromLabel}${toLabel}.csv`;
       downloadCSV(filename, buildCSV(manageOrders, optionsMap));
     } finally {
       setManageCsvExporting(false);
@@ -391,7 +394,9 @@ export default function StoreOrdersPage() {
       const orderIds = manageOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
       const slug = (storeName || "store").replace(/\s+/g, "_");
-      printOrdersPDF(manageOrders, optionsMap, `予約管理 ${slug} ${todayStr}〜`);
+      const fromLabel = managePickupDateFromStr ?? todayStr;
+      const toLabel = managePickupDateToStr ? `〜${managePickupDateToStr}` : "〜";
+      printOrdersPDF(manageOrders, optionsMap, `予約管理 ${slug} ${fromLabel}${toLabel}`);
     } finally {
       setManagePdfExporting(false);
     }
@@ -464,26 +469,50 @@ export default function StoreOrdersPage() {
               </select>
             </div>
             <div className="flex items-center gap-3">
-              <div className="relative" ref={manageDateRef}>
+              <div className="relative flex items-center gap-1" ref={manageDateRef}>
                 <button
-                  onClick={() => setShowManageDatePicker(!showManageDatePicker)}
-                  className="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={() => setShowDatePickerFor(showDatePickerFor === "from" ? null : "from")}
+                  className={`border rounded-lg px-3 py-2 text-sm transition-colors ${showDatePickerFor === "from" ? "border-amber-400 bg-amber-50 text-amber-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
                 >
-                  {manageDateStr}
+                  {managePickupDateFrom ? fmtDate(managePickupDateFrom) : "開始日"}
                 </button>
+                <span className="text-gray-400 text-sm">〜</span>
+                <button
+                  onClick={() => setShowDatePickerFor(showDatePickerFor === "to" ? null : "to")}
+                  className={`border rounded-lg px-3 py-2 text-sm transition-colors ${showDatePickerFor === "to" ? "border-amber-400 bg-amber-50 text-amber-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                >
+                  {managePickupDateTo ? fmtDate(managePickupDateTo) : "終了日"}
+                </button>
+                {(managePickupDateFrom || managePickupDateTo) && (
+                  <button
+                    onClick={() => { setManagePickupDateFrom(null); setManagePickupDateTo(null); setShowDatePickerFor(null); }}
+                    className="text-xs text-red-400 hover:text-red-600 px-1 leading-none"
+                  >
+                    ✕
+                  </button>
+                )}
                 <AnimatePresence>
-                  {showManageDatePicker && (
+                  {showDatePickerFor === "from" && (
                     <DatePickerPopup
-                      selectedDate={managePickupDate ?? new Date()}
+                      selectedDate={managePickupDateFrom ?? new Date()}
                       onSelect={(date) => {
-                        setManagePickupDate(date);
-                        setShowManageDatePicker(false);
+                        setManagePickupDateFrom(date);
+                        if (managePickupDateTo && date > managePickupDateTo) setManagePickupDateTo(null);
+                        setShowDatePickerFor("to");
                       }}
-                      onClear={() => {
-                        setManagePickupDate(null);
-                        setShowManageDatePicker(false);
+                      onClear={() => { setManagePickupDateFrom(null); setShowDatePickerFor(null); }}
+                      onClose={() => setShowDatePickerFor(null)}
+                    />
+                  )}
+                  {showDatePickerFor === "to" && (
+                    <DatePickerPopup
+                      selectedDate={managePickupDateTo ?? managePickupDateFrom ?? new Date()}
+                      onSelect={(date) => {
+                        setManagePickupDateTo(date);
+                        setShowDatePickerFor(null);
                       }}
-                      onClose={() => setShowManageDatePicker(false)}
+                      onClear={() => { setManagePickupDateTo(null); setShowDatePickerFor(null); }}
+                      onClose={() => setShowDatePickerFor(null)}
                     />
                   )}
                 </AnimatePresence>

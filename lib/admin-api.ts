@@ -156,7 +156,14 @@ export async function deleteStoreLogo(url: string): Promise<void> {
 }
 
 const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 export type DayName = typeof DAY_NAMES[number];
+
+export interface ClosedDayRule {
+  dayOfWeek: number;
+  day: string;
+  rule: string;
+}
 
 function dayNameToIndex(name: string): number {
   const i = DAY_NAMES.indexOf(name as DayName);
@@ -168,20 +175,41 @@ function indexToDayName(i: number): DayName | null {
 }
 
 export async function saveClosedDays(storeId: string, closedDays: string[]) {
-  // store_business_hours テーブルで曜日別の定休日を管理
-  // まず既存の曜日設定を削除
   const { error: delErr } = await supabase
     .from("store_business_hours")
     .delete()
     .eq("store_id", storeId);
   if (delErr) throw delErr;
 
-  // 全曜日分のレコードを作成（定休日フラグ付き）
   const rows = Array.from({ length: 7 }, (_, i) => ({
     store_id: storeId,
     day_of_week: i,
     is_closed: closedDays.some((day) => dayNameToIndex(day) === i),
+    closed_week_rule: closedDays.some((day) => dayNameToIndex(day) === i) ? "毎週" : null,
   }));
+
+  const { error: insErr } = await supabase
+    .from("store_business_hours")
+    .insert(rows);
+  if (insErr) throw insErr;
+}
+
+export async function saveClosedDayRules(storeId: string, rules: ClosedDayRule[]) {
+  const { error: delErr } = await supabase
+    .from("store_business_hours")
+    .delete()
+    .eq("store_id", storeId);
+  if (delErr) throw delErr;
+
+  const rows = Array.from({ length: 7 }, (_, i) => {
+    const rule = rules.find((r) => r.dayOfWeek === i);
+    return {
+      store_id: storeId,
+      day_of_week: i,
+      is_closed: !!rule,
+      closed_week_rule: rule?.rule ?? null,
+    };
+  });
 
   const { error: insErr } = await supabase
     .from("store_business_hours")
@@ -202,6 +230,20 @@ export async function fetchClosedDays(storeId: string): Promise<string[]> {
     if (name) result.push(name);
   }
   return result;
+}
+
+export async function fetchClosedDayRules(storeId: string): Promise<ClosedDayRule[]> {
+  const { data, error } = await supabase
+    .from("store_business_hours")
+    .select("day_of_week, is_closed, closed_week_rule")
+    .eq("store_id", storeId)
+    .eq("is_closed", true);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    dayOfWeek: Number(r.day_of_week),
+    day: DAY_LABELS[r.day_of_week] ?? String(r.day_of_week),
+    rule: r.closed_week_rule ?? "毎週",
+  }));
 }
 
 export async function fetchBusinessHours(storeId: string) {

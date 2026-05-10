@@ -197,9 +197,9 @@ export default function AdminInsightsPage() {
 
   return (
     <>
-      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
+      <header className="bg-[#FFF9C4] px-4 sm:px-6 py-4 border-b border-yellow-200 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-0 sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">営業インサイト</h1>
+          <h1 className="text-base sm:text-lg font-bold text-gray-900">営業インサイト</h1>
           <p className="text-xs text-gray-600">Supabase実データに基づく分析</p>
         </div>
         <div className="flex items-center gap-2">
@@ -207,20 +207,20 @@ export default function AdminInsightsPage() {
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           <span className="text-gray-400">〜</span>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+            className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
         </div>
       </header>
 
-      <div className="p-6 space-y-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <TrendingUp className="w-5 h-5 text-amber-500" />
             <div>
@@ -228,7 +228,7 @@ export default function AdminInsightsPage() {
               <p className="text-sm font-bold">{periodLabel}</p>
             </div>
           </div>
-          <div className="flex items-center gap-6 text-sm">
+          <div className="grid grid-cols-2 sm:flex sm:items-center sm:gap-6 gap-3 text-sm">
             <div className="text-center">
               <p className="text-xs text-gray-500">総注文件数（件）</p>
               <p className="font-bold text-lg">{totalOrders.toLocaleString()}</p>
@@ -248,7 +248,7 @@ export default function AdminInsightsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           {topMetrics.map((metric, i) => (
             <motion.div
               key={metric.label}
@@ -273,7 +273,7 @@ export default function AdminInsightsPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -329,7 +329,7 @@ export default function AdminInsightsPage() {
           </motion.div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -410,7 +410,7 @@ export default function AdminInsightsPage() {
           className="bg-white rounded-xl border border-gray-200 p-6"
         >
           <h2 className="font-bold text-sm mb-4">期間内注文詳細</h2>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {[
               { label: "総注文件数", value: totalOrders.toLocaleString(), unit: "件" },
               { label: "総売上額", value: `¥${totalRevenue.toLocaleString()}`, unit: "" },

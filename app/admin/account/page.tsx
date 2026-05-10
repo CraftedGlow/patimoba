@@ -278,7 +278,7 @@ export default function AdminAccountPage() {
 
   return (
     <>
-      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
+      <header className="bg-[#FFF9C4] px-4 sm:px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">アカウント設定</h1>
           <p className="text-xs text-gray-600">
@@ -293,7 +293,7 @@ export default function AdminAccountPage() {
         )}
       </header>
 
-      <div className="p-6 space-y-6 max-w-5xl">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-5xl">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -400,7 +400,7 @@ export default function AdminAccountPage() {
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

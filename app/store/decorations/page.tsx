@@ -465,8 +465,8 @@ export default function DecorationsPage() {
           ) : (
             <div className="space-y-2">
               {filteredDecos.map((deco) => (
-                <div key={deco.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
-                  <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center text-2xl">
+                <div key={deco.id} className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center text-2xl">
                     {deco.imageUrl ? (
                       <img src={deco.imageUrl} alt={deco.name} className="w-full h-full object-cover" />
                     ) : (
@@ -474,8 +474,8 @@ export default function DecorationsPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold truncate">{deco.name}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <p className="text-sm font-bold">{deco.name}</p>
                       <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full shrink-0">
                         {CATEGORY_LABELS[deco.category] ?? deco.category}
                       </span>
@@ -484,13 +484,13 @@ export default function DecorationsPage() {
                       )}
                     </div>
                     {deco.description && (
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{deco.description}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{deco.description}</p>
                     )}
+                    <p className="text-sm font-bold text-amber-600 mt-1">
+                      {deco.price === 0 ? "無料" : `+¥${deco.price.toLocaleString()}`}
+                    </p>
                   </div>
-                  <div className="text-sm font-bold text-amber-600 shrink-0">
-                    {deco.price === 0 ? "無料" : `+¥${deco.price.toLocaleString()}`}
-                  </div>
-                  <div className="flex gap-1 shrink-0">
+                  <div className="flex gap-1 shrink-0 ml-2">
                     <button type="button" onClick={() => setDecoPanel(deco.id)}
                       className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
                       <Pencil className="w-4 h-4" />

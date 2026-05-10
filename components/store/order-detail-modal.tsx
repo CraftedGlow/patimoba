@@ -206,16 +206,22 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
                       </div>
                     )}
 
-                    {/* オプション（プレート・メッセージ等） */}
-                    {item.options.length > 0 && (
+                    {/* メッセージオプション（サイズの直下） */}
+                    {item.options.filter(opt => opt.groupName === "メッセージ").map((opt, j) => (
+                      <div key={`msg-${j}`} className="flex items-start gap-1 text-xs text-gray-600 mt-0.5 ml-2">
+                        <span className="text-gray-400 shrink-0 mt-px">・</span>
+                        <span className="leading-snug">「{opt.itemName}」</span>
+                      </div>
+                    ))}
+
+                    {/* その他オプション */}
+                    {item.options.filter(opt => opt.groupName !== "メッセージ").length > 0 && (
                       <div className="mt-2 ml-2 space-y-0.5">
-                        {item.options.map((opt, j) => (
+                        {item.options.filter(opt => opt.groupName !== "メッセージ").map((opt, j) => (
                           <div key={j} className="flex items-start gap-1 text-xs text-gray-600">
                             <span className="text-gray-400 shrink-0 mt-px">・</span>
                             <span className="leading-snug">
-                              {opt.groupName === "メッセージ"
-                                ? `「${opt.itemName}」`
-                                : `${opt.groupName}（${opt.itemName}）`}
+                              {`${opt.groupName}（${opt.itemName}）`}
                               {opt.priceDelta > 0 && (
                                 <span className="text-gray-400 ml-1">
                                   +¥{opt.priceDelta.toLocaleString()}

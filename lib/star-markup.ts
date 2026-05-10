@@ -47,7 +47,10 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   const lines: string[] = []
   const push = (...s: string[]) => lines.push(...s)
 
-  // 店名 - 2倍サイズ・太字・中央揃え
+  // フォントBで全体を小さめに
+  push("[font: B]")
+
+  // 店名 - 1.5倍相当（font B × magnify 2）・太字・中央揃え
   push(
     "[align: center]",
     "[bold: on]",
@@ -96,11 +99,7 @@ export function buildReceiptMarkup(data: ReceiptData): string {
         label = opt.itemName
       }
 
-      const price =
-        opt.priceDelta && opt.priceDelta !== 0
-          ? ` +¥${opt.priceDelta.toLocaleString()}`
-          : ""
-      push(`  ${label}${price}`)
+      push(`  ${label}`)
     }
   }
 

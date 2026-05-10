@@ -42,8 +42,9 @@ const SEP = "------------------------"
 export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   const parts: Buffer[] = [
     cmd(ESC, 0x40),        // 初期化
-    cmd(ESC, 0x4D, 0x01),  // フォントB（小さいフォント）
+    cmd(ESC, 0x4D, 0x01),  // フォントB
     cmd(ESC, 0x33, 16),    // 行間 16ドット
+    SIZE_2X,               // フォントBの2倍サイズ
     blank(),
     // 店名: 太字・中央
     cmd(ESC, 0x61, 0x01),  // センター

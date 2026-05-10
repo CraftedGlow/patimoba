@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      print_jobs: {
+        Row: {
+          id: string
+          store_id: string
+          order_id: string | null
+          status: string
+          markup: string
+          delete_token: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          store_id: string
+          order_id?: string | null
+          status?: string
+          markup: string
+          delete_token?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          store_id?: string
+          order_id?: string | null
+          status?: string
+          markup?: string
+          delete_token?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_jobs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_item_options: {
         Row: {
           created_at: string

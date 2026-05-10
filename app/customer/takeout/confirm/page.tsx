@@ -32,6 +32,7 @@ export default function TakeoutConfirmPage() {
   const [partialPoints, setPartialPoints] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit");
   const [showOrderComplete, setShowOrderComplete] = useState(false);
+  const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
@@ -221,6 +222,7 @@ export default function TakeoutConfirmPage() {
     if (result.error) { setSubmitError(result.error); return; }
 
     if (result.orderId) {
+      setCompletedOrderId(result.orderId);
       fetch("/api/line/send-order-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -262,6 +264,7 @@ export default function TakeoutConfirmPage() {
   useEffect(() => {
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
+
 
   const continueShoppingHref = selectedStoreId || cartStoreId
     ? `/customer/takeout/products?store=${selectedStoreId || cartStoreId}`
@@ -619,9 +622,11 @@ export default function TakeoutConfirmPage() {
               <p className="text-sm text-gray-500 leading-relaxed mb-5">
                 来店時にLINEのメッセージをお見せください。
               </p>
-              <p className="text-xs text-gray-400 mb-4">
-                {countdown}秒後に自動で商品一覧に戻ります
-              </p>
+              {countdown > 0 && (
+                <p className="text-xs text-gray-400 mb-4">
+                  {countdown}秒後に自動で商品一覧に戻ります
+                </p>
+              )}
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

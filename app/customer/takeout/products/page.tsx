@@ -178,13 +178,21 @@ export default function TakeoutProductsPage() {
 
   const isLimited = (p: ProductRegistration) => !!(p.limited_from || p.limited_until);
   const isSameDayOnly = (p: ProductRegistration) => !p.is_active && p.same_day_order_allowed;
+  const isExpiredLimited = (p: ProductRegistration) => {
+    if (!p.limited_until) return false;
+    const [y, m, d] = p.limited_until.split("-").map(Number);
+    const until = new Date(y, m - 1, d);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return until < today;
+  };
   // ホールケーキ(is_preorder_required)は wholeCakes に出るので除外。ECのみ商品も除外。
   const visibleProducts = (typeParam === "sameday"
     ? products.filter((p) => p.same_day_order_allowed)
     : typeParam === "reservation"
     ? products.filter((p) => p.is_active)
     : products.filter((p) => p.is_active || isSameDayOnly(p))
-  ).filter((p) => !p.is_preorder_required && !p.is_ec);
+  ).filter((p) => !p.is_preorder_required && !p.is_ec && !isExpiredLimited(p));
 
   const limitedProducts = visibleProducts.filter(isLimited);
   const nonLimitedProducts = visibleProducts.filter((p) => !isLimited(p));

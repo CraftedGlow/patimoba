@@ -209,15 +209,13 @@ export default function TakeoutStorePage() {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="flex gap-2 mb-4 max-w-sm">
-                <input
-                  type="text"
-                  placeholder="店舗名を検索"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="店舗名を検索"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-4"
+              />
 
               {loading ? (
                 <div className="flex items-center justify-center py-20">
@@ -257,15 +255,13 @@ export default function TakeoutStorePage() {
               exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="flex gap-2 mb-4 max-w-sm">
-                <input
-                  type="text"
-                  placeholder="店舗名を検索"
-                  value={favSearchQuery}
-                  onChange={(e) => setFavSearchQuery(e.target.value)}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="店舗名を検索"
+                value={favSearchQuery}
+                onChange={(e) => setFavSearchQuery(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-4"
+              />
 
               {favoriteStores.length === 0 ? (
                 <motion.div

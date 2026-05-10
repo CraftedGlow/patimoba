@@ -10,6 +10,8 @@ import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
+import { PrintReceipt } from "@/components/customer/ec/print-receipt";
+import type { UICartItem } from "@/lib/types";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
@@ -53,6 +55,13 @@ export default function ECConfirmPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
+
+  // 注文完了後に印刷用データを保持
+  const [orderedItems, setOrderedItems] = useState<UICartItem[]>([]);
+  const [orderDateTime, setOrderDateTime] = useState<Date>(new Date());
+  const [orderedSubtotal, setOrderedSubtotal] = useState(0);
+  const [orderedUsedPoints, setOrderedUsedPoints] = useState(0);
+  const [orderedTotal, setOrderedTotal] = useState(0);
 
   // sessionStorage から配送情報・カード情報を復元
   useEffect(() => {
@@ -262,6 +271,13 @@ export default function ECConfirmPage() {
       await supabase.from("users").update({ points: newPts }).eq("id", userId);
       await refreshPoints();
     }
+
+    // 印刷用にカートデータを保持してからクリア
+    setOrderedItems([...cartItems]);
+    setOrderDateTime(new Date());
+    setOrderedSubtotal(subtotal);
+    setOrderedUsedPoints(usedPoints);
+    setOrderedTotal(total);
 
     clearCart();
     sessionStorage.removeItem("ec_shipping_address");
@@ -582,6 +598,20 @@ export default function ECConfirmPage() {
           </>
         )}
       </AnimatePresence>
+
+      {/* 印刷用レシート（画面上は非表示、印刷時のみ表示） */}
+      <PrintReceipt
+        customerName={`${lastName} ${firstName}`.trim()}
+        lineName={profile?.lineName}
+        phone={phone}
+        orderDateTime={orderDateTime}
+        deliveryTime={deliveryTime}
+        items={orderedItems}
+        subtotal={orderedSubtotal}
+        usedPoints={orderedUsedPoints}
+        total={orderedTotal}
+        storeName={selectedStoreName || "パティモバ"}
+      />
 
       {/* 注文完了モーダル */}
       <AnimatePresence>

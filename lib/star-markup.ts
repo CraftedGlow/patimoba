@@ -50,13 +50,11 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   // 全体をFont B（小さめ）に設定
   push("[font: name b]")
 
-  // 店名 - 2倍・太字・中央揃え
+  // 店名 - 太字・中央揃え
   push(
     "[align: center]",
     "[bold: on]",
-    "[mag: w 2; h 2]",
     data.storeName,
-    "[mag]",
     "[bold: off]",
     SEP,
     "[align: left]",

@@ -82,15 +82,18 @@ export function buildReceiptMarkup(data: ReceiptData): string {
     push(`${item.name}  x${item.quantity}`)
     // バリアント（ホールサイズ等）
     if (item.variantName) push(`  ${item.variantName}`)
-    // オプション（金額非表示）
+    // メッセージをサイズの直下に出力
+    for (const opt of item.options ?? []) {
+      if (!opt.itemName || opt.groupName !== "メッセージ") continue
+      push(`  「${opt.itemName}」`)
+    }
+    // その他オプション（サイズ・メッセージ以外）
     for (const opt of item.options ?? []) {
       if (!opt.itemName) continue
-      if (opt.groupName === "サイズ") continue
+      if (opt.groupName === "サイズ" || opt.groupName === "メッセージ") continue
 
       let label: string
-      if (opt.groupName === "メッセージ") {
-        label = `「${opt.itemName}」`
-      } else if (opt.groupName === "ろうそく") {
+      if (opt.groupName === "ろうそく") {
         const qty = (opt.quantity ?? 1) > 1 ? ` ×${opt.quantity}` : ""
         label = `${opt.itemName}${qty}`
       } else {

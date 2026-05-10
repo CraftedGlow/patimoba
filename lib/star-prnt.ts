@@ -83,21 +83,22 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
     // バリアント（ホールサイズ等）
     if (item.variantName) parts.push(line(item.variantName))
 
-    // オプション（左揃え・箇条点なし）
+    // メッセージをサイズの直下に出力
+    for (const opt of item.options ?? []) {
+      if (!opt.itemName || opt.groupName !== "メッセージ") continue
+      parts.push(line(`「${opt.itemName}」`))
+    }
+
+    // その他オプション（サイズ・メッセージ以外）
     for (const opt of item.options ?? []) {
       if (!opt.itemName) continue
-      // サイズはvariantNameで表示済みのためスキップ
-      if (opt.groupName === "サイズ") continue
+      if (opt.groupName === "サイズ" || opt.groupName === "メッセージ") continue
 
       let label: string
-      if (opt.groupName === "メッセージ") {
-        label = `「${opt.itemName}」`
-      } else if (opt.groupName === "ろうそく") {
-        // ろうそくは本数を表示
+      if (opt.groupName === "ろうそく") {
         const qty = (opt.quantity ?? 1) > 1 ? ` ×${opt.quantity}` : ""
         label = `${opt.itemName}${qty}`
       } else {
-        // その他はアイテム名のみ
         label = opt.itemName
       }
 

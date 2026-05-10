@@ -10,6 +10,7 @@ import {
   Bell,
 } from "lucide-react";
 import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
+import { OrderDetailModal } from "@/components/store/order-detail-modal";
 import type { Order } from "@/lib/types";
 import { useOrders } from "@/hooks/use-orders";
 import { useDashboardStats } from "@/hooks/use-dashboard-stats";
@@ -71,6 +72,7 @@ export default function StoreDashboardPage() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newOrderAlert, setNewOrderAlert] = useState(false);
   const audioLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dateRef = useRef<HTMLDivElement>(null);
@@ -303,8 +305,9 @@ export default function StoreDashboardPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
               transition={{ delay: i * 0.05 }}
-              className={`grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
-                isEc ? "bg-amber-50" : "bg-white"
+              onClick={() => setSelectedOrder(order)}
+              className={`grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 cursor-pointer ${
+                isEc ? "bg-amber-50 hover:bg-amber-100" : "bg-white hover:bg-gray-50"
               }`}
             >
               <div>
@@ -323,7 +326,7 @@ export default function StoreDashboardPage() {
                     <span className="truncate">{item.name}</span>
                     {item.variantName ? (
                       <button
-                        onClick={() => setWholeCakeDetailOrder(order)}
+                        onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
                         className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
                       >
                         詳細
@@ -357,13 +360,10 @@ export default function StoreDashboardPage() {
                 <motion.button
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.92 }}
-                  onClick={() =>
-                    setConfirmAction({
-                      orderId: order.id,
-                      toReady: !isPrepared,
-                      isEc,
-                    })
-                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmAction({ orderId: order.id, toReady: !isPrepared, isEc });
+                  }}
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                     isPrepared
                       ? "bg-amber-400 hover:bg-amber-500 text-white"
@@ -378,6 +378,12 @@ export default function StoreDashboardPage() {
           })
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedOrder && (
+          <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {wholeCakeDetailOrder && (

@@ -132,7 +132,8 @@ export async function GET(
     .select(`
       id, order_no, store_id, customer_name_snapshot,
       subtotal, discount_amount, total_amount,
-      pickup_date, pickup_time,
+      pickup_date, pickup_time, payment_status, created_at,
+      users:users!orders_customer_id_fkey(line_name, phone),
       order_items (
         product_name_snapshot, quantity, unit_price, subtotal,
         variant_name_snapshot,
@@ -153,12 +154,24 @@ export async function GET(
     return new NextResponse("Order not found", { status: 404 })
   }
 
+  const users = (order.users as any) ?? {}
+  const orderDateFmt = order.created_at
+    ? (() => {
+        const d = new Date(order.created_at)
+        return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+      })()
+    : null
+
   const receiptData = {
     storeName: (order.stores as any)?.name ?? "PATIMOBA",
     orderNo: order.order_no,
     pickupDate: order.pickup_date,
     pickupTime: order.pickup_time,
     customerName: order.customer_name_snapshot,
+    lineName: users.line_name ?? null,
+    phone: users.phone ?? null,
+    orderDate: orderDateFmt,
+    paymentStatus: order.payment_status ?? null,
     items: ((order.order_items as any[]) ?? []).map((item) => ({
       name: item.product_name_snapshot,
       quantity: item.quantity,

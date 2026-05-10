@@ -5,19 +5,40 @@ import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { fetchStoreById, updateStore, uploadStoreLogo, uploadStoreImage, fetchClosedDays, saveClosedDays } from "@/lib/admin-api";
+import {
+  fetchStoreById,
+  updateStore,
+  uploadStoreLogo,
+  uploadStoreImage,
+  fetchClosedDayRules,
+  saveClosedDayRules,
+  type ClosedDayRule,
+} from "@/lib/admin-api";
 import type { StorePlanSlug } from "@/lib/store-plans";
 import { normalizeStorePlan } from "@/lib/store-plans";
 import { StorePlanPicker } from "@/components/admin/store-plan-picker";
+import { supabase } from "@/lib/supabase";
 
-const daysOfWeek = [
-  { key: "mon", label: "月" },
-  { key: "tue", label: "火" },
-  { key: "wed", label: "水" },
-  { key: "thu", label: "木" },
-  { key: "fri", label: "金" },
-  { key: "sat", label: "土" },
-  { key: "sun", label: "日" },
+const RULE_OPTIONS = [
+  { value: "", label: "なし" },
+  { value: "毎週", label: "毎週" },
+  { value: "第1", label: "第1" },
+  { value: "第2", label: "第2" },
+  { value: "第3", label: "第3" },
+  { value: "第4", label: "第4" },
+  { value: "第1.3", label: "第1・3" },
+  { value: "第1.4", label: "第1・4" },
+  { value: "第2.4", label: "第2・4" },
+];
+
+const DAYS_OF_WEEK = [
+  { dow: 0, label: "日" },
+  { dow: 1, label: "月" },
+  { dow: 2, label: "火" },
+  { dow: 3, label: "水" },
+  { dow: 4, label: "木" },
+  { dow: 5, label: "金" },
+  { dow: 6, label: "土" },
 ];
 
 const hours = Array.from({ length: 24 }, (_, i) => {
@@ -41,35 +62,54 @@ export default function AdminStoreEditPage() {
   const [addressUrl, setAddressUrl] = useState("");
   const [openTime, setOpenTime] = useState("10:00");
   const [closeTime, setCloseTime] = useState("19:00");
-  const [closedDays, setClosedDays] = useState<string[]>([]);
+  const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [tokushoText, setTokushoText] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [existingLogo, setExistingLogo] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const loadStore = useCallback(async () => {
     try {
       const store = await fetchStoreById(storeId);
-
       setStoreName(store.name ?? "");
       setPhone(store.phone ?? "");
       setMail(store.email ?? "");
       setAddressUrl(store.address ?? "");
-      if (store.logo_url) {
-        setExistingLogo(store.logo_url);
-        setLogoPreview(store.logo_url);
-      }
-      if ((store as any).image) {
-        setImagePreview((store as any).image);
-      }
+      if (store.logo_url) setLogoPreview(store.logo_url);
+      if ((store as any).image) setImagePreview((store as any).image);
       setSelectedPlan(normalizeStorePlan((store as { plan?: string | null }).plan));
+
+      const rawOptions = (store as any).plan_options;
+      if (Array.isArray(rawOptions)) setSelectedAddons(rawOptions as string[]);
+
+      setTokushoText((store as any).tokusho_text ?? "");
+
       try {
-        const days = await fetchClosedDays(storeId);
-        setClosedDays(days);
+        const rules = await fetchClosedDayRules(storeId);
+        setClosedDayRules(rules);
       } catch {
-        /* ignore if no closed days */
+        /* ignore */
+      }
+
+      // 営業時間
+      const { data: bhData } = await supabase
+        .from("store_business_hours")
+        .select("day_of_week, open_time, close_time, is_closed")
+        .eq("store_id", storeId)
+        .order("day_of_week", { ascending: true });
+      if (bhData && bhData.length > 0) {
+        const openDay = bhData.find((r: any) => !r.is_closed);
+        if (openDay?.open_time) {
+          const [h, m] = String(openDay.open_time).split(":");
+          setOpenTime(`${h.padStart(2, "0")}:${m.padStart(2, "0")}`);
+        }
+        if (openDay?.close_time) {
+          const [h, m] = String(openDay.close_time).split(":");
+          setCloseTime(`${h.padStart(2, "0")}:${m.padStart(2, "0")}`);
+        }
       }
     } catch {
       setError("店舗情報の取得に失敗しました");
@@ -78,9 +118,7 @@ export default function AdminStoreEditPage() {
     }
   }, [storeId]);
 
-  useEffect(() => {
-    loadStore();
-  }, [loadStore]);
+  useEffect(() => { loadStore(); }, [loadStore]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,30 +138,28 @@ export default function AdminStoreEditPage() {
     reader.readAsDataURL(file);
   };
 
-  const toggleDay = (day: string) => {
-    setClosedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+  const getRuleForDay = (dow: number) =>
+    closedDayRules.find((r) => r.dayOfWeek === dow)?.rule ?? "";
+
+  const setRuleForDay = (dow: number, label: string, rule: string) => {
+    setClosedDayRules((prev) => {
+      const filtered = prev.filter((r) => r.dayOfWeek !== dow);
+      if (!rule) return filtered;
+      return [...filtered, { dayOfWeek: dow, day: label, rule }];
+    });
   };
 
   const handleUpdate = async () => {
     if (saving) return;
-    if (!storeName.trim()) {
-      setError("店舗名は必須です");
-      return;
-    }
+    if (!storeName.trim()) { setError("店舗名は必須です"); return; }
     setSaving(true);
     setError(null);
     try {
-      let logoUrl: string | null | undefined = undefined;
-      if (logoFile) {
-        logoUrl = await uploadStoreLogo(logoFile, storeId);
-      }
+      let logoUrl: string | undefined;
+      if (logoFile) logoUrl = await uploadStoreLogo(logoFile, storeId);
 
-      let storeImageUrl: string | null | undefined = undefined;
-      if (imageFile) {
-        storeImageUrl = await uploadStoreImage(imageFile, storeId);
-      }
+      let storeImageUrl: string | undefined;
+      if (imageFile) storeImageUrl = await uploadStoreImage(imageFile, storeId);
 
       const updates: Record<string, unknown> = {
         name: storeName,
@@ -131,11 +167,14 @@ export default function AdminStoreEditPage() {
         phone: phone || "",
         address: addressUrl || "",
         plan: selectedPlan,
+        plan_options: selectedAddons.length > 0 ? selectedAddons : null,
+        tokusho_text: tokushoText || null,
       };
       if (logoUrl !== undefined) updates.logo_url = logoUrl;
       if (storeImageUrl !== undefined) updates.image = storeImageUrl;
       await updateStore(storeId, updates);
-      await saveClosedDays(storeId, closedDays);
+      await saveClosedDayRules(storeId, closedDayRules);
+
       setSuccess(true);
       setTimeout(() => {
         router.refresh();
@@ -158,7 +197,7 @@ export default function AdminStoreEditPage() {
 
   return (
     <>
-      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center gap-3">
+      <header className="bg-[#FFF9C4] px-4 sm:px-6 py-4 border-b border-yellow-200 flex items-center gap-3">
         <button
           onClick={() => router.back()}
           className="p-1.5 hover:bg-yellow-200/60 rounded-lg transition-colors"
@@ -166,12 +205,12 @@ export default function AdminStoreEditPage() {
           <ArrowLeft className="w-5 h-5 text-gray-700" />
         </button>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">店舗編集</h1>
+          <h1 className="text-base sm:text-lg font-bold text-gray-900">店舗編集</h1>
           <p className="text-xs text-gray-600">{storeName || `ID: ${storeId}`}</p>
         </div>
       </header>
 
-      <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
         <Section title="店舗基本情報">
           <Field label="店舗名">
             <input
@@ -212,25 +251,14 @@ export default function AdminStoreEditPage() {
 
           <Field label="店舗ロゴ">
             <label className="block">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleLogoChange}
-                className="hidden"
-              />
+              <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
               {logoPreview ? (
                 <div className="relative border-2 border-amber-400 rounded-xl p-4 text-center cursor-pointer hover:border-amber-500 transition-colors">
-                  <Image
-                    src={logoPreview}
-                    alt="プレビュー"
-                    width={120}
-                    height={120}
-                    className="mx-auto rounded-lg object-cover"
-                  />
+                  <Image src={logoPreview} alt="プレビュー" width={120} height={120} className="mx-auto rounded-lg object-cover" />
                   <p className="text-xs text-amber-600 mt-2">クリックして変更</p>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
                   <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">ロゴをアップロード</p>
                   <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP対応</p>
@@ -242,25 +270,16 @@ export default function AdminStoreEditPage() {
           <Field label="店舗外観写真">
             <p className="text-xs text-gray-400 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
             <label className="block">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
+              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               {imagePreview ? (
                 <div className="relative border-2 border-amber-400 rounded-xl overflow-hidden cursor-pointer hover:border-amber-500 transition-colors">
-                  <img
-                    src={imagePreview}
-                    alt="外観プレビュー"
-                    className="w-full h-44 object-cover"
-                  />
+                  <img src={imagePreview} alt="外観プレビュー" className="w-full h-40 object-cover" />
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     <p className="text-white text-sm font-bold bg-black/50 px-3 py-1 rounded-full">クリックして変更</p>
                   </div>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
                   <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">外観写真をアップロード</p>
                   <p className="text-xs text-gray-400 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
@@ -270,46 +289,85 @@ export default function AdminStoreEditPage() {
           </Field>
 
           <Field label="営業時間">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <select value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="form-select">
-                {hours.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
+                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
-              <span className="text-gray-500 text-lg">~</span>
+              <span className="text-gray-500">〜</span>
               <select value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="form-select">
-                {hours.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
+                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
             </div>
           </Field>
 
           <Field label="定休日">
-            <div className="flex items-center gap-2">
-              {daysOfWeek.map((day) => {
-                const isSelected = closedDays.includes(day.key);
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+              {DAYS_OF_WEEK.map((day) => {
+                const rule = getRuleForDay(day.dow);
+                const isSat = day.dow === 6;
+                const isSun = day.dow === 0;
                 return (
-                  <button
-                    key={day.key}
-                    type="button"
-                    onClick={() => toggleDay(day.key)}
-                    className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
-                      isSelected
-                        ? "bg-amber-500 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {day.label}
-                  </button>
+                  <div key={day.dow} className="flex flex-col items-center gap-1">
+                    <span
+                      className={`text-xs font-bold ${
+                        rule
+                          ? "text-amber-600"
+                          : isSun
+                          ? "text-red-500"
+                          : isSat
+                          ? "text-blue-500"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      {day.label}
+                    </span>
+                    <select
+                      value={rule}
+                      onChange={(e) => setRuleForDay(day.dow, day.label, e.target.value)}
+                      className={`w-full text-[10px] sm:text-xs border rounded-lg px-0.5 py-1.5 text-center appearance-none focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                        rule
+                          ? "border-amber-400 bg-amber-50 text-amber-800 font-bold"
+                          : "border-gray-200 text-gray-500"
+                      }`}
+                    >
+                      {RULE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 );
               })}
             </div>
+            {closedDayRules.length > 0 && (
+              <p className="text-xs text-amber-700 mt-2">
+                定休: {closedDayRules.map((r) => `${r.day}（${r.rule}）`).join(" ・ ")}
+              </p>
+            )}
           </Field>
         </Section>
 
         <Section title="ご利用プラン">
-          <StorePlanPicker value={selectedPlan} onChange={setSelectedPlan} />
+          <StorePlanPicker
+            value={selectedPlan}
+            onChange={setSelectedPlan}
+            selectedAddons={selectedAddons}
+            onAddonsChange={setSelectedAddons}
+          />
+        </Section>
+
+        <Section title="特定商取引法に基づく表記">
+          <Field label="表記内容">
+            <textarea
+              value={tokushoText}
+              onChange={(e) => setTokushoText(e.target.value)}
+              placeholder={`販売事業者名: ○○パティスリー\n運営責任者: 山田 太郎\n所在地: 東京都渋谷区神宮前1-2-3\n電話番号: 03-1234-5678\nメール: info@example.jp\n販売価格: 各商品ページに表示\n送料: 別途記載\n支払方法: クレジットカード・銀行振込\n商品引渡し時期: ご注文から3〜5営業日\n返品・交換: 食品のため原則不可`}
+              rows={10}
+              className="form-input font-mono text-xs leading-relaxed resize-y"
+            />
+          </Field>
+          <p className="text-xs text-gray-400">
+            ここで入力した内容が店舗の特商法ページに反映されます。後から随時更新可能です。
+          </p>
         </Section>
 
         {error && (
@@ -324,7 +382,7 @@ export default function AdminStoreEditPage() {
             whileTap={!saving ? { scale: 0.97 } : {}}
             disabled={saving}
             onClick={handleUpdate}
-            className={`px-16 py-3.5 rounded-full font-bold text-base transition-all flex items-center gap-2 ${
+            className={`px-12 sm:px-16 py-3.5 rounded-full font-bold text-base transition-all flex items-center gap-2 ${
               !saving
                 ? "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -369,7 +427,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="bg-[#FFF9C4] px-5 py-3 border-b border-yellow-200">
         <h2 className="font-bold text-sm text-gray-900">{title}</h2>
       </div>
-      <div className="p-5 space-y-5">{children}</div>
+      <div className="p-4 sm:p-5 space-y-5">{children}</div>
     </motion.div>
   );
 }

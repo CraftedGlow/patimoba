@@ -147,24 +147,25 @@ export default function AdminStoresPage() {
 
   return (
     <>
-      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
+      <header className="bg-[#FFF9C4] px-4 sm:px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">店舗一覧</h1>
+          <h1 className="text-base sm:text-lg font-bold text-gray-900">店舗一覧</h1>
           <p className="text-xs text-gray-600">全{total}店舗</p>
         </div>
         <Link href="/admin/stores/new">
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold px-3 sm:px-4 py-2 rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" />
-            店舗を追加
+            <span className="hidden sm:inline">店舗を追加</span>
+            <span className="sm:hidden">追加</span>
           </motion.button>
         </Link>
       </header>
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -273,7 +274,7 @@ export default function AdminStoresPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {summaryCards.map((card, i) => (
             <motion.div
               key={card.label}
@@ -323,10 +324,10 @@ export default function AdminStoresPage() {
                         <StatusBadge active={isActive} />
                       </div>
 
-                      <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-4 items-start">
+                      <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-2 sm:gap-4 items-start mt-1">
                         <div>
                           <p className="text-xs text-gray-500">オーナー</p>
-                          <p className="text-sm">{store.name || "-"}</p>
+                          <p className="text-sm truncate">{store.name || "-"}</p>
                         </div>
                         <div className="flex items-start gap-1">
                           <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
@@ -341,7 +342,7 @@ export default function AdminStoresPage() {
                         </div>
                         <div>
                           <p className="text-xs text-gray-500">メール</p>
-                          <p className="text-sm">{store.email ?? "-"}</p>
+                          <p className="text-sm truncate">{store.email ?? "-"}</p>
                         </div>
                       </div>
 

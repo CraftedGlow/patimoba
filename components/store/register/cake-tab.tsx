@@ -38,7 +38,14 @@ interface ProductRow {
   custom_options: any;
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
+  tags: string[] | null;
 }
+
+const PRODUCT_TAGS = [
+  "誕生日", "クリスマス", "バレンタイン", "ホワイトデー",
+  "母の日", "父の日", "こどもの日", "ハロウィン",
+  "卒業・入学", "結婚記念日", "お中元", "お歳暮",
+];
 
 export function CakeTab() {
   const { user } = useAuth();
@@ -72,6 +79,7 @@ export function CakeTab() {
   const mainInputRef = useRef<HTMLInputElement>(null);
   const crossInputRef = useRef<HTMLInputElement>(null);
 
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +174,7 @@ export function CakeTab() {
     setSelectedGroupIds([]);
     setNoshiEnabled(false);
     setNoshiIds([]);
+    setSelectedTags([]);
     setSizes([]);
     setMainImage(null);
     setCrossImage(null);
@@ -191,6 +200,7 @@ export function CakeTab() {
       setCustomOptions(Array.isArray(p.custom_options) ? (p.custom_options as ProductCustomOption[]) : []);
       setNoshiEnabled(p.noshi_enabled ?? false);
       setNoshiIds(Array.isArray(p.noshi_ids) ? p.noshi_ids : []);
+      setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setError(null);
@@ -282,6 +292,7 @@ export function CakeTab() {
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
+        tags: selectedTags.length > 0 ? selectedTags : null,
       };
 
       let savedProductId = selectedId
@@ -847,6 +858,33 @@ export function CakeTab() {
             );
           })}
         </div>}
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">タグ（シーズン・用途）</label>
+          <div className="flex flex-wrap gap-2">
+            {PRODUCT_TAGS.map((tag) => {
+              const active = selectedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() =>
+                    setSelectedTags((prev) =>
+                      active ? prev.filter((t) => t !== tag) : [...prev, tag]
+                    )
+                  }
+                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors ${
+                    active
+                      ? "bg-amber-400 text-white border-amber-400"
+                      : "bg-white text-gray-500 border-gray-300 hover:border-amber-300"
+                  }`}
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm cursor-pointer">

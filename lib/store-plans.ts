@@ -48,6 +48,21 @@ export const PLAN_OPTIONS: {
   },
 ];
 
+export interface PlanAddon {
+  id: string;
+  label: string;
+  priceYen: number;
+  description: string;
+}
+
+export const PLAN_ADDONS: PlanAddon[] = [
+  { id: "ec", label: "ECショップ機能", priceYen: 3000, description: "焼き菓子・ギフトのオンライン販売" },
+  { id: "delivery", label: "配達機能", priceYen: 2000, description: "デリバリー対応・配達先管理" },
+  { id: "anniversary", label: "記念日自動通知", priceYen: 1500, description: "顧客の記念日をLINEで自動通知" },
+  { id: "noshi", label: "のし・包装管理", priceYen: 1000, description: "のしや包装オプションの設定・管理" },
+  { id: "multi_staff", label: "複数スタッフ管理", priceYen: 2000, description: "スタッフ別権限・サブアカウント管理" },
+];
+
 /** レガシー値 `free` はライトに読み替え */
 export function normalizeStorePlan(raw: string | null | undefined): StorePlanSlug {
   if (raw === "premium") return "premium";

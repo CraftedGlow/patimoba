@@ -5,19 +5,37 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Upload, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { createStore, uploadStoreLogo, uploadStoreImage, saveClosedDays } from "@/lib/admin-api";
+import {
+  createStore,
+  uploadStoreLogo,
+  uploadStoreImage,
+  saveClosedDayRules,
+  type ClosedDayRule,
+} from "@/lib/admin-api";
 import { supabase } from "@/lib/supabase";
 import type { StorePlanSlug } from "@/lib/store-plans";
 import { StorePlanPicker } from "@/components/admin/store-plan-picker";
 
-const daysOfWeek = [
-  { key: "mon", label: "月" },
-  { key: "tue", label: "火" },
-  { key: "wed", label: "水" },
-  { key: "thu", label: "木" },
-  { key: "fri", label: "金" },
-  { key: "sat", label: "土" },
-  { key: "sun", label: "日" },
+const RULE_OPTIONS = [
+  { value: "", label: "なし" },
+  { value: "毎週", label: "毎週" },
+  { value: "第1", label: "第1" },
+  { value: "第2", label: "第2" },
+  { value: "第3", label: "第3" },
+  { value: "第4", label: "第4" },
+  { value: "第1.3", label: "第1・3" },
+  { value: "第1.4", label: "第1・4" },
+  { value: "第2.4", label: "第2・4" },
+];
+
+const DAYS_OF_WEEK = [
+  { dow: 0, label: "日" },
+  { dow: 1, label: "月" },
+  { dow: 2, label: "火" },
+  { dow: 3, label: "水" },
+  { dow: 4, label: "木" },
+  { dow: 5, label: "金" },
+  { dow: 6, label: "土" },
 ];
 
 const hours = Array.from({ length: 24 }, (_, i) => {
@@ -37,11 +55,9 @@ export default function AdminStoreNewPage() {
   const [address, setAddress] = useState("");
   const [openTime, setOpenTime] = useState("10:00");
   const [closeTime, setCloseTime] = useState("19:00");
-  const [closedDays, setClosedDays] = useState<string[]>(["wed", "sun"]);
+  const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
-  const [agreePrivacy, setAgreePrivacy] = useState(false);
-  const [agreeTrade, setAgreeTrade] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -68,40 +84,29 @@ export default function AdminStoreNewPage() {
     reader.readAsDataURL(file);
   };
 
-  const toggleDay = (day: string) => {
-    setClosedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
+  const getRuleForDay = (dow: number) =>
+    closedDayRules.find((r) => r.dayOfWeek === dow)?.rule ?? "";
+
+  const setRuleForDay = (dow: number, label: string, rule: string) => {
+    setClosedDayRules((prev) => {
+      const filtered = prev.filter((r) => r.dayOfWeek !== dow);
+      if (!rule) return filtered;
+      return [...filtered, { dayOfWeek: dow, day: label, rule }];
+    });
   };
 
-  const allAgreed = agreePrivacy && agreeTrade && agreeTerms;
-
   const handleSubmit = async () => {
-    if (!allAgreed || saving) return;
-    if (!storeName.trim()) {
-      setError("店舗名は必須です");
-      return;
-    }
-    if (!email.trim()) {
-      setError("メールアドレスは必須です");
-      return;
-    }
-    if (!password.trim()) {
-      setError("パスワードは必須です");
-      return;
-    }
-    if (password.length < 4) {
-      setError("パスワードは4文字以上で設定してください");
-      return;
-    }
+    if (saving) return;
+    if (!storeName.trim()) { setError("店舗名は必須です"); return; }
+    if (!email.trim()) { setError("メールアドレスは必須です"); return; }
+    if (!password.trim()) { setError("パスワードは必須です"); return; }
+    if (password.length < 4) { setError("パスワードは4文字以上で設定してください"); return; }
 
     setSaving(true);
     setError(null);
     try {
-      let logoUrl: string = "";
-      if (logoFile) {
-        logoUrl = await uploadStoreLogo(logoFile);
-      }
+      let logoUrl = "";
+      if (logoFile) logoUrl = await uploadStoreLogo(logoFile);
 
       const created = await createStore({
         name: storeName,
@@ -111,14 +116,15 @@ export default function AdminStoreNewPage() {
         address: `${prefecture || ""}${city || ""}${address || ""}`,
         logo_url: logoUrl,
         plan: selectedPlan,
+        plan_options: selectedAddons.length > 0 ? selectedAddons : null,
       });
 
       if (imageFile) {
         const imageUrl = await uploadStoreImage(imageFile, created.id);
         await supabase.from("stores").update({ image: imageUrl }).eq("id", created.id);
       }
-      if (closedDays.length > 0) {
-        await saveClosedDays(created.id, closedDays);
+      if (closedDayRules.length > 0) {
+        await saveClosedDayRules(created.id, closedDayRules);
       }
 
       const res = await fetch("/api/admin/create-user", {
@@ -171,7 +177,7 @@ export default function AdminStoreNewPage() {
 
   return (
     <>
-      <header className="bg-[#FFF9C4] px-6 py-4 border-b border-yellow-200 flex items-center gap-3">
+      <header className="bg-[#FFF9C4] px-4 sm:px-6 py-4 border-b border-yellow-200 flex items-center gap-3">
         <button
           onClick={() => router.back()}
           className="p-1.5 hover:bg-yellow-200/60 rounded-lg transition-colors"
@@ -179,12 +185,12 @@ export default function AdminStoreNewPage() {
           <ArrowLeft className="w-5 h-5 text-gray-700" />
         </button>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">店舗登録</h1>
+          <h1 className="text-base sm:text-lg font-bold text-gray-900">店舗登録</h1>
           <p className="text-xs text-gray-600">新しい店舗を追加します</p>
         </div>
       </header>
 
-      <div className="p-6 max-w-2xl mx-auto space-y-6">
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
         <Section title="アカウント情報">
           <Field label="メールアドレス">
             <input
@@ -225,24 +231,26 @@ export default function AdminStoreNewPage() {
               className="form-input"
             />
           </Field>
-          <Field label="郵便番号">
-            <input
-              type="text"
-              value={postalCode}
-              onChange={(e) => setPostalCode(e.target.value)}
-              placeholder="150-0001"
-              className="form-input max-w-[200px]"
-            />
-          </Field>
-          <Field label="都道府県">
-            <input
-              type="text"
-              value={prefecture}
-              onChange={(e) => setPrefecture(e.target.value)}
-              placeholder="東京都"
-              className="form-input"
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="郵便番号">
+              <input
+                type="text"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                placeholder="150-0001"
+                className="form-input"
+              />
+            </Field>
+            <Field label="都道府県">
+              <input
+                type="text"
+                value={prefecture}
+                onChange={(e) => setPrefecture(e.target.value)}
+                placeholder="東京都"
+                className="form-input"
+              />
+            </Field>
+          </div>
           <Field label="市区町村">
             <input
               type="text"
@@ -264,12 +272,7 @@ export default function AdminStoreNewPage() {
 
           <Field label="店舗ロゴ">
             <label className="block">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleLogoChange}
-                className="hidden"
-              />
+              <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
               {logoPreview ? (
                 <div className="relative border-2 border-amber-400 rounded-xl p-4 text-center cursor-pointer hover:border-amber-500 transition-colors">
                   <Image
@@ -282,7 +285,7 @@ export default function AdminStoreNewPage() {
                   <p className="text-xs text-amber-600 mt-2">クリックして変更</p>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
                   <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">ロゴをアップロード</p>
                   <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP対応</p>
@@ -294,25 +297,16 @@ export default function AdminStoreNewPage() {
           <Field label="店舗外観写真">
             <p className="text-xs text-gray-400 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
             <label className="block">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="hidden"
-              />
+              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               {imagePreview ? (
                 <div className="relative border-2 border-amber-400 rounded-xl overflow-hidden cursor-pointer hover:border-amber-500 transition-colors">
-                  <img
-                    src={imagePreview}
-                    alt="外観プレビュー"
-                    className="w-full h-44 object-cover"
-                  />
+                  <img src={imagePreview} alt="外観プレビュー" className="w-full h-40 object-cover" />
                   <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     <p className="text-white text-sm font-bold bg-black/50 px-3 py-1 rounded-full">クリックして変更</p>
                   </div>
                 </div>
               ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
                   <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">外観写真をアップロード</p>
                   <p className="text-xs text-gray-400 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
@@ -322,92 +316,80 @@ export default function AdminStoreNewPage() {
           </Field>
 
           <Field label="営業時間">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <select
                 value={openTime}
                 onChange={(e) => setOpenTime(e.target.value)}
                 className="form-select"
               >
-                {hours.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
+                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
-              <span className="text-gray-500 text-lg">~</span>
+              <span className="text-gray-500">〜</span>
               <select
                 value={closeTime}
                 onChange={(e) => setCloseTime(e.target.value)}
                 className="form-select"
               >
-                {hours.map((h) => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
+                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
             </div>
           </Field>
 
           <Field label="定休日">
-            <div className="flex items-center gap-2">
-              {daysOfWeek.map((day) => {
-                const isSelected = closedDays.includes(day.key);
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+              {DAYS_OF_WEEK.map((day) => {
+                const rule = getRuleForDay(day.dow);
+                const isSat = day.dow === 6;
+                const isSun = day.dow === 0;
                 return (
-                  <button
-                    key={day.key}
-                    type="button"
-                    onClick={() => toggleDay(day.key)}
-                    className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
-                      isSelected
-                        ? "bg-amber-500 text-white shadow-md"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {day.label}
-                  </button>
+                  <div key={day.dow} className="flex flex-col items-center gap-1">
+                    <span
+                      className={`text-xs font-bold ${
+                        rule
+                          ? "text-amber-600"
+                          : isSun
+                          ? "text-red-500"
+                          : isSat
+                          ? "text-blue-500"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      {day.label}
+                    </span>
+                    <select
+                      value={rule}
+                      onChange={(e) => setRuleForDay(day.dow, day.label, e.target.value)}
+                      className={`w-full text-[10px] sm:text-xs border rounded-lg px-0.5 py-1.5 text-center appearance-none focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                        rule
+                          ? "border-amber-400 bg-amber-50 text-amber-800 font-bold"
+                          : "border-gray-200 text-gray-500"
+                      }`}
+                    >
+                      {RULE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 );
               })}
             </div>
+            {closedDayRules.length > 0 && (
+              <p className="text-xs text-amber-700 mt-2">
+                定休: {closedDayRules.map((r) => `${r.day}（${r.rule}）`).join(" ・ ")}
+              </p>
+            )}
           </Field>
         </Section>
 
         <Section title="ご利用プラン">
-          <StorePlanPicker value={selectedPlan} onChange={setSelectedPlan} />
-        </Section>
-
-        <Section title="利用規約">
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreePrivacy}
-                onChange={(e) => setAgreePrivacy(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 accent-blue-600"
-              />
-              <span className="text-sm text-gray-700">
-                <a href="#" className="text-blue-600 underline">プライバシーポリシー</a>に同意する
-              </span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeTrade}
-                onChange={(e) => setAgreeTrade(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 accent-blue-600"
-              />
-              <span className="text-sm text-gray-700">
-                <a href="#" className="text-blue-600 underline">特定商取引法に基づく表記</a>を確認した
-              </span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeTerms}
-                onChange={(e) => setAgreeTerms(e.target.checked)}
-                className="w-5 h-5 rounded border-gray-300 text-blue-600 accent-blue-600"
-              />
-              <span className="text-sm text-gray-700">
-                <a href="#" className="text-blue-600 underline">利用規約</a>に同意する
-              </span>
-            </label>
-          </div>
+          <StorePlanPicker
+            value={selectedPlan}
+            onChange={setSelectedPlan}
+            selectedAddons={selectedAddons}
+            onAddonsChange={setSelectedAddons}
+          />
         </Section>
 
         {error && (
@@ -418,12 +400,12 @@ export default function AdminStoreNewPage() {
 
         <div className="flex justify-center pt-2 pb-8">
           <motion.button
-            whileHover={allAgreed && !saving ? { scale: 1.02 } : {}}
-            whileTap={allAgreed && !saving ? { scale: 0.97 } : {}}
-            disabled={!allAgreed || saving}
+            whileHover={!saving ? { scale: 1.02 } : {}}
+            whileTap={!saving ? { scale: 0.97 } : {}}
+            disabled={saving}
             onClick={handleSubmit}
-            className={`px-16 py-3.5 rounded-full font-bold text-base transition-all flex items-center gap-2 ${
-              allAgreed && !saving
+            className={`px-12 sm:px-16 py-3.5 rounded-full font-bold text-base transition-all flex items-center gap-2 ${
+              !saving
                 ? "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
@@ -467,7 +449,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="bg-[#FFF9C4] px-5 py-3 border-b border-yellow-200">
         <h2 className="font-bold text-sm text-gray-900">{title}</h2>
       </div>
-      <div className="p-5 space-y-5">{children}</div>
+      <div className="p-4 sm:p-5 space-y-5">{children}</div>
     </motion.div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Loader2, Trash2, Check, ImagePlus, Plus, Pencil, X } from "lucide-react";
+import { Loader2, Trash2, Check, ImagePlus, Pencil, X } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useNoshi, NoshiItem } from "@/hooks/use-noshi";
 import { uploadNoshiImage } from "@/lib/upload-image";
@@ -86,145 +86,155 @@ export function NoshiTab() {
   };
 
   return (
-    <div className="flex gap-6">
-      {/* List */}
-      <div className="w-64 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-gray-700">のし一覧</h3>
-          <button
-            onClick={clearForm}
-            className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 font-bold"
-          >
-            <Plus size={14} />新規
-          </button>
-        </div>
-        {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="animate-spin text-gray-400" size={20} /></div>
-        ) : noshiList.length === 0 ? (
-          <p className="text-xs text-gray-400 py-4 text-center">のしが登録されていません</p>
-        ) : (
-          <ul className="space-y-1">
-            {noshiList.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => startEdit(item)}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                    editingId === item.id
-                      ? "bg-amber-50 text-amber-800 font-bold"
-                      : "hover:bg-gray-50 text-gray-700"
-                  }`}
-                >
-                  {item.imageUrl && (
-                    <img src={item.imageUrl} alt="" className="w-8 h-8 object-cover rounded flex-shrink-0" />
-                  )}
-                  <span className="flex-1 truncate">{item.name}</span>
-                  <span className="text-xs text-gray-400 flex-shrink-0">¥{item.price.toLocaleString()}</span>
+    <>
+      {/* 650px以下: 縦並び、650px超: 横並び（フォーム左・一覧右） */}
+      <div className="flex flex-col gap-6 [@media(min-width:650px)]:flex-row">
+
+        {/* フォーム - LEFT */}
+        <div className="flex-1 min-w-0 max-w-lg">
+          <h3 className="text-sm font-bold text-gray-700 mb-4">
+            {editingId ? "のしを編集" : "のしを新規登録"}
+          </h3>
+
+          <div className="space-y-4">
+            {/* Image */}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5">画像</label>
+              <div
+                onClick={() => imageInputRef.current?.click()}
+                className="w-40 h-40 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-amber-300 transition-colors overflow-hidden bg-gray-50"
+              >
+                {uploading ? (
+                  <Loader2 className="animate-spin text-gray-400" size={24} />
+                ) : imageUrl ? (
+                  <img src={imageUrl} alt="のし" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-gray-400">
+                    <ImagePlus size={24} />
+                    <span className="text-xs">画像を追加</span>
+                  </div>
+                )}
+              </div>
+              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              {imageUrl && (
+                <button onClick={() => setImageUrl(null)} className="mt-1 text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
+                  <X size={12} />画像を削除
                 </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* Form */}
-      <div className="flex-1 max-w-lg">
-        <h3 className="text-sm font-bold text-gray-700 mb-4">
-          {editingId ? "のしを編集" : "のしを新規登録"}
-        </h3>
-
-        <div className="space-y-4">
-          {/* Image */}
-          <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1.5">画像</label>
-            <div
-              onClick={() => imageInputRef.current?.click()}
-              className="w-40 h-40 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-amber-300 transition-colors overflow-hidden bg-gray-50"
-            >
-              {uploading ? (
-                <Loader2 className="animate-spin text-gray-400" size={24} />
-              ) : imageUrl ? (
-                <img src={imageUrl} alt="のし" className="w-full h-full object-cover" />
-              ) : (
-                <div className="flex flex-col items-center gap-1 text-gray-400">
-                  <ImagePlus size={24} />
-                  <span className="text-xs">画像を追加</span>
-                </div>
               )}
             </div>
-            <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-            {imageUrl && (
-              <button onClick={() => setImageUrl(null)} className="mt-1 text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
-                <X size={12} />画像を削除
+
+            {/* Name */}
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-gray-600">用途</label>
+              <select
+                value={namePreset}
+                onChange={(e) => { setNamePreset(e.target.value); setNameCustom(""); }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 bg-white"
+              >
+                <option value="">用途を選択</option>
+                {NOSHI_PRESETS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+              {namePreset === "その他" && (
+                <input
+                  type="text"
+                  value={nameCustom}
+                  onChange={(e) => setNameCustom(e.target.value)}
+                  placeholder="用途を入力"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
+                />
+              )}
+            </div>
+
+            {/* Price */}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5">金額（円）</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0"
+                  min={0}
+                  className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
+                />
+                <span className="text-sm text-gray-500">円</span>
+              </div>
+            </div>
+
+            {error && <p className="text-xs text-red-500">{error}</p>}
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-5 py-2 bg-amber-400 hover:bg-amber-500 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} /> : <Pencil size={14} />}
+                {saved ? "保存しました" : "保存"}
               </button>
-            )}
-          </div>
 
-          {/* Name */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-gray-600">用途</label>
-            <select
-              value={namePreset}
-              onChange={(e) => { setNamePreset(e.target.value); setNameCustom(""); }}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 bg-white"
-            >
-              <option value="">用途を選択</option>
-              {NOSHI_PRESETS.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-            {namePreset === "その他" && (
-              <input
-                type="text"
-                value={nameCustom}
-                onChange={(e) => setNameCustom(e.target.value)}
-                placeholder="用途を入力"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
-              />
-            )}
-          </div>
-
-          {/* Price */}
-          <div>
-            <label className="block text-xs font-bold text-gray-600 mb-1.5">金額（円）</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0"
-                min={0}
-                className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
-              />
-              <span className="text-sm text-gray-500">円</span>
+              {editingId && (
+                <>
+                  <button onClick={clearForm} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg">
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={() => setShowDeleteConfirm(editingId)}
+                    className="ml-auto flex items-center gap-1 text-sm text-red-400 hover:text-red-600"
+                  >
+                    <Trash2 size={14} />削除
+                  </button>
+                </>
+              )}
             </div>
           </div>
+        </div>
 
-          {error && <p className="text-xs text-red-500">{error}</p>}
-
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-5 py-2 bg-amber-400 hover:bg-amber-500 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors"
-            >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} /> : <Pencil size={14} />}
-              {saved ? "保存しました" : "保存"}
-            </button>
-
-            {editingId && (
-              <>
-                <button onClick={clearForm} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg">
-                  キャンセル
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(editingId)}
-                  className="ml-auto flex items-center gap-1 text-sm text-red-400 hover:text-red-600"
-                >
-                  <Trash2 size={14} />削除
-                </button>
-              </>
-            )}
-          </div>
+        {/* 一覧 - RIGHT (650px超) / BOTTOM (650px以下) */}
+        <div className="w-full [@media(min-width:650px)]:w-80 [@media(min-width:650px)]:flex-shrink-0">
+          <h3 className="text-sm font-bold text-gray-700 mb-3">のし一覧</h3>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="animate-spin text-gray-400" size={20} />
+            </div>
+          ) : noshiList.length === 0 ? (
+            <p className="text-xs text-gray-400 py-4 text-center">のしが登録されていません</p>
+          ) : (
+            <ul className="space-y-1.5 overflow-y-auto max-h-[420px] pr-1">
+              {noshiList.map((item) => (
+                <li key={item.id}>
+                  <div
+                    className={`w-full px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 border transition-colors ${
+                      editingId === item.id
+                        ? "bg-amber-50 border-amber-200"
+                        : "bg-gray-50 border-transparent"
+                    }`}
+                  >
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt="" className="w-9 h-9 object-cover rounded flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded bg-gray-200 flex-shrink-0" />
+                    )}
+                    <span className="flex-1 truncate text-gray-700 font-medium">{item.name}</span>
+                    <span className="text-xs text-gray-400 flex-shrink-0 mr-1">¥{item.price.toLocaleString()}</span>
+                    <button
+                      onClick={() => startEdit(item)}
+                      className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
+                        editingId === item.id
+                          ? "bg-amber-400 text-white"
+                          : "bg-white border border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600"
+                      }`}
+                    >
+                      <Pencil size={11} />
+                      編集
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
@@ -252,6 +262,6 @@ export function NoshiTab() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

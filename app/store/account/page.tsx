@@ -71,14 +71,14 @@ interface ClosedDayRuleRow {
 async function fetchClosedDayRules(storeId: string): Promise<ClosedDayRuleRow[]> {
   const { data, error } = await supabase
     .from("store_business_hours")
-    .select("day_of_week, is_closed")
+    .select("day_of_week, is_closed, closed_week_rule")
     .eq("store_id", storeId)
     .eq("is_closed", true)
     .order("day_of_week", { ascending: true });
   if (error || !data) return [];
   return data.map((r: any) => ({
     dayOfWeek: Number(r.day_of_week),
-    rule: "毎週",
+    rule: r.closed_week_rule ?? "毎週",
   }));
 }
 
@@ -400,12 +400,14 @@ export default function StoreAccountPage() {
 
       const allDays = Array.from({ length: 7 }, (_, i) => {
         const isClosed = modalHolidays.some((h) => h.dayOfWeek === i);
+        const closedRule = modalHolidays.find((h) => h.dayOfWeek === i)?.rule ?? null;
         return {
           store_id: storeId,
           day_of_week: i,
           is_closed: isClosed,
           open_time: isClosed ? null : openTime,
           close_time: isClosed ? null : closeTime,
+          closed_week_rule: isClosed ? closedRule : null,
         };
       });
       const { error } = await supabase.from("store_business_hours").insert(allDays);

@@ -20,6 +20,16 @@ import { useStoreContext } from "@/lib/store-context";
 import { useBusinessDays } from "@/hooks/use-business-days";
 import { supabase } from "@/lib/supabase";
 
+const WEEKDAYS = [
+  { label: "日", value: 0 },
+  { label: "月", value: 1 },
+  { label: "火", value: 2 },
+  { label: "水", value: 3 },
+  { label: "木", value: 4 },
+  { label: "金", value: 5 },
+  { label: "土", value: 6 },
+];
+
 const EN_MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
@@ -151,6 +161,9 @@ export default function BusinessDaysPage() {
   const [storeOpenTime, setStoreOpenTime] = useState("10:00");
   const [storeCloseTime, setStoreCloseTime] = useState("19:00");
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
+  const [showHolidayModal, setShowHolidayModal] = useState(false);
+  const [modalHolidays, setModalHolidays] = useState<{ dayOfWeek: number; rule: string }[]>([]);
+  const [holidaySaving, setHolidaySaving] = useState(false);
 
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date(today);
@@ -244,6 +257,58 @@ export default function BusinessDaysPage() {
     const t = new Date();
     setYear(t.getFullYear()); setMonth(t.getMonth()); setSelectedDay(t.getDate());
     setWeekStart(getWeekStartDate(t));
+  };
+
+  const openHolidayModal = useCallback(() => {
+    setModalHolidays(closedDayRules.map((r) => ({ dayOfWeek: r.dayOfWeek, rule: r.rule })));
+    setShowHolidayModal(true);
+  }, [closedDayRules]);
+
+  const toggleModalHoliday = (dayOfWeek: number) => {
+    setModalHolidays((prev) => {
+      const exists = prev.find((h) => h.dayOfWeek === dayOfWeek);
+      if (exists) return prev.filter((h) => h.dayOfWeek !== dayOfWeek);
+      return [...prev, { dayOfWeek, rule: "毎週" }].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+    });
+  };
+
+  const updateModalHolidayRule = (dayOfWeek: number, rule: string) => {
+    setModalHolidays((prev) =>
+      prev.map((h) => (h.dayOfWeek === dayOfWeek ? { ...h, rule } : h))
+    );
+  };
+
+  const saveHolidayRules = async () => {
+    if (!storeId) return;
+    setHolidaySaving(true);
+    try {
+      await supabase.from("store_business_hours").delete().eq("store_id", storeId);
+      const allDays = Array.from({ length: 7 }, (_, i) => {
+        const isClosed = modalHolidays.some((h) => h.dayOfWeek === i);
+        const closedRule = modalHolidays.find((h) => h.dayOfWeek === i)?.rule ?? null;
+        return {
+          store_id: storeId,
+          day_of_week: i,
+          is_closed: isClosed,
+          open_time: isClosed ? null : storeOpenTime,
+          close_time: isClosed ? null : storeCloseTime,
+          closed_week_rule: isClosed ? closedRule : null,
+        };
+      });
+      await supabase.from("store_business_hours").insert(allDays);
+      setClosedDayRules(
+        modalHolidays.map((h) => ({
+          dayOfWeek: h.dayOfWeek,
+          day: weekdayNames[h.dayOfWeek] ?? "",
+          rule: h.rule,
+        }))
+      );
+      setShowHolidayModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setHolidaySaving(false);
+    }
   };
 
   const handleDayClick = useCallback((y: number, m: number, d: number) => {
@@ -395,7 +460,7 @@ export default function BusinessDaysPage() {
             </div>
             <div className="mt-1">
               <span className="text-sm text-gray-500">定休日</span>
-              <div className="flex items-center gap-6 mt-0.5">
+              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                 {closedDayRules.length > 0 ? (
                   closedDayRules.map((r, i) => (
                     <span key={i} className="text-sm font-medium">
@@ -405,6 +470,15 @@ export default function BusinessDaysPage() {
                 ) : (
                   <span className="text-sm text-gray-400">未設定</span>
                 )}
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={openHolidayModal}
+                  className="px-3 py-1 rounded-md bg-amber-400 text-white text-xs font-bold hover:bg-amber-500 transition-colors"
+                >
+                  変更
+                </motion.button>
               </div>
             </div>
           </div>
@@ -637,6 +711,88 @@ export default function BusinessDaysPage() {
                 </motion.button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showHolidayModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+            onClick={() => setShowHolidayModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-8 relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowHolidayModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-lg font-bold text-center mb-6">定休日の変更</h2>
+              <div className="space-y-3 mb-6">
+                {WEEKDAYS.map((wd) => {
+                  const selected = modalHolidays.find((h) => h.dayOfWeek === wd.value);
+                  return (
+                    <div key={wd.value} className="flex items-center gap-3">
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => toggleModalHoliday(wd.value)}
+                        className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                          selected
+                            ? "bg-amber-400 text-white"
+                            : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                        }`}
+                      >
+                        {wd.label}
+                      </motion.button>
+                      {selected && (
+                        <select
+                          value={selected.rule}
+                          onChange={(e) => updateModalHolidayRule(wd.value, e.target.value)}
+                          className="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                        >
+                          <option value="毎週">毎週</option>
+                          <option value="第1">第1</option>
+                          <option value="第2">第2</option>
+                          <option value="第3">第3</option>
+                          <option value="第4">第4</option>
+                          <option value="第1.3">第1・3</option>
+                          <option value="第1.4">第1・4</option>
+                          <option value="第2.4">第2・4</option>
+                        </select>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex justify-center">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={saveHolidayRules}
+                  disabled={holidaySaving}
+                  className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {holidaySaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  以上の内容に変更
+                </motion.button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

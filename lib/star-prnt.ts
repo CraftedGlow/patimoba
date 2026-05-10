@@ -46,10 +46,12 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
     cmd(ESC, 0x33, 16),    // 行間 16ドット
     SIZE_1X,
     blank(),
-    // 店名: 太字・中央
+    // 店名: 2倍・太字・中央
     cmd(ESC, 0x61, 0x01),  // センター
     cmd(ESC, 0x45, 0x01),  // 太字ON
+    SIZE_2X,
     line(data.storeName),
+    SIZE_1X,
     cmd(ESC, 0x45, 0x00),  // 太字OFF
     line(SEP),
     cmd(ESC, 0x61, 0x00),  // 左揃え
@@ -100,10 +102,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
         label = opt.itemName
       }
 
-      const price = opt.priceDelta && opt.priceDelta !== 0
-        ? ` +¥${opt.priceDelta.toLocaleString()}`
-        : ""
-      parts.push(line(`${label}${price}`))
+      parts.push(line(label))
     }
 
     parts.push(blank())

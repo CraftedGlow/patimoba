@@ -103,7 +103,6 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
         throw new Error(body?.error ?? `HTTP ${res.status}`);
       }
       setPrintDone(true);
-      setTimeout(() => setPrintDone(false), 3000);
     } catch (e) {
       setPrintError(e instanceof Error ? e.message : "印刷に失敗しました");
     } finally {

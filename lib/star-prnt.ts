@@ -43,7 +43,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   const parts: Buffer[] = [
     cmd(ESC, 0x40),        // 初期化
     cmd(ESC, 0x4D, 0x01),  // フォントB
-    cmd(ESC, 0x33, 22),    // 行間 22ドット
+    cmd(ESC, 0x33, 16),    // 行間 16ドット
     SIZE_1X,
     blank(),
     // 店名: 太字・中央
@@ -80,19 +80,30 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
     parts.push(cmd(ESC, 0x45, 0x00))
 
     // バリアント（ホールサイズ等）
-    if (item.variantName) parts.push(line(`  ${item.variantName}`))
+    if (item.variantName) parts.push(line(item.variantName))
 
-    // オプション（モーダルと同じ形式）
+    // オプション（左揃え・箇条点なし）
     for (const opt of item.options ?? []) {
       if (!opt.itemName) continue
-      const isMessage = opt.groupName === "メッセージ"
-      const label = isMessage
-        ? `「${opt.itemName}」`
-        : `${opt.groupName}（${opt.itemName}）`
+      // サイズはvariantNameで表示済みのためスキップ
+      if (opt.groupName === "サイズ") continue
+
+      let label: string
+      if (opt.groupName === "メッセージ") {
+        label = `「${opt.itemName}」`
+      } else if (opt.groupName === "ろうそく") {
+        // ろうそくは本数を表示
+        const qty = (opt.quantity ?? 1) > 1 ? ` ×${opt.quantity}` : ""
+        label = `${opt.itemName}${qty}`
+      } else {
+        // その他はアイテム名のみ
+        label = opt.itemName
+      }
+
       const price = opt.priceDelta && opt.priceDelta !== 0
-        ? `  +¥${opt.priceDelta.toLocaleString()}`
+        ? ` +¥${opt.priceDelta.toLocaleString()}`
         : ""
-      parts.push(line(`  ・${label}${price}`))
+      parts.push(line(`${label}${price}`))
     }
 
     parts.push(blank())

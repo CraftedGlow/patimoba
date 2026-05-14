@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Building2, ChartBar as BarChart3, Lightbulb, User, LogOut } from "lucide-react";
+import { LayoutGrid, Building2, ChartBar as BarChart3, Lightbulb, User, LogOut, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
 const navItems = [
@@ -10,6 +10,7 @@ const navItems = [
   { href: "/admin/stores", icon: Building2, label: "店舗一覧" },
   { href: "/admin/revenue", icon: BarChart3, label: "収益分析" },
   { href: "/admin/insights", icon: Lightbulb, label: "営業インサイト" },
+  { href: "/admin/legal", icon: FileText, label: "規約管理" },
   { href: "/admin/account", icon: User, label: "アカウント設定" },
 ];
 

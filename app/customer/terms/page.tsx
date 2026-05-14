@@ -1,71 +1,26 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-
-const sections = [
-  {
-    title: "第1条（適用）",
-    content: "本規約は、ユーザーと運営者との間に成立する、当サービスの利用に関わる一切の関係に適用されます。",
-  },
-  {
-    title: "第2条（定義）",
-    content:
-      "「ユーザー」とは、当サービスを利用するすべての方をいいます。\n「出店店舗」とは、当サービス上で商品・サービスを販売する飲食・物販事業者をいいます。\n「顧客」とは、出店店舗の商品を注文するエンドユーザーをいいます。\n「運営者」とは、Crafted Glow株式会社をいいます。",
-  },
-  {
-    title: "第3条（サービス内容）",
-    content:
-      "当サービスは、LINE連携を用いた店舗向けのネット注文・販売促進を行うプラットフォームです。顧客は以下のいずれかの方法から注文できます。\n\n・パティモバ公式LINEのメニューから店舗を選択して注文する\n・各出店店舗のLINE公式アカウントから直接注文する（その店舗のメニューがそのまま表示されます）\n\n注文後は以下のいずれかの方法で商品を受け取ることができます。\n\n・店舗での受け取り（テイクアウト）\n・全国配送（スタンダード・プロプランの店舗のみ）\n・一部店舗が提供する配達サービス\n\n出店店舗は、商品登録・営業日設定等の機能を利用し、当サービスを通じて入った注文の対応を行います。",
-  },
-  {
-    title: "第4条（利用環境の整備）",
-    content:
-      "ユーザーは、当サービスを利用するために必要な通信機器・インターネット接続・LINEアカウント等を自己の責任と負担において準備・維持するものとします。",
-  },
-  {
-    title: "第5条（禁止事項）",
-    content:
-      "ユーザーは以下の行為をしてはなりません。\n\n・虚偽の情報を提供する行為\n・不正アクセスやシステム妨害行為\n・第三者の権利侵害行為\n・法令や公序良俗に違反する行為\n・他人になりすます行為\n・サービスの信用を毀損する行為\n・当サービスの運営を妨害する行為\n・その他運営者が不適切と判断する行為",
-  },
-  {
-    title: "第6条（注文・支払い・キャンセル）",
-    content:
-      "顧客は、パティモバ公式LINEまたは各出店店舗のLINE公式アカウントから商品を選択し、日時・商品を指定して注文を行います。支払方法はクレジットカード決済（Pay.jpを使用）または店舗における現地決済（現金・店舗が指定する方法）です。\n\nキャンセル・返金をご希望の場合は、各出店店舗に直接お問い合わせください。店舗がキャンセルを承認した場合、クレジットカード決済の場合は運営者がPay.jpを通じてご注文時のクレジットカードへ返金処理を行います。現地決済（現金等）の場合は店舗にて対応します。返金までに3〜10営業日かかる場合があります。\n\nなお以下の場合は運営者が対応し、全額返金します。\n\n・注文商品と異なる商品が届いた場合\n・商品が破損・劣化していた場合\n・著しい品質不良が確認された場合\n\n該当する場合は商品受け取り後24時間以内にinfo@craftedglow-j.comまでご連絡ください。",
-  },
-  {
-    title: "第7条（特定商取引法に基づく表記）",
-    content:
-      "各出店店舗が販売者となる商品については、各店舗が定める特定商取引法に基づく表記が適用されます。各店舗の特定商取引法表記は、各店舗のページに掲示します。",
-  },
-  {
-    title: "第8条（免責事項）",
-    content:
-      "商品の製造・提供・配送は出店店舗が行います。運営者は注文・LINE配信のプラットフォームとしての役割を担いますが、顧客からのトラブル申告については運営者が合理的な範囲で対応します。\n\nシステム障害や通信エラー等によりサービスの提供が一時的に中断される場合がありますが、運営者はこれに対する直接損害を超える責任は負いません。地震・洪水・火災その他の天災地変、停電、通信回線の障害、戦争、テロ、法令の改廃その他の不可抗力により生じた損害についても、運営者は合理的な範囲を超えた責任を負いません。",
-  },
-  {
-    title: "第9条（個人情報の取扱い）",
-    content: "ユーザーの個人情報は、当サービスのプライバシーポリシーに則り適切に管理・運用します。",
-  },
-  {
-    title: "第10条（知的財産権）",
-    content:
-      "当サービスに関する一切のコンテンツ（ロゴ・デザイン・システム等）に関する著作権その他の知的財産権は、運営者または正当な権利者に帰属します。ユーザーは、当サービスのコンテンツを無断で利用（複製・転用・配布など）することはできません。",
-  },
-  {
-    title: "第11条（本規約の変更）",
-    content:
-      "運営者は必要と判断した場合、本規約を変更できるものとします。変更内容がユーザーに重大な影響を与える場合は当サービス上で事前に通知します。変更後にサービスを利用した場合、変更内容に同意したものとみなされます。",
-  },
-  {
-    title: "第12条（準拠法及び裁判管轄）",
-    content:
-      "本規約は日本法を準拠法とし、紛争が生じた場合には大分地方裁判所を第一審の専属的合意管轄裁判所とします。",
-  },
-];
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function TermsPage() {
   const router = useRouter();
+  const [text, setText] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "terms")
+      .maybeSingle()
+      .then(({ data }) => {
+        setText(data?.value ?? null);
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div className="min-h-screen bg-white">
@@ -77,20 +32,15 @@ export default function TermsPage() {
       </header>
 
       <div className="px-4 py-6 max-w-2xl mx-auto">
-        <p className="text-xs text-gray-500 mb-6">最終改定日：2025年5月14日</p>
-
-        <p className="text-sm text-gray-700 leading-relaxed mb-8">
-          本利用規約（以下「本規約」）は、パティモバ（以下「当サービス」）の提供に関する条件を定めたものです。ユーザーには本規約に従って当サービスをご利用いただきます。
-        </p>
-
-        <div className="space-y-8">
-          {sections.map((s) => (
-            <section key={s.title}>
-              <h2 className="text-sm font-bold text-gray-900 mb-2">{s.title}</h2>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{s.content}</p>
-            </section>
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+          </div>
+        ) : text ? (
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{text}</p>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-20">内容を準備中です。</p>
+        )}
 
         <div className="mt-10 pt-6 border-t border-gray-100 text-center">
           <p className="text-xs text-gray-400">Crafted Glow株式会社</p>

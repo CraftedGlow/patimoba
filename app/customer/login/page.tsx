@@ -118,7 +118,7 @@ export default function CustomerLoginPage() {
 
       if (!liff.isLoggedIn()) {
         sessionStorage.setItem("liff_login_pending", "1");
-        liff.login({ redirectUri: window.location.href });
+        liff.login({ redirectUri: window.location.origin });
         return;
       }
 

@@ -121,7 +121,9 @@ export default function LoginPage() {
 
     sessionStorage.removeItem("liff_login_pending")
     localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
-    router.push("/customer/takeout")
+    const returnPath = sessionStorage.getItem("liff_return_path")
+    sessionStorage.removeItem("liff_return_path")
+    router.push(returnPath || "/customer/takeout")
   }, [router])
 
   // LINEからのリダイレクト戻りを処理
@@ -164,7 +166,7 @@ export default function LoginPage() {
 
       if (!liff.isLoggedIn()) {
         sessionStorage.setItem("liff_login_pending", "1")
-        liff.login({ redirectUri: window.location.href })
+        liff.login({ redirectUri: window.location.origin })
         return
       }
 

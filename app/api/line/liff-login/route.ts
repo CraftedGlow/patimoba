@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
     type: "magiclink",
     email: authUserData.user.email,
+    
+    
   })
   if (linkError || !linkData.properties?.email_otp) {
     console.error("[LIFF Login] OTP 生成失敗:", linkError)

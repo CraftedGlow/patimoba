@@ -104,31 +104,6 @@ export function LineLoginScreen({
         </motion.div>
       </div>
 
-      <motion.footer
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.45, duration: 0.4 }}
-        className="text-center pb-10 space-y-3"
-      >
-        <button
-          type="button"
-          className="text-sm text-blue-600 underline block mx-auto hover:text-blue-700"
-        >
-          利用規約を読む
-        </button>
-        <button
-          type="button"
-          className="text-sm text-blue-600 underline block mx-auto hover:text-blue-700"
-        >
-          プライバシーポリシーを読む
-        </button>
-        <button
-          type="button"
-          className="text-sm text-blue-600 underline block mx-auto hover:text-blue-700"
-        >
-          特定商取引法を読む
-        </button>
-      </motion.footer>
     </div>
   );
 }

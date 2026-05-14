@@ -512,13 +512,6 @@ export default function TakeoutConfirmPage() {
           </motion.button>
         </div>
 
-        <div className="text-center space-y-2">
-          <button className="text-sm text-amber-600 underline">利用規約を読む</button>
-          <br />
-          <button className="text-sm text-amber-600 underline">プライバシーポリシーを読む</button>
-          <br />
-          <button className="text-sm text-amber-600 underline">特定商取引法を読む</button>
-        </div>
       </div>
 
       {/* ポイント変更モーダル */}

@@ -290,7 +290,10 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         await liff.init({ liffId });
         if (!liff.isInClient()) return;
         if (!liff.isLoggedIn()) {
-          liff.login({ redirectUri: window.location.href });
+          // liff.login() はエンドポイントURL(LP)に戻してしまうのでログインページ経由にする
+          sessionStorage.setItem("liff_return_path", window.location.pathname);
+          sessionStorage.setItem("liff_login_pending", "1");
+          router.push("/customer/login");
           return;
         }
         const idToken = liff.getIDToken();

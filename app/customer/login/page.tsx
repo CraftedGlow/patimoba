@@ -74,7 +74,9 @@ export default function CustomerLoginPage() {
     localStorage.removeItem("patimoba_cart_takeout_v1");
     localStorage.removeItem("patimoba_cart_ec_v1");
     localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
-    router.push("/customer/takeout");
+    const returnPath = sessionStorage.getItem("liff_return_path");
+    sessionStorage.removeItem("liff_return_path");
+    router.push(returnPath || "/customer/takeout");
   }, [router]);
 
   useEffect(() => {

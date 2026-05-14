@@ -555,6 +555,14 @@ export default function TakeoutConfirmPage() {
           </motion.button>
         </div>
 
+        <div className="text-center pt-2 pb-4">
+          <button onClick={() => setShowTermsModal(true)} className="text-xs text-gray-400 underline underline-offset-2">利用規約</button>
+          <span className="text-xs text-gray-300 mx-2">|</span>
+          <button onClick={() => setShowPrivacyModal(true)} className="text-xs text-gray-400 underline underline-offset-2">プライバシーポリシー</button>
+          <span className="text-xs text-gray-300 mx-2">|</span>
+          <button onClick={() => setShowTokushoModal(true)} className="text-xs text-gray-400 underline underline-offset-2">特定商取引法</button>
+        </div>
+
       </div>
 
       {/* ポイント変更モーダル */}

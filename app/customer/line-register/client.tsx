@@ -243,7 +243,7 @@ export function LineRegisterClient({
           </motion.button>
 
           <p className="text-center text-xs text-gray-400 mt-3">
-            登録することで、利用規約およびプライバシーポリシーに同意したものとみなします
+            登録することで、<Link href="/customer/terms" className="underline underline-offset-2">利用規約</Link>および<Link href="/customer/privacy" className="underline underline-offset-2">プライバシーポリシー</Link>に同意したものとみなします
           </p>
 
           <p className="text-center text-xs text-gray-500 mt-6">

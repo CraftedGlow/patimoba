@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, PartyPopper, ShoppingBag } from "lucide-react";
+import { X, PartyPopper, ShoppingBag, Loader2 } from "lucide-react";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
@@ -11,6 +11,31 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { supabase } from "@/lib/supabase";
+
+const TERMS_SECTIONS = [
+  { title: "第1条（適用）", body: "本規約は、ユーザーと運営者との間に成立する、当サービスの利用に関わる一切の関係に適用されます。" },
+  { title: "第2条（定義）", body: "「ユーザー」とは、当サービスを利用するすべての方をいいます。\n「出店店舗」とは、当サービス上で商品・サービスを販売する飲食・物販事業者をいいます。\n「顧客」とは、出店店舗の商品を注文するエンドユーザーをいいます。\n「運営者」とは、Crafted Glow株式会社をいいます。" },
+  { title: "第3条（サービス内容）", body: "当サービスは、LINE連携を用いた店舗向けのネット注文・販売促進を行うプラットフォームです。顧客は以下のいずれかの方法から注文できます。\n\n・パティモバ公式LINEのメニューから店舗を選択して注文する\n・各出店店舗のLINE公式アカウントから直接注文する（その店舗のメニューがそのまま表示されます）\n\n注文後は以下のいずれかの方法で商品を受け取ることができます。\n\n・店舗での受け取り（テイクアウト）\n・全国配送（スタンダード・プロプランの店舗のみ）\n・一部店舗が提供する配達サービス\n\n出店店舗は、商品登録・営業日設定等の機能を利用し、当サービスを通じて入った注文の対応を行います。" },
+  { title: "第4条（利用環境の整備）", body: "ユーザーは、当サービスを利用するために必要な通信機器・インターネット接続・LINEアカウント等を自己の責任と負担において準備・維持するものとします。" },
+  { title: "第5条（禁止事項）", body: "ユーザーは以下の行為をしてはなりません。\n\n・虚偽の情報を提供する行為\n・不正アクセスやシステム妨害行為\n・第三者の権利侵害行為\n・法令や公序良俗に違反する行為\n・他人になりすます行為\n・サービスの信用を毀損する行為\n・当サービスの運営を妨害する行為\n・その他運営者が不適切と判断する行為" },
+  { title: "第6条（注文・支払い・キャンセル）", body: "顧客は、パティモバ公式LINEまたは各出店店舗のLINE公式アカウントから商品を選択し、日時・商品を指定して注文を行います。支払方法はクレジットカード決済（Pay.jpを使用）または店舗における現地決済（現金・店舗が指定する方法）です。\n\nキャンセル・返金をご希望の場合は、各出店店舗に直接お問い合わせください。店舗がキャンセルを承認した場合、クレジットカード決済の場合は運営者がPay.jpを通じてご注文時のクレジットカードへ返金処理を行います。現地決済（現金等）の場合は店舗にて対応します。返金までに3〜10営業日かかる場合があります。\n\nなお以下の場合は運営者が対応し、全額返金します。\n\n・注文商品と異なる商品が届いた場合\n・商品が破損・劣化していた場合\n・著しい品質不良が確認された場合\n\n該当する場合は商品受け取り後24時間以内にinfo@craftedglow-j.comまでご連絡ください。" },
+  { title: "第7条（特定商取引法に基づく表記）", body: "各出店店舗が販売者となる商品については、各店舗が定める特定商取引法に基づく表記が適用されます。各店舗の特定商取引法表記は、各店舗のページに掲示します。" },
+  { title: "第8条（免責事項）", body: "商品の製造・提供・配送は出店店舗が行います。運営者は注文・LINE配信のプラットフォームとしての役割を担いますが、顧客からのトラブル申告については運営者が合理的な範囲で対応します。\n\nシステム障害や通信エラー等によりサービスの提供が一時的に中断される場合がありますが、運営者はこれに対する直接損害を超える責任は負いません。地震・洪水・火災その他の天災地変、停電、通信回線の障害、戦争、テロ、法令の改廃その他の不可抗力により生じた損害についても、運営者は合理的な範囲を超えた責任を負いません。" },
+  { title: "第9条（個人情報の取扱い）", body: "ユーザーの個人情報は、当サービスのプライバシーポリシーに則り適切に管理・運用します。" },
+  { title: "第10条（知的財産権）", body: "当サービスに関する一切のコンテンツ（ロゴ・デザイン・システム等）に関する著作権その他の知的財産権は、運営者または正当な権利者に帰属します。ユーザーは、当サービスのコンテンツを無断で利用（複製・転用・配布など）することはできません。" },
+  { title: "第11条（本規約の変更）", body: "運営者は必要と判断した場合、本規約を変更できるものとします。変更内容がユーザーに重大な影響を与える場合は当サービス上で事前に通知します。変更後にサービスを利用した場合、変更内容に同意したものとみなされます。" },
+  { title: "第12条（準拠法及び裁判管轄）", body: "本規約は日本法を準拠法とし、紛争が生じた場合には大分地方裁判所を第一審の専属的合意管轄裁判所とします。" },
+];
+
+const PRIVACY_SECTIONS = [
+  { title: "第1条（取得する情報の範囲）", body: "当サービスは、LINE連携や注文システムの運営にあたり、以下の情報を取得する場合があります。\n\n・氏名\n・電話番号\n・メールアドレス\n・住所\n・LINEアカウントに紐づくユーザーID\n・LINEアカウント名\n・LINEのアイコン\n・お気に入り店舗情報\n・注文履歴\n・配送・受取希望日時\n・記念日などの登録情報\n・LINEサービスメッセージの受信に関する同意状況\n・LINEミニアプリ利用時の友だち追加オプションへの同意状況" },
+  { title: "第2条〜第4条（個人情報の利用・管理）", body: "取得した個人情報は、本サービスの提供・改善・サポート対応・通知配信等の目的に限り利用します。ユーザーの同意なく第三者へ提供することはありません（法令に基づく場合を除く）。Cookieを利用する場合がありますが、ブラウザ設定により無効にすることも可能です（一部機能が利用できなくなる場合があります）。" },
+  { title: "第5条（個人情報の安全管理）", body: "運営者は個人情報の漏洩・滅失・毀損の防止のため以下の措置を講じています。\n\n・アクセス権限の制御・通信の暗号化（SSL/TLS）\n・定期的なバックアップ・ソフトウェア更新\n・業務委託先への監督と契約管理" },
+  { title: "第6条（開示・訂正・削除の請求）", body: "ユーザーは自己に関する個人情報の開示・訂正・利用停止・削除等を希望される場合、以下の連絡先までご連絡ください。本人確認のうえ法令に基づき誠実に対応いたします。なお開示請求に手数料はかかりません。\n\nメールアドレス：info@craftedglow-j.com\nお問い合わせフォーム：https://patisseriemobile.com/#form" },
+  { title: "第7条（ポリシーの改訂）", body: "本ポリシーの内容は必要に応じて変更することがあります。改定後のポリシーは本サイト上での掲示をもって効力を生じるものとします。重要な変更の場合は当サービス上で事前に通知します。" },
+  { title: "第8条（運営者情報）", body: "運営者名：Crafted Glow株式会社（代表取締役：神田 丈）\n所在地：〒879-7411 大分県豊後大野市千歳町柴山1494-1\nメールアドレス：info@craftedglow-j.com\nお問い合わせフォーム：https://patisseriemobile.com/#form" },
+  { title: "第9条（決済情報の取扱い）", body: "当サービスにおける決済処理は、PAY株式会社が提供する安全な決済システム（Pay.jp）を利用して行われます。運営者はユーザーのクレジットカード番号・セキュリティコード等の決済情報を保持しません。決済処理はSSL/TLSによる暗号化通信を用いて行われます。決済に関するお問い合わせはinfo@craftedglow-j.comまでご連絡ください。" },
+];
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
@@ -38,10 +63,28 @@ export default function TakeoutConfirmPage() {
   const [countdown, setCountdown] = useState(5);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showTokushoModal, setShowTokushoModal] = useState(false);
+  const [tokushoText, setTokushoText] = useState<string | null>(null);
+  const [tokushoLoading, setTokushoLoading] = useState(false);
+
   const [pickupDate, setPickupDate] = useState("");
   const [pickupTime, setPickupTime] = useState("");
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
+
+  useEffect(() => {
+    if (!showTokushoModal) return;
+    const sid = selectedStoreId || cartStoreId;
+    if (!sid) return;
+    setTokushoLoading(true);
+    supabase.from("stores").select("name, tokusho_text").eq("id", sid).maybeSingle().then(({ data }) => {
+      setTokushoText(data?.tokusho_text ?? null);
+      setTokushoLoading(false);
+    });
+  }, [showTokushoModal, selectedStoreId, cartStoreId]);
+
   useEffect(() => {
     const d = sessionStorage.getItem("patimoba_pickup_date") ?? "";
     const t = sessionStorage.getItem("patimoba_pickup_time") ?? "";
@@ -628,6 +671,96 @@ export default function TakeoutConfirmPage() {
               >
                 商品一覧に戻る
               </motion.button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 利用規約モーダル */}
+      <AnimatePresence>
+        {showTermsModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black z-[60]" onClick={() => setShowTermsModal(false)} />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-2xl z-[70] max-h-[85vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+                <div>
+                  <p className="font-bold text-gray-900 text-base">パティモバ 利用規約</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">最終改定日：2025年5月14日</p>
+                </div>
+                <button onClick={() => setShowTermsModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
+                <p className="text-xs text-gray-600 leading-relaxed">本利用規約（以下「本規約」）は、パティモバ（以下「当サービス」）の提供に関する条件を定めたものです。ユーザーには本規約に従って当サービスをご利用いただきます。</p>
+                {TERMS_SECTIONS.map((s) => (
+                  <div key={s.title}>
+                    <p className="text-xs font-bold text-gray-900 mb-1">{s.title}</p>
+                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{s.body}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* プライバシーポリシーモーダル */}
+      <AnimatePresence>
+        {showPrivacyModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black z-[60]" onClick={() => setShowPrivacyModal(false)} />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-2xl z-[70] max-h-[85vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+                <div>
+                  <p className="font-bold text-gray-900 text-base">パティモバ プライバシーポリシー</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">最終改定日：2025年5月14日</p>
+                </div>
+                <button onClick={() => setShowPrivacyModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
+                <p className="text-xs text-gray-600 leading-relaxed">Crafted Glow株式会社（以下「運営者」）は、パティモバ（以下「当サービス」）において、ユーザーの個人情報を適切に取り扱うことが重要な責務であると認識し、以下のとおりプライバシーポリシーを定め、これを遵守します。</p>
+                {PRIVACY_SECTIONS.map((s) => (
+                  <div key={s.title}>
+                    <p className="text-xs font-bold text-gray-900 mb-1">{s.title}</p>
+                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{s.body}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 特定商取引法モーダル */}
+      <AnimatePresence>
+        {showTokushoModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black z-[60]" onClick={() => setShowTokushoModal(false)} />
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-2xl z-[70] max-h-[85vh] flex flex-col"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+                <p className="font-bold text-gray-900 text-base">特定商取引法に基づく表記</p>
+                <button onClick={() => setShowTokushoModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              </div>
+              <div className="overflow-y-auto flex-1 px-5 py-5">
+                {tokushoLoading ? (
+                  <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-amber-400" /></div>
+                ) : tokushoText ? (
+                  <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">{tokushoText}</pre>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center py-10">各店舗の特定商取引法に基づく表記がこちらに表示されます。</p>
+                )}
+              </div>
             </motion.div>
           </>
         )}

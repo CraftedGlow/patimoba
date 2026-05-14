@@ -318,9 +318,9 @@ export default function CustomerLoginPage() {
               >
                 ログインすることで、
                 <br />
-                <span className="underline underline-offset-2">利用規約</span>
+                <Link href="/customer/terms" className="underline underline-offset-2">利用規約</Link>
                 および
-                <span className="underline underline-offset-2">プライバシーポリシー</span>
+                <Link href="/customer/privacy" className="underline underline-offset-2">プライバシーポリシー</Link>
                 に同意したものとみなします
               </motion.p>
             </motion.div>

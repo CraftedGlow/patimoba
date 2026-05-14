@@ -94,7 +94,7 @@ export function MonthView({
                     </span>
                   </div>
                   <div className="flex-1 flex items-center justify-center">
-                    <span className="text-sm font-medium text-gray-800">休み</span>
+                    <span className="text-sm font-medium text-red-600">休み</span>
                   </div>
                 </>
               ) : (

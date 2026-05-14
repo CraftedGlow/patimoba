@@ -35,7 +35,7 @@ export function useCustomers(options: UseCustomersOptions = {}) {
       return
     }
 
-    const customerIds = [...new Set((orderRows || []).map((r: any) => r.customer_id as string))]
+    const customerIds = Array.from(new Set((orderRows || []).map((r: any) => r.customer_id as string)))
 
     if (customerIds.length === 0) {
       setCustomers([])

@@ -17,13 +17,38 @@ export function useCustomers(options: UseCustomersOptions = {}) {
     setLoading(true)
     setError(null)
 
-    let query = supabase
+    if (!options.storeId) {
+      setCustomers([])
+      setLoading(false)
+      return
+    }
+
+    const { data: orderRows, error: orderErr } = await supabase
+      .from("orders")
+      .select("customer_id")
+      .eq("store_id", options.storeId)
+      .not("customer_id", "is", null)
+
+    if (orderErr) {
+      setError(orderErr.message)
+      setLoading(false)
+      return
+    }
+
+    const customerIds = [...new Set((orderRows || []).map((r: any) => r.customer_id as string))]
+
+    if (customerIds.length === 0) {
+      setCustomers([])
+      setLoading(false)
+      return
+    }
+
+    const { data, error: err } = await supabase
       .from("users")
       .select("*")
-      .eq("user_type", "customer")
+      .in("id", customerIds)
       .order("created_at", { ascending: false })
 
-    const { data, error: err } = await query
     if (err) {
       setError(err.message)
     } else {

@@ -225,6 +225,15 @@ export default function StoreCustomersPage() {
                       }
                     />
                     <DetailRow
+                      label="来店回数"
+                      value={
+                        <span>
+                          <span className="font-bold text-lg text-gray-900">{selectedCustomer.orders.length}</span>
+                          <span className="text-sm text-gray-500 ml-1">回</span>
+                        </span>
+                      }
+                    />
+                    <DetailRow
                       label="最終来店日"
                       value={
                         selectedCustomer.lastVisitAt

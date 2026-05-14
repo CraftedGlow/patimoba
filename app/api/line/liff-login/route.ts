@@ -3,77 +3,112 @@ import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/database.types"
 
 export async function POST(request: NextRequest) {
-  console.log("[LIFF Login] リクエスト受信")
-
   const body = await request.json().catch(() => null)
   const idToken = body?.idToken
 
   if (!idToken) {
-    console.warn("[LIFF Login] idToken なし")
     return NextResponse.json({ error: "id_token_required" }, { status: 400 })
   }
 
   const channelId = process.env.LINE_LOGIN_CHANNEL_ID
   if (!channelId) {
-    console.error("[LIFF Login] LINE_LOGIN_CHANNEL_ID が未設定")
     return NextResponse.json({ error: "server_misconfigured" }, { status: 500 })
   }
 
-  // IDトークンをLINEで検証しユーザーIDを取得
-  console.log("[LIFF Login] IDトークン検証中...")
+  // LINE ID トークン検証
   const verifyRes = await fetch("https://api.line.me/oauth2/v2.1/verify", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ id_token: idToken, client_id: channelId }),
   })
-
   const verified = await verifyRes.json()
   if (!verifyRes.ok || !verified.sub) {
-    console.error("[LIFF Login] IDトークン検証失敗:", verified)
     return NextResponse.json({ error: "invalid_token" }, { status: 401 })
   }
 
   const lineUserId: string = verified.sub
-  console.log(`[LIFF Login] 検証OK: lineUserId=${lineUserId}`)
+  const lineName: string = verified.name ?? ""
+  const avatarUrl: string | null = verified.picture ?? null
 
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  console.log("[LIFF Login] users テーブル照合中...")
-  const { data: user } = await supabase
+  // LINE ユーザーID で既存ユーザーを検索
+  let { data: user } = await supabase
     .from("users")
     .select("*")
     .eq("line_user_id", lineUserId)
     .maybeSingle()
 
+  // ── 新規ユーザー：Supabase auth + users レコードを自動作成 ──────────────
   if (!user) {
-    console.warn(`[LIFF Login] ユーザー未登録: lineUserId=${lineUserId} → 登録画面へ`)
-    const pendingData = JSON.stringify({
-      lineUserId,
-      lineName: verified.name ?? "",
-      avatarUrl: verified.picture ?? null,
+    console.log(`[LIFF Login] 新規ユーザー自動作成: lineUserId=${lineUserId}`)
+    const fakeEmail = `line_${lineUserId}@patimoba.internal`
+
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: fakeEmail,
+      email_confirm: true,
+      user_metadata: { line_user_id: lineUserId },
     })
-    const res = NextResponse.json({ action: "register" }, { status: 200 })
-    res.cookies.set("line_pending_user", pendingData, {
-      httpOnly: true,
-      maxAge: 300,
-      path: "/",
-      sameSite: "lax",
-    })
-    return res
+    if (authError || !authData.user) {
+      console.error("[LIFF Login] auth ユーザー作成失敗:", authError)
+      return NextResponse.json({ error: "auth_create_failed" }, { status: 500 })
+    }
+
+    const { data: newUser, error: insertError } = await supabase
+      .from("users")
+      .insert({
+        line_user_id: lineUserId,
+        line_name: lineName,
+        avatar_url: avatarUrl,
+        user_type: "customer",
+        auth_user_id: authData.user.id,
+      })
+      .select()
+      .single()
+
+    if (insertError || !newUser) {
+      console.error("[LIFF Login] users 挿入失敗:", insertError)
+      return NextResponse.json({ error: "user_create_failed" }, { status: 500 })
+    }
+
+    user = newUser
+    console.log(`[LIFF Login] 新規作成完了: userId=${user.id}`)
   }
 
-  console.log(`[LIFF Login] ユーザー発見: userId=${user.id}, auth_user_id=${user.auth_user_id ?? "未設定"}`)
-
+  // ── auth_user_id 未設定の既存ユーザー：自動でリンク ───────────────────
   if (!user.auth_user_id) {
-    console.warn(`[LIFF Login] auth_user_id 未設定: userId=${user.id} → 登録画面へ`)
-    return NextResponse.json({ action: "signup", userId: user.id }, { status: 200 })
+    console.log(`[LIFF Login] auth_user_id 未設定 → 自動リンク: userId=${user.id}`)
+    const fakeEmail = `line_${lineUserId}@patimoba.internal`
+
+    // 同じメールが既に存在する場合は取得、なければ作成
+    let authUserId: string
+    const { data: existingAuthList } = await supabase.auth.admin.listUsers()
+    const existing = existingAuthList?.users?.find((u) => u.email === fakeEmail)
+
+    if (existing) {
+      authUserId = existing.id
+    } else {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: fakeEmail,
+        email_confirm: true,
+        user_metadata: { line_user_id: lineUserId },
+      })
+      if (authError || !authData.user) {
+        console.error("[LIFF Login] auth リンク作成失敗:", authError)
+        return NextResponse.json({ error: "auth_link_failed" }, { status: 500 })
+      }
+      authUserId = authData.user.id
+    }
+
+    await supabase.from("users").update({ auth_user_id: authUserId }).eq("id", user.id)
+    user = { ...user, auth_user_id: authUserId }
   }
 
-  // auth.users からメールアドレスを取得してマジックリンク OTP を生成
-  const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(user.auth_user_id)
+  // ── OTP 生成してクライアント側で Supabase セッションを確立 ───────────────
+  const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(user.auth_user_id!)
   if (authUserError || !authUserData.user?.email) {
     console.error("[LIFF Login] auth ユーザー取得失敗:", authUserError)
     return NextResponse.json({ error: "auth_user_not_found" }, { status: 500 })
@@ -82,8 +117,6 @@ export async function POST(request: NextRequest) {
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
     type: "magiclink",
     email: authUserData.user.email,
-    
-    
   })
   if (linkError || !linkData.properties?.email_otp) {
     console.error("[LIFF Login] OTP 生成失敗:", linkError)

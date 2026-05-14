@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarDays, MapPin, X, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
 import { toUIStore } from "@/lib/types";
 import type { Store } from "@/lib/types";
@@ -276,6 +276,64 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
     const t = setTimeout(() => setLoginDone(true), 600);
     return () => clearTimeout(t);
   }, [progress]);
+
+  // LINEアプリ内からのアクセス時に自動ログイン
+  useEffect(() => {
+    if (authLoading) return;
+    if (user) return;
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) return;
+
+    (async () => {
+      try {
+        const liff = (await import("@line/liff")).default;
+        await liff.init({ liffId });
+        if (!liff.isInClient()) return;
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+        const idToken = liff.getIDToken();
+        if (!idToken) return;
+        const res = await fetch("/api/line/liff-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+        if (!res.ok) return;
+        const result = await res.json();
+        if (result.action === "register") {
+          sessionStorage.setItem("liff_return_path", window.location.pathname);
+          router.push("/customer/line-register");
+          return;
+        }
+        if (result.action === "signup") {
+          sessionStorage.setItem("liff_signup_link_user_id", result.userId);
+          sessionStorage.setItem("liff_return_path", window.location.pathname);
+          router.push("/customer/signup");
+          return;
+        }
+        const { user: userData, otp } = result;
+        if (otp) {
+          const { supabase } = await import("@/lib/supabase");
+          await supabase.auth.verifyOtp({ email: otp.email, token: otp.token, type: "magiclink" });
+        }
+        const nameParts = (userData.name || userData.line_name || "").split(" ");
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          id: userData.id,
+          email: userData.email ?? "",
+          userType: "customer",
+          firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
+          lastName: nameParts[0] ?? "",
+          storeId: null,
+          raw: userData,
+        }));
+        setLoginDone(true);
+      } catch (err) {
+        console.error("[Store LIFF] auto-login error:", err);
+      }
+    })();
+  }, [authLoading, user]);
 
   // 店舗情報フェッチ
   useEffect(() => {

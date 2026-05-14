@@ -87,7 +87,9 @@ export function LineRegisterClient({
 
       setSaved(true)
       setTimeout(() => {
-        router.push("/customer/takeout")
+        const returnPath = sessionStorage.getItem("liff_return_path");
+        sessionStorage.removeItem("liff_return_path");
+        router.push(returnPath || "/customer/takeout");
       }, 900)
     } catch {
       setError("通信エラーが発生しました。もう一度お試しください")

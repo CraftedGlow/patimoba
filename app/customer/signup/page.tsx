@@ -127,7 +127,9 @@ export default function CustomerSignupPage() {
 
       setSaved(true);
       setTimeout(() => {
-        router.push("/customer/takeout");
+        const returnPath = sessionStorage.getItem("liff_return_path");
+        sessionStorage.removeItem("liff_return_path");
+        router.push(returnPath || "/customer/takeout");
       }, 900);
     } catch (e) {
       setError(e instanceof Error ? e.message : "登録に失敗しました");

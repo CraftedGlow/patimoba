@@ -183,7 +183,7 @@ export default function TakeoutProductDetailPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-square shadow-[0_8px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 w-4/5"
+          className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-square shadow-[0_8px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 w-[65%]"
         >
           {product.image ? (
             <img src={product.image} alt={product.name} className="w-full h-full object-cover" />

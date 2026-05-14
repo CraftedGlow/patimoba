@@ -47,7 +47,7 @@ export function StepProgress({ currentStep, steps, onStepClick }: StepProgressPr
             </button>
             {i < steps.length - 1 && (
               <div
-                className={`flex-1 h-0.5 mx-2 mt-[-1rem] ${
+                className={`flex-1 h-0.5 mx-[6px] mt-[-1rem] ${
                   stepNum < currentStep ? "bg-amber-400" : "bg-gray-200"
                 }`}
               />

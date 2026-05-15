@@ -62,14 +62,16 @@ export async function POST(request: NextRequest) {
     if (authData?.user) {
       authUserId = authData.user.id
     } else if (authError) {
-      // Email already registered from a prior partial failure — look up by email
-      const { data: listData, error: listError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const existing = listData?.users?.find((u) => u.email === fakeEmail)
-      if (existing) {
-        console.log(`[LIFF Login] 既存 auth user を再利用: ${existing.id}`)
-        authUserId = existing.id
+      // メール重複エラー時は generateLink でユーザーIDを取得
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: fakeEmail,
+      })
+      if (linkData?.user?.id) {
+        console.log(`[LIFF Login] 既存 auth user を再利用: ${linkData.user.id}`)
+        authUserId = linkData.user.id
       } else {
-        console.error("[LIFF Login] auth ユーザー作成失敗:", authError, "listError:", listError)
+        console.error("[LIFF Login] auth ユーザー作成失敗:", authError, "linkError:", linkError)
         return NextResponse.json({ error: "auth_create_failed", detail: authError.message }, { status: 500 })
       }
     } else {
@@ -121,12 +123,14 @@ export async function POST(request: NextRequest) {
     if (authData?.user) {
       authUserId = authData.user.id
     } else if (authError) {
-      const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-      const existing = listData?.users?.find((u) => u.email === fakeEmail)
-      if (existing) {
-        authUserId = existing.id
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: fakeEmail,
+      })
+      if (linkData?.user?.id) {
+        authUserId = linkData.user.id
       } else {
-        console.error("[LIFF Login] auth リンク作成失敗:", authError)
+        console.error("[LIFF Login] auth リンク作成失敗:", authError, "linkError:", linkError)
         return NextResponse.json({ error: "auth_link_failed", detail: authError.message }, { status: 500 })
       }
     } else {

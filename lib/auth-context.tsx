@@ -7,7 +7,7 @@ type UserRow = Database["public"]["Tables"]["users"]["Row"]
 
 export type UserType = "admin" | "store" | "customer"
 
-interface AuthUser {
+export interface AuthUser {
   id: string
   email: string
   userType: UserType

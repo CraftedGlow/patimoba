@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { completeLiffLogin } from "@/lib/liff-login";
+import { useAuth } from "@/lib/auth-context";
 import { LpHeader } from "@/components/lp/lp-header";
 import { LpHero } from "@/components/lp/lp-hero";
 import { LpTwoValues } from "@/components/lp/lp-two-values";
@@ -20,6 +21,7 @@ import { LpFooter } from "@/components/lp/lp-footer";
 
 export default function Home() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [isLiffCallback, setIsLiffCallback] = useState(false);
 
   const handleLiffCallback = useCallback(async (liffId: string) => {
@@ -27,14 +29,13 @@ export default function Home() {
       const liff = (await import("@line/liff")).default;
       await liff.init({ liffId });
 
-      // liff.init() が liff.state を処理してパスを書き換えた場合
       const redirectedPath = window.location.pathname;
       if (redirectedPath && redirectedPath !== "/") {
-        // ログイン済みならここでLIFFログインを完結させてからリダイレクト
         if (liff.isLoggedIn()) {
-          // 店舗ページへの戻り先を保存しておく
           sessionStorage.setItem("liff_return_path", redirectedPath);
-          await completeLiffLogin(liff, (path) => router.replace(path));
+          const { authUser, returnPath } = await completeLiffLogin(liff);
+          setUser(authUser);
+          router.replace(returnPath || redirectedPath);
         } else {
           router.replace(redirectedPath + window.location.search);
         }
@@ -42,14 +43,16 @@ export default function Home() {
       }
 
       if (liff.isLoggedIn()) {
-        await completeLiffLogin(liff, (path) => router.replace(path));
+        const { authUser, returnPath } = await completeLiffLogin(liff);
+        setUser(authUser);
+        router.replace(returnPath || "/customer/takeout");
       } else {
         router.replace("/login");
       }
     } catch {
       router.replace("/login");
     }
-  }, [router]);
+  }, [router, setUser]);
 
   useEffect(() => {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;

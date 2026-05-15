@@ -58,7 +58,7 @@ const roles = [
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, setUser } = useAuth();
   const [selectedRole, setSelectedRole] = useState<Role>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,8 +70,10 @@ export default function LoginPage() {
   const currentRole = roles.find((r) => r.id === selectedRole);
 
   const loginWithLiff = useCallback(async (liff: any) => {
-    await completeLiffLogin(liff, (path) => router.replace(path))
-  }, [router])
+    const { authUser, returnPath } = await completeLiffLogin(liff)
+    setUser(authUser)
+    router.replace(returnPath || "/customer/takeout")
+  }, [router, setUser])
 
   // LINEからのリダイレクト戻りを処理
   useEffect(() => {

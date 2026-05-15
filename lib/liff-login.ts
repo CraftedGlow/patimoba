@@ -1,11 +1,11 @@
-import { STORAGE_KEY } from "@/lib/auth-context"
+import { STORAGE_KEY, type AuthUser } from "@/lib/auth-context"
 
-type Navigate = (path: string) => void
+interface LiffLoginResult {
+  authUser: AuthUser
+  returnPath: string | null
+}
 
-export async function completeLiffLogin(
-  liff: any,
-  navigate: Navigate
-): Promise<void> {
+export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   const idToken = liff.getIDToken()
   if (!idToken) throw new Error("IDトークンを取得できませんでした")
 
@@ -17,7 +17,7 @@ export async function completeLiffLogin(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.error || "ログインに失敗しました")
+    throw new Error(`${body.error || "login_failed"}${body.detail ? ": " + body.detail : ""}`)
   }
 
   const result = await res.json()
@@ -33,7 +33,7 @@ export async function completeLiffLogin(
   }
 
   const nameParts = (user.line_name || user.name || "").split(" ")
-  const authUser = {
+  const authUser: AuthUser = {
     id: user.id,
     email: user.email ?? "",
     userType: "customer" as const,
@@ -45,7 +45,9 @@ export async function completeLiffLogin(
 
   sessionStorage.removeItem("liff_login_pending")
   localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+
   const returnPath = sessionStorage.getItem("liff_return_path")
   sessionStorage.removeItem("liff_return_path")
-  navigate(returnPath || "/customer/takeout")
+
+  return { authUser, returnPath }
 }

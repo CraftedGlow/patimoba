@@ -14,8 +14,9 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   try {
     const p = await liff.getProfile()
     lineProfile = { displayName: p.displayName, pictureUrl: p.pictureUrl }
-  } catch {
-    // 取得失敗時はIDトークンの情報にフォールバック
+    console.log("[LIFF] getProfile 成功:", p.displayName)
+  } catch (profileErr) {
+    console.warn("[LIFF] getProfile 失敗（IDトークンにフォールバック）:", profileErr)
   }
 
   const res = await fetch("/api/line/liff-login", {

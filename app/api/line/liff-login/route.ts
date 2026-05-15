@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   // liff.getProfile() の値を優先（IDトークンの name クレームはキャッシュされる場合がある）
   const lineName: string = body?.lineName || verified.name || ""
   const avatarUrl: string | null = body?.avatarUrl || verified.picture || null
+  console.log(`[LIFF Login] 受信プロフィール: lineUserId=${lineUserId}, body.lineName=${body?.lineName ?? "(none)"}, verified.name=${verified.name ?? "(none)"}, resolved lineName=${lineName}`)
 
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -104,9 +105,11 @@ export async function POST(request: NextRequest) {
   const profileUpdates: Record<string, string> = {}
   if (lineName && user.line_name !== lineName) profileUpdates.line_name = lineName
   if (avatarUrl && user.avatar_url !== avatarUrl) profileUpdates.avatar_url = avatarUrl
+  console.log(`[LIFF Login] プロフィール更新チェック: DB.line_name=${user.line_name ?? "(null)"}, new lineName=${lineName}, updates=${JSON.stringify(profileUpdates)}`)
   if (Object.keys(profileUpdates).length > 0) {
     await supabase.from("users").update(profileUpdates).eq("id", user.id)
     user = { ...user, ...profileUpdates }
+    console.log(`[LIFF Login] プロフィール更新完了: ${JSON.stringify(profileUpdates)}`)
   }
 
   // ── auth_user_id 未設定の既存ユーザー：自動でリンク ───────────────────

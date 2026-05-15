@@ -8,13 +8,15 @@ import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useStores } from "@/hooks/use-stores";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
+import { completeLiffLogin } from "@/lib/liff-login";
 import { Store } from "@/lib/types";
 import { Search, Heart, Loader2 } from "lucide-react";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const tabs = ["店舗一覧", "お気に入り", "履歴"] as const;
+const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
 
 function StoreCard({
   store,
@@ -67,7 +69,7 @@ function StoreCard({
 
 export default function TakeoutStorePage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, setUser } = useAuth();
   const {
     profile,
     points,
@@ -81,33 +83,58 @@ export default function TakeoutStorePage() {
   const [favSearchQuery, setFavSearchQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
 
-  // LINEログイン（未ログイン時のみ）
-  const [progress, setProgress] = useState(0);
   const [loginDone, setLoginDone] = useState(false);
-  const animStarted = useRef(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const liffStarted = useRef(false);
 
+  // 常にLINEログインを実行（前回セッションキャッシュを無視）
   useEffect(() => {
-    if (authLoading) return;
-    if (user) {
+    if (liffStarted.current) return;
+    liffStarted.current = true;
+
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) {
       setLoginDone(true);
       return;
     }
-    if (animStarted.current) return;
-    animStarted.current = true;
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) { clearInterval(timer); return 100; }
-        return prev + 4;
-      });
-    }, 60);
-    return () => clearInterval(timer);
-  }, [authLoading, user]);
 
-  useEffect(() => {
-    if (progress !== 100) return;
-    const t = setTimeout(() => setLoginDone(true), 600);
-    return () => clearTimeout(t);
-  }, [progress]);
+    // 直前にroot pageでLIFFログイン済みなら再実行不要
+    const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
+    if (ts && Date.now() - Number(ts) < 15000 && user) {
+      setLoginDone(true);
+      return;
+    }
+
+    ;(async () => {
+      try {
+        const liff = (await import("@line/liff")).default;
+        await liff.init({ liffId });
+
+        if (!liff.isInClient()) {
+          // LINEクライアント外（ブラウザ）ではキャッシュユーザーを使用
+          setLoginDone(true);
+          return;
+        }
+
+        // LINEクライアント内：常にフレッシュログイン
+        try { localStorage.removeItem(STORAGE_KEY) } catch {}
+        setUser(null);
+
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        const { authUser } = await completeLiffLogin(liff);
+        setUser(authUser);
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+        setLoginDone(true);
+      } catch (err: any) {
+        console.error("[StoreSelection] LIFF login error:", err);
+        setLoginError(err?.message || "LINEログインに失敗しました");
+      }
+    })();
+  }, []);
 
   const filteredStores = stores.filter((s) =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -151,16 +178,17 @@ export default function TakeoutStorePage() {
             transition={{ delay: 0.2, duration: 0.4 }}
             className="w-full max-w-xs text-center"
           >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">LINEログイン中...</h2>
-            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3 shadow-inner">
-              <motion.div
-                className="h-full rounded-full bg-[#F9A825]"
-                initial={{ width: "0%" }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.08 }}
-              />
-            </div>
-            <p className="text-lg font-bold text-gray-900">{progress}%</p>
+            {loginError ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-left">
+                <p className="text-sm font-bold text-red-700 mb-1">ログインエラー</p>
+                <p className="text-xs text-red-600 break-all">{loginError}</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+                <p className="text-base font-bold text-gray-700">LINEログイン中...</p>
+              </div>
+            )}
           </motion.div>
         </div>
       </div>

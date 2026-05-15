@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarDays, MapPin, X, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
+import { completeLiffLogin } from "@/lib/liff-login";
+
+const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
 import { useCustomerContext } from "@/lib/customer-context";
 import { toUIStore } from "@/lib/types";
 import type { Store } from "@/lib/types";
@@ -250,71 +253,54 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const sameDayStatus = useSameDayAvailability(loginDone ? store : null);
   const sameDayOk = sameDayStatus.available;
 
-  // ログイン済みならすぐに表示
+  // 常にLINEログインを実行（前回セッションキャッシュを無視）
   useEffect(() => {
     if (authLoading) return;
-    if (user) {
-      setLoginDone(true);
-    }
-  }, [authLoading, user]);
 
-  // LINEアプリ内からのアクセス時に自動ログイン
-  useEffect(() => {
-    if (authLoading) return;
-    if (user) return;
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) return;
+    if (!liffId) {
+      // LIFF未設定の場合はキャッシュユーザーをそのまま使用
+      if (user) setLoginDone(true);
+      return;
+    }
+
+    // 直前にroot pageでLIFFログイン済みなら再実行不要
+    const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
+    if (ts && Date.now() - Number(ts) < 15000 && user) {
+      setLoginDone(true);
+      return;
+    }
 
     (async () => {
       try {
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
-        if (!liff.isInClient()) return;
+
+        if (!liff.isInClient()) {
+          // ブラウザアクセス：キャッシュユーザーを使用
+          if (user) setLoginDone(true);
+          return;
+        }
+
+        // LINEクライアント内：常にフレッシュログイン
+        try { localStorage.removeItem(STORAGE_KEY) } catch {}
+        setUser(null);
+
         if (!liff.isLoggedIn()) {
           liff.login({ redirectUri: window.location.href });
           return;
         }
-        const idToken = liff.getIDToken();
-        if (!idToken) return;
-        const res = await fetch("/api/line/liff-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          console.error("[Store LIFF] login API error:", errBody);
-          setLoginError(`${errBody.error || "login_failed"}${errBody.detail ? ": " + errBody.detail : ""}`);
-          return;
-        }
-        const { user: userData, otp } = await res.json();
-        if (!userData) {
-          setLoginError("ユーザー情報を取得できませんでした");
-          return;
-        }
-        if (otp) {
-          const { supabase } = await import("@/lib/supabase");
-          await supabase.auth.verifyOtp({ email: otp.email, token: otp.token, type: "magiclink" });
-        }
-        const nameParts = (userData.line_name || userData.name || "").split(" ");
-        const authUser = {
-          id: userData.id,
-          email: userData.email ?? "",
-          userType: "customer" as const,
-          firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
-          lastName: nameParts[0] ?? "",
-          storeId: null as string | null,
-          raw: userData,
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+
+        const { authUser } = await completeLiffLogin(liff);
         setUser(authUser);
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
         setLoginDone(true);
       } catch (err: any) {
         console.error("[Store LIFF] auto-login error:", err);
         setLoginError(err?.message || "LIFF初期化エラー");
       }
     })();
-  }, [authLoading, user]);
+  }, [authLoading]);
 
   // 店舗情報フェッチ
   useEffect(() => {

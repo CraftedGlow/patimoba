@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { completeLiffLogin } from "@/lib/liff-login";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
+
+const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp"
 import { LpHeader } from "@/components/lp/lp-header";
 import { LpHero } from "@/components/lp/lp-hero";
 import { LpTwoValues } from "@/components/lp/lp-two-values";
@@ -25,6 +27,10 @@ export default function Home() {
   const [isLiffCallback, setIsLiffCallback] = useState(false);
 
   const handleLiffCallback = useCallback(async (liffId: string) => {
+    // 毎回フレッシュなLINEプロフィールを取得するためキャッシュをクリア
+    try { localStorage.removeItem(STORAGE_KEY) } catch {}
+    setUser(null)
+
     try {
       const liff = (await import("@line/liff")).default;
       await liff.init({ liffId });
@@ -35,6 +41,7 @@ export default function Home() {
           sessionStorage.setItem("liff_return_path", redirectedPath);
           const { authUser, returnPath } = await completeLiffLogin(liff);
           setUser(authUser);
+          sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
           router.replace(returnPath || redirectedPath);
         } else {
           router.replace(redirectedPath + window.location.search);
@@ -45,6 +52,7 @@ export default function Home() {
       if (liff.isLoggedIn()) {
         const { authUser, returnPath } = await completeLiffLogin(liff);
         setUser(authUser);
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
         router.replace(returnPath || "/customer/takeout");
       } else {
         router.replace("/login");

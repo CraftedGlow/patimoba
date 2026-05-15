@@ -14,68 +14,398 @@ export type Database = {
   }
   public: {
     Tables: {
-      platform_settings: {
+      buyers: {
         Row: {
-          key: string
-          value: string
+          auth_user_id: string | null
+          budget_limit: number | null
+          company_name: string
+          created_at: string
+          department: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
           updated_at: string
         }
         Insert: {
-          key: string
-          value: string
+          auth_user_id?: string | null
+          budget_limit?: number | null
+          company_name: string
+          created_at?: string
+          department: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
           updated_at?: string
         }
         Update: {
-          key?: string
-          value?: string
+          auth_user_id?: string | null
+          budget_limit?: number | null
+          company_name?: string
+          created_at?: string
+          department?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
       }
-      print_jobs: {
+      decoration_group_items: {
         Row: {
+          decoration_id: string
+          display_order: number
+          group_id: string
           id: string
-          store_id: string
-          order_id: string | null
-          status: string
-          markup: string
-          delete_token: string
+        }
+        Insert: {
+          decoration_id: string
+          display_order?: number
+          group_id: string
+          id?: string
+        }
+        Update: {
+          decoration_id?: string
+          display_order?: number
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decoration_group_items_decoration_id_fkey"
+            columns: ["decoration_id"]
+            isOneToOne: false
+            referencedRelation: "decorations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decoration_group_items_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "decoration_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decoration_groups: {
+        Row: {
           created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          max_selections: number | null
+          name: string
+          preparation_days: number | null
+          required: boolean
+          selection_type: string
+          store_id: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          store_id: string
-          order_id?: string | null
-          status?: string
-          markup: string
-          delete_token?: string
           created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          max_selections?: number | null
+          name: string
+          preparation_days?: number | null
+          required?: boolean
+          selection_type?: string
+          store_id: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          store_id?: string
-          order_id?: string | null
-          status?: string
-          markup?: string
-          delete_token?: string
           created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          max_selections?: number | null
+          name?: string
+          preparation_days?: number | null
+          required?: boolean
+          selection_type?: string
+          store_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "print_jobs_store_id_fkey"
+            foreignKeyName: "decoration_groups_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      decorations: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_seasonal: boolean
+          name: string
+          preparation_days: number | null
+          price: number
+          season_end: string | null
+          season_start: string | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_seasonal?: boolean
+          name: string
+          preparation_days?: number | null
+          price?: number
+          season_end?: string | null
+          season_start?: string | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_seasonal?: boolean
+          name?: string
+          preparation_days?: number | null
+          price?: number
+          season_end?: string | null
+          season_start?: string | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "print_jobs_order_id_fkey"
+            foreignKeyName: "decorations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          addressee: string
+          created_at: string
+          id: string
+          invoice_number: string | null
+          issued_at: string
+          note: string | null
+          order_id: string
+          pdf_url: string | null
+          type: string
+        }
+        Insert: {
+          addressee?: string
+          created_at?: string
+          id?: string
+          invoice_number?: string | null
+          issued_at?: string
+          note?: string | null
+          order_id: string
+          pdf_url?: string | null
+          type: string
+        }
+        Update: {
+          addressee?: string
+          created_at?: string
+          id?: string
+          invoice_number?: string | null
+          issued_at?: string
+          note?: string | null
+          order_id?: string
+          pdf_url?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "orders"
+            referencedRelation: "machi_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machi_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          product_id: string
+          quantity: number
+          shipped_at: string | null
+          shipping_address_id: string
+          store_id: string
+          tracking_number: string | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          product_id: string
+          quantity?: number
+          shipped_at?: string | null
+          shipping_address_id: string
+          store_id: string
+          tracking_number?: string | null
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          shipped_at?: string | null
+          shipping_address_id?: string
+          store_id?: string
+          tracking_number?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machi_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "machi_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machi_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machi_order_items_shipping_address_id_fkey"
+            columns: ["shipping_address_id"]
+            isOneToOne: false
+            referencedRelation: "shipping_addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machi_order_items_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      machi_orders: {
+        Row: {
+          buyer_id: string
+          cancel_fee_rate: number
+          cancelled_at: string | null
+          created_at: string
+          id: string
+          note: string | null
+          payjp_charge_id: string | null
+          payment_method: string
+          quote_requested: boolean
+          status: string
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          cancel_fee_rate?: number
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          payjp_charge_id?: string | null
+          payment_method?: string
+          quote_requested?: boolean
+          status?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          cancel_fee_rate?: number
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          note?: string | null
+          payjp_charge_id?: string | null
+          payment_method?: string
+          quote_requested?: boolean
+          status?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machi_orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      noshi: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          store_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          name: string
+          price?: number
+          store_id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "noshi_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -191,11 +521,11 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           customer_id: string | null
+          customer_name_snapshot: string | null
           discount_amount: number | null
           fulfilled_at: string | null
           fulfilled_by: string | null
           fulfillment_status: string
-          customer_name_snapshot: string | null
           guest_email: string | null
           id: string
           notes: string | null
@@ -206,6 +536,7 @@ export type Database = {
           payment_status: string
           pickup_date: string | null
           pickup_time: string | null
+          print_photo_url: string | null
           store_id: string
           subtotal: number
           total_amount: number
@@ -216,10 +547,10 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           customer_id?: string | null
+          customer_name_snapshot?: string | null
           discount_amount?: number | null
           fulfilled_at?: string | null
           fulfilled_by?: string | null
-          customer_name_snapshot?: string | null
           fulfillment_status?: string
           guest_email?: string | null
           id?: string
@@ -231,6 +562,7 @@ export type Database = {
           payment_status?: string
           pickup_date?: string | null
           pickup_time?: string | null
+          print_photo_url?: string | null
           store_id: string
           subtotal?: number
           total_amount?: number
@@ -256,6 +588,7 @@ export type Database = {
           payment_status?: string
           pickup_date?: string | null
           pickup_time?: string | null
+          print_photo_url?: string | null
           store_id?: string
           subtotal?: number
           total_amount?: number
@@ -281,6 +614,153 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payouts: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_item_id: string
+          paid_at: string | null
+          status: string
+          store_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_item_id: string
+          paid_at?: string | null
+          status?: string
+          store_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_item_id?: string
+          paid_at?: string | null
+          status?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payouts_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "machi_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payouts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      print_jobs: {
+        Row: {
+          created_at: string
+          delete_token: string
+          id: string
+          markup: string
+          order_id: string | null
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delete_token?: string
+          id?: string
+          markup: string
+          order_id?: string | null
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delete_token?: string
+          id?: string
+          markup?: string
+          order_id?: string | null
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_decoration_groups: {
+        Row: {
+          display_order: number
+          group_id: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          display_order?: number
+          group_id: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          display_order?: number
+          group_id?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_decoration_groups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "decoration_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_decoration_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -334,78 +814,117 @@ export type Database = {
       }
       products: {
         Row: {
+          allergens: string[] | null
           base_price: number
+          best_before_days: number | null
           category_name: string | null
+          content_quantity: string | null
           created_at: string
           cross_section_image: string | null
           custom_options: Json
           daily_max_quantity: number | null
+          days_before_order_deadline: number
           description: string | null
           display_order: number | null
+          has_gift_wrapping: boolean
           id: string
           image: string | null
+          images: string[] | null
+          ingredients: string | null
           is_active: boolean
           is_ec: boolean
           is_preorder_required: boolean | null
+          is_published: boolean
           is_takeout: boolean
           limited_from: string | null
           limited_until: string | null
           min_order_lead_minutes: number | null
           name: string
+          noshi_enabled: boolean
+          noshi_ids: string[]
           preparation_days: number | null
           same_day_order_allowed: boolean | null
+          shipping_method: string | null
+          stock: number
+          storage_method: string | null
           store_id: string
           tags: Json | null
           tax_type: string | null
           updated_at: string
         }
         Insert: {
+          allergens?: string[] | null
           base_price?: number
+          best_before_days?: number | null
           category_name?: string | null
+          content_quantity?: string | null
           created_at?: string
           cross_section_image?: string | null
           custom_options?: Json
           daily_max_quantity?: number | null
+          days_before_order_deadline?: number
           description?: string | null
           display_order?: number | null
+          has_gift_wrapping?: boolean
           id?: string
           image?: string | null
+          images?: string[] | null
+          ingredients?: string | null
           is_active?: boolean
           is_ec?: boolean
           is_preorder_required?: boolean | null
+          is_published?: boolean
           is_takeout?: boolean
           limited_from?: string | null
           limited_until?: string | null
           min_order_lead_minutes?: number | null
           name?: string
+          noshi_enabled?: boolean
+          noshi_ids?: string[]
           preparation_days?: number | null
           same_day_order_allowed?: boolean | null
+          shipping_method?: string | null
+          stock?: number
+          storage_method?: string | null
           store_id: string
           tags?: Json | null
           tax_type?: string | null
           updated_at?: string
         }
         Update: {
+          allergens?: string[] | null
           base_price?: number
+          best_before_days?: number | null
           category_name?: string | null
+          content_quantity?: string | null
           created_at?: string
           cross_section_image?: string | null
           custom_options?: Json
           daily_max_quantity?: number | null
+          days_before_order_deadline?: number
           description?: string | null
           display_order?: number | null
+          has_gift_wrapping?: boolean
           id?: string
           image?: string | null
+          images?: string[] | null
+          ingredients?: string | null
           is_active?: boolean
           is_ec?: boolean
           is_preorder_required?: boolean | null
+          is_published?: boolean
           is_takeout?: boolean
           limited_from?: string | null
           limited_until?: string | null
           min_order_lead_minutes?: number | null
           name?: string
+          noshi_enabled?: boolean
+          noshi_ids?: string[]
           preparation_days?: number | null
           same_day_order_allowed?: boolean | null
+          shipping_method?: string | null
+          stock?: number
+          storage_method?: string | null
           store_id?: string
           tags?: Json | null
           tax_type?: string | null
@@ -421,183 +940,40 @@ export type Database = {
           },
         ]
       }
-      decorations: {
+      shipping_addresses: {
         Row: {
-          id: string
-          store_id: string
-          name: string
-          description: string | null
-          image_url: string | null
-          category: string
-          price: number
-          is_active: boolean
-          is_seasonal: boolean
-          season_start: string | null
-          season_end: string | null
-          preparation_days: number | null
-          display_order: number
+          address: string
+          buyer_id: string
           created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          store_id: string
-          name: string
-          description?: string | null
-          image_url?: string | null
-          category?: string
-          price?: number
-          is_active?: boolean
-          is_seasonal?: boolean
-          season_start?: string | null
-          season_end?: string | null
-          preparation_days?: number | null
-          display_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          store_id?: string
-          name?: string
-          description?: string | null
-          image_url?: string | null
-          category?: string
-          price?: number
-          is_active?: boolean
-          is_seasonal?: boolean
-          season_start?: string | null
-          season_end?: string | null
-          preparation_days?: number | null
-          display_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "decorations_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      decoration_groups: {
-        Row: {
           id: string
-          store_id: string
-          name: string
-          description: string | null
-          selection_type: string
-          max_selections: number | null
-          required: boolean
-          display_order: number
-          created_at: string
-          updated_at: string
+          label: string | null
+          postal_code: string
+          recipient_name: string
         }
         Insert: {
-          id?: string
-          store_id: string
-          name: string
-          description?: string | null
-          selection_type?: string
-          max_selections?: number | null
-          required?: boolean
-          display_order?: number
+          address: string
+          buyer_id: string
           created_at?: string
-          updated_at?: string
+          id?: string
+          label?: string | null
+          postal_code: string
+          recipient_name: string
         }
         Update: {
-          id?: string
-          store_id?: string
-          name?: string
-          description?: string | null
-          selection_type?: string
-          max_selections?: number | null
-          required?: boolean
-          display_order?: number
+          address?: string
+          buyer_id?: string
           created_at?: string
-          updated_at?: string
+          id?: string
+          label?: string | null
+          postal_code?: string
+          recipient_name?: string
         }
         Relationships: [
           {
-            foreignKeyName: "decoration_groups_store_id_fkey"
-            columns: ["store_id"]
+            foreignKeyName: "shipping_addresses_buyer_id_fkey"
+            columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      decoration_group_items: {
-        Row: {
-          id: string
-          group_id: string
-          decoration_id: string
-          display_order: number
-        }
-        Insert: {
-          id?: string
-          group_id: string
-          decoration_id: string
-          display_order?: number
-        }
-        Update: {
-          id?: string
-          group_id?: string
-          decoration_id?: string
-          display_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "decoration_group_items_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "decoration_groups"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "decoration_group_items_decoration_id_fkey"
-            columns: ["decoration_id"]
-            isOneToOne: false
-            referencedRelation: "decorations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      product_decoration_groups: {
-        Row: {
-          id: string
-          product_id: string
-          group_id: string
-          display_order: number
-        }
-        Insert: {
-          id?: string
-          product_id: string
-          group_id: string
-          display_order?: number
-        }
-        Update: {
-          id?: string
-          product_id?: string
-          group_id?: string
-          display_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_decoration_groups_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_decoration_groups_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "decoration_groups"
+            referencedRelation: "buyers"
             referencedColumns: ["id"]
           },
         ]
@@ -803,70 +1179,88 @@ export type Database = {
       stores: {
         Row: {
           address: string | null
+          area: string | null
+          blackout_periods: Json | null
           building: string | null
+          category: string | null
           created_at: string
           description: string | null
           email: string | null
           id: string
           image: string | null
+          images: string[] | null
+          invoice_number: string | null
           is_active: boolean
+          is_corporate_ready: boolean
+          is_published: boolean
           line_channel_access_token: string | null
           line_official_account_id: string | null
           logo_url: string | null
           name: string
-          payjp_tenant_id: string | null
           phone: string | null
           plan: string
-          blackout_periods: Json | null
           plan_options: Json | null
           postal_code: string | null
           slug: string | null
+          tenant_id: string | null
           tokusho_text: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          area?: string | null
           blackout_periods?: Json | null
           building?: string | null
+          category?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
           id?: string
           image?: string | null
+          images?: string[] | null
+          invoice_number?: string | null
           is_active?: boolean
+          is_corporate_ready?: boolean
+          is_published?: boolean
           line_channel_access_token?: string | null
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string
-          payjp_tenant_id?: string | null
           phone?: string | null
           plan?: string
           plan_options?: Json | null
           postal_code?: string | null
           slug?: string | null
+          tenant_id?: string | null
           tokusho_text?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          area?: string | null
           blackout_periods?: Json | null
           building?: string | null
+          category?: string | null
           created_at?: string
           description?: string | null
           email?: string | null
           id?: string
           image?: string | null
+          images?: string[] | null
+          invoice_number?: string | null
           is_active?: boolean
+          is_corporate_ready?: boolean
+          is_published?: boolean
           line_channel_access_token?: string | null
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string
-          payjp_tenant_id?: string | null
           phone?: string | null
           plan?: string
           plan_options?: Json | null
           postal_code?: string | null
           slug?: string | null
+          tenant_id?: string | null
           tokusho_text?: string | null
           updated_at?: string
         }
@@ -919,55 +1313,67 @@ export type Database = {
       }
       users: {
         Row: {
+          address: string | null
           anniversaries: Json
           auth_user_id: string | null
           avatar_url: string | null
+          birth_date: string | null
           created_at: string
+          customer_id: string | null
           email: string | null
+          gender: string | null
           id: string
           line_name: string | null
           line_user_id: string | null
           name: string
           name_kana: string | null
-          customer_id: string | null
           phone: string | null
           points: number
+          postal_code: string | null
           status: string
           updated_at: string
           user_type: string
         }
         Insert: {
+          address?: string | null
           anniversaries?: Json
           auth_user_id?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
           created_at?: string
+          customer_id?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           line_name?: string | null
           line_user_id?: string | null
           name?: string
           name_kana?: string | null
-          customer_id?: string | null
           phone?: string | null
           points?: number
+          postal_code?: string | null
           status?: string
           updated_at?: string
           user_type?: string
         }
         Update: {
+          address?: string | null
           anniversaries?: Json
           auth_user_id?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
           created_at?: string
+          customer_id?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           line_name?: string | null
           line_user_id?: string | null
           name?: string
           name_kana?: string | null
-          customer_id?: string | null
           phone?: string | null
           points?: number
+          postal_code?: string | null
           status?: string
           updated_at?: string
           user_type?: string
@@ -979,7 +1385,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_app_user_id: { Args: never; Returns: string }
+      is_app_admin: { Args: never; Returns: boolean }
+      is_store_member: { Args: { p_store_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

@@ -1,237 +1,204 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Check, Trash2, LogOut, Plus, X, Camera } from "lucide-react";
-import { PasswordInput } from "@/components/ui/password-input";
-import { CustomerHeader } from "@/components/customer/customer-header";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/lib/auth-context";
+import Image from "next/image";
+import { Loader2, Check, Plus, X } from "lucide-react";
+import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
+import { completeLiffLogin } from "@/lib/liff-login";
 
-const years = Array.from({ length: 80 }, (_, i) => `${2010 - i}年`);
-const monthLabels = Array.from({ length: 12 }, (_, i) => `${i + 1}月`);
-const dayLabels = Array.from({ length: 31 }, (_, i) => `${i + 1}日`);
+const ANNIVERSARY_TYPES = [
+  "誕生日",
+  "結婚記念日",
+  "子供の誕生日",
+  "交際記念日",
+  "入学・卒業記念日",
+  "その他",
+];
+
+const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
+
+const years = Array.from({ length: 80 }, (_, i) => 2010 - i);
+const months = Array.from({ length: 12 }, (_, i) => i + 1);
+const days = Array.from({ length: 31 }, (_, i) => i + 1);
+
+function parseBirthDate(dateStr: string | null): { year: number; month: number; day: number } | null {
+  if (!dateStr) return null;
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return null;
+  return { year: Number(parts[0]), month: Number(parts[1]), day: Number(parts[2]) };
+}
+
+function formatBirthDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 export default function CustomerProfilePage() {
-  const { user, logout } = useAuth();
-  const router = useRouter();
+  const { user, setUser } = useAuth();
+
+  const [loginDone, setLoginDone] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const liffStarted = useRef(false);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isNew, setIsNew] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const [lastName, setLastName] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastNameKana, setLastNameKana] = useState("");
   const [firstNameKana, setFirstNameKana] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [gender, setGender] = useState<string>("女性");
-  const [birthYear, setBirthYear] = useState("1990年");
-  const [birthMonth, setBirthMonth] = useState("1月");
-  const [birthDay, setBirthDay] = useState("1日");
+  const [gender, setGender] = useState("回答しない");
+  const [birthYear, setBirthYear] = useState<number>(1990);
+  const [birthMonth, setBirthMonth] = useState<number>(1);
+  const [birthDay, setBirthDay] = useState<number>(1);
+  const [hasBirthDate, setHasBirthDate] = useState(false);
+  const [postalCode, setPostalCode] = useState("");
+  const [address, setAddress] = useState("");
   const [anniversaries, setAnniversaries] = useState<{ label: string; date: string }[]>([]);
 
-  const loadProfile = useCallback(async () => {
-    if (!user || user.userType !== "customer") {
-      setIsNew(true);
-      setLoading(false);
-      return;
-    }
-
-    const { data, error: err } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (err || !data) {
-      setIsNew(true);
-      setLoading(false);
-      return;
-    }
-
-    setUserId(data.id);
-    const nameParts = (data.name || "").split(" ");
-    setLastName(nameParts[0] || "");
-    setFirstName(nameParts.slice(1).join(" ") || "");
-    setEmail(data.email || "");
-    setPhone(data.phone || "");
-    setAvatarUrl(data.avatar_url || null);
-    if (data.name_kana) {
-      const kanaParts = String(data.name_kana).split(/\s+/);
-      setLastNameKana(kanaParts[0] || "");
-      setFirstNameKana(kanaParts.slice(1).join(" ") || "");
-    }
-    if (Array.isArray(data.anniversaries)) {
-      setAnniversaries(
-        data.anniversaries
-          .filter((a: any) => a && typeof a === "object")
-          .map((a: any) => ({ label: String(a.label ?? ""), date: String(a.date ?? "") })),
-      );
-    }
-
-    setIsNew(false);
-    setLoading(false);
-  }, [user]);
-
+  // 常にLINEログインを実行
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    if (liffStarted.current) return;
+    liffStarted.current = true;
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("画像ファイルを選択してください");
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+    if (!liffId) {
+      setLoginDone(true);
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError("画像は 5MB 以下にしてください");
-      return;
-    }
-    if (!userId) {
-      setError("プロフィール保存後にアップロードできます");
-      return;
-    }
-    setUploadingAvatar(true);
-    setError(null);
-    try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `${userId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-      const url = pub?.publicUrl || null;
-      setAvatarUrl(url);
-      await supabase.from("users").update({ avatar_url: url }).eq("id", userId);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "画像のアップロードに失敗しました");
-    } finally {
-      setUploadingAvatar(false);
-      e.target.value = "";
-    }
-  };
 
-  const handleDelete = async () => {
-    if (deleting || !userId) return;
-    setDeleting(true);
-    setError(null);
-    try {
-      const { error: err } = await supabase
-        .from("users")
-        .delete()
-        .eq("id", userId);
-      if (err) throw err;
-      logout();
-      router.push("/customer/login");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "削除に失敗しました");
-      setDeleting(false);
+    // 直前にroot pageでLIFFログイン済みなら再実行不要
+    const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
+    if (ts && Date.now() - Number(ts) < 15000 && user) {
+      setLoginDone(true);
+      return;
     }
-  };
+
+    ;(async () => {
+      try {
+        const liff = (await import("@line/liff")).default;
+        await liff.init({ liffId });
+
+        if (!liff.isInClient()) {
+          // ブラウザアクセス：キャッシュユーザーを使用
+          if (!user) {
+            setLoginError("このページはLINEミニアプリからアクセスしてください");
+            return;
+          }
+          setLoginDone(true);
+          return;
+        }
+
+        // LINEクライアント内：常にフレッシュログイン
+        try { localStorage.removeItem(STORAGE_KEY) } catch {}
+        setUser(null);
+
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        const { authUser } = await completeLiffLogin(liff);
+        setUser(authUser);
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+        setLoginDone(true);
+      } catch (err: any) {
+        console.error("[Profile] LIFF login error:", err);
+        setLoginError(err?.message || "LINEログインに失敗しました");
+      }
+    })();
+  }, []);
+
+  // LINEログイン完了後にDBからプロフィールを取得
+  useEffect(() => {
+    if (!loginDone || !user) return;
+
+    ;(async () => {
+      setLoading(true);
+      try {
+        const { supabase } = await import("@/lib/supabase");
+        const { data } = await supabase
+          .from("users")
+          .select("id, name, name_kana, phone, gender, birth_date, postal_code, address, anniversaries")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (data) {
+          setUserId(data.id);
+          const nameParts = (data.name || "").split(" ");
+          setLastName(nameParts[0] || "");
+          setFirstName(nameParts.slice(1).join(" ") || "");
+          if (data.name_kana) {
+            const kanaParts = String(data.name_kana).split(/\s+/);
+            setLastNameKana(kanaParts[0] || "");
+            setFirstNameKana(kanaParts.slice(1).join(" ") || "");
+          }
+          setPhone(data.phone || "");
+          setGender(data.gender || "回答しない");
+          const bd = parseBirthDate(data.birth_date);
+          if (bd) {
+            setBirthYear(bd.year);
+            setBirthMonth(bd.month);
+            setBirthDay(bd.day);
+            setHasBirthDate(true);
+          }
+          setPostalCode(data.postal_code || "");
+          setAddress(data.address || "");
+          if (Array.isArray(data.anniversaries)) {
+            setAnniversaries(
+              data.anniversaries
+                .filter((a: any) => a && typeof a === "object")
+                .map((a: any) => ({ label: String(a.label ?? ""), date: String(a.date ?? "") }))
+            );
+          }
+        } else {
+          setUserId(user.id);
+        }
+      } catch (e) {
+        console.error("[Profile] load error:", e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [loginDone, user]);
 
   const handleSave = async () => {
-    if (saving) return;
+    if (saving || !userId) return;
     setError(null);
-
-    if (!lastName.trim()) {
-      setError("姓は必須です");
-      return;
-    }
-    if (!email.trim()) {
-      setError("メールアドレスは必須です");
-      return;
-    }
-
-    if (isNew || password.trim()) {
-      if (!password.trim()) {
-        setError("パスワードを設定してください");
-        return;
-      }
-      if (password.length < 6) {
-        setError("パスワードは6文字以上で設定してください");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("パスワードが一致しません");
-        return;
-      }
-    }
-
     setSaving(true);
-    try {
-      const fullName = [lastName, firstName].filter(Boolean).join(" ");
 
+    try {
+      const { supabase } = await import("@/lib/supabase");
+      const fullName = [lastName, firstName].filter(Boolean).join(" ");
+      const fullNameKana = [lastNameKana, firstNameKana].filter(Boolean).join(" ");
       const cleanedAnniversaries = anniversaries
         .map((a) => ({ label: a.label.trim(), date: a.date.trim() }))
         .filter((a) => a.label && a.date);
 
-      const fullNameKana = [lastNameKana, firstNameKana].filter(Boolean).join(" ");
-
-      const payload = {
-        name: fullName,
+      const payload: Record<string, any> = {
+        name: fullName || user?.raw?.line_name || "",
         name_kana: fullNameKana || null,
-        email,
         phone: phone || null,
-        avatar_url: avatarUrl,
+        gender,
+        birth_date: hasBirthDate ? formatBirthDate(birthYear, birthMonth, birthDay) : null,
+        postal_code: postalCode || null,
+        address: address || null,
         anniversaries: cleanedAnniversaries,
       };
 
-      if (userId) {
-        const { error: err } = await supabase
-          .from("users")
-          .update(payload)
-          .eq("id", userId);
-        if (err) throw err;
+      const { error: err } = await supabase
+        .from("users")
+        .update(payload)
+        .eq("id", userId);
 
-        if (password.trim()) {
-          const { error: pwErr } = await supabase.auth.updateUser({ password });
-          if (pwErr) throw pwErr;
-        }
-      } else {
-        const { data: authResp, error: authErr } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (authErr) throw authErr;
-        const authUserId = authResp.user?.id;
-        if (!authUserId) throw new Error("認証ユーザーの作成に失敗しました");
+      if (err) throw err;
 
-        const { data: created, error: err } = await supabase
-          .from("users")
-          .insert({
-            ...payload,
-            auth_user_id: authUserId,
-            user_type: "customer",
-          })
-          .select()
-          .single();
-        if (err) throw err;
-        if (created) {
-          setUserId(created.id);
-          setIsNew(false);
-        }
-      }
-
-      setPassword("");
-      setConfirmPassword("");
       setSaved(true);
-      setTimeout(() => {
-        setSaved(false);
-        router.push("/customer/takeout");
-      }, 1200);
+      setTimeout(() => setSaved(false), 2500);
     } catch (e) {
       setError(e instanceof Error ? e.message : "保存に失敗しました");
     } finally {
@@ -239,9 +206,53 @@ export default function CustomerProfilePage() {
     }
   };
 
+  // LINEログイン中
+  if (!loginDone) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
+        <div className="flex-1 flex flex-col items-center justify-center px-8">
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="mb-10"
+          >
+            <Image
+              src="/スクリーンショット_2026-04-09_14.49.59.png"
+              alt="パティモバ"
+              width={280}
+              height={80}
+              className="h-14 w-auto"
+              priority
+            />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="w-full max-w-xs text-center"
+          >
+            {loginError ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-left">
+                <p className="text-sm font-bold text-red-700 mb-1">ログインエラー</p>
+                <p className="text-xs text-red-600 break-all">{loginError}</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+                <p className="text-base font-bold text-gray-700">LINEログイン中...</p>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
       </div>
     );
@@ -249,116 +260,33 @@ export default function CustomerProfilePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <CustomerHeader
-        userName={
-          [lastName, firstName].filter(Boolean).join(" ") ||
-          user?.lastName ||
-          "ゲスト"
-        }
-        avatarUrl={avatarUrl || undefined}
-      />
+      {/* ヘッダー */}
+      <div className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-300 px-5 py-3 flex items-center justify-center">
+        <Image
+          src="/スクリーンショット_2026-04-09_14.49.59.png"
+          alt="パティモバ"
+          width={160}
+          height={44}
+          className="h-8 w-auto"
+        />
+      </div>
 
-      <div className="px-5 py-6 pb-12">
-        <h1 className="text-lg font-bold text-gray-900 mb-6">
-          お客様情報のご登録
-        </h1>
+      <div className="px-5 py-6 pb-16">
+        <h1 className="text-lg font-bold text-gray-900 mb-1">お客様情報の登録</h1>
+        <p className="text-xs text-gray-400 mb-6">入力した情報はお店のみに共有されます</p>
 
-        <div className="flex flex-col items-center mb-6">
-          <div className="relative w-24 h-24">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="avatar"
-                className="w-24 h-24 rounded-full object-cover border-2 border-amber-300"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-200">
-                <Camera className="w-7 h-7 text-gray-400" />
-              </div>
-            )}
-            <label
-              className={`absolute bottom-0 right-0 bg-amber-400 hover:bg-amber-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow cursor-pointer ${
-                uploadingAvatar ? "opacity-60 pointer-events-none" : ""
-              }`}
-            >
-              {uploadingAvatar ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Camera className="w-4 h-4" />
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-            </label>
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            {userId ? "タップで画像を変更（5MBまで）" : "先にアカウントを登録すると画像を設定できます"}
-          </p>
-        </div>
-
+        {/* お名前 */}
         <section className="mb-6">
-          <h2 className="text-sm font-bold text-gray-900 mb-4">
-            アカウント情報
-          </h2>
-
-          <div className="mb-4">
-            <label className="block text-xs text-gray-500 mb-1">
-              メールアドレス <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@patimoba.com"
-              className="w-full border-b border-gray-300 pb-2 text-sm focus:outline-none focus:border-amber-400"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-100">お名前</h2>
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                パスワード {isNew && <span className="text-red-500">*</span>}
-              </label>
-              <PasswordInput
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={isNew ? "パスワードを設定" : "変更する場合のみ入力"}
-                className="w-full border-b border-gray-300 pb-2 pr-8 text-sm focus:outline-none focus:border-amber-400"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                パスワード確認 {isNew && <span className="text-red-500">*</span>}
-              </label>
-              <PasswordInput
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="もう一度入力"
-                className="w-full border-b border-gray-300 pb-2 pr-8 text-sm focus:outline-none focus:border-amber-400"
-              />
-            </div>
-          </div>
-        </section>
-
-        <section className="mb-6">
-          <h2 className="text-sm font-bold text-gray-900 mb-4">
-            お名前・連絡先
-          </h2>
-
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
-                姓 <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-xs text-gray-500 mb-1">姓</label>
               <input
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="山田"
-                className="w-full border-b border-gray-300 pb-2 text-sm focus:outline-none focus:border-amber-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
               />
             </div>
             <div>
@@ -368,12 +296,11 @@ export default function CustomerProfilePage() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="花子"
-                className="w-full border-b border-gray-300 pb-2 text-sm focus:outline-none focus:border-amber-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
               />
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">セイ（フリガナ）</label>
               <input
@@ -381,7 +308,7 @@ export default function CustomerProfilePage() {
                 value={lastNameKana}
                 onChange={(e) => setLastNameKana(e.target.value)}
                 placeholder="ヤマダ"
-                className="w-full border-b border-gray-300 pb-2 text-sm focus:outline-none focus:border-amber-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
               />
             </div>
             <div>
@@ -391,35 +318,65 @@ export default function CustomerProfilePage() {
                 value={firstNameKana}
                 onChange={(e) => setFirstNameKana(e.target.value)}
                 placeholder="ハナコ"
-                className="w-full border-b border-gray-300 pb-2 text-sm focus:outline-none focus:border-amber-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
               />
             </div>
           </div>
+        </section>
 
-          <div className="mb-4">
+        {/* 連絡先 */}
+        <section className="mb-6">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-100">連絡先</h2>
+          <div className="mb-3">
             <label className="block text-xs text-gray-500 mb-1">電話番号</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="090-1234-5678"
-              maxLength={11}
-              className="w-full border-b border-gray-300 pb-2 text-sm focus:outline-none focus:border-amber-400"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
             />
           </div>
+          <div className="mb-3">
+            <label className="block text-xs text-gray-500 mb-1">郵便番号</label>
+            <input
+              type="text"
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+              placeholder="123-4567"
+              maxLength={8}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">住所</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="大分県豊後大野市千歳町…"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white"
+            />
+          </div>
+        </section>
+
+        {/* 基本情報 */}
+        <section className="mb-6">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-100">基本情報</h2>
 
           <div className="mb-4">
-            <label className="block text-xs text-gray-500 mb-3">性別</label>
+            <label className="block text-xs text-gray-500 mb-2">性別</label>
             <div className="flex gap-2">
               {["男性", "女性", "回答しない"].map((g) => (
                 <motion.button
                   key={g}
+                  type="button"
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setGender(g)}
                   className={`flex-1 py-2.5 rounded-full text-sm font-medium border-2 transition-colors ${
                     gender === g
                       ? "bg-amber-400 text-white border-amber-400"
-                      : "bg-white text-gray-600 border-gray-300"
+                      : "bg-white text-gray-600 border-gray-200"
                   }`}
                 >
                   {g}
@@ -428,200 +385,142 @@ export default function CustomerProfilePage() {
             </div>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-xs text-gray-500 mb-2">生年月日</label>
-            <div className="grid grid-cols-3 gap-2">
-              <select
-                value={birthYear}
-                onChange={(e) => setBirthYear(e.target.value)}
-                className="border border-gray-300 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              <select
-                value={birthMonth}
-                onChange={(e) => setBirthMonth(e.target.value)}
-                className="border border-gray-300 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-                {monthLabels.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={birthDay}
-                onChange={(e) => setBirthDay(e.target.value)}
-                className="border border-gray-300 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-              >
-                {dayLabels.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="mb-5">
+          <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs text-gray-500">記念日</label>
+              <label className="block text-xs text-gray-500">生年月日</label>
               <button
                 type="button"
-                onClick={() =>
-                  setAnniversaries((prev) => [...prev, { label: "", date: "" }])
-                }
-                className="inline-flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-600"
+                onClick={() => setHasBirthDate((v) => !v)}
+                className="text-xs text-amber-500 font-medium"
               >
-                <Plus className="w-3.5 h-3.5" />
-                追加
+                {hasBirthDate ? "未設定にする" : "設定する"}
               </button>
             </div>
-            {anniversaries.length === 0 && (
-              <p className="text-xs text-gray-400 mb-1">
-                結婚記念日・お子様の誕生日などを登録できます
-              </p>
+            {hasBirthDate && (
+              <div className="grid grid-cols-3 gap-2">
+                <select
+                  value={birthYear}
+                  onChange={(e) => setBirthYear(Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  {years.map((y) => (
+                    <option key={y} value={y}>{y}年</option>
+                  ))}
+                </select>
+                <select
+                  value={birthMonth}
+                  onChange={(e) => setBirthMonth(Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  {months.map((m) => (
+                    <option key={m} value={m}>{m}月</option>
+                  ))}
+                </select>
+                <select
+                  value={birthDay}
+                  onChange={(e) => setBirthDay(Number(e.target.value))}
+                  className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                >
+                  {days.map((d) => (
+                    <option key={d} value={d}>{d}日</option>
+                  ))}
+                </select>
+              </div>
             )}
-            <div className="space-y-2">
-              {anniversaries.map((a, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input
-                    type="text"
+          </div>
+        </section>
+
+        {/* 記念日 */}
+        <section className="mb-8">
+          <div className="flex items-center justify-between mb-3 pb-1 border-b border-gray-100">
+            <h2 className="text-sm font-bold text-gray-700">記念日登録</h2>
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setAnniversaries((prev) => [...prev, { label: ANNIVERSARY_TYPES[0], date: "" }])}
+              className="flex items-center gap-1 text-xs font-bold text-amber-500 hover:text-amber-600 px-2 py-1 rounded-lg"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              記念日を追加
+            </motion.button>
+          </div>
+
+          {anniversaries.length === 0 && (
+            <p className="text-xs text-gray-400 mb-2">
+              結婚記念日・お子様の誕生日などを登録すると、記念日に合わせたご提案をお届けします
+            </p>
+          )}
+
+          <div className="space-y-3">
+            {anniversaries.map((a, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 bg-amber-50 rounded-xl p-3"
+              >
+                <div className="flex-1 flex flex-col gap-2">
+                  <select
                     value={a.label}
                     onChange={(e) =>
                       setAnniversaries((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, label: e.target.value } : p)),
+                        prev.map((p, i) => (i === idx ? { ...p, label: e.target.value } : p))
                       )
                     }
-                    placeholder="記念日の名称（例: 結婚記念日）"
-                    className="flex-1 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  />
+                    className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  >
+                    {ANNIVERSARY_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                   <input
                     type="date"
                     value={a.date}
                     onChange={(e) =>
                       setAnniversaries((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p)),
+                        prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
                       )
                     }
-                    className="border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
                   />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAnniversaries((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                    className="p-2 text-gray-400 hover:text-red-500"
-                    aria-label="削除"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
-              ))}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setAnniversaries((prev) => prev.filter((_, i) => i !== idx))}
+                  className="p-1.5 text-gray-400 hover:text-red-500 shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ))}
           </div>
-
-          <AnimatePresence>
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="text-sm text-red-500 mb-4"
-              >
-                {error}
-              </motion.p>
-            )}
-          </AnimatePresence>
-
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isNew ? "登録する" : "変更を保存"}
-          </motion.button>
-
-          <p className="text-center text-xs text-gray-400 mt-3">
-            入力内容はお店にのみ共有されます
-          </p>
-
-          <div className="flex justify-center mt-4">
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                logout();
-                router.push("/");
-              }}
-              className="border-2 border-gray-300 text-gray-600 font-bold py-2.5 px-8 rounded-full text-sm flex items-center justify-center gap-1 hover:bg-gray-50 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              ログアウト
-            </motion.button>
-          </div>
-
-          {!isNew && userId && (
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowDeleteConfirm(true)}
-              className="w-full mt-4 border-2 border-red-300 text-red-500 font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 hover:bg-red-50 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-              お客様情報を削除する
-            </motion.button>
-          )}
         </section>
-      </div>
 
-      <AnimatePresence>
-        {showDeleteConfirm && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black z-[60]"
-              onClick={() => !deleting && setShowDeleteConfirm(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed left-6 right-6 top-[30%] bg-white rounded-2xl shadow-2xl z-[70] p-6"
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="text-sm text-red-500 mb-4"
             >
-              <h3 className="text-base font-bold text-center mb-2">
-                お客様情報を削除しますか？
-              </h3>
-              <p className="text-xs text-gray-500 text-center mb-5">
-                削除するとログアウトされ、元に戻せません。
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 border-2 border-gray-300 text-gray-700 font-bold py-2.5 rounded-full text-sm"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="button"
-                  disabled={deleting}
-                  onClick={handleDelete}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 disabled:opacity-60"
-                >
-                  {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  削除する
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          保存する
+        </motion.button>
+      </div>
 
       <AnimatePresence>
         {saved && (
@@ -629,10 +528,10 @@ export default function CustomerProfilePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 z-50"
+            className="fixed bottom-6 left-4 right-4 bg-green-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center justify-center gap-2 z-50"
           >
             <Check className="w-4 h-4" />
-            {isNew ? "アカウントを登録しました" : "変更を保存しました"}
+            保存しました
           </motion.div>
         )}
       </AnimatePresence>

@@ -15,7 +15,6 @@ export default function TakeoutLayout({ children }: { children: React.ReactNode 
   // 店舗TOPページは自前でLIFFログインを処理するため認証ガードを適用しない
   const isStorePage = pathname?.startsWith("/customer/takeout/store/")
 
-  // セッション開始時にカートをクリア（前回セッションの商品を消す）
   const [cartReady] = useState(() => {
     try {
       if (!sessionStorage.getItem(CART_SESSION_KEY)) {
@@ -31,7 +30,18 @@ export default function TakeoutLayout({ children }: { children: React.ReactNode 
     if (loading) return
     if (isStorePage) return
     if (!user || user.userType !== "customer") {
-      router.replace("/customer/signup")
+      // storeId が URL にあれば店舗TOPへ、なければ店舗選択へ
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const storeId = params.get("store")
+        if (storeId) {
+          router.replace(`/customer/takeout/store/${storeId}`)
+        } else {
+          router.replace("/customer/takeout")
+        }
+      } catch {
+        router.replace("/customer/takeout")
+      }
     }
   }, [user, loading, router, isStorePage])
 

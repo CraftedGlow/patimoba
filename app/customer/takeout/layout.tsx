@@ -12,8 +12,8 @@ export default function TakeoutLayout({ children }: { children: React.ReactNode 
   const router = useRouter()
   const pathname = usePathname()
 
-  // 店舗TOPページは自前でLIFFログインを処理するため認証ガードを適用しない
-  const isStorePage = pathname?.startsWith("/customer/takeout/store/")
+  // 店舗TOP・店舗選択ページは自前でLIFFログインを処理するため認証ガードを適用しない
+  const isStorePage = pathname?.startsWith("/customer/takeout/store/") || pathname === "/customer/takeout"
 
   const [cartReady] = useState(() => {
     try {

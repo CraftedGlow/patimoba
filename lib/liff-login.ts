@@ -9,10 +9,23 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   const idToken = liff.getIDToken()
   if (!idToken) throw new Error("IDトークンを取得できませんでした")
 
+  // liff.getProfile() で最新のLINE表示名・アイコンを取得（IDトークンはキャッシュされる場合がある）
+  let lineProfile: { displayName?: string; pictureUrl?: string } = {}
+  try {
+    const p = await liff.getProfile()
+    lineProfile = { displayName: p.displayName, pictureUrl: p.pictureUrl }
+  } catch {
+    // 取得失敗時はIDトークンの情報にフォールバック
+  }
+
   const res = await fetch("/api/line/liff-login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken }),
+    body: JSON.stringify({
+      idToken,
+      lineName: lineProfile.displayName,
+      avatarUrl: lineProfile.pictureUrl,
+    }),
   })
 
   if (!res.ok) {

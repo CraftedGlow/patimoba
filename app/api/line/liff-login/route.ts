@@ -32,8 +32,9 @@ export async function POST(request: NextRequest) {
   }
 
   const lineUserId: string = verified.sub
-  const lineName: string = verified.name ?? ""
-  const avatarUrl: string | null = verified.picture ?? null
+  // liff.getProfile() の値を優先（IDトークンの name クレームはキャッシュされる場合がある）
+  const lineName: string = body?.lineName || verified.name || ""
+  const avatarUrl: string | null = body?.avatarUrl || verified.picture || null
 
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

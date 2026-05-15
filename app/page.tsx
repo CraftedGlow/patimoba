@@ -27,10 +27,17 @@ export default function Home() {
       const liff = (await import("@line/liff")).default;
       await liff.init({ liffId });
 
-      // liff.init() が liff.state を処理してパスを書き換えた場合はそこへ遷移
+      // liff.init() が liff.state を処理してパスを書き換えた場合
       const redirectedPath = window.location.pathname;
       if (redirectedPath && redirectedPath !== "/") {
-        router.replace(redirectedPath + window.location.search);
+        // ログイン済みならここでLIFFログインを完結させてからリダイレクト
+        if (liff.isLoggedIn()) {
+          // 店舗ページへの戻り先を保存しておく
+          sessionStorage.setItem("liff_return_path", redirectedPath);
+          await completeLiffLogin(liff, (path) => router.replace(path));
+        } else {
+          router.replace(redirectedPath + window.location.search);
+        }
         return;
       }
 

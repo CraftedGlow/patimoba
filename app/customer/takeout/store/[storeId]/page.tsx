@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarDays, MapPin, X, Loader2 } from "lucide-react";
@@ -224,10 +224,8 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const { user, loading: authLoading, setUser } = useAuth();
   const { setSelectedStoreId, setSelectedStoreName, addViewedStore } = useCustomerContext();
 
-  const [progress, setProgress] = useState(0);
   const [loginDone, setLoginDone] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const animStarted = useRef(false);
 
   const [store, setStore] = useState<Store | null>(null);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
@@ -252,31 +250,13 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const sameDayStatus = useSameDayAvailability(loginDone ? store : null);
   const sameDayOk = sameDayStatus.available;
 
-  // 認証確認後にアニメーション要否を決定
+  // ログイン済みならすぐに表示
   useEffect(() => {
     if (authLoading) return;
     if (user) {
-      // ログイン済みならアニメーションをスキップ
       setLoginDone(true);
-      return;
     }
-    // 未ログイン時のみアニメーション開始（1回だけ）
-    if (animStarted.current) return;
-    animStarted.current = true;
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) { clearInterval(timer); return 100; }
-        return prev + 4;
-      });
-    }, 60);
-    return () => clearInterval(timer);
   }, [authLoading, user]);
-
-  useEffect(() => {
-    if (progress !== 100) return;
-    const t = setTimeout(() => setLoginDone(true), 600);
-    return () => clearTimeout(t);
-  }, [progress]);
 
   // LINEアプリ内からのアクセス時に自動ログイン
   useEffect(() => {
@@ -401,18 +381,10 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                 <p className="text-xs text-red-600 break-all">{loginError}</p>
               </div>
             ) : (
-              <>
-                <h2 className="text-xl font-bold text-gray-900 mb-6">LINEログイン中...</h2>
-                <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3 shadow-inner">
-                  <motion.div
-                    className="h-full rounded-full bg-[#F9A825]"
-                    initial={{ width: "0%" }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.08 }}
-                  />
-                </div>
-                <p className="text-lg font-bold text-gray-900">{progress}%</p>
-              </>
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+                <p className="text-base font-bold text-gray-700">LINEログイン中...</p>
+              </div>
             )}
           </motion.div>
         </div>

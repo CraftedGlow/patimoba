@@ -35,19 +35,6 @@ export default function CustomerLoginPage() {
 
     const result = await res.json();
 
-    if (result.action === "register") {
-      sessionStorage.removeItem("liff_login_pending");
-      router.push("/customer/line-register");
-      return;
-    }
-
-    if (result.action === "signup") {
-      sessionStorage.removeItem("liff_login_pending");
-      sessionStorage.setItem("liff_signup_link_user_id", result.userId);
-      router.push("/customer/signup");
-      return;
-    }
-
     const { user, otp } = result;
 
     if (otp) {

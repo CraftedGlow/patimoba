@@ -307,24 +307,16 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           setLoginError(`${errBody.error || "login_failed"}${errBody.detail ? ": " + errBody.detail : ""}`);
           return;
         }
-        const result = await res.json();
-        if (result.action === "register") {
-          sessionStorage.setItem("liff_return_path", window.location.pathname);
-          router.push("/customer/line-register");
+        const { user: userData, otp } = await res.json();
+        if (!userData) {
+          setLoginError("ユーザー情報を取得できませんでした");
           return;
         }
-        if (result.action === "signup") {
-          sessionStorage.setItem("liff_signup_link_user_id", result.userId);
-          sessionStorage.setItem("liff_return_path", window.location.pathname);
-          router.push("/customer/signup");
-          return;
-        }
-        const { user: userData, otp } = result;
         if (otp) {
           const { supabase } = await import("@/lib/supabase");
           await supabase.auth.verifyOtp({ email: otp.email, token: otp.token, type: "magiclink" });
         }
-        const nameParts = (userData.name || userData.line_name || "").split(" ");
+        const nameParts = (userData.line_name || userData.name || "").split(" ");
         const authUser = {
           id: userData.id,
           email: userData.email ?? "",

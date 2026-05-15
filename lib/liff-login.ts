@@ -21,20 +21,6 @@ export async function completeLiffLogin(
   }
 
   const result = await res.json()
-
-  if (result.action === "register") {
-    sessionStorage.removeItem("liff_login_pending")
-    navigate("/customer/line-register")
-    return
-  }
-
-  if (result.action === "signup") {
-    sessionStorage.removeItem("liff_login_pending")
-    sessionStorage.setItem("liff_signup_link_user_id", result.userId)
-    navigate("/customer/signup")
-    return
-  }
-
   const { user, otp } = result
 
   if (otp) {
@@ -46,7 +32,7 @@ export async function completeLiffLogin(
     })
   }
 
-  const nameParts = (user.name || user.line_name || "").split(" ")
+  const nameParts = (user.line_name || user.name || "").split(" ")
   const authUser = {
     id: user.id,
     email: user.email ?? "",

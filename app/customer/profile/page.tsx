@@ -85,12 +85,8 @@ export default function CustomerProfilePage() {
         await liff.init({ liffId });
 
         if (!liff.isInClient()) {
-          // ブラウザアクセス：キャッシュユーザーを使用
-          if (!user) {
-            setLoginError("このページはLINEミニアプリからアクセスしてください");
-            return;
-          }
-          setLoginDone(true);
+          if (user) { setLoginDone(true); return; }
+          setLoginError("このページはLINEアプリからアクセスしてください");
           return;
         }
 

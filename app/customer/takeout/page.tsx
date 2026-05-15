@@ -113,8 +113,8 @@ export default function TakeoutStorePage() {
         await liff.init({ liffId });
 
         if (!liff.isInClient()) {
-          // ブラウザアクセス：キャッシュユーザーを使用
-          if (user) setLoginDone(true);
+          if (user) { setLoginDone(true); return; }
+          setLoginError("このページはLINEアプリからアクセスしてください");
           return;
         }
 

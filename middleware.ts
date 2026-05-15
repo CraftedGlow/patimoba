@@ -10,9 +10,9 @@ export function middleware(request: NextRequest) {
     searchParams.has("code") &&
     searchParams.has("liffClientId")
   ) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url, { status: 302 })
+    // リダイレクトではなくリライト: ブラウザの URL は /?code=... のまま（LIFF 登録エンドポイントと一致）
+    // LIFF SDK はブラウザの URL を参照するため、エンドポイント不一致エラーが出ない
+    return NextResponse.rewrite(new URL("/liff-loading", request.url))
   }
 
   return NextResponse.next()

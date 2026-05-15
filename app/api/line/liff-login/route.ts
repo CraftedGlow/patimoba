@@ -47,14 +47,25 @@ export async function POST(request: NextRequest) {
     console.log(`[LIFF Login] 新規ユーザー自動作成: lineUserId=${lineUserId}`)
     const fakeEmail = `line_${lineUserId}@patimoba.internal`
 
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: fakeEmail,
-      email_confirm: true,
-      user_metadata: { line_user_id: lineUserId },
-    })
-    if (authError || !authData.user) {
-      console.error("[LIFF Login] auth ユーザー作成失敗:", authError)
-      return NextResponse.json({ error: "auth_create_failed" }, { status: 500 })
+    // 前回失敗で auth user だけ残っている場合は再利用
+    let authUserId: string
+    const { data: existingAuthList } = await supabase.auth.admin.listUsers()
+    const existingAuth = existingAuthList?.users?.find((u) => u.email === fakeEmail)
+
+    if (existingAuth) {
+      console.log(`[LIFF Login] 既存 auth user を再利用: ${existingAuth.id}`)
+      authUserId = existingAuth.id
+    } else {
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: fakeEmail,
+        email_confirm: true,
+        user_metadata: { line_user_id: lineUserId },
+      })
+      if (authError || !authData.user) {
+        console.error("[LIFF Login] auth ユーザー作成失敗:", authError)
+        return NextResponse.json({ error: "auth_create_failed" }, { status: 500 })
+      }
+      authUserId = authData.user.id
     }
 
     const { data: newUser, error: insertError } = await supabase
@@ -64,7 +75,7 @@ export async function POST(request: NextRequest) {
         line_name: lineName,
         avatar_url: avatarUrl,
         user_type: "customer",
-        auth_user_id: authData.user.id,
+        auth_user_id: authUserId,
       })
       .select()
       .single()

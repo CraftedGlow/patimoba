@@ -26,6 +26,14 @@ export default function Home() {
     try {
       const liff = (await import("@line/liff")).default;
       await liff.init({ liffId });
+
+      // liff.init() が liff.state を処理してパスを書き換えた場合はそこへ遷移
+      const redirectedPath = window.location.pathname;
+      if (redirectedPath && redirectedPath !== "/") {
+        router.replace(redirectedPath + window.location.search);
+        return;
+      }
+
       if (liff.isLoggedIn()) {
         await completeLiffLogin(liff, (path) => router.replace(path));
       } else {
@@ -40,7 +48,8 @@ export default function Home() {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
     if (!liffId) return;
     const params = new URLSearchParams(window.location.search);
-    if (!params.has("code") && !params.has("liffClientId")) return;
+    // LIFF 認証コールバック or liff.state によるパス転送
+    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state")) return;
 
     setIsLiffCallback(true);
     handleLiffCallback(liffId);

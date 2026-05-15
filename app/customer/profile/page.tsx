@@ -57,7 +57,9 @@ export default function CustomerProfilePage() {
   const [birthDay, setBirthDay] = useState<number>(1);
   const [postalCode, setPostalCode] = useState("");
   const [address, setAddress] = useState("");
-  const [anniversaries, setAnniversaries] = useState<{ label: string; date: string }[]>([]);
+  const [anniversaries, setAnniversaries] = useState<{ label: string; date: string }[]>([
+    { label: ANNIVERSARY_TYPES[0], date: "" },
+  ]);
 
   // 常にLINEログインを実行
   useEffect(() => {
@@ -146,7 +148,7 @@ export default function CustomerProfilePage() {
           }
           setPostalCode(data.postal_code || "");
           setAddress(data.address || "");
-          if (Array.isArray(data.anniversaries)) {
+          if (Array.isArray(data.anniversaries) && data.anniversaries.length > 0) {
             setAnniversaries(
               data.anniversaries
                 .filter((a: any) => a && typeof a === "object")

@@ -103,7 +103,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
         .maybeSingle()
 
       setProfile({
-        lineName: userRow?.line_name || userRow?.name || user.lastName || "ゲスト",
+        lineName: userRow?.line_name || user.raw?.line_name || "ゲスト",
         avatar: userRow?.avatar_url || null,
         nameKana: userRow?.name_kana || null,
       })

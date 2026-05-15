@@ -65,6 +65,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [liffLoading, setLiffLoading] = useState(false);
+  const [isLiffCallback, setIsLiffCallback] = useState(false);
 
   const currentRole = roles.find((r) => r.id === selectedRole);
 
@@ -77,11 +78,13 @@ export default function LoginPage() {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID
     if (!liffId) return
 
+    const search = window.location.search
     const isPending = !!sessionStorage.getItem("liff_login_pending")
-    // liff.hback や liff.state など LIFF OAuth コールバック時に付与されるパラメータを検知
-    const hasLiffParams = window.location.search.includes("liff.")
+    // liff.state / liff.hback (LIFF SDK) または code + liffClientId (ミドルウェア経由) を検知
+    const hasLiffParams = search.includes("liff.") || search.includes("code=")
     if (!isPending && !hasLiffParams) return
 
+    setIsLiffCallback(true)
     setLiffLoading(true)
     ;(async () => {
       try {
@@ -91,11 +94,13 @@ export default function LoginPage() {
           await loginWithLiff(liff)
         } else {
           sessionStorage.removeItem("liff_login_pending")
+          setIsLiffCallback(false)
           setLiffLoading(false)
         }
       } catch (err: any) {
         sessionStorage.removeItem("liff_login_pending")
         setError(err.message || "LINEログインに失敗しました")
+        setIsLiffCallback(false)
         setLiffLoading(false)
       }
     })()
@@ -150,6 +155,14 @@ export default function LoginPage() {
     setPassword("");
     setError("");
   };
+
+  if (isLiffCallback) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+      </div>
+    )
+  }
 
   return (
     <AnimatePresence mode="wait">

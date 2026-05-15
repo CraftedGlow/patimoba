@@ -316,7 +316,6 @@ export default function StoreOrdersPage() {
 
   const { updateFulfillmentStatus } = useOrderMutations();
 
-
   const handleConfirm = async () => {
     if (!confirmAction || confirmLoading) return;
     setConfirmLoading(true);

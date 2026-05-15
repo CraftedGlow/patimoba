@@ -308,7 +308,6 @@ export default function TakeoutConfirmPage() {
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
-
   const continueShoppingHref = selectedStoreId || cartStoreId
     ? `/customer/takeout/products?store=${selectedStoreId || cartStoreId}`
     : "/customer/takeout";
@@ -355,7 +354,6 @@ export default function TakeoutConfirmPage() {
             </p>
           </div>
         )}
-
 
         {/* お名前 */}
         <div className="mb-4">

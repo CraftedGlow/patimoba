@@ -78,6 +78,15 @@ export async function POST(request: NextRequest) {
     console.log(`[LIFF Login] 新規作成完了: userId=${user.id}`)
   }
 
+  // ── 既存ユーザーのLINEプロフィールを最新情報で更新 ────────────────────
+  if (user.line_name !== lineName || user.avatar_url !== avatarUrl) {
+    await supabase
+      .from("users")
+      .update({ line_name: lineName, avatar_url: avatarUrl })
+      .eq("id", user.id)
+    user = { ...user, line_name: lineName, avatar_url: avatarUrl }
+  }
+
   // ── auth_user_id 未設定の既存ユーザー：自動でリンク ───────────────────
   if (!user.auth_user_id) {
     console.log(`[LIFF Login] auth_user_id 未設定 → 自動リンク: userId=${user.id}`)

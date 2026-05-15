@@ -449,8 +449,8 @@ export default function TakeoutProductDetailPage() {
       </div>
 
       {/* Sticky bottom: 価格・個数・カートボタン */}
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-5 pt-3 pb-6 max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-3">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-5 pt-2 pb-5 max-w-lg mx-auto">
+        <div className="flex items-center justify-between mb-2">
           <div>
             <p className="flex items-baseline gap-0.5">
               <span className="text-3xl font-bold text-gray-900 tabular-nums">
@@ -469,7 +469,7 @@ export default function TakeoutProductDetailPage() {
             <button
               type="button"
               onClick={() => setShowQuantityDropdown(!showQuantityDropdown)}
-              className="rounded-lg px-4 py-2.5 min-w-[4.5rem] flex items-center justify-center gap-2 bg-[#FFF9C4] border border-amber-200/80 shadow-sm"
+              className="rounded-lg px-4 py-2 min-w-[4.5rem] flex items-center justify-center gap-2 bg-[#FFF9C4] border border-amber-200/80 shadow-sm"
             >
               <span className="font-bold text-lg text-gray-900 tabular-nums">{quantity}</span>
               <svg className={`w-4 h-4 text-gray-500 transition-transform ${showQuantityDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -510,7 +510,7 @@ export default function TakeoutProductDetailPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleAddToCart}
-          className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base shadow-md shadow-amber-200/60 transition-colors"
+          className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base shadow-md shadow-amber-200/60 transition-colors"
         >
           カートに追加
         </motion.button>

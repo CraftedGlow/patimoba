@@ -88,7 +88,7 @@ export function CustomerHeader({
 
       {/* 戻るボタン: ヘッダーの外・左下 */}
       {showBack && (
-        <div className="px-3 pt-2 pb-0.5">
+        <div className="px-3 pt-1 pb-0">
           <button
             onClick={handleBack}
             className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"

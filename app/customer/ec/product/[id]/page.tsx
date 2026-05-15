@@ -214,7 +214,7 @@ export default function ECProductDetailPage() {
             <div className="relative shrink-0">
               <button
                 onClick={() => setShowQuantityDropdown(!showQuantityDropdown)}
-                className="border border-gray-200 rounded-lg px-4 py-2.5 min-w-[4rem] bg-[#FFF9C4] flex items-center gap-2"
+                className="border border-gray-200 rounded-lg px-4 py-2 min-w-[4rem] bg-[#FFF9C4] flex items-center gap-2"
               >
                 <span className="font-bold text-base">{quantity}</span>
                 <svg
@@ -258,7 +258,7 @@ export default function ECProductDetailPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleAddToCart}
-            className="w-full mt-5 mb-5 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors"
+            className="w-full mt-4 mb-4 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base transition-colors"
           >
             カートに追加
           </motion.button>

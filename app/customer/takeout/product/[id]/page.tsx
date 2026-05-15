@@ -204,7 +204,7 @@ export default function TakeoutProductDetailPage() {
           transition={{ delay: 0.08, duration: 0.35 }}
           className="space-y-0"
         >
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight leading-snug mb-4">{product.name}</h1>
+          <h1 className="text-[20px] font-bold text-gray-900 tracking-tight leading-snug mb-4">{product.name}</h1>
 
           {isLimited && limitedNote && (
             <p className="text-sm leading-relaxed text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
@@ -510,7 +510,7 @@ export default function TakeoutProductDetailPage() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleAddToCart}
-          className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base shadow-md shadow-amber-200/60 transition-colors"
+          className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-full text-base shadow-md shadow-amber-200/60 transition-colors"
         >
           カートに追加
         </motion.button>

@@ -26,7 +26,7 @@ export function StepProgress({ currentStep, steps, onStepClick }: StepProgressPr
               className={`flex flex-col items-center ${isClickable ? "cursor-pointer" : "cursor-default"}`}
             >
               <motion.div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                   isActive
                     ? "bg-amber-400 text-white"
                     : "bg-gray-200 text-gray-500"
@@ -38,7 +38,7 @@ export function StepProgress({ currentStep, steps, onStepClick }: StepProgressPr
                 {stepNum}
               </motion.div>
               <span
-                className={`text-xs mt-1.5 whitespace-nowrap ${
+                className={`text-[11px] mt-1 whitespace-nowrap ${
                   isActive ? "text-gray-900 font-medium" : "text-gray-400"
                 }`}
               >

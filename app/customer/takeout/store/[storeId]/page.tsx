@@ -420,7 +420,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       {store && (
         <div className="border-b border-gray-100">
           {/* ヒーロー画像 */}
-          <div className="w-full h-52 overflow-hidden bg-gray-100">
+          <div className="w-full h-40 overflow-hidden bg-gray-100">
             {store.image ? (
               <img src={store.image} alt={store.name} className="w-full h-full object-cover" />
             ) : (
@@ -434,12 +434,12 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
           {/* 店舗名・詳細 */}
           <div className="px-4 pt-3 pb-4 space-y-2">
-            <h1 className="text-xl font-bold text-gray-900 leading-snug">{store.name}</h1>
+            <h1 className="text-base font-bold text-gray-900 leading-snug">{store.name}</h1>
 
             <div className="space-y-1.5">
               {/* 住所 */}
               {store.address && (
-                <div className="flex items-start gap-2 text-sm text-gray-500">
+                <div className="flex items-start gap-2 text-[13px] text-gray-500">
                   <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" />
                   <span>
                     {store.postalCode && `〒${store.postalCode} `}
@@ -451,7 +451,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
               {/* 営業時間（1行サマリー） */}
               {businessHours.length > 0 && (
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-2 text-[13px] text-gray-500">
                   <Clock className="w-4 h-4 shrink-0 text-gray-400" />
                   <span>{formatHoursLine(businessHours)}</span>
                 </div>
@@ -462,13 +462,10 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       )}
 
       {/* 注文タイプ選択 */}
-      <div className="px-4 pt-5 pb-8 flex-1">
-        <h2 className="text-base font-bold text-gray-900 text-center leading-snug">
+      <div className="px-4 pt-4 pb-8 flex-1">
+        <h2 className="text-base font-bold text-gray-900 text-center leading-snug mb-5">
           ご注文方法を選択してください
         </h2>
-        <p className="text-xs text-gray-400 text-center mt-1 mb-5">
-          シーンに合わせてお選びいただけます
-        </p>
 
         {/* 当日受取注文 */}
         <button

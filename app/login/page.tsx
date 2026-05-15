@@ -14,7 +14,8 @@ import {
   Loader2,
   MessageCircle,
 } from "lucide-react";
-import { useAuth, type UserType, STORAGE_KEY } from "@/lib/auth-context";
+import { useAuth, type UserType } from "@/lib/auth-context";
+import { completeLiffLogin } from "@/lib/liff-login";
 import { PasswordInput } from "@/components/ui/password-input";
 
 type Role = "store" | "admin" | "customer" | null;
@@ -68,62 +69,7 @@ export default function LoginPage() {
   const currentRole = roles.find((r) => r.id === selectedRole);
 
   const loginWithLiff = useCallback(async (liff: any) => {
-    const idToken = liff.getIDToken()
-    if (!idToken) throw new Error("IDトークンを取得できませんでした")
-
-    const res = await fetch("/api/line/liff-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
-    })
-
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      throw new Error(body.error || "ログインに失敗しました")
-    }
-
-    const result = await res.json()
-
-    if (result.action === "register") {
-      sessionStorage.removeItem("liff_login_pending")
-      router.push("/customer/line-register")
-      return
-    }
-
-    if (result.action === "signup") {
-      sessionStorage.removeItem("liff_login_pending")
-      sessionStorage.setItem("liff_signup_link_user_id", result.userId)
-      router.push("/customer/signup")
-      return
-    }
-
-    const { user, otp } = result
-
-    if (otp) {
-      const { supabase } = await import("@/lib/supabase")
-      await supabase.auth.verifyOtp({
-        email: otp.email,
-        token: otp.token,
-        type: "magiclink",
-      })
-    }
-
-    const nameParts = (user.name || user.line_name || "").split(" ")
-    const authUser = {
-      id: user.id,
-      email: user.email ?? "",
-      userType: "customer" as const,
-      firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
-      lastName: nameParts[0] ?? "",
-      storeId: null,
-      raw: user,
-    }
-
-    sessionStorage.removeItem("liff_login_pending")
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
-    const returnPath = sessionStorage.getItem("liff_return_path")
-    sessionStorage.removeItem("liff_return_path")
-    router.push(returnPath || "/customer/takeout")
+    await completeLiffLogin(liff, (path) => router.replace(path))
   }, [router])
 
   // LINEからのリダイレクト戻りを処理

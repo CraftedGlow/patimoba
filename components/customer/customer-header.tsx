@@ -41,7 +41,7 @@ export function CustomerHeader({
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="bg-[#ffff9d] px-4 py-3 flex items-center justify-between sticky top-0 z-50"
+        className="bg-[#ffff9d] px-4 py-[11px] flex items-center justify-between sticky top-0 z-50"
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <Link href="/customer/profile" className="flex-shrink-0">

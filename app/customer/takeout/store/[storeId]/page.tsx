@@ -221,7 +221,7 @@ function formatHoursLine(hours: BusinessHour[]): string {
 
 export default function StorePage({ params }: { params: { storeId: string } }) {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, setUser } = useAuth();
   const { setSelectedStoreId, setSelectedStoreName, addViewedStore } = useCustomerContext();
 
   const [progress, setProgress] = useState(0);
@@ -290,10 +290,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         await liff.init({ liffId });
         if (!liff.isInClient()) return;
         if (!liff.isLoggedIn()) {
-          // liff.login() はエンドポイントURL(LP)に戻してしまうのでログインページ経由にする
-          sessionStorage.setItem("liff_return_path", window.location.pathname);
-          sessionStorage.setItem("liff_login_pending", "1");
-          router.push("/customer/login");
+          liff.login({ redirectUri: window.location.href });
           return;
         }
         const idToken = liff.getIDToken();
@@ -322,15 +319,17 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           await supabase.auth.verifyOtp({ email: otp.email, token: otp.token, type: "magiclink" });
         }
         const nameParts = (userData.name || userData.line_name || "").split(" ");
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        const authUser = {
           id: userData.id,
           email: userData.email ?? "",
-          userType: "customer",
+          userType: "customer" as const,
           firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
           lastName: nameParts[0] ?? "",
-          storeId: null,
+          storeId: null as string | null,
           raw: userData,
-        }));
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+        setUser(authUser);
         setLoginDone(true);
       } catch (err) {
         console.error("[Store LIFF] auto-login error:", err);
@@ -533,7 +532,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         </button>
 
         {/* 利用規約・特商法リンク */}
-        <div className="text-center space-y-2 pt-4 pb-2">
+        <div className="text-center space-y-2 pt-6 pb-2">
           <button onClick={() => setShowTermsModal(true)} className="text-xs text-gray-400 underline underline-offset-2">利用規約</button>
           <span className="text-xs text-gray-300 mx-2">|</span>
           <button onClick={() => setShowPrivacyModal(true)} className="text-xs text-gray-400 underline underline-offset-2">プライバシーポリシー</button>

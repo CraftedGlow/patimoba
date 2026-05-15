@@ -293,7 +293,7 @@ export default function TakeoutPickupPage() {
       <StepProgress currentStep={3} steps={steps} />
 
       <div className="px-4 md:px-8 lg:px-12 pb-8 md:max-w-2xl md:mx-auto">
-        <h2 className="text-lg font-bold mb-4">受け取り日時を選択</h2>
+        <h2 className="text-base font-bold mb-4">受け取り日時を選択</h2>
 
         {/* 予約注文：カレンダー */}
         {!isSameDay && (

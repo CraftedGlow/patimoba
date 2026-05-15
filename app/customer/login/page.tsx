@@ -11,7 +11,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 
 export default function CustomerLoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -74,10 +74,11 @@ export default function CustomerLoginPage() {
     localStorage.removeItem("patimoba_cart_takeout_v1");
     localStorage.removeItem("patimoba_cart_ec_v1");
     localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+    setUser(authUser);
     const returnPath = sessionStorage.getItem("liff_return_path");
     sessionStorage.removeItem("liff_return_path");
     router.push(returnPath || "/customer/takeout");
-  }, [router]);
+  }, [router, setUser]);
 
   useEffect(() => {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID;

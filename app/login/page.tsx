@@ -166,7 +166,7 @@ export default function LoginPage() {
 
       if (!liff.isLoggedIn()) {
         sessionStorage.setItem("liff_login_pending", "1")
-        liff.login({ redirectUri: window.location.origin })
+        liff.login({ redirectUri: window.location.href })
         return
       }
 

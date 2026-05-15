@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import { Loader2, Check, Plus, X } from "lucide-react";
+import NextImage from "next/image";
+import { Loader2, Check, Plus, X, User } from "lucide-react";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 
@@ -55,7 +55,6 @@ export default function CustomerProfilePage() {
   const [birthYear, setBirthYear] = useState<number>(1990);
   const [birthMonth, setBirthMonth] = useState<number>(1);
   const [birthDay, setBirthDay] = useState<number>(1);
-  const [hasBirthDate, setHasBirthDate] = useState(false);
   const [postalCode, setPostalCode] = useState("");
   const [address, setAddress] = useState("");
   const [anniversaries, setAnniversaries] = useState<{ label: string; date: string }[]>([]);
@@ -144,7 +143,6 @@ export default function CustomerProfilePage() {
             setBirthYear(bd.year);
             setBirthMonth(bd.month);
             setBirthDay(bd.day);
-            setHasBirthDate(true);
           }
           setPostalCode(data.postal_code || "");
           setAddress(data.address || "");
@@ -184,7 +182,7 @@ export default function CustomerProfilePage() {
         name_kana: fullNameKana || null,
         phone: phone || null,
         gender,
-        birth_date: hasBirthDate ? formatBirthDate(birthYear, birthMonth, birthDay) : null,
+        birth_date: formatBirthDate(birthYear, birthMonth, birthDay),
         postal_code: postalCode || null,
         address: address || null,
         anniversaries: cleanedAnniversaries,
@@ -218,7 +216,7 @@ export default function CustomerProfilePage() {
             transition={{ duration: 0.45 }}
             className="mb-10"
           >
-            <Image
+            <NextImage
               src="/スクリーンショット_2026-04-09_14.49.59.png"
               alt="パティモバ"
               width={280}
@@ -260,20 +258,34 @@ export default function CustomerProfilePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* ヘッダー */}
-      <div className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-300 px-5 py-3 flex items-center justify-center">
-        <Image
-          src="/スクリーンショット_2026-04-09_14.49.59.png"
-          alt="パティモバ"
-          width={160}
-          height={44}
-          className="h-8 w-auto"
-        />
-      </div>
+      {/* ヘッダー（他の注文ページと同じ黄色ヘッダー） */}
+      <motion.header
+        initial={{ y: -10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className="bg-[#ffff9d] px-4 py-[11px] flex items-center justify-between sticky top-0 z-50"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          {user?.raw?.avatar_url ? (
+            <img
+              src={user.raw.avatar_url}
+              alt="avatar"
+              className="w-9 h-9 rounded-full object-cover border-2 border-white flex-shrink-0"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-white" />
+            </div>
+          )}
+          <span className="font-bold text-gray-900 text-sm truncate">
+            {user?.raw?.line_name || user?.lastName || "ゲスト"}
+          </span>
+        </div>
+      </motion.header>
 
       <div className="px-5 py-6 pb-16">
         <h1 className="text-lg font-bold text-gray-900 mb-1">お客様情報の登録</h1>
-        <p className="text-xs text-gray-400 mb-6">入力した情報はお店のみに共有されます</p>
+        <p className="text-xs text-gray-500 mb-6">記念日やお客様情報を登録して、特別な日にぴったりなお知らせを受け取れます！</p>
 
         {/* お名前 */}
         <section className="mb-6">
@@ -386,47 +398,36 @@ export default function CustomerProfilePage() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs text-gray-500">生年月日</label>
-              <button
-                type="button"
-                onClick={() => setHasBirthDate((v) => !v)}
-                className="text-xs text-amber-500 font-medium"
+            <label className="block text-xs text-gray-500 mb-2">生年月日</label>
+            <div className="grid grid-cols-3 gap-2">
+              <select
+                value={birthYear}
+                onChange={(e) => setBirthYear(Number(e.target.value))}
+                className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
               >
-                {hasBirthDate ? "未設定にする" : "設定する"}
-              </button>
+                {years.map((y) => (
+                  <option key={y} value={y}>{y}年</option>
+                ))}
+              </select>
+              <select
+                value={birthMonth}
+                onChange={(e) => setBirthMonth(Number(e.target.value))}
+                className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                {months.map((m) => (
+                  <option key={m} value={m}>{m}月</option>
+                ))}
+              </select>
+              <select
+                value={birthDay}
+                onChange={(e) => setBirthDay(Number(e.target.value))}
+                className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                {days.map((d) => (
+                  <option key={d} value={d}>{d}日</option>
+                ))}
+              </select>
             </div>
-            {hasBirthDate && (
-              <div className="grid grid-cols-3 gap-2">
-                <select
-                  value={birthYear}
-                  onChange={(e) => setBirthYear(Number(e.target.value))}
-                  className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
-                >
-                  {years.map((y) => (
-                    <option key={y} value={y}>{y}年</option>
-                  ))}
-                </select>
-                <select
-                  value={birthMonth}
-                  onChange={(e) => setBirthMonth(Number(e.target.value))}
-                  className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
-                >
-                  {months.map((m) => (
-                    <option key={m} value={m}>{m}月</option>
-                  ))}
-                </select>
-                <select
-                  value={birthDay}
-                  onChange={(e) => setBirthDay(Number(e.target.value))}
-                  className="border border-gray-200 rounded-lg px-2 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
-                >
-                  {days.map((d) => (
-                    <option key={d} value={d}>{d}日</option>
-                  ))}
-                </select>
-              </div>
-            )}
           </div>
         </section>
 
@@ -460,6 +461,16 @@ export default function CustomerProfilePage() {
                 className="flex items-center gap-2 bg-amber-50 rounded-xl p-3"
               >
                 <div className="flex-1 flex flex-col gap-2">
+                  <input
+                    type="date"
+                    value={a.date}
+                    onChange={(e) =>
+                      setAnniversaries((prev) =>
+                        prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
+                      )
+                    }
+                    className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                  />
                   <select
                     value={a.label}
                     onChange={(e) =>
@@ -473,16 +484,6 @@ export default function CustomerProfilePage() {
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
-                  <input
-                    type="date"
-                    value={a.date}
-                    onChange={(e) =>
-                      setAnniversaries((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
-                      )
-                    }
-                    className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  />
                 </div>
                 <button
                   type="button"

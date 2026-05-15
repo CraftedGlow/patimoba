@@ -226,6 +226,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
   const [progress, setProgress] = useState(0);
   const [loginDone, setLoginDone] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const animStarted = useRef(false);
 
   const [store, setStore] = useState<Store | null>(null);
@@ -303,7 +304,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({}));
           console.error("[Store LIFF] login API error:", errBody);
-          alert(`LINEログインに失敗しました\n${errBody.error || ""}${errBody.detail ? ": " + errBody.detail : ""}`);
+          setLoginError(`${errBody.error || "login_failed"}${errBody.detail ? ": " + errBody.detail : ""}`);
           return;
         }
         const result = await res.json();
@@ -336,8 +337,9 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
         setUser(authUser);
         setLoginDone(true);
-      } catch (err) {
+      } catch (err: any) {
         console.error("[Store LIFF] auto-login error:", err);
+        setLoginError(err?.message || "LIFF初期化エラー");
       }
     })();
   }, [authLoading, user]);
@@ -401,16 +403,25 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             transition={{ delay: 0.2, duration: 0.4 }}
             className="w-full max-w-xs text-center"
           >
-            <h2 className="text-xl font-bold text-gray-900 mb-6">LINEログイン中...</h2>
-            <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3 shadow-inner">
-              <motion.div
-                className="h-full rounded-full bg-[#F9A825]"
-                initial={{ width: "0%" }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.08 }}
-              />
-            </div>
-            <p className="text-lg font-bold text-gray-900">{progress}%</p>
+            {loginError ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-left">
+                <p className="text-sm font-bold text-red-700 mb-1">ログインエラー</p>
+                <p className="text-xs text-red-600 break-all">{loginError}</p>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-bold text-gray-900 mb-6">LINEログイン中...</h2>
+                <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3 shadow-inner">
+                  <motion.div
+                    className="h-full rounded-full bg-[#F9A825]"
+                    initial={{ width: "0%" }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.08 }}
+                  />
+                </div>
+                <p className="text-lg font-bold text-gray-900">{progress}%</p>
+              </>
+            )}
           </motion.div>
         </div>
       </div>

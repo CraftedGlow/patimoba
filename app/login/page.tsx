@@ -129,7 +129,12 @@ export default function LoginPage() {
   // LINEからのリダイレクト戻りを処理
   useEffect(() => {
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID
-    if (!liffId || !sessionStorage.getItem("liff_login_pending")) return
+    if (!liffId) return
+
+    const isPending = !!sessionStorage.getItem("liff_login_pending")
+    // liff.hback や liff.state など LIFF OAuth コールバック時に付与されるパラメータを検知
+    const hasLiffParams = window.location.search.includes("liff.")
+    if (!isPending && !hasLiffParams) return
 
     setLiffLoading(true)
     ;(async () => {

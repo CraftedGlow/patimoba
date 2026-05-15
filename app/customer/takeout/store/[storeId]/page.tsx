@@ -300,7 +300,12 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken }),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          console.error("[Store LIFF] login API error:", errBody);
+          alert(`LINEログインに失敗しました\n${errBody.error || ""}${errBody.detail ? ": " + errBody.detail : ""}`);
+          return;
+        }
         const result = await res.json();
         if (result.action === "register") {
           sessionStorage.setItem("liff_return_path", window.location.pathname);

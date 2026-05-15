@@ -12,7 +12,12 @@ export async function POST(request: NextRequest) {
 
   const channelId = process.env.LINE_LOGIN_CHANNEL_ID
   if (!channelId) {
-    return NextResponse.json({ error: "server_misconfigured" }, { status: 500 })
+    return NextResponse.json({ error: "server_misconfigured", detail: "LINE_LOGIN_CHANNEL_ID missing" }, { status: 500 })
+  }
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceRoleKey) {
+    return NextResponse.json({ error: "server_misconfigured", detail: "SUPABASE_SERVICE_ROLE_KEY missing" }, { status: 500 })
   }
 
   // LINE ID トークン検証
@@ -32,7 +37,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    serviceRoleKey
   )
 
   // LINE ユーザーID で既存ユーザーを検索
@@ -47,25 +52,28 @@ export async function POST(request: NextRequest) {
     console.log(`[LIFF Login] 新規ユーザー自動作成: lineUserId=${lineUserId}`)
     const fakeEmail = `line_${lineUserId}@patimoba.internal`
 
-    // 前回失敗で auth user だけ残っている場合は再利用
     let authUserId: string
-    const { data: existingAuthList } = await supabase.auth.admin.listUsers()
-    const existingAuth = existingAuthList?.users?.find((u) => u.email === fakeEmail)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: fakeEmail,
+      email_confirm: true,
+      user_metadata: { line_user_id: lineUserId },
+    })
 
-    if (existingAuth) {
-      console.log(`[LIFF Login] 既存 auth user を再利用: ${existingAuth.id}`)
-      authUserId = existingAuth.id
-    } else {
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: fakeEmail,
-        email_confirm: true,
-        user_metadata: { line_user_id: lineUserId },
-      })
-      if (authError || !authData.user) {
-        console.error("[LIFF Login] auth ユーザー作成失敗:", authError)
-        return NextResponse.json({ error: "auth_create_failed" }, { status: 500 })
-      }
+    if (authData?.user) {
       authUserId = authData.user.id
+    } else if (authError) {
+      // Email already registered from a prior partial failure — look up by email
+      const { data: listData, error: listError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      const existing = listData?.users?.find((u) => u.email === fakeEmail)
+      if (existing) {
+        console.log(`[LIFF Login] 既存 auth user を再利用: ${existing.id}`)
+        authUserId = existing.id
+      } else {
+        console.error("[LIFF Login] auth ユーザー作成失敗:", authError, "listError:", listError)
+        return NextResponse.json({ error: "auth_create_failed", detail: authError.message }, { status: 500 })
+      }
+    } else {
+      return NextResponse.json({ error: "auth_create_failed", detail: "no user returned" }, { status: 500 })
     }
 
     const { data: newUser, error: insertError } = await supabase
@@ -82,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError || !newUser) {
       console.error("[LIFF Login] users 挿入失敗:", insertError)
-      return NextResponse.json({ error: "user_create_failed" }, { status: 500 })
+      return NextResponse.json({ error: "user_create_failed", detail: insertError?.message }, { status: 500 })
     }
 
     user = newUser
@@ -103,24 +111,26 @@ export async function POST(request: NextRequest) {
     console.log(`[LIFF Login] auth_user_id 未設定 → 自動リンク: userId=${user.id}`)
     const fakeEmail = `line_${lineUserId}@patimoba.internal`
 
-    // 同じメールが既に存在する場合は取得、なければ作成
     let authUserId: string
-    const { data: existingAuthList } = await supabase.auth.admin.listUsers()
-    const existing = existingAuthList?.users?.find((u) => u.email === fakeEmail)
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: fakeEmail,
+      email_confirm: true,
+      user_metadata: { line_user_id: lineUserId },
+    })
 
-    if (existing) {
-      authUserId = existing.id
-    } else {
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: fakeEmail,
-        email_confirm: true,
-        user_metadata: { line_user_id: lineUserId },
-      })
-      if (authError || !authData.user) {
-        console.error("[LIFF Login] auth リンク作成失敗:", authError)
-        return NextResponse.json({ error: "auth_link_failed" }, { status: 500 })
-      }
+    if (authData?.user) {
       authUserId = authData.user.id
+    } else if (authError) {
+      const { data: listData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      const existing = listData?.users?.find((u) => u.email === fakeEmail)
+      if (existing) {
+        authUserId = existing.id
+      } else {
+        console.error("[LIFF Login] auth リンク作成失敗:", authError)
+        return NextResponse.json({ error: "auth_link_failed", detail: authError.message }, { status: 500 })
+      }
+    } else {
+      return NextResponse.json({ error: "auth_link_failed", detail: "no user returned" }, { status: 500 })
     }
 
     await supabase.from("users").update({ auth_user_id: authUserId }).eq("id", user.id)
@@ -131,7 +141,7 @@ export async function POST(request: NextRequest) {
   const { data: authUserData, error: authUserError } = await supabase.auth.admin.getUserById(user.auth_user_id!)
   if (authUserError || !authUserData.user?.email) {
     console.error("[LIFF Login] auth ユーザー取得失敗:", authUserError)
-    return NextResponse.json({ error: "auth_user_not_found" }, { status: 500 })
+    return NextResponse.json({ error: "auth_user_not_found", detail: authUserError?.message }, { status: 500 })
   }
 
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
@@ -140,7 +150,7 @@ export async function POST(request: NextRequest) {
   })
   if (linkError || !linkData.properties?.email_otp) {
     console.error("[LIFF Login] OTP 生成失敗:", linkError)
-    return NextResponse.json({ error: "otp_generation_failed" }, { status: 500 })
+    return NextResponse.json({ error: "otp_generation_failed", detail: linkError?.message }, { status: 500 })
   }
 
   console.log(`[LIFF Login] ログイン成功: userId=${user.id}`)

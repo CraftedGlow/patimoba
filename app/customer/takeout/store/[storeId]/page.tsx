@@ -340,15 +340,15 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
-        <div className="flex-1 flex flex-col items-center justify-center px-8">
+        <div className="flex-1 flex flex-col px-8">
           <motion.div
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="mb-10"
+            className="flex justify-center pt-16"
           >
             <Image
-              src="/スクリーンショット_2026-04-09_14.49.59.png"
+              src="/パティモバ　ロゴ.png"
               alt="パティモバ"
               width={200}
               height={57}
@@ -360,7 +360,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="w-full max-w-xs text-center"
+            className="flex-1 flex flex-col items-center justify-center w-full max-w-xs mx-auto text-center"
           >
             {loginError ? (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-left">

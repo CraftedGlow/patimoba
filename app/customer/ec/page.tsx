@@ -9,7 +9,8 @@ import { useStores } from "@/hooks/use-stores";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { Store } from "@/lib/types";
-import { Search, Loader2 } from "lucide-react";
+import { Search } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 
 const ecSteps = ["店舗選択", "商品選択", "お届け先", "注文確認"];
 
@@ -71,7 +72,7 @@ export default function ECStorePage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+            <LineSpinner size={24} />
           </div>
         ) : filteredStores.length === 0 ? (
           <div className="text-center py-20 text-gray-400 text-sm">

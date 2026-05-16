@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Search } from "lucide-react";
+import { Search } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useProductRegistrations } from "@/hooks/use-product-registrations";
 import type { ProductRegistration } from "@/hooks/use-product-registrations";
 import { useStoreContext } from "@/lib/store-context";
@@ -110,7 +111,7 @@ export default function StoreProductsPage() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
+        <LineSpinner size={28} />
       </div>
     );
   }

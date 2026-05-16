@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Loader2, Trash2, Check, ImagePlus, Pencil, X } from "lucide-react";
+import { Trash2, Check, ImagePlus, Pencil, X } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth } from "@/lib/auth-context";
 import { useNoshi, NoshiItem } from "@/hooks/use-noshi";
 import { uploadNoshiImage } from "@/lib/upload-image";
@@ -105,7 +106,7 @@ export function NoshiTab() {
                 className="w-40 h-40 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-amber-300 transition-colors overflow-hidden bg-gray-50"
               >
                 {uploading ? (
-                  <Loader2 className="animate-spin text-gray-400" size={24} />
+                  <LineSpinner size={24} />
                 ) : imageUrl ? (
                   <img src={imageUrl} alt="のし" className="w-full h-full object-cover" />
                 ) : (
@@ -171,7 +172,7 @@ export function NoshiTab() {
                 disabled={saving}
                 className="flex items-center gap-2 px-5 py-2 bg-amber-400 hover:bg-amber-500 text-white text-sm font-bold rounded-lg disabled:opacity-50 transition-colors"
               >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} /> : <Pencil size={14} />}
+                {saving ? <LineSpinner size={20} /> : saved ? <Check size={14} /> : <Pencil size={14} />}
                 {saved ? "保存しました" : "保存"}
               </button>
 
@@ -197,7 +198,7 @@ export function NoshiTab() {
           <h3 className="text-sm font-bold text-gray-700 mb-3">のし一覧</h3>
           {loading ? (
             <div className="flex justify-center py-8">
-              <Loader2 className="animate-spin text-gray-400" size={20} />
+              <LineSpinner size={20} />
             </div>
           ) : noshiList.length === 0 ? (
             <p className="text-xs text-gray-400 py-4 text-center">のしが登録されていません</p>
@@ -256,7 +257,7 @@ export function NoshiTab() {
                 disabled={deleting}
                 className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-bold disabled:opacity-50"
               >
-                {deleting ? <Loader2 size={14} className="animate-spin mx-auto" /> : "削除"}
+                {deleting ? <LineSpinner size={20} /> : "削除"}
               </button>
             </div>
           </div>

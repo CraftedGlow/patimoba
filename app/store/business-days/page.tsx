@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { toJpeg } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { MonthView } from "@/components/store/business-days/month-view";
 import { WeekView } from "@/components/store/business-days/week-view";
 import { DayView } from "@/components/store/business-days/day-view";
@@ -438,7 +439,7 @@ export default function BusinessDaysPage() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
+        <LineSpinner size={28} />
       </div>
     );
   }
@@ -490,7 +491,7 @@ export default function BusinessDaysPage() {
               disabled={exporting}
               className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
             >
-              {exporting && <Loader2 className="w-4 h-4 animate-spin" />}
+              {exporting && <LineSpinner size={16} />}
               カレンダーを保存
             </motion.button>
             <AnimatePresence>
@@ -788,7 +789,7 @@ export default function BusinessDaysPage() {
                   disabled={holidaySaving}
                   className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {holidaySaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {holidaySaving && <LineSpinner size={16} />}
                   以上の内容に変更
                 </motion.button>
               </div>

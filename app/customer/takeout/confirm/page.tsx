@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, PartyPopper, ShoppingBag, Loader2 } from "lucide-react";
+import { X, PartyPopper, ShoppingBag } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
@@ -760,7 +761,7 @@ export default function TakeoutConfirmPage() {
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5">
                 {tokushoLoading ? (
-                  <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-amber-400" /></div>
+                  <div className="flex justify-center py-10"><LineSpinner size={20} /></div>
                 ) : tokushoText ? (
                   <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">{tokushoText}</pre>
                 ) : (

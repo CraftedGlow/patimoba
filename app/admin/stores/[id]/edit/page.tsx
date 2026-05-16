@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import Image from "next/image";
 import {
   fetchStoreById,
@@ -190,7 +191,7 @@ export default function AdminStoreEditPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+        <LineSpinner size={30} />
       </div>
     );
   }
@@ -388,7 +389,7 @@ export default function AdminStoreEditPage() {
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {saving && <LineSpinner size={16} />}
             {saving ? "更新中..." : "更新する"}
           </motion.button>
         </div>

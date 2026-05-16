@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Check, Trash2, ImagePlus, Plus, GripVertical } from "lucide-react";
+import { X, Check, Trash2, ImagePlus, Plus, GripVertical } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useProductTypes } from "@/hooks/use-product-types";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import type { ProductRegistration, ProductCustomOption } from "@/hooks/use-product-registrations";
@@ -259,7 +260,7 @@ export function ProductDetailPanel({
               className="border border-gray-300 rounded-lg px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
             >
               {uploading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <LineSpinner size={20} />
               ) : (
                 <>画像<br />追加</>
               )}
@@ -519,7 +520,7 @@ export function ProductDetailPanel({
           className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
         >
           {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <LineSpinner size={20} />
           ) : saved ? (
             <>
               <Check className="w-4 h-4" />
@@ -573,7 +574,7 @@ export function ProductDetailPanel({
                   disabled={deleting}
                   className="px-8 py-2 rounded-lg bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {deleting && <LineSpinner size={20} />}
                   削除する
                 </motion.button>
                 <motion.button

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Save, Loader2, CheckCircle2 } from "lucide-react";
+import { Save, CheckCircle2 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { motion } from "framer-motion";
 
 type Tab = "terms" | "privacy";
@@ -62,7 +63,7 @@ export default function LegalPage() {
           className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
         >
           {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <LineSpinner size={16} />
           ) : saved ? (
             <CheckCircle2 className="w-4 h-4" />
           ) : (
@@ -92,7 +93,7 @@ export default function LegalPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            <LineSpinner size={24} />
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

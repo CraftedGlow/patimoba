@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Check, Loader2 } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
@@ -325,7 +326,7 @@ export default function TakeoutProductsPage() {
 
         {loading || cakesLoading ? (
           <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+            <LineSpinner size={24} />
           </div>
         ) : selectedCategory === "すべて" ? (
           allGridItems.length === 0 ? (

@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import { ChartCandlestick as CandlestickChart, X, Check, ImagePlus, Loader2 } from "lucide-react";
+import { ChartCandlestick as CandlestickChart, X, Check, ImagePlus } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import type { WholeCakeProduct } from "@/lib/types";
 import type { CandleOption } from "@/hooks/use-whole-cakes";
 
@@ -293,7 +294,7 @@ export function WholeCakeBasicStep({
                     className="w-full h-32 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 text-gray-500 text-sm hover:border-amber-400 hover:text-amber-600 transition-colors disabled:opacity-50"
                   >
                     {uploadingPrintPhoto ? (
-                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <LineSpinner size={24} />
                     ) : (
                       <ImagePlus className="w-6 h-6" />
                     )}

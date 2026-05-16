@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 
 export default function TermsPage() {
@@ -34,7 +35,7 @@ export default function TermsPage() {
       <div className="px-4 py-6 max-w-2xl mx-auto">
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+            <LineSpinner size={24} />
           </div>
         ) : text ? (
           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{text}</p>

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Upload, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import Image from "next/image";
 import {
   createStore,
@@ -410,7 +411,7 @@ export default function AdminStoreNewPage() {
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {saving && <LineSpinner size={20} />}
             {saving ? "登録中..." : "店舗登録する"}
           </motion.button>
         </div>

@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Loader2, Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 
@@ -392,7 +393,7 @@ export default function CustomerSignupPage() {
             disabled={submitting}
             className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {submitting && <LineSpinner size={20} />}
             登録する
           </motion.button>
 

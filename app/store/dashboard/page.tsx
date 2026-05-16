@@ -6,9 +6,9 @@ import {
   DollarSign,
   Users,
   Building2,
-  Loader2,
   Bell,
 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
 import { OrderDetailModal } from "@/components/store/order-detail-modal";
 import type { Order } from "@/lib/types";
@@ -490,7 +490,7 @@ export default function StoreDashboardPage() {
                   }`}
                 >
                   {confirmLoading && (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <LineSpinner size={16} />
                   )}
                   はい
                 </button>

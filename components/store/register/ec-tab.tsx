@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Trash2, Check, X, ImagePlus } from "lucide-react";
+import { Trash2, Check, X, ImagePlus } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
@@ -262,7 +263,7 @@ export function EcTab() {
           disabled={uploading}
           className="w-[150px] h-[150px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
         >
-          {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+          {uploading ? <LineSpinner size={24} /> : (
             <><ImagePlus className="w-8 h-8" /><span className="text-center px-2">{label}</span></>
           )}
         </motion.button>
@@ -273,7 +274,7 @@ export function EcTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
+        <LineSpinner size={28} />
       </div>
     );
   }
@@ -504,7 +505,7 @@ export function EcTab() {
           disabled={saving}
           className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          {saving && <LineSpinner size={16} />}
           {selectedId ? "商品を更新する" : "商品を登録する"}
         </motion.button>
       </motion.div>
@@ -555,7 +556,7 @@ export function EcTab() {
                   onClick={handleDelete} disabled={deleting}
                   className="px-8 py-2 rounded-lg bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {deleting && <Loader2 className="w-4 h-4 animate-spin" />}削除する
+                  {deleting && <LineSpinner size={16} />}削除する
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}

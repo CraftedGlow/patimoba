@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { X, Loader2, Key, Check, Camera, Link2, Plus, Trash2 } from "lucide-react";
+import { X, Key, Check, Camera, Link2, Plus, Trash2 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { PasswordInput } from "@/components/ui/password-input";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -472,7 +473,7 @@ export default function StoreAccountPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+        <LineSpinner size={30} />
       </div>
     );
   }
@@ -544,7 +545,7 @@ export default function StoreAccountPage() {
               ) : (
                 <div className="w-16 h-16 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors">
                   {logoUploading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <LineSpinner size={20} />
                   ) : (
                     <>
                       <Camera className="w-4 h-4 mb-0.5" />
@@ -555,7 +556,7 @@ export default function StoreAccountPage() {
               )}
               {logoUploading && logoUrl && (
                 <div className="absolute inset-0 bg-white/60 rounded-lg flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+                  <LineSpinner size={20} />
                 </div>
               )}
             </motion.button>
@@ -591,14 +592,14 @@ export default function StoreAccountPage() {
                   </div>
                   {imageUploading && (
                     <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-                      <Loader2 className="w-5 h-5 text-amber-500 animate-spin" />
+                      <LineSpinner size={20} />
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="w-full h-36 max-w-sm rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors">
                   {imageUploading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <LineSpinner size={20} />
                   ) : (
                     <>
                       <Camera className="w-5 h-5 mb-1" />
@@ -844,7 +845,7 @@ export default function StoreAccountPage() {
             disabled={pwSaving}
             className="px-6 py-2.5 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
-            {pwSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {pwSaving && <LineSpinner size={16} />}
             {hasPassword ? "パスワードを変更" : "パスワードを設定"}
           </motion.button>
         </div>
@@ -890,7 +891,7 @@ export default function StoreAccountPage() {
                 disabled={saving}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving && <LineSpinner size={16} />}
                 以上の内容に変更
               </motion.button>
             </div>
@@ -926,7 +927,7 @@ export default function StoreAccountPage() {
                 disabled={saving}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving && <LineSpinner size={16} />}
                 保存
               </motion.button>
             </div>
@@ -962,7 +963,7 @@ export default function StoreAccountPage() {
                 disabled={saving}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving && <LineSpinner size={16} />}
                 保存
               </motion.button>
             </div>
@@ -997,7 +998,7 @@ export default function StoreAccountPage() {
                 disabled={saving}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving && <LineSpinner size={16} />}
                 保存
               </motion.button>
             </div>
@@ -1052,7 +1053,7 @@ export default function StoreAccountPage() {
                 disabled={saving || !newBlackoutFrom || !newBlackoutTo || newBlackoutFrom > newBlackoutTo}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving && <LineSpinner size={16} />}
                 追加する
               </motion.button>
             </div>
@@ -1114,7 +1115,7 @@ export default function StoreAccountPage() {
                 disabled={saving}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {saving && <LineSpinner size={16} />}
                 以上の内容に変更
               </motion.button>
             </div>

@@ -12,7 +12,8 @@ import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { Store } from "@/lib/types";
-import { Search, Heart, Loader2 } from "lucide-react";
+import { Search, Heart } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
 
@@ -186,7 +187,7 @@ export default function TakeoutStorePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+                <LineSpinner size={30} />
                 <p className="text-base font-bold text-gray-700">LINEログイン中...</p>
               </div>
             )}
@@ -248,7 +249,7 @@ export default function TakeoutStorePage() {
 
               {loading ? (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+                  <LineSpinner size={24} />
                 </div>
               ) : filteredStores.length === 0 ? (
                 <div className="text-center py-20 text-gray-400 text-sm">

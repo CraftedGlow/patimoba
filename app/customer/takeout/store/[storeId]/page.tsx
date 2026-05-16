@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CalendarDays, MapPin, X, Loader2 } from "lucide-react";
+import { Clock, CalendarDays, MapPin, X } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import Image from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
@@ -368,7 +369,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+                <LineSpinner size={30} />
                 <p className="text-base font-bold text-gray-700">LINEログイン中...</p>
               </div>
             )}
@@ -585,7 +586,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5">
                 {tokushoLoading ? (
-                  <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-amber-400" /></div>
+                  <div className="flex justify-center py-10"><LineSpinner size={20} /></div>
                 ) : tokushoText ? (
                   <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">{tokushoText}</pre>
                 ) : (

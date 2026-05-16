@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Trash2, Check, ImagePlus, Plus } from "lucide-react";
+import { X, Trash2, Check, ImagePlus, Plus } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import type { ProductCustomOption } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
@@ -372,7 +373,7 @@ export function CakeTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
+        <LineSpinner size={28} />
       </div>
     );
   }
@@ -493,7 +494,7 @@ export function CakeTab() {
                 className="w-[160px] h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingMain ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <LineSpinner size={24} />
                 ) : (
                   <>
                     <ImagePlus className="w-8 h-8" />
@@ -523,7 +524,7 @@ export function CakeTab() {
                 className="w-[160px] h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingCross ? (
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <LineSpinner size={24} />
                 ) : (
                   <>
                     <ImagePlus className="w-8 h-8" />
@@ -1055,7 +1056,7 @@ export function CakeTab() {
           disabled={saving}
           className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          {saving && <LineSpinner size={16} />}
           {selectedId ? "商品を更新する" : "商品を登録する"}
         </motion.button>
       </motion.div>
@@ -1123,7 +1124,7 @@ export function CakeTab() {
                   disabled={deleting}
                   className="px-8 py-2 rounded-lg bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
-                  {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {deleting && <LineSpinner size={16} />}
                   削除する
                 </motion.button>
                 <motion.button

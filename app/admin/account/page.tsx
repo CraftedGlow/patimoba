@@ -10,10 +10,10 @@ import {
   Key,
   Bell,
   Save,
-  Loader2,
   Check,
   UserPlus,
 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import { PasswordInput } from "@/components/ui/password-input";
 
@@ -271,7 +271,7 @@ export default function AdminAccountPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+        <LineSpinner size={30} />
       </div>
     );
   }
@@ -468,7 +468,7 @@ export default function AdminAccountPage() {
                 disabled={passwordSaving || isNew}
                 className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {passwordSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {passwordSaving && <LineSpinner size={16} />}
                 パスワードを変更
               </motion.button>
               {isNew && (
@@ -544,7 +544,7 @@ export default function AdminAccountPage() {
             className="flex items-center gap-2 bg-amber-400 hover:bg-amber-500 text-white font-bold px-6 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50"
           >
             {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <LineSpinner size={16} />
             ) : isNew ? (
               <UserPlus className="w-4 h-4" />
             ) : (

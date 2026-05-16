@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
@@ -242,7 +243,7 @@ export default function WholeCakePage() {
   if (isPageLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+        <LineSpinner size={24} />
       </div>
     );
   }

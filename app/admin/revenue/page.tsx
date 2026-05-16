@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import {
   BarChart,
   Bar,
@@ -187,7 +188,7 @@ export default function AdminRevenuePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+        <LineSpinner size={30} />
       </div>
     );
   }

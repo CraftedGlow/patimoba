@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Loader2, Check } from "lucide-react"
+import { ArrowLeft, Check } from "lucide-react"
+import { LineSpinner } from "@/components/ui/line-spinner"
 import { PasswordInput } from "@/components/ui/password-input"
 import type { Database } from "@/lib/database.types"
 
@@ -240,7 +241,7 @@ export function LineRegisterClient({
             disabled={submitting}
             className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {submitting && <LineSpinner size={16} />}
             登録して店舗を選ぶ
           </motion.button>
 

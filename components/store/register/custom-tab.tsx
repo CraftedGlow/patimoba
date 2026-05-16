@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, Loader2, Check } from "lucide-react";
+import { X, Plus, Check } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
@@ -183,7 +184,7 @@ export function CustomTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
+        <LineSpinner size={28} />
       </div>
     );
   }
@@ -581,7 +582,7 @@ export function CustomTab() {
                             disabled={saving}
                             className="bg-amber-400 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
                           >
-                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "確定"}
+                            {saving ? <LineSpinner size={16} /> : "確定"}
                           </motion.button>
                           <button
                             onClick={() => setEditId(null)}

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, User, X, Loader2 } from "lucide-react";
+import { Heart, User, X } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 
 import { useCustomers } from "@/hooks/use-customers";
 import { useStoreContext } from "@/lib/store-context";
@@ -180,7 +181,7 @@ export default function StoreCustomersPage() {
             >
               {detailLoading ? (
                 <div className="flex items-center justify-center h-full">
-                  <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+                  <LineSpinner size={30} />
                 </div>
               ) : selectedCustomer ? (
                 <div className="p-6">

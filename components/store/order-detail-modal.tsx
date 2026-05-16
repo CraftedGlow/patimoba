@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { X, Printer, Loader2, Check } from "lucide-react";
+import { X, Printer, Check } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import type { Order } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 
@@ -152,7 +153,7 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
               style={!printDone ? { backgroundColor: "#FEBC2F" } : undefined}
             >
               {printing ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <LineSpinner size={20} />
               ) : printDone ? (
                 <Check className="w-3.5 h-3.5" />
               ) : (
@@ -184,7 +185,7 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
 
             {itemsLoading ? (
               <div className="flex justify-center py-6">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                <LineSpinner size={20} />
               </div>
             ) : (
               <div className="space-y-4">

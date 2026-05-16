@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { PasswordInput } from "@/components/ui/password-input";
 
@@ -203,7 +204,7 @@ export default function CustomerLoginPage() {
                 className="w-full flex items-center justify-center gap-3 bg-[#06C755] hover:bg-[#05b34d] text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl transition-colors duration-200 shadow-lg shadow-green-200/50 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {liffLoading ? (
-                  <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" />
+                  <LineSpinner size={20} />
                 ) : (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -270,7 +271,7 @@ export default function CustomerLoginPage() {
                     disabled={submitting}
                     className="w-full flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-500 text-white font-bold text-sm sm:text-base py-3 sm:py-3.5 rounded-xl transition-colors duration-200 shadow-lg shadow-amber-200/50 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {submitting && <LineSpinner size={16} />}
                     メールアドレスでログイン
                   </motion.button>
 

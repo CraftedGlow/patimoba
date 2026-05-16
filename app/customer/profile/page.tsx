@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NextImage from "next/image";
-import { Loader2, Check, Plus, X, User } from "lucide-react";
+import { Check, Plus, X, User } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 
@@ -236,7 +237,7 @@ export default function CustomerProfilePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+                <LineSpinner size={30} />
                 <p className="text-base font-bold text-gray-700">LINEログイン中...</p>
               </div>
             )}
@@ -249,7 +250,7 @@ export default function CustomerProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+        <LineSpinner size={30} />
       </div>
     );
   }
@@ -516,7 +517,7 @@ export default function CustomerProfilePage() {
           disabled={saving}
           className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+          {saving ? <LineSpinner size={16} /> : <Check className="w-4 h-4" />}
           保存する
         </motion.button>
       </div>

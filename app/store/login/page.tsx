@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Eye, EyeOff, Loader2, X } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, X } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth } from "@/lib/auth-context";
 
 export default function StoreLoginPage() {
@@ -143,7 +144,7 @@ export default function StoreLoginPage() {
             disabled={submitting}
             className="px-12 py-2.5 rounded-full border-2 border-amber-400 text-amber-500 font-bold text-sm hover:bg-amber-400 hover:text-white transition-all duration-200 mb-3 disabled:opacity-50 flex items-center gap-2"
           >
-            {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {submitting && <LineSpinner size={20} />}
             ログイン
           </motion.button>
 

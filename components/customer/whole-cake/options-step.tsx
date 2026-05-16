@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import type { WholeCakeProduct, DecorationGroupWithItems } from "@/lib/types";
 
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -83,7 +84,7 @@ export function WholeCakeOptionsStep({
 
         {groupsLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
+            <LineSpinner size={20} />
           </div>
         ) : visibleGroups.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-400">

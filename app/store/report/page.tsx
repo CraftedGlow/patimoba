@@ -12,10 +12,10 @@ import {
   TrendingUp,
   TrendingDown,
   Download,
-  Loader2,
   ShoppingBag,
   Users,
 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 
 function RankIcon({ rank }: { rank: number }) {
   if (rank === 0) {
@@ -282,7 +282,7 @@ export default function StoreReportPage() {
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <Loader2 className="w-7 h-7 text-amber-400 animate-spin" />
+        <LineSpinner size={28} />
       </div>
     );
   }

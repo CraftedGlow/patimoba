@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import { ImagePlus, X, Loader2, Download } from "lucide-react";
+import { ImagePlus, X, Download } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import type { WholeCakeProduct, WholeCakeSize, DecorationGroupWithItems } from "@/lib/types";
 import type { CandleOption } from "@/hooks/use-whole-cakes";
 import type { CandleEntry } from "./basic-step";
@@ -172,7 +173,7 @@ export function WholeCakeConfirmStep({
               disabled={uploadingPrintPhoto}
               className="flex items-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-amber-400 text-amber-600 text-sm font-bold hover:bg-amber-50 transition-colors disabled:opacity-50"
             >
-              {uploadingPrintPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
+              {uploadingPrintPhoto ? <LineSpinner size={20} /> : <ImagePlus className="w-4 h-4" />}
               {uploadingPrintPhoto ? "アップロード中..." : "写真を選択"}
             </motion.button>
           )}

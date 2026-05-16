@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 
@@ -76,7 +76,7 @@ export default function Home() {
   if (isLiffCallback) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+        <LineSpinner size={30} />
       </div>
     );
   }

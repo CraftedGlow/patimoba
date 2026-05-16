@@ -14,9 +14,9 @@ import {
   Trash2,
   Pencil,
   X,
-  Loader2,
   Check,
 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { fetchStores, deleteStore, type Store } from "@/lib/admin-api";
 import { mrrYenForStorePlan, normalizeStorePlan } from "@/lib/store-plans";
 
@@ -298,7 +298,7 @@ export default function AdminStoresPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+            <LineSpinner size={30} />
           </div>
         ) : filteredStores.length === 0 ? (
           <div className="text-center py-20 text-gray-400">

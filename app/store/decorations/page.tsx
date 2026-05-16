@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, X, Loader2, ImagePlus, Pencil, Trash2, Check, ChevronDown, ChevronUp, Cherry, LayoutGrid, Sparkles, Droplets, Tag, type LucideIcon } from "lucide-react"
+import { Plus, X, ImagePlus, Pencil, Trash2, Check, ChevronDown, ChevronUp, Cherry, LayoutGrid, Sparkles, Droplets, Tag, type LucideIcon } from "lucide-react"
+import { LineSpinner } from "@/components/ui/line-spinner"
 import { useAuth } from "@/lib/auth-context"
 import { useDecorations } from "@/hooks/use-decorations"
 import { useDecorationGroups } from "@/hooks/use-decoration-groups"
@@ -145,7 +146,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
             disabled={uploading}
             className="w-28 h-28 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-amber-400 hover:bg-amber-50 transition-colors"
           >
-            {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-6 h-6" />}
+            {uploading ? <LineSpinner size={20} /> : <ImagePlus className="w-6 h-6" />}
             <span className="text-xs">画像を追加</span>
           </motion.button>
         )}
@@ -239,7 +240,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
           disabled={saving}
           className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          {saving && <LineSpinner size={16} />}
           保存する
         </motion.button>
       </div>
@@ -343,7 +344,7 @@ function GroupForm({ initial, onSave, onClose }: GroupFormProps) {
         <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           onClick={handleSubmit} disabled={saving}
           className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          {saving && <LineSpinner size={16} />}
           保存する
         </motion.button>
       </div>
@@ -399,7 +400,7 @@ export default function DecorationsPage() {
   if (decoLoading || groupLoading) {
     return (
       <div className="p-6 flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
+        <LineSpinner size={24} />
       </div>
     )
   }

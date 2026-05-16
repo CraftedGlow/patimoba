@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useOrders, type OrderChannel } from "@/hooks/use-orders";
 import { useStoreContext } from "@/lib/store-context";
 import { useAuth } from "@/lib/auth-context";
@@ -524,7 +525,7 @@ export default function StoreOrdersPage() {
                   disabled={manageCsvExporting}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
                 >
-                  {manageCsvExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {manageCsvExporting ? <LineSpinner size={16} /> : <Download className="w-4 h-4" />}
                   CSV
                 </motion.button>
                 <motion.button
@@ -534,7 +535,7 @@ export default function StoreOrdersPage() {
                   disabled={managePdfExporting}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
                 >
-                  {managePdfExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {managePdfExporting ? <LineSpinner size={16} /> : <Download className="w-4 h-4" />}
                   PDF
                 </motion.button>
               </div>
@@ -673,7 +674,7 @@ export default function StoreOrdersPage() {
                 disabled={csvExporting}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
               >
-                {csvExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {csvExporting ? <LineSpinner size={16} /> : <Download className="w-4 h-4" />}
                 CSV
               </motion.button>
               <motion.button
@@ -683,7 +684,7 @@ export default function StoreOrdersPage() {
                 disabled={pdfExporting}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-bold transition-colors disabled:opacity-50"
               >
-                {pdfExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                {pdfExporting ? <LineSpinner size={16} /> : <Download className="w-4 h-4" />}
                 PDF
               </motion.button>
             </div>
@@ -846,7 +847,7 @@ export default function StoreOrdersPage() {
                   onClick={handleConfirm}
                   className={`flex-1 font-bold py-2.5 rounded-full text-sm flex items-center justify-center gap-1 disabled:opacity-60 text-white ${confirmAction.toFulfilled ? "bg-amber-400 hover:bg-amber-500" : "bg-gray-500 hover:bg-gray-600"}`}
                 >
-                  {confirmLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {confirmLoading && <LineSpinner size={16} />}
                   はい
                 </button>
               </div>

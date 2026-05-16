@@ -11,9 +11,9 @@ import {
   Users,
   ChevronRight,
   ArrowLeft,
-  Loader2,
   MessageCircle,
 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, type UserType } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -161,7 +161,7 @@ export default function LoginPage() {
   if (isLiffCallback) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+        <LineSpinner size={30} />
       </div>
     )
   }
@@ -251,7 +251,7 @@ export default function LoginPage() {
                     </div>
                     {role.id === "customer" ? (
                       liffLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-[#06C755]" />
+                        <LineSpinner size={16} />
                       ) : (
                         <span className="flex items-center gap-1 text-xs text-[#06C755] font-medium">
                           <MessageCircle className="w-3.5 h-3.5" />
@@ -373,7 +373,7 @@ export default function LoginPage() {
                 disabled={submitting}
                 className="px-12 py-2.5 rounded-full border-2 border-amber-400 text-amber-500 font-bold text-sm hover:bg-amber-400 hover:text-white transition-all duration-200 mb-3 disabled:opacity-50 flex items-center gap-2"
               >
-                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                {submitting && <LineSpinner size={16} />}
                 ログイン
               </motion.button>
 

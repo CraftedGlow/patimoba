@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Printer, Loader2, Download } from "lucide-react";
+import { X, Printer, Download } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import type { Order } from "@/lib/types";
 
@@ -123,7 +124,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
         <div className="overflow-y-auto flex-1 px-5 py-4">
           {loading ? (
             <div className="flex justify-center py-10">
-              <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
+              <LineSpinner size={20} />
             </div>
           ) : options.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">詳細情報がありません</p>

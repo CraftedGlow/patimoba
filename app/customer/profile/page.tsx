@@ -208,12 +208,12 @@ export default function CustomerProfilePage() {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
-        <div className="flex-1 flex flex-col px-8">
+        <div className="flex-1 relative flex items-center justify-center px-8">
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="flex justify-center pt-16"
+            className="absolute top-10 left-0 right-0 flex justify-center"
           >
             <NextImage
               src="/パティモバ　ロゴ.png"
@@ -228,7 +228,7 @@ export default function CustomerProfilePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2, duration: 0.4 }}
-            className="flex-1 flex flex-col items-center justify-center w-full max-w-xs mx-auto text-center"
+            className="text-center"
           >
             {loginError ? (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-left">

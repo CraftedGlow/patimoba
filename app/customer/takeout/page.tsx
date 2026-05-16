@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
@@ -160,24 +159,9 @@ export default function TakeoutStorePage() {
         <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
         <div className="flex-1 flex flex-col items-center justify-center px-8">
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="mb-10"
-          >
-            <Image
-              src="/スクリーンショット_2026-04-09_14.49.59.png"
-              alt="パティモバ"
-              width={280}
-              height={80}
-              className="h-14 w-auto"
-              priority
-            />
-          </motion.div>
-          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
+            transition={{ duration: 0.4 }}
             className="w-full max-w-xs text-center"
           >
             {loginError ? (
@@ -188,7 +172,7 @@ export default function TakeoutStorePage() {
             ) : (
               <div className="flex flex-col items-center gap-4">
                 <LineSpinner size={30} />
-                <p className="text-base font-bold text-gray-700">LINEログイン中...</p>
+                <p className="text-base font-bold text-gray-900">LINEログイン中...</p>
               </div>
             )}
           </motion.div>

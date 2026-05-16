@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 
 type LineLoginScreenProps = {
   redirectTo: string;
@@ -21,29 +22,13 @@ export function LineLoginScreen({
   backLabel = "ログイン",
 }: LineLoginScreenProps) {
   const router = useRouter();
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(timer);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 60);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (progress !== 100) return;
     const t = setTimeout(() => {
       router.push(redirectTo);
-    }, 800);
+    }, 3800);
     return () => clearTimeout(t);
-  }, [progress, redirectTo, router]);
+  }, [redirectTo, router]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -87,20 +72,13 @@ export function LineLoginScreen({
           transition={{ delay: 0.2, duration: 0.4 }}
           className="w-full max-w-xs text-center"
         >
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-8">
             LINEログイン中...
           </h2>
 
-          <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden mb-3 shadow-inner">
-            <motion.div
-              className="h-full rounded-full bg-[#F9A825]"
-              initial={{ width: "0%" }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.08 }}
-            />
+          <div className="flex justify-center">
+            <LineSpinner size={30} />
           </div>
-
-          <p className="text-lg font-bold text-gray-900">{progress}%</p>
         </motion.div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { LineSpinner } from "@/components/ui/line-spinner";
 
 export default function LiffLoadingPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function LiffLoadingPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
-      <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+      <LineSpinner size={30} />
     </div>
   );
 }

@@ -354,7 +354,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             ) : (
               <div className="flex flex-col items-center gap-4">
                 <LineSpinner size={30} />
-                <p className="text-base font-bold text-gray-900">LINEログイン中...</p>
+                <p className="text-2xl font-bold text-gray-900">LINEログイン中...</p>
               </div>
             )}
           </motion.div>

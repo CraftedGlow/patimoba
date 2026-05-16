@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Noto_Sans_JP } from "next/font/google";
 import { Providers } from "@/components/providers";
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "洋菓子店のテイクアウト注文・EC・店舗管理を一元化するプラットフォーム",
 };
 
-export const viewport: Viewport = {
+export const viewport = {
   viewportFit: "cover",
 };
 

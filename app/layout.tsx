@@ -11,6 +11,9 @@ const notoSansJP = Noto_Sans_JP({
 export const metadata: Metadata = {
   title: "パティモバ - 洋菓子店向けSaaS",
   description: "洋菓子店のテイクアウト注文・EC・店舗管理を一元化するプラットフォーム",
+  icons: {
+    icon: "/favicon.jpg",
+  },
 };
 
 export const viewport = {

@@ -457,9 +457,16 @@ export default function CustomerProfilePage() {
                 key={idx}
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2 bg-amber-50 rounded-xl p-3"
+                className="relative bg-amber-50 rounded-xl p-3 pr-8"
               >
-                <div className="flex-1 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAnniversaries((prev) => prev.filter((_, i) => i !== idx))}
+                  className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex flex-col gap-2">
                   <input
                     type="date"
                     value={a.date}
@@ -484,13 +491,6 @@ export default function CustomerProfilePage() {
                     ))}
                   </select>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAnniversaries((prev) => prev.filter((_, i) => i !== idx))}
-                  className="p-1.5 text-gray-400 hover:text-red-500 shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </motion.div>
             ))}
           </div>

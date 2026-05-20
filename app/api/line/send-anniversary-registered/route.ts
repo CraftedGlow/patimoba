@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     if (!channelAccessToken) return NextResponse.json({ success: true, sent: false });
 
     const name = user.name ? `${user.name} 様` : "お客様";
-    const message = `🎂 記念日登録ありがとうございます！\n\n${name}\n\nご登録いただいた記念日に合わせて、特別なご提案をお届けします✨\n\nお誕生日や大切な記念日に、ぴったりなケーキをご用意してお待ちしております🍰`;
+    const message = `${name}\n\n情報登録ありがとうございます✨\n\nご登録いただいた記念日の前に、\nおすすめのケーキやご予約のお知らせをLINEでお届けします🎂\n\n特別な日のお祝いに、ぜひご利用ください🍓`;
 
     await fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",

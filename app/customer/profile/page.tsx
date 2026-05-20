@@ -470,7 +470,7 @@ export default function CustomerProfilePage() {
                 className="bg-amber-50 rounded-xl p-3"
               >
                 <div className="flex items-center gap-2">
-                  <div className="flex flex-col gap-2 flex-1 min-w-0 overflow-hidden">
+                  <div className="flex flex-col gap-2 flex-1 min-w-0 overflow-hidden pr-px">
                     <input
                       type="date"
                       value={a.date}

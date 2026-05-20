@@ -139,6 +139,7 @@ export interface WholeCakeProduct {
   name: string
   image: string
   sizes: WholeCakeSize[]
+  printDecorationEnabled: boolean
 }
 
 export interface CartCandleEntry {

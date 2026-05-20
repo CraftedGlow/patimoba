@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Plus, X, User } from "lucide-react";
+import { Check, Plus, X, User, PartyPopper } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import NextImage from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
@@ -36,6 +37,8 @@ function formatBirthDate(year: number, month: number, day: number): string {
 
 export default function CustomerProfilePage() {
   const { user, setUser } = useAuth();
+  const searchParams = useSearchParams();
+  const storeId = searchParams.get("storeId");
 
   const [loginDone, setLoginDone] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -45,6 +48,7 @@ export default function CustomerProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAnniversaryModal, setShowAnniversaryModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   const [lastName, setLastName] = useState("");
@@ -196,6 +200,15 @@ export default function CustomerProfilePage() {
 
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
+
+      if (cleanedAnniversaries.length > 0) {
+        setShowAnniversaryModal(true);
+        fetch("/api/line/send-anniversary-registered", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, storeId }),
+        }).catch(() => {});
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "保存に失敗しました");
     } finally {
@@ -457,39 +470,41 @@ export default function CustomerProfilePage() {
                 key={idx}
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="relative bg-amber-50 rounded-xl p-3 pr-8"
+                className="bg-amber-50 rounded-xl p-3"
               >
-                <button
-                  type="button"
-                  onClick={() => setAnniversaries((prev) => prev.filter((_, i) => i !== idx))}
-                  className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="flex flex-col gap-2">
-                  <input
-                    type="date"
-                    value={a.date}
-                    onChange={(e) =>
-                      setAnniversaries((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
-                      )
-                    }
-                    className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
-                  />
-                  <select
-                    value={a.label}
-                    onChange={(e) =>
-                      setAnniversaries((prev) =>
-                        prev.map((p, i) => (i === idx ? { ...p, label: e.target.value } : p))
-                      )
-                    }
-                    className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-2 flex-1">
+                    <input
+                      type="date"
+                      value={a.date}
+                      onChange={(e) =>
+                        setAnniversaries((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
+                        )
+                      }
+                      className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    />
+                    <select
+                      value={a.label}
+                      onChange={(e) =>
+                        setAnniversaries((prev) =>
+                          prev.map((p, i) => (i === idx ? { ...p, label: e.target.value } : p))
+                        )
+                      }
+                      className="w-full border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    >
+                      {ANNIVERSARY_TYPES.map((t) => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAnniversaries((prev) => prev.filter((_, i) => i !== idx))}
+                    className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500"
                   >
-                    {ANNIVERSARY_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </motion.div>
             ))}
@@ -533,6 +548,53 @@ export default function CustomerProfilePage() {
             <Check className="w-4 h-4" />
             保存しました
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 記念日登録完了モーダル */}
+      <AnimatePresence>
+        {showAnniversaryModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-[60]"
+              onClick={() => setShowAnniversaryModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed left-6 right-6 top-[25%] bg-white rounded-2xl shadow-2xl z-[70] p-8 text-center"
+            >
+              <button
+                onClick={() => setShowAnniversaryModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex justify-center mb-3">
+                <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+                  <PartyPopper className="w-7 h-7 text-amber-500" />
+                </div>
+              </div>
+              <p className="text-base leading-relaxed text-gray-900 font-bold mb-2">
+                登録ありがとうございます！
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                記念日に合わせた特別なご提案をLINEでお届けします✨
+              </p>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowAnniversaryModal(false)}
+                className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base transition-colors"
+              >
+                閉じる
+              </motion.button>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

@@ -34,17 +34,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
+    const restore = async () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY)
+        if (!stored) return
+
         const parsed = JSON.parse(stored)
+
+        // Supabaseセッションが有効か確認する
+        const { supabase } = await import("./supabase")
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          // セッション切れ → ローカル状態もクリア
+          localStorage.removeItem(STORAGE_KEY)
+          return
+        }
+
         setUser(parsed)
+      } catch {
+        /* ignore */
+      } finally {
+        setLoading(false)
       }
-    } catch {
-      /* ignore */
-    } finally {
-      setLoading(false)
     }
+    restore()
   }, [])
 
   const login = useCallback(async (email: string, password: string, expectedType?: UserType): Promise<AuthUser> => {

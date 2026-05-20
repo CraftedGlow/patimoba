@@ -32,6 +32,13 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchOrders = async () => {
+    // storeIdが渡されているのに空文字の場合はまだ未読み込みなのでスキップ
+    if (options.storeId === "") {
+      setOrders([])
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 

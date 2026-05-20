@@ -35,6 +35,11 @@ export function useDashboardStats(storeId?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchStats = async () => {
+    if (storeId === "") {
+      setLoading(false)
+      return
+    }
+
     setLoading(true)
     setError(null)
 

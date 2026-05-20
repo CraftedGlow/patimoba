@@ -43,49 +43,32 @@ export default function WholeCakePage() {
 
   const { wholeCakes, candleOptions, loading } = useWholeCakes(selectedStoreId ?? "");
 
-  // Print mode: store data about the プリントデコレーション group
-  const [printGroupData, setPrintGroupData] = useState<{
-    groupId: string;
-    itemId: string;
-    price: number;
-    cakeIds: string[];
-  } | null>(null);
+  // Print mode: カテゴリ=printのデコレーションを直接取得（グループ不要）
+  const [printDeco, setPrintDeco] = useState<{ id: string; price: number } | null>(null);
   const [printGroupLoading, setPrintGroupLoading] = useState(false);
 
   useEffect(() => {
     if (!isPrintMode || !selectedStoreId || loading) return;
     setPrintGroupLoading(true);
-    (async () => {
-      const { data: groups } = await supabase
-        .from("decoration_groups")
-        .select(`id, decoration_group_items(decorations(id, price))`)
-        .eq("store_id", selectedStoreId)
-        .ilike("name", "%プリントデコレーション%")
-        .limit(1);
-      const group = groups?.[0];
-      if (!group) { setPrintGroupLoading(false); return; }
-      const firstDeco = (group.decoration_group_items?.[0] as any)?.decorations;
-      if (!firstDeco) { setPrintGroupLoading(false); return; }
-      const { data: links } = await supabase
-        .from("product_decoration_groups")
-        .select("product_id")
-        .eq("group_id", group.id);
-      const cakeIds = (links ?? []).map((l: any) => String(l.product_id));
-      setPrintGroupData({
-        groupId: String(group.id),
-        itemId: String(firstDeco.id),
-        price: Number(firstDeco.price) || 0,
-        cakeIds,
+    supabase
+      .from("decorations")
+      .select("id, price")
+      .eq("store_id", selectedStoreId)
+      .eq("category", "print")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        setPrintDeco(data ? { id: String(data.id), price: Number(data.price) || 0 } : null);
+        setPrintGroupLoading(false);
       });
-      setPrintGroupLoading(false);
-    })();
   }, [isPrintMode, selectedStoreId, loading]);
 
-  // Print mode: filter to cakes that have the print group
+  // プリントデコレーション対応ケーキのみ対象
   const printCakes = useMemo(() => {
-    if (!isPrintMode || !printGroupData) return [];
-    return wholeCakes.filter((c) => printGroupData.cakeIds.includes(c.id));
-  }, [isPrintMode, printGroupData, wholeCakes]);
+    if (!isPrintMode || !printDeco) return [];
+    return wholeCakes.filter((c) => c.printDecorationEnabled);
+  }, [isPrintMode, printDeco, wholeCakes]);
 
   // Selected cake
   const [selectedCakeIdForPrint, setSelectedCakeIdForPrint] = useState<string | null>(null);
@@ -117,16 +100,8 @@ export default function WholeCakePage() {
     selectedCake?.id
   );
 
-  // Auto-select the print decoration item when groups load (print mode)
-  useEffect(() => {
-    if (!isPrintMode || !printGroupData || decorationGroups.length === 0) return;
-    const printGroup = decorationGroups.find((g) => g.id === printGroupData.groupId);
-    if (!printGroup) return;
-    setSelectedDecorations((prev) => ({
-      ...prev,
-      [printGroupData.groupId]: [printGroupData.itemId],
-    }));
-  }, [isPrintMode, printGroupData?.groupId, printGroupData?.itemId, decorationGroups]);
+  // プリントモード時はprintDecoを自動選択済みとして扱う（selectedDecorationsには乗せない）
+
 
   const selectedSize = selectedCake?.sizes.find((s) => s.id === selectedSizeId);
   const sizePrice = selectedSize?.price ?? 0;
@@ -230,7 +205,7 @@ export default function WholeCakePage() {
 
   // Non-print regular decoration check for confirm step upload
   const hasPrintDecorationFromRegularMode = !isPrintMode && decorationGroups.some(
-    (g) => g.name.includes("プリント") && (selectedDecorations[g.id] ?? []).length > 0
+    (g) => g.items.some((item) => item.category === "print") && (selectedDecorations[g.id] ?? []).length > 0
   );
 
   // Step 1 can proceed
@@ -340,7 +315,7 @@ export default function WholeCakePage() {
           onDecorationsChange={setSelectedDecorations}
           total={total}
           hasRequiredUnfilled={hasRequiredUnfilled}
-          excludeGroupIds={isPrintMode && printGroupData ? [printGroupData.groupId] : undefined}
+          excludeGroupIds={undefined}
           onNext={() => setStep(3)}
         />
       )}

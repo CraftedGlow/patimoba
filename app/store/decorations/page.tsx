@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Plus, X, ImagePlus, Pencil, Trash2, Check, ChevronDown, ChevronUp, Cherry, LayoutGrid, Sparkles, Droplets, Tag, type LucideIcon } from "lucide-react"
+import { Plus, X, ImagePlus, Pencil, Trash2, Check, ChevronDown, ChevronUp, Cherry, LayoutGrid, Sparkles, Droplets, Tag, Printer, type LucideIcon } from "lucide-react"
 import { LineSpinner } from "@/components/ui/line-spinner"
 import { useAuth } from "@/lib/auth-context"
 import { useDecorations } from "@/hooks/use-decorations"
@@ -11,6 +11,7 @@ import { uploadDecorationImage, deleteProductImage } from "@/lib/upload-image"
 import type { DecorationItem, DecorationGroupWithItems } from "@/lib/types"
 
 const CATEGORY_LABELS: Record<string, string> = {
+  print: "プリントデコレーション",
   fruit: "フルーツ",
   plate: "プレート",
   topping: "トッピング",
@@ -19,6 +20,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 const CATEGORIES = Object.keys(CATEGORY_LABELS)
 const CATEGORY_ICON: Record<string, LucideIcon> = {
+  print: Printer,
   fruit: Cherry,
   plate: LayoutGrid,
   topping: Sparkles,
@@ -95,6 +97,26 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
 
   return (
     <div className="space-y-4">
+      {/* カテゴリ */}
+      <div>
+        <label className="text-xs font-medium text-gray-600 block mb-1">カテゴリ</label>
+        <select
+          value={category}
+          onChange={(e) => {
+            const next = e.target.value
+            setCategory(next)
+            if (next === "print" && !name.trim()) {
+              setName("プリントデコレーション")
+            }
+          }}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
+        >
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+          ))}
+        </select>
+      </div>
+
       {/* 名前 */}
       <div>
         <label className="text-xs font-medium text-gray-600 block mb-1">名前</label>
@@ -105,20 +127,6 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
           placeholder="例: いちごデコレーション"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
         />
-      </div>
-
-      {/* カテゴリ */}
-      <div>
-        <label className="text-xs font-medium text-gray-600 block mb-1">カテゴリ</label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
-          ))}
-        </select>
       </div>
 
       {/* 画像 */}
@@ -455,7 +463,7 @@ export default function DecorationsPage() {
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               onClick={() => setDecoPanel("new")}
-              className="flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors"
+              className="flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors shrink-0 whitespace-nowrap"
             >
               <Plus className="w-4 h-4" /> 新規登録
             </motion.button>
@@ -664,10 +672,11 @@ export default function DecorationsPage() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.3 }} exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black z-40" onClick={() => setGroupPanel("closed")} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setGroupPanel("closed")}>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.18 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-md bg-white rounded-2xl shadow-2xl z-50 p-6 overflow-y-auto max-h-[90vh]"
+              className="w-[90%] max-w-md bg-white rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-5">
@@ -687,6 +696,7 @@ export default function DecorationsPage() {
                 onClose={() => setGroupPanel("closed")}
               />
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>

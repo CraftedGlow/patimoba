@@ -470,7 +470,7 @@ export default function CustomerProfilePage() {
                 className="bg-amber-50 rounded-xl p-3"
               >
                 <div className="flex items-center gap-2">
-                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                  <div className="flex flex-col gap-2 flex-1 min-w-0 overflow-hidden">
                     <input
                       type="date"
                       value={a.date}
@@ -479,7 +479,7 @@ export default function CustomerProfilePage() {
                           prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
                         )
                       }
-                      className="w-full min-w-0 border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+                      className="w-full max-w-full min-w-0 border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
                     />
                     <select
                       value={a.label}

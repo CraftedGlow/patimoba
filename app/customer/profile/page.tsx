@@ -470,17 +470,19 @@ export default function CustomerProfilePage() {
                 className="bg-amber-50 rounded-xl p-3"
               >
                 <div className="flex items-center gap-2">
-                  <div className="flex flex-col gap-2 flex-1 min-w-0 overflow-hidden pr-px">
-                    <input
-                      type="date"
-                      value={a.date}
-                      onChange={(e) =>
-                        setAnniversaries((prev) =>
-                          prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
-                        )
-                      }
-                      className="w-full max-w-full min-w-0 border border-amber-200 rounded-lg px-2 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
-                    />
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <div className="w-full overflow-hidden border border-amber-200 rounded-lg bg-white focus-within:ring-2 focus-within:ring-amber-300">
+                      <input
+                        type="date"
+                        value={a.date}
+                        onChange={(e) =>
+                          setAnniversaries((prev) =>
+                            prev.map((p, i) => (i === idx ? { ...p, date: e.target.value } : p))
+                          )
+                        }
+                        className="w-full px-2 py-2 text-sm bg-transparent border-none outline-none"
+                      />
+                    </div>
                     <select
                       value={a.label}
                       onChange={(e) =>

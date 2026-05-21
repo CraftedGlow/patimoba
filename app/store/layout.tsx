@@ -2,6 +2,7 @@
 
 import { StoreSidebar } from "@/components/store/sidebar";
 import { StoreProvider } from "@/lib/store-context";
+import { NewOrderAlert } from "@/components/store/new-order-alert";
 
 export default function StoreLayout({
   children,
@@ -17,6 +18,7 @@ export default function StoreLayout({
           <div className="h-12 lg:hidden" />
           {children}
         </main>
+        <NewOrderAlert />
       </div>
     </StoreProvider>
   );

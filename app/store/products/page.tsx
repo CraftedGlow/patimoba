@@ -247,170 +247,267 @@ export default function StoreProductsPage() {
           </button>
         </div>
 
-        {/* 商品テーブル */}
-        <div className="overflow-x-auto">
-        <div className="min-w-[700px] border border-gray-200 rounded-lg overflow-hidden">
-          {/* ヘッダー行 */}
-          {isEc ? (
-            <div className="grid grid-cols-[1.2fr_70px_1.5fr_0.8fr_0.6fr_80px_80px] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
-              <span>商品名</span>
-              <span>商品画像</span>
-              <span>商品の説明</span>
-              <span>原材料</span>
-              <span>金額</span>
-              <span className="text-center">賞味期限</span>
-              <span className="text-center">受付状況</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
-              <span>商品名</span>
-              <span>商品画像</span>
-              <span>商品の説明</span>
-              <span>金額</span>
-              <span className="text-center">受付状況</span>
-              <span className="text-center">当日状況</span>
-              <span className="text-center whitespace-nowrap px-0.5">最大個数（/日）</span>
-              <span className="text-center">準備日数</span>
-            </div>
-          )}
+        {/* 商品一覧 */}
+        {filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center text-gray-400 text-sm border border-gray-200 rounded-lg">
+            {search
+              ? "検索結果がありません"
+              : "登録された商品がありません"}
+          </div>
+        ) : (
+          <>
+            {/* モバイル: カード形式 */}
+            <div className="lg:hidden space-y-0">
+              {filtered.map((product, i) => {
+                const isSelected = selectedProduct?.id === product.id;
+                const isInactive = !product.is_active;
+                const price = product.is_preorder_required && product.minVariantPrice != null
+                  ? `¥${product.minVariantPrice.toLocaleString()}~`
+                  : product.base_price > 0
+                  ? `¥${product.base_price.toLocaleString()}`
+                  : "";
 
-          {/* データ行 */}
-          {filtered.length === 0 ? (
-            <div className="px-4 py-12 text-center text-gray-400 text-sm">
-              {search
-                ? "検索結果がありません"
-                : "登録された商品がありません"}
-            </div>
-          ) : (
-            filtered.map((product, i) => {
-              const isSelected = selectedProduct?.id === product.id;
-              const isInactive = !product.is_active;
-
-              return isEc ? (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.02 }}
-                  onClick={() => setSelectedProduct(product)}
-                  className={`grid grid-cols-[1.2fr_70px_1.5fr_0.8fr_0.6fr_80px_80px] px-4 py-2.5 items-center border-t border-gray-100 cursor-pointer transition-colors ${
-                    isSelected
-                      ? "bg-amber-50"
-                      : "hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="text-sm font-medium truncate pr-2">
-                    {product.name}
-                  </span>
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                    {product.image ? (
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200" />
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-500 line-clamp-2 pr-2">
-                    {product.description}
-                  </span>
-                  <span className="text-xs text-gray-500 truncate pr-2">
-
-                  </span>
-                  <span className="text-sm">
-                    {product.is_preorder_required && product.minVariantPrice != null
-                      ? `¥${product.minVariantPrice.toLocaleString()}~`
-                      : product.base_price > 0
-                      ? `¥${product.base_price.toLocaleString()}`
-                      : ""}
-                  </span>
-                  <span className="text-sm text-center">
-
-                  </span>
-                  <div
-                    className="flex justify-center"
-                    onClick={(e) => e.stopPropagation()}
+                return (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.02 }}
+                    onClick={() => setSelectedProduct(product)}
+                    className={`border border-gray-200 rounded-lg p-3 mb-2 flex gap-3 items-start cursor-pointer hover:bg-gray-50 transition-colors ${
+                      isSelected
+                        ? "bg-amber-50"
+                        : isInactive
+                        ? "bg-pink-50/40"
+                        : ""
+                    }`}
                   >
-                    <ToggleSwitch
-                      enabled={product.is_active}
-                      onToggle={() => handleToggleAccept(product)}
-                      colorOn="bg-green-500"
-                    />
+                    {/* 商品画像 */}
+                    <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-200" />
+                      )}
+                    </div>
+
+                    {/* 右側コンテンツ */}
+                    <div className="flex-1 min-w-0">
+                      {/* 商品名 + 価格 */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-bold truncate">{product.name}</span>
+                        {price && <span className="text-sm shrink-0">{price}</span>}
+                      </div>
+
+                      {/* 説明文 */}
+                      {product.description && (
+                        <p className="text-xs text-gray-500 line-clamp-2 mt-0.5">
+                          {product.description}
+                        </p>
+                      )}
+
+                      {/* トグル・詳細情報 */}
+                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                        {/* 受付状況トグル */}
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <ToggleSwitch
+                            enabled={product.is_active}
+                            onToggle={() => handleToggleAccept(product)}
+                            colorOn="bg-green-500"
+                          />
+                        </div>
+
+                        {!isEc && (
+                          <>
+                            {/* 当日状況トグル */}
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <ToggleSwitch
+                                enabled={product.same_day_order_allowed}
+                                onToggle={() => handleToggleSameDay(product)}
+                                colorOn="bg-red-500"
+                              />
+                            </div>
+
+                            {/* 最大個数・準備日数 */}
+                            <span className="text-xs text-gray-500">
+                              最大{product.daily_max_quantity != null ? product.daily_max_quantity : "-"}個
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {product.preparation_days > 0 ? `${product.preparation_days}日` : "当日"}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            {/* デスクトップ: グリッド形式 */}
+            <div className="hidden lg:block">
+              <div className="overflow-x-auto">
+              <div className="min-w-[700px] border border-gray-200 rounded-lg overflow-hidden">
+                {/* ヘッダー行 */}
+                {isEc ? (
+                  <div className="grid grid-cols-[1.2fr_70px_1.5fr_0.8fr_0.6fr_80px_80px] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
+                    <span>商品名</span>
+                    <span>商品画像</span>
+                    <span>商品の説明</span>
+                    <span>原材料</span>
+                    <span>金額</span>
+                    <span className="text-center">賞味期限</span>
+                    <span className="text-center">受付状況</span>
                   </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: i * 0.02 }}
-                  onClick={() => setSelectedProduct(product)}
-                  className={`grid grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem] px-4 py-2.5 items-center border-t border-gray-100 cursor-pointer transition-colors ${
-                    isSelected
-                      ? "bg-amber-50"
-                      : isInactive
-                      ? "bg-pink-50/40 hover:bg-pink-50"
-                      : "hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="text-sm font-medium truncate pr-2">
-                    {product.name}
-                  </span>
-                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                    {product.image ? (
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200" />
-                    )}
+                ) : (
+                  <div className="grid grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
+                    <span>商品名</span>
+                    <span>商品画像</span>
+                    <span>商品の説明</span>
+                    <span>金額</span>
+                    <span className="text-center">受付状況</span>
+                    <span className="text-center">当日状況</span>
+                    <span className="text-center whitespace-nowrap px-0.5">最大個数（/日）</span>
+                    <span className="text-center">準備日数</span>
                   </div>
-                  <span className="text-xs text-gray-500 line-clamp-2 pr-2">
-                    {product.description}
-                  </span>
-                  <span className="text-sm">
-                    {product.is_preorder_required && product.minVariantPrice != null
-                      ? `¥${product.minVariantPrice.toLocaleString()}~`
-                      : product.base_price > 0
-                      ? `¥${product.base_price.toLocaleString()}`
-                      : ""}
-                  </span>
-                  <div
-                    className="flex justify-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ToggleSwitch
-                      enabled={product.is_active}
-                      onToggle={() => handleToggleAccept(product)}
-                      colorOn="bg-green-500"
-                    />
-                  </div>
-                  <div
-                    className="flex justify-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <ToggleSwitch
-                      enabled={product.same_day_order_allowed}
-                      onToggle={() => handleToggleSameDay(product)}
-                      colorOn="bg-red-500"
-                    />
-                  </div>
-                  <span className="text-sm text-center">
-                    {product.daily_max_quantity != null ? product.daily_max_quantity : "-"}
-                  </span>
-                  <span className="text-sm text-center">
-                    {product.preparation_days > 0 ? `${product.preparation_days}日` : "-"}
-                  </span>
-                </motion.div>
-              );
-            })
-          )}
-        </div>
-        </div>
+                )}
+
+                {/* データ行 */}
+                {filtered.map((product, i) => {
+                  const isSelected = selectedProduct?.id === product.id;
+                  const isInactive = !product.is_active;
+
+                  return isEc ? (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.02 }}
+                      onClick={() => setSelectedProduct(product)}
+                      className={`grid grid-cols-[1.2fr_70px_1.5fr_0.8fr_0.6fr_80px_80px] px-4 py-2.5 items-center border-t border-gray-100 cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-amber-50"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="text-sm font-medium truncate pr-2">
+                        {product.name}
+                      </span>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200" />
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500 line-clamp-2 pr-2">
+                        {product.description}
+                      </span>
+                      <span className="text-xs text-gray-500 truncate pr-2">
+
+                      </span>
+                      <span className="text-sm">
+                        {product.is_preorder_required && product.minVariantPrice != null
+                          ? `¥${product.minVariantPrice.toLocaleString()}~`
+                          : product.base_price > 0
+                          ? `¥${product.base_price.toLocaleString()}`
+                          : ""}
+                      </span>
+                      <span className="text-sm text-center">
+
+                      </span>
+                      <div
+                        className="flex justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ToggleSwitch
+                          enabled={product.is_active}
+                          onToggle={() => handleToggleAccept(product)}
+                          colorOn="bg-green-500"
+                        />
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={product.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.02 }}
+                      onClick={() => setSelectedProduct(product)}
+                      className={`grid grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem] px-4 py-2.5 items-center border-t border-gray-100 cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-amber-50"
+                          : isInactive
+                          ? "bg-pink-50/40 hover:bg-pink-50"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="text-sm font-medium truncate pr-2">
+                        {product.name}
+                      </span>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200" />
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500 line-clamp-2 pr-2">
+                        {product.description}
+                      </span>
+                      <span className="text-sm">
+                        {product.is_preorder_required && product.minVariantPrice != null
+                          ? `¥${product.minVariantPrice.toLocaleString()}~`
+                          : product.base_price > 0
+                          ? `¥${product.base_price.toLocaleString()}`
+                          : ""}
+                      </span>
+                      <div
+                        className="flex justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ToggleSwitch
+                          enabled={product.is_active}
+                          onToggle={() => handleToggleAccept(product)}
+                          colorOn="bg-green-500"
+                        />
+                      </div>
+                      <div
+                        className="flex justify-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ToggleSwitch
+                          enabled={product.same_day_order_allowed}
+                          onToggle={() => handleToggleSameDay(product)}
+                          colorOn="bg-red-500"
+                        />
+                      </div>
+                      <span className="text-sm text-center">
+                        {product.daily_max_quantity != null ? product.daily_max_quantity : "-"}
+                      </span>
+                      <span className="text-sm text-center">
+                        {product.preparation_days > 0 ? `${product.preparation_days}日` : "-"}
+                      </span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 右サイドパネル */}

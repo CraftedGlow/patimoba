@@ -217,16 +217,15 @@ export default function CustomerProfilePage() {
   if (!loginDone) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
-        <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
         <div className="flex-1 relative flex items-center justify-center px-8">
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="absolute top-10 left-0 right-0 flex justify-center"
+            className="absolute top-[30px] left-0 right-0 flex justify-center"
           >
             <NextImage
-              src="/パティモバ　ロゴ.png"
+              src="/patimoba-logo-new.png"
               alt="パティモバ"
               width={200}
               height={57}

@@ -103,7 +103,7 @@ export function NoshiTab() {
               <label className="block text-xs font-bold text-gray-600 mb-1.5">画像</label>
               <div
                 onClick={() => imageInputRef.current?.click()}
-                className="w-40 h-40 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-amber-300 transition-colors overflow-hidden bg-gray-50"
+                className="w-full max-w-[160px] h-[130px] sm:h-40 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-amber-300 transition-colors overflow-hidden bg-gray-50"
               >
                 {uploading ? (
                   <LineSpinner size={24} />

@@ -18,7 +18,7 @@ export default function StoreRegisterPage() {
   const [activeTab, setActiveTab] = useState<TabId>("cake");
 
   return (
-    <div className="p-6">
+    <div className="p-4 lg:p-6">
       <div className="flex gap-1 mb-6 border-b border-gray-200">
         {tabs.map((tab) => (
           <button

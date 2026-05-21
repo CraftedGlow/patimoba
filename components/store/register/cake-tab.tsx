@@ -383,7 +383,7 @@ export function CakeTab() {
 
   return (
     <div>
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-6">
         <h2 className="text-lg font-bold">商品登録画面</h2>
         <select
           value={selectedId ?? ""}
@@ -395,7 +395,7 @@ export function CakeTab() {
               selectProduct(v);
             }
           }}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-[220px]"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full sm:w-[220px]"
         >
           <option value="">＋ 新規登録</option>
           {products.map((p) => (
@@ -420,7 +420,7 @@ export function CakeTab() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#FFF9C4] rounded-xl p-6 max-w-[640px] space-y-4"
+        className="bg-[#FFF9C4] rounded-xl p-4 lg:p-6 max-w-[640px] space-y-4"
       >
         {/* ケーキの種類 (product_types) */}
         <select
@@ -454,7 +454,7 @@ export function CakeTab() {
         </div>
 
         {/* 画像アップロード */}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <input
             ref={mainInputRef}
             type="file"
@@ -479,7 +479,7 @@ export function CakeTab() {
           />
           <div className="relative group">
             {mainImage ? (
-              <div className="relative w-[160px] h-[160px] rounded-lg overflow-hidden border border-gray-200">
+              <div className="relative w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg overflow-hidden border border-gray-200">
                 <img src={mainImage} alt="メイン" className="w-full h-full object-cover" />
                 <button
                   onClick={() => handleRemoveImage("main")}
@@ -494,7 +494,7 @@ export function CakeTab() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => mainInputRef.current?.click()}
                 disabled={uploadingMain}
-                className="w-[160px] h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className="w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingMain ? (
                   <LineSpinner size={24} />
@@ -509,7 +509,7 @@ export function CakeTab() {
           </div>
           <div className="relative group">
             {crossImage ? (
-              <div className="relative w-[160px] h-[160px] rounded-lg overflow-hidden border border-gray-200">
+              <div className="relative w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg overflow-hidden border border-gray-200">
                 <img src={crossImage} alt="断面" className="w-full h-full object-cover" />
                 <button
                   onClick={() => handleRemoveImage("cross")}
@@ -524,7 +524,7 @@ export function CakeTab() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => crossInputRef.current?.click()}
                 disabled={uploadingCross}
-                className="w-[160px] h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className="w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingCross ? (
                   <LineSpinner size={24} />
@@ -560,7 +560,7 @@ export function CakeTab() {
         )}
 
         {/* 1日の最大数 / 準備日数 */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-600 block mb-1">1日の最大数</label>
             <input

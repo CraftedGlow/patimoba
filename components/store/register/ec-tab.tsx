@@ -246,7 +246,7 @@ export function EcTab() {
         }}
       />
       {image ? (
-        <div className="relative w-[150px] h-[150px] rounded-lg overflow-hidden border border-gray-200">
+        <div className="relative w-full max-w-[150px] h-[130px] sm:h-[150px] rounded-lg overflow-hidden border border-gray-200">
           <img src={image} alt={label} className="w-full h-full object-cover" />
           <button
             onClick={() => handleRemoveImage(type)}
@@ -261,7 +261,7 @@ export function EcTab() {
           whileTap={{ scale: 0.98 }}
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="w-[150px] h-[150px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+          className="w-full max-w-[150px] h-[130px] sm:h-[150px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
         >
           {uploading ? <LineSpinner size={24} /> : (
             <><ImagePlus className="w-8 h-8" /><span className="text-center px-2">{label}</span></>
@@ -281,12 +281,12 @@ export function EcTab() {
 
   return (
     <div>
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-6">
         <h2 className="text-lg font-bold">商品登録画面</h2>
         <select
           value={selectedId ?? ""}
           onChange={(e) => { const v = e.target.value; if (v === "") clearForm(); else selectProduct(v); }}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-[240px]"
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full sm:w-[240px]"
         >
           <option value="">登録済み商品リスト(EC)</option>
           {products.map((p) => (
@@ -308,7 +308,7 @@ export function EcTab() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#FFF9C4] rounded-xl p-6 max-w-[640px] space-y-4"
+        className="bg-[#FFF9C4] rounded-xl p-4 lg:p-6 max-w-[640px] space-y-4"
       >
         <input
           type="text"
@@ -318,7 +318,7 @@ export function EcTab() {
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {renderImageSlot("main", "メイン画像をアップロード", mainImage, uploadingMain, mainInputRef)}
           {renderImageSlot("cross", "断面の画像をアップロード", crossImage, uploadingCross, crossInputRef)}
           {renderImageSlot("extra", "サブ画像をアップロード", extraImage, uploadingExtra, extraInputRef)}

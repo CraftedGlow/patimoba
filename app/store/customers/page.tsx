@@ -110,7 +110,7 @@ export default function StoreCustomersPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 lg:p-6">
       <div className="flex items-center gap-3 mb-6 bg-[#FFF9C4] rounded-xl p-4">
         <div className="w-12 h-12 bg-amber-400 rounded-full flex items-center justify-center">
           <Heart className="w-6 h-6 text-white" />
@@ -121,7 +121,44 @@ export default function StoreCustomersPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* モバイルカード表示 */}
+      <div className="lg:hidden">
+        {customers.map((customer, i) => (
+          <motion.div
+            key={customer.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: i * 0.03 }}
+            onClick={() => handleRowClick(customer)}
+            className="border border-gray-100 rounded-lg p-3 mb-2 hover:bg-amber-50 cursor-pointer transition-colors flex items-center gap-3"
+          >
+            {customer.avatarUrl ? (
+              <img src={customer.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#06C755] flex items-center justify-center shrink-0">
+                <User className="w-5 h-5 text-white" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-900 truncate">{customer.lineName || customer.name || "-"}</p>
+              {customer.phone && (
+                <p className="text-xs text-gray-400 truncate">{customer.phone}</p>
+              )}
+              {customer.email && (
+                <p className="text-xs text-gray-400 truncate">{customer.email}</p>
+              )}
+            </div>
+          </motion.div>
+        ))}
+        {customers.length === 0 && (
+          <div className="py-10 text-center text-sm text-gray-400">
+            顧客がいません
+          </div>
+        )}
+      </div>
+
+      {/* デスクトップグリッド表示 */}
+      <div className="hidden lg:block overflow-x-auto">
       <div className="min-w-[480px] border border-gray-200 rounded-lg overflow-hidden">
         <div className="grid grid-cols-[2fr_1.3fr_1.5fr] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
           <span>LINEアカウント名</span>

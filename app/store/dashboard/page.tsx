@@ -202,14 +202,14 @@ export default function StoreDashboardPage() {
 
   if (ordersLoading || statsLoading) {
     return (
-      <div className="p-6 flex items-center justify-center">
+      <div className="p-4 lg:p-6 flex items-center justify-center">
         <p className="text-gray-500">読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 lg:p-6">
       <div className="flex justify-end mb-6" ref={dateRef}>
         <div className="relative">
           <button
@@ -279,7 +279,8 @@ export default function StoreDashboardPage() {
       </div>
 
       <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] bg-[#FFF176] px-3 py-2.5 text-xs font-bold text-gray-700 items-center">
+        {/* デスクトップ用ヘッダー */}
+        <div className="hidden lg:grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] bg-[#FFF176] px-3 py-2.5 text-xs font-bold text-gray-700 items-center">
           <span>顧客名</span>
           <span>来店/発送</span>
           <span className="pl-3">注文内容</span>
@@ -298,82 +299,152 @@ export default function StoreDashboardPage() {
               ? order.fulfillmentStatus === "fulfilled"
               : order.orderStatus === "ready" || order.orderStatus === "completed";
 
+            const readyButton = (
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmAction({ orderId: order.id, toReady: !isPrepared, isEc });
+                }}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                  isPrepared
+                    ? "bg-amber-400 hover:bg-amber-500 text-white"
+                    : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                }`}
+              >
+                {isPrepared ? "済" : "未"}
+              </motion.button>
+            );
+
             return (
-            <motion.div
-              key={order.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => setSelectedOrder(order)}
-              className={`grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 cursor-pointer ${
-                isEc ? "bg-amber-50 hover:bg-amber-100" : "bg-white hover:bg-gray-50"
-              }`}
-            >
-              <div>
-                <span className="text-xs text-gray-900">{order.customerName || order.lineName || "-"}</span>
-              </div>
-
-              <div className="text-xs text-gray-600">
-                {isEc
-                  ? <span className="text-[10px] leading-tight line-clamp-2">{order.notes?.split("　配送時間")[0] || "-"}</span>
-                  : (order.pickupTime ? order.pickupTime.slice(0, 5) : "-")}
-              </div>
-
-              <div className="text-sm min-w-0 pl-3 pt-1">
-                {order.items.map((item, j) => (
-                  <div key={j} className="flex items-center gap-1.5 truncate">
-                    <span className="truncate">{item.name}</span>
-                    {item.variantName ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
-                        className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
-                      >
-                        詳細
-                      </button>
-                    ) : (
-                      <span className="shrink-0 text-gray-400 text-xs">×{item.quantity}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div>
-                <div className="text-sm font-bold">
-                  &yen;{order.totalAmount.toLocaleString()}
-                </div>
+              <motion.div
+                key={order.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => setSelectedOrder(order)}
+                className="cursor-pointer"
+              >
+                {/* モバイル用カード */}
                 <div
-                  className={`text-xs ${
-                    order.paymentStatus === "決済済み"
-                      ? "text-green-600"
-                      : order.paymentStatus === "店頭支払い" ||
-                          order.paymentStatus === "銀行振込"
-                        ? "text-blue-600"
-                        : "text-gray-500"
+                  className={`lg:hidden rounded-lg border border-gray-100 p-3 mb-2 mx-2 mt-2 ${
+                    isEc ? "bg-amber-50" : "bg-white"
                   }`}
                 >
-                  {order.paymentStatus}
-                </div>
-              </div>
+                  <div className="flex items-start justify-between gap-2">
+                    {/* 左: 顧客名 + 来店時間/配送先 */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {order.customerName || order.lineName || "-"}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                        {isEc
+                          ? (order.notes?.split("　配送時間")[0] || "-")
+                          : (order.pickupTime ? order.pickupTime.slice(0, 5) : "-")}
+                      </p>
+                      {/* 注文商品リスト */}
+                      <div className="mt-1.5">
+                        {order.items.map((item, j) => (
+                          <div key={j} className="flex items-center gap-1.5 text-sm">
+                            <span className="truncate">{item.name}</span>
+                            {item.variantName ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                                className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                              >
+                                詳細
+                              </button>
+                            ) : (
+                              <span className="shrink-0 text-gray-400 text-xs">×{item.quantity}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-              <div className="flex justify-center">
-                <motion.button
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.92 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmAction({ orderId: order.id, toReady: !isPrepared, isEc });
-                  }}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                    isPrepared
-                      ? "bg-amber-400 hover:bg-amber-500 text-white"
-                      : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                    {/* 右: 金額 + 支払状況 + 準備ボタン */}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <div className="text-right">
+                        <div className="text-sm font-bold">
+                          &yen;{order.totalAmount.toLocaleString()}
+                        </div>
+                        <div
+                          className={`text-xs ${
+                            order.paymentStatus === "決済済み"
+                              ? "text-green-600"
+                              : order.paymentStatus === "店頭支払い" ||
+                                  order.paymentStatus === "銀行振込"
+                                ? "text-blue-600"
+                                : "text-gray-500"
+                          }`}
+                        >
+                          {order.paymentStatus}
+                        </div>
+                      </div>
+                      {readyButton}
+                    </div>
+                  </div>
+                </div>
+
+                {/* デスクトップ用グリッド行 */}
+                <div
+                  className={`hidden lg:grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
+                    isEc ? "bg-amber-50 hover:bg-amber-100" : "bg-white hover:bg-gray-50"
                   }`}
                 >
-                  {isPrepared ? "済" : "未"}
-                </motion.button>
-              </div>
-            </motion.div>
+                  <div>
+                    <span className="text-xs text-gray-900">{order.customerName || order.lineName || "-"}</span>
+                  </div>
+
+                  <div className="text-xs text-gray-600">
+                    {isEc
+                      ? <span className="text-[10px] leading-tight line-clamp-2">{order.notes?.split("　配送時間")[0] || "-"}</span>
+                      : (order.pickupTime ? order.pickupTime.slice(0, 5) : "-")}
+                  </div>
+
+                  <div className="text-sm min-w-0 pl-3 pt-1">
+                    {order.items.map((item, j) => (
+                      <div key={j} className="flex items-center gap-1.5 truncate">
+                        <span className="truncate">{item.name}</span>
+                        {item.variantName ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                            className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                          >
+                            詳細
+                          </button>
+                        ) : (
+                          <span className="shrink-0 text-gray-400 text-xs">×{item.quantity}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-bold">
+                      &yen;{order.totalAmount.toLocaleString()}
+                    </div>
+                    <div
+                      className={`text-xs ${
+                        order.paymentStatus === "決済済み"
+                          ? "text-green-600"
+                          : order.paymentStatus === "店頭支払い" ||
+                              order.paymentStatus === "銀行振込"
+                            ? "text-blue-600"
+                            : "text-gray-500"
+                      }`}
+                    >
+                      {order.paymentStatus}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    {readyButton}
+                  </div>
+                </div>
+              </motion.div>
             );
           })
         )}

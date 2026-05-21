@@ -293,6 +293,7 @@ export default function StoreOrdersPage() {
   const manageLoading = manageTakeoutLoading || manageEcLoading;
   const refetchManage = async () => { await Promise.all([refetchManageTakeout(), refetchManageEc()]); };
 
+
   const manageOrders = (() => {
     if (manageChannel === "takeout") return manageTakeoutOrders;
     if (manageChannel === "ec") return manageEcOrders;
@@ -542,7 +543,112 @@ export default function StoreOrdersPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* モバイル: カード形式 */}
+          <div className="lg:hidden space-y-0 border border-gray-200 rounded-lg overflow-hidden">
+            {manageLoading && (
+              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">読み込み中...</div>
+            )}
+            {!manageLoading && manageOrders.length === 0 && (
+              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">
+                該当する注文はありません
+              </div>
+            )}
+            {manageOrders.map((order, i) => {
+              const isEc = order.orderType === "ec";
+              const isFulfilled = order.fulfillmentStatus === "fulfilled";
+              const prevOrder = i > 0 ? manageOrders[i - 1] : null;
+              const isDateChanged = prevOrder !== null && prevOrder.pickupDate !== order.pickupDate;
+
+              return (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                  onClick={() => setSelectedOrder(order)}
+                  className={`border-l-4 cursor-pointer transition-colors ${
+                    isDateChanged ? "border-t-2 border-t-gray-300" : "border-t border-gray-100"
+                  } ${
+                    isFulfilled
+                      ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                      : isEc
+                      ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
+                      : "bg-white border-l-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="px-3 py-3">
+                    {/* 上段: 顧客名 + 受取日時 + バッジ */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-sm font-bold text-gray-800 leading-tight">
+                        {order.customerName || order.lineName || "-"}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isEc ? (
+                          <div className="text-right text-xs text-gray-500 leading-tight line-clamp-1">
+                            {order.notes?.split("　配送時間")[0] || "-"}
+                          </div>
+                        ) : (
+                          <div className="text-right">
+                            {order.pickupTime && <div className="text-sm font-medium text-gray-700">{order.pickupTime.slice(0, 5)}</div>}
+                            {order.pickupDate && <div className="text-xs text-gray-500">{order.pickupDate}</div>}
+                          </div>
+                        )}
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isEc ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"}`}>
+                          {isEc ? "EC" : "テイクアウト"}
+                        </span>
+                      </div>
+                    </div>
+                    {/* 中段: 商品リスト */}
+                    <div className="text-sm leading-relaxed mb-2">
+                      {order.items.map((item, j) => (
+                        <div key={j} className="flex items-center gap-1.5">
+                          <span className="text-gray-700">{item.name}</span>
+                          {item.variantName ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                              className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                            >
+                              詳細
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-xs shrink-0">×{item.quantity}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* 下段: 合計金額 + 支払状況 + 提供ボタン */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-sm font-bold text-gray-800">¥{order.totalAmount.toLocaleString()}</span>
+                        <span className={`ml-1.5 text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
+                          {order.paymentStatus}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {order.fulfilledAt && (
+                          <div className="text-right">
+                            <span className="text-[10px] text-gray-400 leading-none block">更新</span>
+                            <span className="text-xs text-gray-700 font-medium tabular-nums">{formatFulfilledAt(order.fulfilledAt)}</span>
+                          </div>
+                        )}
+                        <motion.button
+                          whileHover={{ scale: 1.08 }}
+                          whileTap={{ scale: 0.92 }}
+                          onClick={(e) => { e.stopPropagation(); setConfirmAction({ orderId: order.id, toFulfilled: !isFulfilled, isEc }); }}
+                          className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${isFulfilled ? "bg-amber-400 hover:bg-amber-500 text-white" : "bg-gray-200 hover:bg-gray-300 text-gray-700"}`}
+                        >
+                          {isFulfilled ? "済" : "未"}
+                        </motion.button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* デスクトップ: グリッド形式 */}
+          <div className="hidden lg:block overflow-x-auto">
           <div className="min-w-[640px] border border-gray-200 rounded-lg overflow-hidden">
             <div className="grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] bg-[#FFF176] pl-1 pr-4 py-3 text-xs font-bold text-gray-700 items-center">
               <span className="pl-3">顧客名</span>
@@ -708,7 +814,93 @@ export default function StoreOrdersPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* モバイル: カード形式 */}
+          <div className="lg:hidden space-y-0 border border-gray-200 rounded-lg overflow-hidden">
+            {historyLoading && (
+              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">読み込み中...</div>
+            )}
+            {!historyLoading && historyOrders.length === 0 && (
+              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">注文履歴はありません</div>
+            )}
+            {historyOrders.map((order, i) => {
+              const isEc = order.orderType === "ec";
+              const isFulfilled = order.fulfillmentStatus === "fulfilled";
+              const fulfilledLabel = isEc ? "出荷済" : "受渡済";
+
+              return (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.02 }}
+                  onClick={() => setSelectedOrder(order)}
+                  className={`border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
+                    isFulfilled
+                      ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                      : isEc
+                      ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
+                      : "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
+                  }`}
+                >
+                  <div className="px-3 py-3">
+                    {/* 上段: 顧客名 + 受取日時 + バッジ */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-sm font-bold text-gray-800 leading-tight">
+                        {order.customerName || order.lineName || "-"}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="text-right">
+                          {order.pickupDate && <div className="text-sm font-medium text-gray-700">{order.pickupDate}</div>}
+                          {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
+                        </div>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isEc ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}`}>
+                          {isEc ? "EC" : "テイクアウト"}
+                        </span>
+                      </div>
+                    </div>
+                    {/* 中段: 商品リスト */}
+                    <div className="text-sm leading-relaxed mb-2">
+                      {order.items.map((item, j) => (
+                        <div key={j} className="flex items-center gap-1.5">
+                          <span className="text-gray-700">{item.name}</span>
+                          {item.variantName ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                              className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                            >
+                              詳細
+                            </button>
+                          ) : (
+                            <span className="text-gray-500 text-xs shrink-0">×{item.quantity}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {/* 下段: 金額 + 支払状況 + 提供状況 */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-sm font-bold text-gray-800">¥{order.totalAmount.toLocaleString()}</span>
+                        <span className={`ml-1.5 text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
+                          {order.paymentStatus}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isFulfilled && order.fulfilledAt && (
+                          <span className="text-xs text-gray-500">{formatFulfilledAt(order.fulfilledAt)}</span>
+                        )}
+                        <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ${isFulfilled ? "bg-amber-400 text-white" : "bg-gray-200 text-gray-700"}`}>
+                          {isFulfilled ? "済" : "未"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* デスクトップ: グリッド形式 */}
+          <div className="hidden lg:block overflow-x-auto">
           <div className="min-w-[640px] border border-gray-200 rounded-lg overflow-hidden">
             <div className="grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] bg-[#FFF176] pl-1 pr-4 py-3 text-xs font-bold text-gray-700 items-center">
               <span className="pl-3">顧客名</span>
@@ -871,6 +1063,7 @@ export default function StoreOrdersPage() {
           />
         )}
       </AnimatePresence>
+
     </div>
   );
 }

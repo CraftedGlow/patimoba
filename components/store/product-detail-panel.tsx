@@ -60,6 +60,14 @@ export function ProductDetailPanel({
 
   const [panelWidth, setPanelWidth] = useState(PANEL_DEFAULT_W);
   const dragStartRef = useRef<{ x: number; w: number } | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -171,8 +179,12 @@ export function ProductDetailPanel({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 48, opacity: 0 }}
       transition={{ type: "spring", damping: 28, stiffness: 320 }}
-      className="flex h-full shrink-0 bg-white border-l border-gray-200 shadow-[inset_1px_0_0_rgba(0,0,0,0.04)]"
-      style={{ width: panelWidth }}
+      className={
+        isMobile
+          ? "fixed inset-0 z-50 bg-white overflow-y-auto"
+          : "flex h-full shrink-0 bg-white border-l border-gray-200 shadow-[inset_1px_0_0_rgba(0,0,0,0.04)]"
+      }
+      style={{ width: isMobile ? "100%" : panelWidth }}
     >
       <button
         type="button"
@@ -198,7 +210,7 @@ export function ProductDetailPanel({
           window.addEventListener("mousemove", onMove);
           window.addEventListener("mouseup", onUp);
         }}
-        className="group w-3 shrink-0 flex flex-col items-center justify-center cursor-col-resize border-r border-transparent hover:border-amber-200 hover:bg-amber-50/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-inset"
+        className="hidden lg:flex group w-3 shrink-0 flex-col items-center justify-center cursor-col-resize border-r border-transparent hover:border-amber-200 hover:bg-amber-50/80 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-inset"
       >
         <GripVertical className="w-3.5 h-3.5 text-gray-300 group-hover:text-amber-500 transition-colors" />
       </button>

@@ -447,52 +447,53 @@ export default function BusinessDaysPage() {
   return (
     <div className="p-4 lg:p-6 relative flex flex-col lg:flex-row gap-6">
       <div className="flex-1">
-        <div className="flex items-start gap-8 mb-6">
+        <div className="flex items-center justify-between gap-4 md:gap-8 mb-6">
           <div>
-            <div className="flex items-center gap-8 mb-1">
+            <div className="flex items-center gap-4 md:gap-8 mb-1">
               <div>
                 <span className="text-xs text-gray-500 block">OPEN</span>
-                <span className="text-3xl font-normal block mt-1">{storeOpenTime}</span>
+                <span className="text-xl md:text-3xl font-normal block mt-1">{storeOpenTime}</span>
               </div>
               <div>
                 <span className="text-xs text-gray-500 block">CLOSE</span>
-                <span className="text-3xl font-normal block mt-1">{storeCloseTime}</span>
+                <span className="text-xl md:text-3xl font-normal block mt-1">{storeCloseTime}</span>
               </div>
             </div>
             <div className="mt-1">
               <span className="text-sm text-gray-500">定休日</span>
-              <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+              <div className="flex items-center gap-2 md:gap-3 mt-0.5 flex-wrap">
                 {closedDayRules.length > 0 ? (
                   closedDayRules.map((r, i) => (
-                    <span key={i} className="text-sm font-medium">
+                    <span key={i} className="text-xs md:text-sm font-medium">
                       {r.day} <span className="text-gray-500">{r.rule}</span>
                     </span>
                   ))
                 ) : (
-                  <span className="text-sm text-gray-400">未設定</span>
+                  <span className="text-xs md:text-sm text-gray-400">未設定</span>
                 )}
                 <motion.button
                   type="button"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={openHolidayModal}
-                  className="px-3 py-1 rounded-md bg-amber-400 text-white text-xs font-bold hover:bg-amber-500 transition-colors"
+                  className="px-2 md:px-3 py-1 rounded-md bg-amber-400 text-white text-xs font-bold hover:bg-amber-500 transition-colors"
                 >
                   変更
                 </motion.button>
               </div>
             </div>
           </div>
-          <div ref={exportMenuRef} className="relative mt-1">
+          <div ref={exportMenuRef} className="relative shrink-0">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowExportMenu((v) => !v)}
               disabled={exporting}
-              className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
+              className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 md:px-6 py-3 rounded-xl transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
             >
               {exporting && <LineSpinner size={16} />}
-              カレンダーを保存
+              <span className="md:hidden">保存</span>
+              <span className="hidden md:inline">カレンダーを保存</span>
             </motion.button>
             <AnimatePresence>
               {showExportMenu && !exporting && (

@@ -454,7 +454,7 @@ export function CakeTab() {
         </div>
 
         {/* 画像アップロード */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex gap-3">
           <input
             ref={mainInputRef}
             type="file"
@@ -477,9 +477,9 @@ export function CakeTab() {
               e.target.value = "";
             }}
           />
-          <div className="relative group">
+          <div className="relative group flex-1 max-w-[220px]">
             {mainImage ? (
-              <div className="relative w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg overflow-hidden border border-gray-200">
+              <div className="relative w-full h-[160px] sm:h-[180px] rounded-lg overflow-hidden border border-gray-200">
                 <img src={mainImage} alt="メイン" className="w-full h-full object-cover" />
                 <button
                   onClick={() => handleRemoveImage("main")}
@@ -494,22 +494,22 @@ export function CakeTab() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => mainInputRef.current?.click()}
                 disabled={uploadingMain}
-                className="w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className="w-full h-[160px] sm:h-[180px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingMain ? (
                   <LineSpinner size={24} />
                 ) : (
                   <>
                     <ImagePlus className="w-8 h-8" />
-                    <span>メイン画像を<br />アップロード</span>
+                    <span className="text-center">メイン画像を<br />アップロード</span>
                   </>
                 )}
               </motion.button>
             )}
           </div>
-          <div className="relative group">
+          <div className="relative group flex-1 max-w-[220px]">
             {crossImage ? (
-              <div className="relative w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg overflow-hidden border border-gray-200">
+              <div className="relative w-full h-[160px] sm:h-[180px] rounded-lg overflow-hidden border border-gray-200">
                 <img src={crossImage} alt="断面" className="w-full h-full object-cover" />
                 <button
                   onClick={() => handleRemoveImage("cross")}
@@ -524,14 +524,14 @@ export function CakeTab() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => crossInputRef.current?.click()}
                 disabled={uploadingCross}
-                className="w-full max-w-[160px] h-[140px] sm:h-[160px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className="w-full h-[160px] sm:h-[180px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingCross ? (
                   <LineSpinner size={24} />
                 ) : (
                   <>
                     <ImagePlus className="w-8 h-8" />
-                    <span>断面の画像を<br />アップロード</span>
+                    <span className="text-center">断面の画像を<br />アップロード</span>
                   </>
                 )}
               </motion.button>

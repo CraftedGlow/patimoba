@@ -180,17 +180,20 @@ export default function ECProductDetailPage() {
       <StepProgress currentStep={2} steps={ecSteps} />
 
       <div className="px-4 pb-8">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-xl overflow-hidden bg-gray-100 aspect-[4/3] mb-4"
-        >
-          {product.image ? (
-            <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
-          )}
-        </motion.div>
+        <div className="flex justify-center mb-6">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-square shadow-[0_8px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 w-[65%] max-w-[80%]"
+          >
+            {product.image ? (
+              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
+            )}
+          </motion.div>
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}

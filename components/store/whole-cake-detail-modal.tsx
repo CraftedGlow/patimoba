@@ -100,7 +100,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2 }}
         style={{ x: "-50%", y: "-50%" }}
-        className="fixed left-1/2 top-1/2 bg-white rounded-2xl shadow-2xl z-[120] w-auto max-h-[80vh] flex flex-col"
+        className="fixed left-1/2 top-1/2 bg-white rounded-2xl shadow-2xl z-[120] w-[92vw] max-w-lg max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ヘッダー */}

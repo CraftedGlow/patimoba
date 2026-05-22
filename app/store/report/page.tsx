@@ -312,7 +312,9 @@ export default function StoreReportPage() {
           onClick={handleDownloadReportPDF}
           className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg text-sm transition-colors"
         >
-          <Download className="w-4 h-4" /> PDFダウンロード
+          <Download className="w-4 h-4" />
+          <span className="md:hidden">PDF</span>
+          <span className="hidden md:inline">PDFダウンロード</span>
         </motion.button>
       </div>
 

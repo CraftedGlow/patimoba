@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { PasswordInput } from "@/components/ui/password-input";
+import { getLiffId } from "@/lib/get-liff-id";
 
 export default function CustomerLoginPage() {
   const router = useRouter();
@@ -69,12 +70,12 @@ export default function CustomerLoginPage() {
   }, [router, setUser]);
 
   useEffect(() => {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId || !sessionStorage.getItem("liff_login_pending")) return;
+    if (!sessionStorage.getItem("liff_login_pending")) return;
 
     setLiffLoading(true);
     (async () => {
       try {
+        const liffId = await getLiffId();
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
         if (liff.isLoggedIn()) {
@@ -92,16 +93,11 @@ export default function CustomerLoginPage() {
   }, [loginWithLiff]);
 
   const handleLineLogin = async () => {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) {
-      setError("LIFFが設定されていません");
-      return;
-    }
-
     setLiffLoading(true);
     setError("");
 
     try {
+      const liffId = await getLiffId();
       const liff = (await import("@line/liff")).default;
       await liff.init({ liffId });
 

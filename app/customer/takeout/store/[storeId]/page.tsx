@@ -8,6 +8,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import Image from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
+import { getLiffId } from "@/lib/get-liff-id";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
 import { useCustomerContext } from "@/lib/customer-context";
@@ -258,13 +259,6 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   useEffect(() => {
     if (authLoading) return;
 
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) {
-      // LIFF未設定の場合はキャッシュユーザーをそのまま使用
-      if (user) setLoginDone(true);
-      return;
-    }
-
     // 直前にroot pageでLIFFログイン済みなら再実行不要
     const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
     if (ts && Date.now() - Number(ts) < 15000 && user) {
@@ -274,6 +268,12 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
     (async () => {
       try {
+        const liffId = await getLiffId(params.storeId);
+        if (!liffId) {
+          if (user) setLoginDone(true);
+          return;
+        }
+
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
 

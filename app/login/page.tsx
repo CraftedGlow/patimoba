@@ -17,6 +17,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, type UserType } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { PasswordInput } from "@/components/ui/password-input";
+import { getLiffId } from "@/lib/get-liff-id";
 
 type Role = "store" | "admin" | "customer" | null;
 
@@ -77,9 +78,6 @@ export default function LoginPage() {
 
   // LINEからのリダイレクト戻りを処理
   useEffect(() => {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID
-    if (!liffId) return
-
     const search = window.location.search
     const isPending = !!sessionStorage.getItem("liff_login_pending")
     // liff.state / liff.hback (LIFF SDK) または code + liffClientId (ミドルウェア経由) を検知
@@ -90,6 +88,13 @@ export default function LoginPage() {
     setLiffLoading(true)
     ;(async () => {
       try {
+        const liffId = await getLiffId()
+        if (!liffId) {
+          sessionStorage.removeItem("liff_login_pending")
+          setIsLiffCallback(false)
+          setLiffLoading(false)
+          return
+        }
         const liff = (await import("@line/liff")).default
         await liff.init({ liffId })
         if (liff.isLoggedIn()) {
@@ -109,16 +114,16 @@ export default function LoginPage() {
   }, [loginWithLiff])
 
   const handleCustomerLogin = async () => {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID
-    if (!liffId) {
-      setError("LIFFが設定されていません")
-      return
-    }
-
     setLiffLoading(true)
     setError("")
 
     try {
+      const liffId = await getLiffId()
+      if (!liffId) {
+        setError("LIFFが設定されていません")
+        setLiffLoading(false)
+        return
+      }
       const liff = (await import("@line/liff")).default
       await liff.init({ liffId })
 

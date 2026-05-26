@@ -11,6 +11,7 @@ import Image from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
 import { completeLiffLogin } from "@/lib/liff-login";
+import { getLiffId } from "@/lib/get-liff-id";
 import { Store } from "@/lib/types";
 import { Search, Heart } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -95,12 +96,6 @@ export default function TakeoutStorePage() {
     if (liffStarted.current) return;
     liffStarted.current = true;
 
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) {
-      if (user) setLoginDone(true);
-      return;
-    }
-
     // 直前にroot pageや他のページでLIFFログイン済みなら再実行不要
     const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
     if (ts && Date.now() - Number(ts) < 15000 && user) {
@@ -110,6 +105,12 @@ export default function TakeoutStorePage() {
 
     (async () => {
       try {
+        const liffId = await getLiffId();
+        if (!liffId) {
+          if (user) setLoginDone(true);
+          return;
+        }
+
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
 

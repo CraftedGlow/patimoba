@@ -8,6 +8,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import NextImage from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
+import { getLiffId } from "@/lib/get-liff-id";
 
 const ANNIVERSARY_TYPES = [
   "誕生日",
@@ -71,12 +72,6 @@ export default function CustomerProfilePage() {
     if (liffStarted.current) return;
     liffStarted.current = true;
 
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) {
-      setLoginDone(true);
-      return;
-    }
-
     // 直前にroot pageでLIFFログイン済みなら再実行不要
     const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
     if (ts && Date.now() - Number(ts) < 15000 && user) {
@@ -86,6 +81,12 @@ export default function CustomerProfilePage() {
 
     ;(async () => {
       try {
+        const liffId = await getLiffId(storeId);
+        if (!liffId) {
+          setLoginDone(true);
+          return;
+        }
+
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
 

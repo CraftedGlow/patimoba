@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
+import { getLiffId, parseLiffStateStoreId } from "@/lib/get-liff-id";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp"
 import { LpHeader } from "@/components/lp/lp-header";
@@ -63,14 +64,16 @@ export default function Home() {
   }, [router, setUser]);
 
   useEffect(() => {
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
-    if (!liffId) return;
     const params = new URLSearchParams(window.location.search);
     // LIFF 認証コールバック or liff.state によるパス転送
     if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state")) return;
 
     setIsLiffCallback(true);
-    handleLiffCallback(liffId);
+    (async () => {
+      const storeId = parseLiffStateStoreId();
+      const liffId = await getLiffId(storeId);
+      handleLiffCallback(liffId);
+    })();
   }, [handleLiffCallback]);
 
   if (isLiffCallback) {

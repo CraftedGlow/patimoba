@@ -52,7 +52,7 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
     } catch {}
   }
 
-  return process.env.NEXT_PUBLIC_LIFF_ID ?? "";
+  return "";
 }
 
 export function saveLiffId(liffId: string): void {

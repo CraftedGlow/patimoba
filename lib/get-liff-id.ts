@@ -9,10 +9,18 @@ export function parseLiffStateStoreId(): string | null {
     const liffState = params.get("liff.state");
     if (!liffState) return null;
     const decoded = decodeURIComponent(liffState);
+
+    // クエリパラメータ (?store=xxx or ?storeId=xxx) を優先
     const qIndex = decoded.indexOf("?");
-    if (qIndex === -1) return null;
-    const stateParams = new URLSearchParams(decoded.slice(qIndex + 1));
-    return stateParams.get("store") ?? stateParams.get("storeId") ?? null;
+    if (qIndex !== -1) {
+      const stateParams = new URLSearchParams(decoded.slice(qIndex + 1));
+      const id = stateParams.get("store") ?? stateParams.get("storeId");
+      if (id) return id;
+    }
+
+    // パス内のUUIDを抽出 (例: /customer/takeout/store/[uuid] or /customer/takeout/[uuid])
+    const uuidMatch = decoded.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    return uuidMatch?.[1] ?? null;
   } catch {
     return null;
   }

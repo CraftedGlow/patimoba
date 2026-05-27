@@ -27,7 +27,12 @@ export default function Home() {
   const { setUser } = useAuth();
   const [isLiffCallback, setIsLiffCallback] = useState(false);
 
-  const handleLiffCallback = useCallback(async (liffId: string) => {
+  const handleLiffCallback = useCallback(async (liffId: string, storeId?: string | null) => {
+    if (!liffId) {
+      router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
+      return;
+    }
+
     // 毎回フレッシュなLINEプロフィールを取得するためキャッシュをクリア
     try { localStorage.removeItem(STORAGE_KEY) } catch {}
     setUser(null)
@@ -36,7 +41,14 @@ export default function Home() {
       const liff = (await import("@line/liff")).default;
       await liff.init({ liffId });
 
-      const redirectedPath = window.location.pathname;
+      // LIFF SDKがURLを書き換えた後のパスを取得
+      // /customer/takeout/[uuid] 形式は /customer/takeout/store/[uuid] に補正
+      let redirectedPath = window.location.pathname;
+      const missingStorePath = redirectedPath.match(/^(\/customer\/takeout\/)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+      if (missingStorePath) {
+        redirectedPath = `${missingStorePath[1]}store/${missingStorePath[2]}`;
+      }
+
       if (redirectedPath && redirectedPath !== "/") {
         if (liff.isLoggedIn()) {
           sessionStorage.setItem("liff_return_path", redirectedPath);
@@ -45,7 +57,7 @@ export default function Home() {
           sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
           router.replace(returnPath || redirectedPath);
         } else {
-          router.replace(redirectedPath + window.location.search);
+          router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
         }
         return;
       }
@@ -56,10 +68,10 @@ export default function Home() {
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
         router.replace(returnPath || "/customer/takeout");
       } else {
-        router.replace("/login");
+        router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
       }
     } catch {
-      router.replace("/login");
+      router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
     }
   }, [router, setUser]);
 
@@ -72,7 +84,7 @@ export default function Home() {
     (async () => {
       const storeId = parseLiffStateStoreId();
       const liffId = await getLiffId(storeId);
-      handleLiffCallback(liffId);
+      handleLiffCallback(liffId, storeId);
     })();
   }, [handleLiffCallback]);
 

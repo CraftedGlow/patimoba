@@ -88,7 +88,8 @@ export default function LoginPage() {
     setLiffLoading(true)
     ;(async () => {
       try {
-        const liffId = await getLiffId()
+        const storeIdFromUrl = new URLSearchParams(window.location.search).get("storeId")
+        const liffId = await getLiffId(storeIdFromUrl)
         if (!liffId) {
           sessionStorage.removeItem("liff_login_pending")
           setIsLiffCallback(false)
@@ -118,7 +119,8 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const liffId = await getLiffId()
+      const storeIdFromUrl = new URLSearchParams(window.location.search).get("storeId")
+      const liffId = await getLiffId(storeIdFromUrl)
       if (!liffId) {
         setError("LIFFが設定されていません")
         setLiffLoading(false)

@@ -10,21 +10,22 @@ export default function LiffLoadingPage() {
 
   useEffect(() => {
     (async () => {
+      const storeId = parseLiffStateStoreId();
+      const loginUrl = storeId ? `/login?storeId=${storeId}` : "/login";
       try {
-        const storeId = parseLiffStateStoreId();
         const liffId = await getLiffId(storeId);
         if (!liffId) {
-          router.replace("/login");
+          router.replace(loginUrl);
           return;
         }
         saveLiffId(liffId);
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
         if (!liff.isLoggedIn()) {
-          router.replace("/login");
+          router.replace(loginUrl);
         }
       } catch {
-        router.replace("/login");
+        router.replace(loginUrl);
       }
     })();
   }, [router]);

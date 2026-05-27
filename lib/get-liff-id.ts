@@ -9,10 +9,18 @@ export function parseLiffStateStoreId(): string | null {
     const liffState = params.get("liff.state");
     if (!liffState) return null;
     const decoded = decodeURIComponent(liffState);
+
+    // クエリパラメータ (?store=xxx or ?storeId=xxx) を優先
     const qIndex = decoded.indexOf("?");
-    if (qIndex === -1) return null;
-    const stateParams = new URLSearchParams(decoded.slice(qIndex + 1));
-    return stateParams.get("store") ?? stateParams.get("storeId") ?? null;
+    if (qIndex !== -1) {
+      const stateParams = new URLSearchParams(decoded.slice(qIndex + 1));
+      const id = stateParams.get("store") ?? stateParams.get("storeId");
+      if (id) return id;
+    }
+
+    // パス形式: /customer/takeout/store/[storeId] からも抽出
+    const pathMatch = decoded.match(/\/store\/([^/?#]+)/);
+    return pathMatch?.[1] ?? null;
   } catch {
     return null;
   }
@@ -44,7 +52,7 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
     } catch {}
   }
 
-  return "";
+  return process.env.NEXT_PUBLIC_LIFF_ID ?? "";
 }
 
 export function saveLiffId(liffId: string): void {

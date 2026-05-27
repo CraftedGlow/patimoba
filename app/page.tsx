@@ -27,7 +27,12 @@ export default function Home() {
   const { setUser } = useAuth();
   const [isLiffCallback, setIsLiffCallback] = useState(false);
 
-  const handleLiffCallback = useCallback(async (liffId: string) => {
+  const handleLiffCallback = useCallback(async (liffId: string, storeId?: string | null) => {
+    if (!liffId) {
+      router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
+      return;
+    }
+
     // 毎回フレッシュなLINEプロフィールを取得するためキャッシュをクリア
     try { localStorage.removeItem(STORAGE_KEY) } catch {}
     setUser(null)
@@ -56,10 +61,10 @@ export default function Home() {
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
         router.replace(returnPath || "/customer/takeout");
       } else {
-        router.replace("/login");
+        router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
       }
     } catch {
-      router.replace("/login");
+      router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
     }
   }, [router, setUser]);
 
@@ -72,7 +77,7 @@ export default function Home() {
     (async () => {
       const storeId = parseLiffStateStoreId();
       const liffId = await getLiffId(storeId);
-      handleLiffCallback(liffId);
+      handleLiffCallback(liffId, storeId);
     })();
   }, [handleLiffCallback]);
 

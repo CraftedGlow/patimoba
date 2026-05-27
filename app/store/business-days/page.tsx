@@ -587,19 +587,21 @@ export default function BusinessDaysPage() {
             </div>
 
             {/* 右: ロゴ + 営業時間 (下揃え = April | 2026 行と同じベースライン) */}
-            <div className="flex-1 flex flex-col items-end justify-end">
+            <div className="flex-1 flex flex-col justify-end" style={{ alignItems: "flex-end" }}>
               {storeLogo ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={storeLogo}
-                  alt={storeName || ""}
-                  style={{ maxHeight: 44, maxWidth: 110, objectFit: "contain" }}
-                  crossOrigin="anonymous"
-                />
+                <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={storeLogo}
+                    alt={storeName || ""}
+                    style={{ maxHeight: 50, maxWidth: 116, objectFit: "contain" }}
+                    crossOrigin="anonymous"
+                  />
+                </div>
               ) : storeName ? (
-                <span className="text-sm font-bold text-gray-700">{storeName}</span>
+                <span className="text-sm font-bold text-gray-700" style={{ textAlign: "right", width: "100%" }}>{storeName}</span>
               ) : null}
-              <div className="text-xs text-gray-700 mt-1 tabular-nums whitespace-nowrap">
+              <div style={{ textAlign: "right", width: "100%" }} className="text-xs text-gray-700 mt-1 tabular-nums whitespace-nowrap">
                 {storeOpenTime} - {storeCloseTime}
               </div>
             </div>

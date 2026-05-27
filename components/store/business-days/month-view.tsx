@@ -89,7 +89,7 @@ export function MonthView({
                 /* 休業日: 丸枠日付 + 「休み」小さめ黒 */
                 <>
                   <div className="self-start">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-gray-600 text-xs font-medium text-gray-700 tabular-nums">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-red-500 text-xs font-medium text-red-500 tabular-nums">
                       {cell.d}
                     </span>
                   </div>

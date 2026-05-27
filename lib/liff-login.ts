@@ -24,6 +24,7 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       idToken,
+      liffId: liff.id,
       lineName: lineProfile.displayName,
       avatarUrl: lineProfile.pictureUrl,
     }),

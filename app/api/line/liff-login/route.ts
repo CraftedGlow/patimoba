@@ -10,9 +10,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "id_token_required" }, { status: 400 })
   }
 
-  const channelId = process.env.LINE_LOGIN_CHANNEL_ID
+  // liffId の `-` より前がチャンネルID。未送信時は環境変数にフォールバック
+  const channelId = body?.liffId
+    ? String(body.liffId).split("-")[0]
+    : process.env.LINE_LOGIN_CHANNEL_ID
   if (!channelId) {
-    return NextResponse.json({ error: "server_misconfigured", detail: "LINE_LOGIN_CHANNEL_ID missing" }, { status: 500 })
+    return NextResponse.json({ error: "server_misconfigured", detail: "channel_id missing" }, { status: 500 })
   }
 
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY

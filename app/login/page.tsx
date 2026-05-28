@@ -183,6 +183,7 @@ export default function LoginPage() {
   }
 
   return (
+    <>
     <AnimatePresence mode="wait">
       {!selectedRole ? (
         <motion.div
@@ -476,5 +477,6 @@ export default function LoginPage() {
           </motion.div>
         )}
       </AnimatePresence>
+    </>
   );
 }

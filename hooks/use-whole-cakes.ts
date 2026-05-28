@@ -55,6 +55,8 @@ export function useWholeCakes(storeId?: string) {
         image: product.image || "",
         sizes: (product.product_variants || []).map(toUIWholeCakeSize),
         printDecorationEnabled: product.print_decoration_enabled ?? false,
+        isActive: product.is_active ?? true,
+        sameDayOrderAllowed: product.same_day_order_allowed ?? false,
       }))
 
       setWholeCakes(cakes)

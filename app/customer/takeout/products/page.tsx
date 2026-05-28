@@ -211,9 +211,15 @@ export default function TakeoutProductsPage() {
     | { kind: "wholecake"; data: WholeCakeProduct }
     | { kind: "printdeco"; price: number };
 
+  const visibleWholeCakeList = wholeCakes.filter((c) =>
+    typeParam === "sameday"
+      ? c.sameDayOrderAllowed === true
+      : c.isActive !== false
+  );
+
   const allGridItems: GridItem[] = [
     ...limitedProducts.map((p) => ({ kind: "product" as const, data: p })),
-    ...wholeCakes.map((c) => ({ kind: "wholecake" as const, data: c })),
+    ...visibleWholeCakeList.map((c) => ({ kind: "wholecake" as const, data: c })),
     ...(printDecoData ? [{ kind: "printdeco" as const, price: printDecoData.price }] : []),
     ...orderedCategories.flatMap((cat) =>
       nonLimitedProducts.filter((p) => p.category_name === cat).map((p) => ({ kind: "product" as const, data: p }))
@@ -230,7 +236,7 @@ export default function TakeoutProductsPage() {
       : visibleProducts.filter((p) => p.category_name === selectedCategory);
 
   const visibleWholeCakes =
-    selectedCategory === "ホールケーキ" ? wholeCakes : [];
+    selectedCategory === "ホールケーキ" ? visibleWholeCakeList : [];
 
   const displayCategories = (() => {
     // visibleProductsに存在するカテゴリのみ（EC商品カテゴリを除外）、"ホール"はホールケーキと重複するため除外
@@ -241,7 +247,7 @@ export default function TakeoutProductsPage() {
       (c) => c === "すべて" || (visibleCatSet.has(c) && c !== "ホール")
     );
     const withLimited = base.includes("期間限定") ? base : [...base, "期間限定"];
-    return wholeCakes.length > 0 && !withLimited.includes("ホールケーキ")
+    return visibleWholeCakeList.length > 0 && !withLimited.includes("ホールケーキ")
       ? [...withLimited, "ホールケーキ"]
       : withLimited;
   })();

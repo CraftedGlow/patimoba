@@ -140,6 +140,8 @@ export interface WholeCakeProduct {
   image: string
   sizes: WholeCakeSize[]
   printDecorationEnabled: boolean
+  isActive?: boolean
+  sameDayOrderAllowed?: boolean
 }
 
 export interface CartCandleEntry {

@@ -62,8 +62,9 @@ export default function TakeoutPickupPage() {
   const [cutoffMinutes, setCutoffMinutes] = useState(180);
   const [minFutureDays, setMinFutureDays] = useState(2);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
-  // 特定日の営業状況 override: key = "YYYY-MM-DD", value = isOpen
+  // 特定日の営業状況 override: key = "YYYY-MM-DD"
   const [businessDayOverrides, setBusinessDayOverrides] = useState<Record<string, boolean>>({});
+  const [specialDateHours, setSpecialDateHours] = useState<Record<string, { openTime: string | null; closeTime: string | null }>>({});
 
   // カート内商品の期間制約
   const [maxPreparationDays, setMaxPreparationDays] = useState(2);
@@ -109,18 +110,22 @@ export default function TakeoutPickupPage() {
         const fromDate = dateKey(today);
         const toDate = new Date(today);
         toDate.setMonth(toDate.getMonth() + 3);
-        const db = supabase as any;
-        const { data: bdRows } = await db
-          .from("business_days")
-          .select("date, is_open")
+        const { data: sdRows } = await supabase
+          .from("store_special_dates")
+          .select("target_date, is_closed, open_time, close_time")
           .eq("store_id", storeId)
-          .gte("date", fromDate)
-          .lte("date", dateKey(toDate));
+          .gte("target_date", fromDate)
+          .lte("target_date", dateKey(toDate));
         const overrides: Record<string, boolean> = {};
-        for (const row of (bdRows || []) as { date: string; is_open: boolean }[]) {
-          overrides[row.date] = row.is_open;
+        const hours: Record<string, { openTime: string | null; closeTime: string | null }> = {};
+        for (const row of (sdRows || []) as { target_date: string; is_closed: boolean; open_time: string | null; close_time: string | null }[]) {
+          overrides[row.target_date] = !row.is_closed;
+          if (row.open_time || row.close_time) {
+            hours[row.target_date] = { openTime: row.open_time, closeTime: row.close_time };
+          }
         }
         setBusinessDayOverrides(overrides);
+        setSpecialDateHours(hours);
 
         // カート内商品の制約
         const productIds = cartItems.map((i) => i.productId).filter(Boolean);
@@ -227,9 +232,10 @@ export default function TakeoutPickupPage() {
     const bh = businessHours.find((b) => b.dayOfWeek === dow);
     // 定休日として設定されていて、特定日のoverride(is_open=true)もない場合は空
     if (bh?.isClosed && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
-    // 営業時間が設定されていれば使用、なければデフォルト(10:00-19:00)
-    const openTime = bh?.openTime ?? "10:00";
-    const closeTime = bh?.closeTime ?? "19:00";
+    // 特定日の営業時間 → 曜日ルール → デフォルトの順で優先
+    const specialHour = specialDateHours[key];
+    const openTime = specialHour?.openTime ?? bh?.openTime ?? "10:00";
+    const closeTime = specialHour?.closeTime ?? bh?.closeTime ?? "19:00";
     return generateTimeSlots(toMin(openTime), toMin(closeTime));
   })();
 

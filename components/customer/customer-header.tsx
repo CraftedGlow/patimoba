@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { User, ShoppingCart, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/cart-context";
@@ -44,7 +43,7 @@ export function CustomerHeader({
         className="bg-[#ffff9d] px-4 py-[11px] flex items-center justify-between sticky top-0 z-50"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <Link href="/customer/profile" className="flex-shrink-0">
+          <div className="flex-shrink-0">
             {avatarUrl ? (
               <img
                 src={avatarUrl}
@@ -56,7 +55,7 @@ export function CustomerHeader({
                 <User className="w-5 h-5 text-white" />
               </div>
             )}
-          </Link>
+          </div>
           <span className="font-bold text-gray-900 text-sm truncate">
             {userName || shopName || "ゲスト"}
           </span>

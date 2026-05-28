@@ -474,7 +474,7 @@ export default function DecorationsPage() {
           ) : (
             <div className="space-y-2">
               {filteredDecos.map((deco) => (
-                <div key={deco.id} className="flex items-start gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors">
+                <div key={deco.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${deco.isActive ? "border-gray-200 bg-white hover:bg-gray-50" : "border-gray-100 bg-gray-50 opacity-60"}`}>
                   <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center text-2xl">
                     {deco.imageUrl ? (
                       <img src={deco.imageUrl} alt={deco.name} className="w-full h-full object-cover" />
@@ -491,6 +491,9 @@ export default function DecorationsPage() {
                       {deco.isSeasonal && (
                         <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full shrink-0">季節限定</span>
                       )}
+                      {!deco.isActive && (
+                        <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full shrink-0">非表示</span>
+                      )}
                     </div>
                     {deco.description && (
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{deco.description}</p>
@@ -499,7 +502,14 @@ export default function DecorationsPage() {
                       {deco.price === 0 ? "無料" : `+¥${deco.price.toLocaleString()}`}
                     </p>
                   </div>
-                  <div className="flex gap-1 shrink-0 ml-2">
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <button
+                      type="button"
+                      onClick={() => updateDecoration(deco.id, { isActive: !deco.isActive })}
+                      className={`relative w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none ${deco.isActive ? "bg-amber-400" : "bg-gray-300"}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${deco.isActive ? "translate-x-4" : "translate-x-0"}`} />
+                    </button>
                     <button type="button" onClick={() => setDecoPanel(deco.id)}
                       className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
                       <Pencil className="w-4 h-4" />
@@ -546,10 +556,13 @@ export default function DecorationsPage() {
                       </button>
                       <div className="flex-1">
                         <p className="text-sm font-bold">{group.name}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-xs text-gray-500 mt-0.5">
                           {group.selectionType === "single" ? "単一選択" : `複数選択${group.maxSelections ? `（最大${group.maxSelections}個）` : ""}`}
                           {group.required ? " / 必須" : " / 任意"}
                           {" · "}デコレーション {group.items.length}件
+                          {group.items.length > 0 && group.items.every((i) => !i.isActive) && (
+                            <span className="ml-2 text-orange-500 font-bold">⚠ 全アイテム非表示</span>
+                          )}
                         </p>
                       </div>
                       <div className="flex gap-1">
@@ -576,26 +589,36 @@ export default function DecorationsPage() {
                             {group.items.length === 0 ? (
                               <p className="text-xs text-gray-400">まだデコレーションが追加されていません</p>
                             ) : (
-                              group.items.map((item) => (
-                                <div key={item.id} className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center text-sm">
-                                    {item.imageUrl ? (
-                                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <CategoryIcon category={item.category} size={14} />
+                              <>
+                                {group.items.every((i) => !i.isActive) && (
+                                  <p className="text-xs text-orange-500 bg-orange-50 rounded-lg px-3 py-2">
+                                    ⚠ すべてのアイテムが非表示のため、顧客には表示されません
+                                  </p>
+                                )}
+                                {group.items.map((item) => (
+                                  <div key={item.id} className={`flex items-center gap-2 ${!item.isActive ? "opacity-50" : ""}`}>
+                                    <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center text-sm">
+                                      {item.imageUrl ? (
+                                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <CategoryIcon category={item.category} size={14} />
+                                      )}
+                                    </div>
+                                    <span className="text-sm flex-1">{item.name}</span>
+                                    {!item.isActive && (
+                                      <span className="text-xs bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded-full">非表示</span>
                                     )}
+                                    <span className="text-xs text-amber-600 font-medium">
+                                      {item.price === 0 ? "無料" : `+¥${item.price.toLocaleString()}`}
+                                    </span>
+                                    <button type="button"
+                                      onClick={() => removeItemFromGroup(group.id, item.id)}
+                                      className="p-1 text-gray-300 hover:text-red-400 transition-colors">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
-                                  <span className="text-sm flex-1">{item.name}</span>
-                                  <span className="text-xs text-amber-600 font-medium">
-                                    {item.price === 0 ? "無料" : `+¥${item.price.toLocaleString()}`}
-                                  </span>
-                                  <button type="button"
-                                    onClick={() => removeItemFromGroup(group.id, item.id)}
-                                    className="p-1 text-gray-300 hover:text-red-400 transition-colors">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ))
+                                ))}
+                              </>
                             )}
                             <motion.button
                               type="button"

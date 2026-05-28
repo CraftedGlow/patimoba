@@ -12,6 +12,7 @@ function toDecorationItem(row: any): DecorationItem {
     imageUrl: row.image_url ?? null,
     category: row.category || "other",
     price: Number(row.price) || 0,
+    isActive: row.is_active !== false,
     isSeasonal: Boolean(row.is_seasonal),
     seasonStart: row.season_start ?? null,
     seasonEnd: row.season_end ?? null,

@@ -12,6 +12,7 @@ function toDecorationItem(row: any): DecorationItem {
     imageUrl: row.image_url ?? null,
     category: row.category || "other",
     price: Number(row.price) || 0,
+    isActive: row.is_active !== false,
     isSeasonal: Boolean(row.is_seasonal),
     seasonStart: row.season_start ?? null,
     seasonEnd: row.season_end ?? null,
@@ -20,11 +21,11 @@ function toDecorationItem(row: any): DecorationItem {
   }
 }
 
-function toGroupWithItems(row: any): DecorationGroupWithItems {
+function toGroupWithItems(row: any, filterActive = false): DecorationGroupWithItems {
   const items: DecorationItem[] = (row.decoration_group_items ?? [])
     .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
     .map((gi: any) => gi.decorations ? toDecorationItem(gi.decorations) : null)
-    .filter(Boolean)
+    .filter((item: DecorationItem | null): item is DecorationItem => !!item && (!filterActive || item.isActive))
   return {
     id: String(row.id),
     storeId: String(row.store_id),
@@ -43,7 +44,7 @@ const GROUP_SELECT = `
   id, store_id, name, description, selection_type, max_selections, required, preparation_days, display_order,
   decoration_group_items (
     id, display_order, decoration_id,
-    decorations ( id, name, description, image_url, category, price, is_seasonal, season_start, season_end, display_order )
+    decorations ( id, name, description, image_url, category, price, is_active, is_seasonal, season_start, season_end, display_order )
   )
 `
 
@@ -59,7 +60,7 @@ export function useDecorationGroups(storeId?: string) {
       .select(GROUP_SELECT)
       .eq("store_id", storeId)
       .order("display_order", { ascending: true })
-    setGroups((data ?? []).map(toGroupWithItems))
+    setGroups((data ?? []).map((r: any) => toGroupWithItems(r, false)))
     setLoading(false)
   }, [storeId])
 
@@ -173,8 +174,8 @@ export function useProductDecorationGroups(productId?: string) {
       .order("display_order", { ascending: true })
 
     const result: DecorationGroupWithItems[] = (data ?? [])
-      .map((row: any) => row.decoration_groups ? toGroupWithItems(row.decoration_groups) : null)
-      .filter((g): g is DecorationGroupWithItems => g !== null)
+      .map((row: any) => row.decoration_groups ? toGroupWithItems(row.decoration_groups, true) : null)
+      .filter((g): g is DecorationGroupWithItems => g !== null && g.items.length > 0)
     setGroups(result)
     setLoading(false)
   }, [productId])

@@ -164,6 +164,7 @@ export interface DecorationItem {
   imageUrl: string | null
   category: string
   price: number
+  isActive: boolean
   isSeasonal: boolean
   seasonStart: string | null
   seasonEnd: string | null

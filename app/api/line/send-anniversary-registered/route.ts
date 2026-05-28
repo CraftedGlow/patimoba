@@ -20,10 +20,12 @@ export async function POST(req: NextRequest) {
 
     if (!user?.line_user_id) return NextResponse.json({ success: true, sent: false });
 
-    const channelAccessToken =
-      (store as any)?.line_channel_access_token ?? process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    const channelAccessToken = (store as any)?.line_channel_access_token ?? null;
 
-    if (!channelAccessToken) return NextResponse.json({ success: true, sent: false });
+    if (!channelAccessToken) {
+      console.error("[send-anniversary-registered] storeId missing or store has no line_channel_access_token. userId:", userId, "storeId:", storeId ?? "null");
+      return NextResponse.json({ success: true, sent: false });
+    }
 
     const name = user.name ? `${user.name} 様` : "お客様";
     const message = `${name}\n\n情報登録ありがとうございます✨\n\nご登録いただいた記念日の前に、\nおすすめのケーキやご予約のお知らせをLINEでお届けします🎂\n\n特別な日のお祝いに、ぜひご利用ください🍓`;

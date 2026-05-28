@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Store,
   ShieldCheck,
@@ -59,8 +59,12 @@ const roles = [
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, setUser } = useAuth();
-  const [selectedRole, setSelectedRole] = useState<Role>(null);
+  const roleParam = searchParams.get("role") as Role;
+  const [selectedRole, setSelectedRole] = useState<Role>(
+    roleParam === "store" || roleParam === "admin" ? roleParam : null
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

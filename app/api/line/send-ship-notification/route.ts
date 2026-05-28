@@ -7,17 +7,16 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const LINE_CHANNEL_ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN ?? "";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "noreply@example.com";
 
-async function sendLineMessage(lineUserId: string, message: string) {
-  if (!LINE_CHANNEL_ACCESS_TOKEN) return;
+async function sendLineMessage(lineUserId: string, message: string, channelAccessToken: string) {
+  if (!channelAccessToken) return;
   await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${LINE_CHANNEL_ACCESS_TOKEN}`,
+      Authorization: `Bearer ${channelAccessToken}`,
     },
     body: JSON.stringify({
       to: lineUserId,
@@ -35,7 +34,7 @@ export async function POST(req: NextRequest) {
       .from("orders")
       .select(`
         *,
-        stores(name, phone),
+        stores(name, phone, line_channel_access_token),
         users!orders_customer_id_fkey(name, line_user_id, email),
         order_items(product_name_snapshot, quantity)
       `)
@@ -46,6 +45,7 @@ export async function POST(req: NextRequest) {
 
     const storeName = order.stores?.name ?? "";
     const storePhone = order.stores?.phone ?? "";
+    const channelAccessToken: string = order.stores?.line_channel_access_token ?? "";
     const rawName = order.customer_name_snapshot || order.users?.name || bodyCustomerName || "";
     const customerName = rawName || "お客様";
     const lineUserId = order.users?.line_user_id ?? null;
@@ -90,8 +90,8 @@ ${deliveryAddress}
 ${storeName}
 TEL：${storePhone}`;
 
-    if (lineUserId) {
-      await sendLineMessage(lineUserId, lineMessage);
+    if (lineUserId && channelAccessToken) {
+      await sendLineMessage(lineUserId, lineMessage, channelAccessToken);
     } else if (email) {
       const { error: sendError } = await resend.emails.send({
         from: `${storeName || "パティモバ"} <${FROM_EMAIL}>`,

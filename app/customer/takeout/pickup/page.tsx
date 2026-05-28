@@ -45,7 +45,8 @@ interface BusinessHour {
 export default function TakeoutPickupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const orderType = searchParams.get("type") ?? "reservation";
+  const orderTypeRaw = searchParams.get("type") || (() => { try { return sessionStorage.getItem("patimoba_order_type_selection"); } catch { return null; } })();
+  const orderType = orderTypeRaw === "sameday" ? "sameday" : "reservation";
   const storeParam = searchParams.get("store") ?? "";
   const isSameDay = orderType === "sameday";
 

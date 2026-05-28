@@ -328,10 +328,12 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   }, [params.storeId]);
 
   const handleSameDay = () => {
+    try { sessionStorage.setItem("patimoba_order_type_selection", "sameday"); } catch {}
     router.push(`/customer/takeout/products?store=${params.storeId}&type=sameday`);
   };
 
   const handleReservation = () => {
+    try { sessionStorage.setItem("patimoba_order_type_selection", "reservation"); } catch {}
     router.push(`/customer/takeout/products?store=${params.storeId}&type=reservation`);
   };
 

@@ -133,8 +133,8 @@ export default function TakeoutProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeParam = searchParams.get("store");
-  const typeParam = searchParams.get("type");
-  const orderTypeParam = typeParam ?? "reservation";
+  const typeParam = searchParams.get("type") || (() => { try { return sessionStorage.getItem("patimoba_order_type_selection"); } catch { return null; } })();
+  const orderTypeParam = (typeParam === "sameday" ? "sameday" : "reservation") as "sameday" | "reservation";
   const { selectedStoreId, selectedStoreName, profile,
     points, } = useCustomerContext();
   const storeId = selectedStoreId || storeParam || undefined;

@@ -12,12 +12,14 @@ import {
   ChevronRight,
   ArrowLeft,
   MessageCircle,
+  X,
 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, type UserType } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { PasswordInput } from "@/components/ui/password-input";
 import { getLiffId } from "@/lib/get-liff-id";
+import { supabase } from "@/lib/supabase";
 
 type Role = "store" | "admin" | "customer" | null;
 
@@ -71,6 +73,9 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [liffLoading, setLiffLoading] = useState(false);
   const [isLiffCallback, setIsLiffCallback] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
 
   const currentRole = roles.find((r) => r.id === selectedRole);
 
@@ -401,6 +406,7 @@ export default function LoginPage() {
 
               <button
                 type="button"
+                onClick={() => { setResetEmail(email); setShowResetModal(true); }}
                 className="text-sm text-amber-500 hover:text-amber-600 underline underline-offset-2 transition-colors"
               >
                 パスワードをお忘れの方
@@ -410,5 +416,65 @@ export default function LoginPage() {
         </motion.div>
       )}
     </AnimatePresence>
+
+      <AnimatePresence>
+        {showResetModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+            onClick={() => setShowResetModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-8 relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              {resetSent ? (
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-lg font-bold text-center py-6">
+                  メールを送信しました
+                </motion.p>
+              ) : (
+                <>
+                  <h2 className="text-lg font-bold text-center mb-6">登録済みのメールアドレスを入力</h2>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    placeholder="メールアドレス"
+                  />
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={async () => {
+                      if (!resetEmail) return;
+                      await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      });
+                      setResetSent(true);
+                      setTimeout(() => { setShowResetModal(false); setResetSent(false); setResetEmail(""); }, 3000);
+                    }}
+                    className="w-full py-2.5 rounded-lg bg-yellow-200 text-gray-800 font-bold text-sm hover:bg-yellow-300 transition-colors"
+                  >
+                    再設定用メールを送信する
+                  </motion.button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
   );
 }

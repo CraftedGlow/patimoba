@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
 export default function StoreLoginPage() {
   const router = useRouter();
@@ -37,14 +38,17 @@ export default function StoreLoginPage() {
     }
   };
 
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!resetEmail) return;
+    await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     setResetSent(true);
     setTimeout(() => {
       setShowResetModal(false);
       setResetSent(false);
       setResetEmail("");
-    }, 2000);
+    }, 3000);
   };
 
   return (

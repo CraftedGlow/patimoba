@@ -237,7 +237,11 @@ export default function TakeoutPickupPage() {
     const specialHour = specialDateHours[key];
     const openTime = specialHour?.openTime ?? bh?.openTime ?? "10:00";
     const closeTime = specialHour?.closeTime ?? bh?.closeTime ?? "19:00";
-    return generateTimeSlots(toMin(openTime), toMin(closeTime));
+    const openMin = toMin(openTime);
+    const closeMin = toMin(closeTime);
+    // 深夜越え（例: 23:00〜10:00）は endMin に +1440 して対応
+    const endMin = closeMin <= openMin ? closeMin + 1440 : closeMin;
+    return generateTimeSlots(openMin, endMin);
   })();
 
   const timeSlots = isSameDay ? sameDayTimeSlots : reservationTimeSlots;

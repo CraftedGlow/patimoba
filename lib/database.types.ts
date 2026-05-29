@@ -1205,6 +1205,7 @@ export type Database = {
           slug: string | null
           tenant_id: string | null
           tokusho_text: string | null
+          privacy_policy_text: string | null
           updated_at: string
         }
         Insert: {
@@ -1235,6 +1236,7 @@ export type Database = {
           slug?: string | null
           tenant_id?: string | null
           tokusho_text?: string | null
+          privacy_policy_text?: string | null
           updated_at?: string
         }
         Update: {
@@ -1265,6 +1267,7 @@ export type Database = {
           slug?: string | null
           tenant_id?: string | null
           tokusho_text?: string | null
+          privacy_policy_text?: string | null
           updated_at?: string
         }
         Relationships: []

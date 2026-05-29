@@ -1,52 +1,81 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 
-export default function PrivacyPage() {
+function PrivacyContent() {
+  const params = useSearchParams();
   const router = useRouter();
-  const [text, setText] = useState<string | null>(null);
+  const storeId = params.get("store");
+
+  const [storeName, setStoreName] = useState("");
+  const [privacyPolicyText, setPrivacyPolicyText] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
-      .from("platform_settings")
-      .select("value")
-      .eq("key", "privacy")
-      .maybeSingle()
-      .then(({ data }) => {
-        setText(data?.value ?? null);
-        setLoading(false);
-      });
-  }, []);
+    if (!storeId) {
+      setLoading(false);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("name, privacy_policy_text")
+        .eq("id", storeId)
+        .maybeSingle();
+      setStoreName(data?.name ?? "");
+      setPrivacyPolicyText(data?.privacy_policy_text ?? null);
+      setLoading(false);
+    })();
+  }, [storeId]);
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="bg-[#ffff9d] px-4 py-3 flex items-center sticky top-0 z-50">
-        <button onClick={() => router.back()} className="p-1 -ml-1 rounded-full hover:bg-black/10 transition-colors">
-          <ArrowLeft className="w-5 h-5 text-gray-800" />
+      <header className="bg-[#ffff9d] px-4 py-3 flex items-center gap-3 sticky top-0 z-50">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-yellow-200 transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-900" />
         </button>
-        <h1 className="ml-3 font-bold text-gray-900 text-base">パティモバ プライバシーポリシー</h1>
+        <span className="font-bold text-gray-900 text-sm truncate">
+          {storeName || "プライバシーポリシー"}
+        </span>
       </header>
 
-      <div className="px-4 py-6 max-w-2xl mx-auto">
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <LineSpinner size={24} />
-          </div>
-        ) : text ? (
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{text}</p>
-        ) : (
-          <p className="text-sm text-gray-400 text-center py-20">内容を準備中です。</p>
-        )}
+      <div className="px-5 py-6 md:max-w-2xl md:mx-auto">
+        <h1 className="text-base font-bold text-gray-900 mb-4">
+          プライバシーポリシー
+        </h1>
 
-        <div className="mt-10 pt-6 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-400">Crafted Glow株式会社</p>
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-7 h-7 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : privacyPolicyText ? (
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {privacyPolicyText}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-400">
+            プライバシーポリシーは準備中です。詳しくは店舗までお問い合わせください。
+          </p>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function PrivacyPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-7 h-7 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <PrivacyContent />
+    </Suspense>
   );
 }

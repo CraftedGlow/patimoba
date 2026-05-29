@@ -67,6 +67,7 @@ export default function AdminStoreEditPage() {
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [tokushoText, setTokushoText] = useState("");
+  const [privacyPolicyText, setPrivacyPolicyText] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -87,6 +88,7 @@ export default function AdminStoreEditPage() {
       if (Array.isArray(rawOptions)) setSelectedAddons(rawOptions as string[]);
 
       setTokushoText((store as any).tokusho_text ?? "");
+      setPrivacyPolicyText((store as any).privacy_policy_text ?? "");
 
       try {
         const rules = await fetchClosedDayRules(storeId);
@@ -170,6 +172,7 @@ export default function AdminStoreEditPage() {
         plan: selectedPlan,
         plan_options: selectedAddons.length > 0 ? selectedAddons : null,
         tokusho_text: tokushoText || null,
+        privacy_policy_text: privacyPolicyText || null,
       };
       if (logoUrl !== undefined) updates.logo_url = logoUrl;
       if (storeImageUrl !== undefined) updates.image = storeImageUrl;
@@ -354,6 +357,21 @@ export default function AdminStoreEditPage() {
             selectedAddons={selectedAddons}
             onAddonsChange={setSelectedAddons}
           />
+        </Section>
+
+        <Section title="プライバシーポリシー">
+          <Field label="内容">
+            <textarea
+              value={privacyPolicyText}
+              onChange={(e) => setPrivacyPolicyText(e.target.value)}
+              placeholder="プライバシーポリシーの内容を入力してください"
+              rows={10}
+              className="form-input font-mono text-xs leading-relaxed resize-y"
+            />
+          </Field>
+          <p className="text-xs text-gray-400">
+            ここで入力した内容が店舗のプライバシーポリシーページに反映されます。
+          </p>
         </Section>
 
         <Section title="特定商取引法に基づく表記">

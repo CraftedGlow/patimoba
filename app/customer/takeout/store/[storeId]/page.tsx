@@ -240,6 +240,8 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const [showTokushoModal, setShowTokushoModal] = useState(false);
   const [tokushoText, setTokushoText] = useState<string | null>(null);
   const [tokushoLoading, setTokushoLoading] = useState(false);
+  const [privacyPolicyText, setPrivacyPolicyText] = useState<string | null>(null);
+  const [privacyLoading, setPrivacyLoading] = useState(false);
 
   useEffect(() => {
     if (!showTokushoModal || !params.storeId) return;
@@ -251,6 +253,17 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       });
     });
   }, [showTokushoModal, params.storeId]);
+
+  useEffect(() => {
+    if (!showPrivacyModal || !params.storeId) return;
+    setPrivacyLoading(true);
+    import("@/lib/supabase").then(({ supabase }) => {
+      supabase.from("stores").select("privacy_policy_text").eq("id", params.storeId).maybeSingle().then(({ data }) => {
+        setPrivacyPolicyText(data?.privacy_policy_text ?? null);
+        setPrivacyLoading(false);
+      });
+    });
+  }, [showPrivacyModal, params.storeId]);
 
   const sameDayStatus = useSameDayAvailability(loginDone ? store : null);
   const sameDayOk = sameDayStatus.available;
@@ -552,20 +565,17 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
               className="fixed inset-x-0 bottom-0 bg-white rounded-t-2xl shadow-2xl z-[70] max-h-[85vh] flex flex-col"
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-                <div>
-                  <p className="font-bold text-gray-900 text-base">パティモバ プライバシーポリシー</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">最終改定日：2025年5月14日</p>
-                </div>
+                <p className="font-bold text-gray-900 text-base">プライバシーポリシー</p>
                 <button onClick={() => setShowPrivacyModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
-              <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
-                <p className="text-xs text-gray-600 leading-relaxed">Crafted Glow株式会社（以下「運営者」）は、パティモバ（以下「当サービス」）において、ユーザーの個人情報を適切に取り扱うことが重要な責務であると認識し、以下のとおりプライバシーポリシーを定め、これを遵守します。</p>
-                {PRIVACY_SECTIONS.map((s) => (
-                  <div key={s.title}>
-                    <p className="text-xs font-bold text-gray-900 mb-1">{s.title}</p>
-                    <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{s.body}</p>
-                  </div>
-                ))}
+              <div className="overflow-y-auto flex-1 px-5 py-5">
+                {privacyLoading ? (
+                  <div className="flex justify-center py-10"><LineSpinner size={20} /></div>
+                ) : privacyPolicyText ? (
+                  <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">{privacyPolicyText}</pre>
+                ) : (
+                  <p className="text-xs text-gray-400 text-center py-10">プライバシーポリシーは準備中です。</p>
+                )}
               </div>
             </motion.div>
           </>

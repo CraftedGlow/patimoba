@@ -69,21 +69,35 @@ export async function POST(req: NextRequest) {
       ? (process.env.LINE_SERVICE_TEMPLATE_EC ?? "order_confirmed_ec_ja")
       : (process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_request_d_o_ja");
 
-    const params: Record<string, string> = {
-      customer_name: customerName,
-      store_name: storeName,
-    };
+    const detailItems: Array<{ label: string; text: string }> = [
+      { label: "お名前", text: customerName },
+      { label: "店舗", text: storeName },
+    ];
 
     if (!isEc) {
       if (order.pickup_date) {
-        params.pickup_date = new Date(order.pickup_date).toLocaleDateString("ja-JP", {
-          year: "numeric", month: "long", day: "numeric", weekday: "short",
+        detailItems.push({
+          label: "受取日",
+          text: new Date(order.pickup_date).toLocaleDateString("ja-JP", {
+            year: "numeric", month: "long", day: "numeric", weekday: "short",
+          }),
         });
       }
       if (order.pickup_time) {
-        params.pickup_time = order.pickup_time.slice(0, 5);
+        detailItems.push({ label: "受取時間", text: order.pickup_time.slice(0, 5) });
       }
     }
+
+    const liffUrl = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
+
+    const params = {
+      detailGroup: { detailItems },
+      buttonGroup: {
+        buttonItems: [
+          { type: "uri", label: "注文詳細を確認", uri: liffUrl },
+        ],
+      },
+    };
 
     const msgRes = await fetch("https://api.line.me/message/v3/notifier/send?target=service", {
       method: "POST",

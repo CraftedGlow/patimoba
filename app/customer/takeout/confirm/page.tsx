@@ -272,6 +272,19 @@ export default function TakeoutConfirmPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId: result.orderId }),
       }).catch(() => {});
+
+      // サービス通知トークンを発行して注文に紐付ける（準備完了通知に使用）
+      try {
+        const liff = (await import("@line/liff")).default;
+        const liffAccessToken = liff.getAccessToken();
+        if (liffAccessToken) {
+          fetch("/api/line/issue-notification-token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
+          }).catch(() => {});
+        }
+      } catch { /* LIFF未初期化時はスキップ */ }
     }
 
     // ポイント付与・消費をDBに反映

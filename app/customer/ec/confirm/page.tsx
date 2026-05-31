@@ -305,6 +305,19 @@ export default function ECConfirmPage() {
       })
       .catch((e) => console.error("[メール送信エラー]", e));
 
+    // サービス通知トークンを発行して注文に紐付ける（発送通知に使用）
+    try {
+      const liff = (await import("@line/liff")).default;
+      const liffAccessToken = liff.getAccessToken();
+      if (liffAccessToken) {
+        fetch("/api/line/issue-notification-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
+        }).catch(() => {});
+      }
+    } catch { /* LIFF未初期化時はスキップ */ }
+
     setShowOrderComplete(true);
     setCountdown(5);
     countdownRef.current = setInterval(() => {

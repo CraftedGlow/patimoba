@@ -327,17 +327,31 @@ export default function StoreOrdersPage() {
         confirmAction.toFulfilled,
         user?.id ?? null,
       );
-      if (confirmAction.isEc && confirmAction.toFulfilled) {
-        const targetOrder = manageOrders.find((o) => o.id === confirmAction.orderId);
-        const customerName = targetOrder?.customerName || targetOrder?.lineName || "";
-        const shipRes = await fetch("/api/line/send-ship-notification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: confirmAction.orderId, customerName }),
-        }).catch((e) => { console.error("[発送通知エラー]", e); return null; });
-        if (shipRes) {
-          const shipData = await shipRes.json().catch(() => ({}));
-          console.log("[発送通知]", shipRes.status, shipData);
+      if (confirmAction.toFulfilled) {
+        if (confirmAction.isEc) {
+          const targetOrder = manageOrders.find((o) => o.id === confirmAction.orderId);
+          const customerName = targetOrder?.customerName || targetOrder?.lineName || "";
+          const shipRes = await fetch("/api/line/send-ship-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: confirmAction.orderId, customerName }),
+          }).catch((e) => { console.error("[発送通知エラー]", e); return null; });
+          if (shipRes) {
+            const shipData = await shipRes.json().catch(() => ({}));
+            console.log("[発送通知]", shipRes.status, shipData);
+          }
+        } else {
+          // テイクアウト: 準備完了通知（サービスメッセージ or プッシュメッセージ）
+          fetch("/api/line/send-service-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: confirmAction.orderId }),
+          })
+            .then(async (r) => {
+              const data = await r.json().catch(() => ({}));
+              console.log("[準備完了通知]", r.status, data);
+            })
+            .catch((e) => console.error("[準備完了通知エラー]", e));
         }
       }
       await refetchManage();
@@ -1013,7 +1027,7 @@ export default function StoreOrdersPage() {
                 <>
                   <h3 className="text-base font-bold text-center mb-2">準備完了にします</h3>
                   <p className="text-xs text-gray-500 text-center mb-5">
-                    この注文を準備完了にしますか？
+                    「はい」を押すと顧客に準備完了の通知が送信されます
                   </p>
                 </>
               ) : (

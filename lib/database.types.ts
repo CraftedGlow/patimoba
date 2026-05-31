@@ -537,6 +537,7 @@ export type Database = {
           pickup_date: string | null
           pickup_time: string | null
           print_photo_url: string | null
+          service_notification_token: string | null
           store_id: string
           subtotal: number
           total_amount: number
@@ -563,6 +564,7 @@ export type Database = {
           pickup_date?: string | null
           pickup_time?: string | null
           print_photo_url?: string | null
+          service_notification_token?: string | null
           store_id: string
           subtotal?: number
           total_amount?: number
@@ -589,6 +591,7 @@ export type Database = {
           pickup_date?: string | null
           pickup_time?: string | null
           print_photo_url?: string | null
+          service_notification_token?: string | null
           store_id?: string
           subtotal?: number
           total_amount?: number
@@ -1329,6 +1332,7 @@ export type Database = {
           email: string | null
           gender: string | null
           id: string
+          liff_id: string | null
           line_name: string | null
           line_user_id: string | null
           name: string
@@ -1351,6 +1355,7 @@ export type Database = {
           email?: string | null
           gender?: string | null
           id?: string
+          liff_id?: string | null
           line_name?: string | null
           line_user_id?: string | null
           name?: string
@@ -1373,6 +1378,7 @@ export type Database = {
           email?: string | null
           gender?: string | null
           id?: string
+          liff_id?: string | null
           line_name?: string | null
           line_user_id?: string | null
           name?: string

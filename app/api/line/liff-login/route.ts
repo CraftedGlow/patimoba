@@ -38,24 +38,51 @@ export async function POST(request: NextRequest) {
   // liff.getProfile() の値を優先（IDトークンの name クレームはキャッシュされる場合がある）
   const lineName: string = body?.lineName || verified.name || ""
   const avatarUrl: string | null = body?.avatarUrl || verified.picture || null
-  console.log(`[LIFF Login] 受信プロフィール: lineUserId=${lineUserId}, body.lineName=${body?.lineName ?? "(none)"}, verified.name=${verified.name ?? "(none)"}, resolved lineName=${lineName}`)
+  const liffId: string | null = body?.liffId ? String(body.liffId) : null
+  console.log(`[LIFF Login] 受信プロフィール: lineUserId=${lineUserId}, liffId=${liffId ?? "(none)"}, body.lineName=${body?.lineName ?? "(none)"}, verified.name=${verified.name ?? "(none)"}, resolved lineName=${lineName}`)
 
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey
   )
 
-  // LINE ユーザーID で既存ユーザーを検索
-  let { data: user } = await supabase
-    .from("users")
-    .select("*")
-    .eq("line_user_id", lineUserId)
-    .maybeSingle()
+  // (line_user_id, liff_id) の組み合わせで既存ユーザーを検索
+  let { data: user } = liffId
+    ? await supabase
+        .from("users")
+        .select("*")
+        .eq("line_user_id", lineUserId)
+        .eq("liff_id", liffId)
+        .maybeSingle()
+    : await supabase
+        .from("users")
+        .select("*")
+        .eq("line_user_id", lineUserId)
+        .maybeSingle()
+
+  // 後方互換: liff_id 未設定の既存ユーザーを line_user_id のみで検索し、liff_id を自動設定
+  if (!user && liffId) {
+    const { data: legacyUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("line_user_id", lineUserId)
+      .is("liff_id", null)
+      .maybeSingle()
+
+    if (legacyUser) {
+      console.log(`[LIFF Login] 既存ユーザーに liff_id を設定: userId=${legacyUser.id} liffId=${liffId}`)
+      await supabase.from("users").update({ liff_id: liffId }).eq("id", legacyUser.id)
+      user = { ...legacyUser, liff_id: liffId }
+    }
+  }
 
   // ── 新規ユーザー：Supabase auth + users レコードを自動作成 ──────────────
   if (!user) {
-    console.log(`[LIFF Login] 新規ユーザー自動作成: lineUserId=${lineUserId}`)
-    const fakeEmail = `line_${lineUserId}@patimoba.internal`
+    console.log(`[LIFF Login] 新規ユーザー自動作成: lineUserId=${lineUserId} liffId=${liffId ?? "(none)"}`)
+    // liff_id を含めることで同一LINEユーザーが複数プロバイダ（店舗）でも衝突しない
+    const fakeEmail = liffId
+      ? `line_${lineUserId}_${liffId}@patimoba.internal`
+      : `line_${lineUserId}@patimoba.internal`
 
     let authUserId: string
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -87,6 +114,7 @@ export async function POST(request: NextRequest) {
       .from("users")
       .insert({
         line_user_id: lineUserId,
+        liff_id: liffId,
         line_name: lineName,
         avatar_url: avatarUrl,
         user_type: "customer",

@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     const templateName = isEc
       ? (process.env.LINE_SERVICE_TEMPLATE_EC ?? "order_confirmed_ec_ja")
-      : (process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_confirmed_ja");
+      : (process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_request_d_o_ja");
 
     const params: Record<string, string> = {
       customer_name: customerName,

@@ -29,10 +29,11 @@ export async function POST(req: NextRequest) {
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(`
-        id, order_type, pickup_date, pickup_time, customer_name_snapshot,
+        id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
         service_notification_token,
-        stores(name, liff_id, line_channel_access_token, line_channel_secret),
-        users!orders_customer_id_fkey(name)
+        stores(name, address, liff_id, line_channel_access_token, line_channel_secret),
+        users!orders_customer_id_fkey(name),
+        order_items(product_name_snapshot, quantity)
       `)
       .eq("id", orderId)
       .maybeSingle() as any;
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     const store = order.stores;
     const storeName: string = store?.name ?? "";
+    const storeAddress: string = store?.address ?? "";
     const customerName: string = order.customer_name_snapshot || order.users?.name || "お客様";
     const isEc = order.order_type === "ec";
 
@@ -69,34 +71,45 @@ export async function POST(req: NextRequest) {
       ? (process.env.LINE_SERVICE_TEMPLATE_EC ?? "order_confirmed_ec_ja")
       : (process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_request_d_o_ja");
 
-    const detailItems: Array<{ label: string; text: string }> = [
-      { label: "お名前", text: customerName },
-      { label: "店舗", text: storeName },
-    ];
-
-    if (!isEc) {
-      if (order.pickup_date) {
-        detailItems.push({
-          label: "受取日",
-          text: new Date(order.pickup_date).toLocaleDateString("ja-JP", {
-            year: "numeric", month: "long", day: "numeric", weekday: "short",
-          }),
-        });
-      }
-      if (order.pickup_time) {
-        detailItems.push({ label: "受取時間", text: order.pickup_time.slice(0, 5) });
-      }
+    // 受取日時
+    let dateStr = "";
+    if (order.pickup_date) {
+      const d = new Date(order.pickup_date);
+      dateStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+      if (order.pickup_time) dateStr += ` ${order.pickup_time.slice(0, 5)}`;
+    } else {
+      const now = new Date();
+      dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
     }
 
-    const liffUrl = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
+    // 注文商品
+    const items: Array<{ product_name_snapshot: string; quantity: number }> = order.order_items || [];
+    const mainProduct = items[0]?.product_name_snapshot ?? storeName;
+    const orderDetail = items.length > 1
+      ? `${items[0]?.product_name_snapshot} 他${items.length - 1}点`
+      : (items[0]?.product_name_snapshot ?? "ご注文商品");
+    const totalCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
+    const sumStr = `${Number(order.total_amount || 0).toLocaleString()} 円`;
 
-    const params = {
-      detailGroup: { detailItems },
-      buttonGroup: {
-        buttonItems: [
-          { type: "uri", label: "注文詳細を確認", uri: liffUrl },
-        ],
-      },
+    const liffUrl = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
+    const howToReceive = isEc
+      ? "発送完了後、追ってご連絡いたします。"
+      : "準備完了のご連絡をLINEでお送りします。カウンターでお受け取りください。";
+
+    const params: Record<string, string> = {
+      number: orderId.slice(0, 8).toUpperCase(),
+      date: dateStr,
+      count: `${totalCount}点`,
+      order_detail: orderDetail,
+      product: mainProduct,
+      shop_name: storeName,
+      address: storeAddress,
+      sum: sumStr,
+      how_to_receive: howToReceive,
+      btn1_url: liffUrl,
+      btn2_url: liffUrl,
+      btn3_url: liffUrl,
+      btn4_url: liffUrl,
     };
 
     const msgRes = await fetch("https://api.line.me/message/v3/notifier/send?target=service", {

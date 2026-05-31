@@ -267,24 +267,31 @@ export default function TakeoutConfirmPage() {
 
     if (result.orderId) {
       setCompletedOrderId(result.orderId);
-      fetch("/api/line/send-order-message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: result.orderId }),
-      }).catch(() => {});
-
-      // サービス通知トークンを発行して注文に紐付ける（準備完了通知に使用）
+      let serviceMessageSent = false;
       try {
         const liff = (await import("@line/liff")).default;
         const liffAccessToken = liff.getAccessToken();
         if (liffAccessToken) {
-          fetch("/api/line/issue-notification-token", {
+          await fetch("/api/line/issue-notification-token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
+          });
+          fetch("/api/line/send-service-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: result.orderId }),
           }).catch(() => {});
+          serviceMessageSent = true;
         }
       } catch { /* LIFF未初期化時はスキップ */ }
+      if (!serviceMessageSent) {
+        fetch("/api/line/send-order-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: result.orderId }),
+        }).catch(() => {});
+      }
     }
 
     // ポイント付与・消費をDBに反映

@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
     // ※ templateName は LINE Mini App 設定画面で事前登録が必要
     if (notificationToken && channelAccessToken) {
       const templateName = isEc
-        ? (process.env.LINE_SERVICE_TEMPLATE_EC ?? "order_shipped_ja")
-        : (process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_ready_ja");
+        ? (process.env.LINE_SERVICE_TEMPLATE_EC ?? "order_confirmed_ec_ja")
+        : (process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_confirmed_ja");
 
       const params: Record<string, string> = {
         customer_name: customerName,
@@ -84,12 +84,12 @@ export async function POST(req: NextRequest) {
       const pickupStr = [pickupDate, pickupTime].filter(Boolean).join(" ");
 
       const lines = [
-        `🎂 ご注文の準備が整いました！`,
+        `🎂 ご注文ありがとうございます！`,
         ``,
         `${customerName} 様`,
         ``,
-        `${storeName}でのご注文が準備完了しました。`,
-        `お気をつけてご来店ください🙏`,
+        `${storeName}へのご注文を受け付けました。`,
+        `来店時にこのメッセージをお見せください🙏`,
       ];
       if (pickupStr) lines.push(``, `受取日時: ${pickupStr}`);
       lines.push(``, `このメッセージを店頭でお見せください。`);

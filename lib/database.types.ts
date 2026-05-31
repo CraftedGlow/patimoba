@@ -1198,6 +1198,7 @@ export type Database = {
           is_published: boolean
           liff_id: string | null
           line_channel_access_token: string | null
+          line_channel_secret: string | null
           line_official_account_id: string | null
           logo_url: string | null
           name: string
@@ -1229,6 +1230,7 @@ export type Database = {
           is_published?: boolean
           liff_id?: string | null
           line_channel_access_token?: string | null
+          line_channel_secret?: string | null
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string
@@ -1260,6 +1262,7 @@ export type Database = {
           is_published?: boolean
           liff_id?: string | null
           line_channel_access_token?: string | null
+          line_channel_secret?: string | null
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string

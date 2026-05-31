@@ -6,6 +6,21 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+async function getStatelessToken(channelId: string, channelSecret: string): Promise<string> {
+  const res = await fetch("https://api.line.me/oauth2/v3/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: channelId,
+      client_secret: channelSecret,
+    }),
+  });
+  if (!res.ok) throw new Error(`stateless token error: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return data.access_token;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { orderId, liffAccessToken } = await req.json();
@@ -15,14 +30,29 @@ export async function POST(req: NextRequest) {
 
     const { data: order } = await supabaseAdmin
       .from("orders")
-      .select("store_id, stores!inner(line_channel_access_token)")
+      .select("store_id, stores!inner(liff_id, line_channel_access_token, line_channel_secret)")
       .eq("id", orderId)
       .maybeSingle() as any;
 
-    const channelAccessToken: string = order?.stores?.line_channel_access_token ?? "";
+    const store = order?.stores;
+    if (!store) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
+
+    const liffId: string = store.liff_id ?? "";
+    const channelSecret: string = store.line_channel_secret ?? "";
+    let channelAccessToken: string;
+
+    if (liffId && channelSecret) {
+      const channelId = liffId.split("-")[0];
+      channelAccessToken = await getStatelessToken(channelId, channelSecret);
+    } else {
+      channelAccessToken = store.line_channel_access_token ?? "";
+    }
+
     if (!channelAccessToken) {
-      console.warn(`[issue-notification-token] no channel access token for orderId=${orderId}`);
-      return NextResponse.json({ error: "Store channel access token not found" }, { status: 404 });
+      console.warn(`[issue-notification-token] no channel access token: orderId=${orderId}`);
+      return NextResponse.json({ error: "No channel access token available" }, { status: 500 });
     }
 
     const tokenRes = await fetch("https://api.line.me/message/v3/notifier/token", {

@@ -272,17 +272,19 @@ export default function TakeoutConfirmPage() {
         const liff = (await import("@line/liff")).default;
         const liffAccessToken = liff.getAccessToken();
         if (liffAccessToken) {
-          await fetch("/api/line/issue-notification-token", {
+          const tokenRes = await fetch("/api/line/issue-notification-token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
           });
-          fetch("/api/line/send-service-message", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: result.orderId }),
-          }).catch(() => {});
-          serviceMessageSent = true;
+          if (tokenRes.ok) {
+            fetch("/api/line/send-service-message", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: result.orderId }),
+            }).catch(() => {});
+            serviceMessageSent = true;
+          }
         }
       } catch { /* LIFF未初期化時はスキップ */ }
       if (!serviceMessageSent) {

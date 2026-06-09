@@ -84,11 +84,9 @@ export async function POST(req: NextRequest) {
 
     // 注文商品
     const items: Array<{ product_name_snapshot: string; quantity: number }> = order.order_items || [];
-    const mainProduct = items[0]?.product_name_snapshot ?? storeName;
     const orderDetail = items
       .map((i) => `${i.product_name_snapshot} ×${i.quantity}`)
       .join("\n");
-    const totalCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
     const sumStr = `${Number(order.total_amount || 0).toLocaleString()} 円`;
 
     const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
@@ -98,19 +96,12 @@ export async function POST(req: NextRequest) {
       : "準備完了のご連絡をLINEでお送りします。カウンターでお受け取りください。";
 
     const params: Record<string, string> = {
-      number: orderId.slice(0, 8).toUpperCase(),
       date: dateStr,
-      count: `${totalCount}点`,
       order_detail: orderDetail,
-      product: mainProduct,
       shop_name: storeName,
-      address: storeAddress,
       sum: sumStr,
       how_to_receive: howToReceive,
       btn1_url: orderDetailUrl,
-      btn2_url: liffBase,
-      btn3_url: liffBase,
-      btn4_url: liffBase,
     };
 
     const msgRes = await fetch("https://api.line.me/message/v3/notifier/send?target=service", {

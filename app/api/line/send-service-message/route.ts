@@ -85,13 +85,14 @@ export async function POST(req: NextRequest) {
     // 注文商品
     const items: Array<{ product_name_snapshot: string; quantity: number }> = order.order_items || [];
     const mainProduct = items[0]?.product_name_snapshot ?? storeName;
-    const orderDetail = items.length > 1
-      ? `${items[0]?.product_name_snapshot} 他${items.length - 1}点`
-      : (items[0]?.product_name_snapshot ?? "ご注文商品");
+    const orderDetail = items
+      .map((i) => `${i.product_name_snapshot} ×${i.quantity}`)
+      .join("\n");
     const totalCount = items.reduce((s, i) => s + (i.quantity || 1), 0);
     const sumStr = `${Number(order.total_amount || 0).toLocaleString()} 円`;
 
-    const liffUrl = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
+    const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
+    const orderDetailUrl = `${liffBase}/customer/orders/${orderId}`;
     const howToReceive = isEc
       ? "発送完了後、追ってご連絡いたします。"
       : "準備完了のご連絡をLINEでお送りします。カウンターでお受け取りください。";
@@ -106,10 +107,10 @@ export async function POST(req: NextRequest) {
       address: storeAddress,
       sum: sumStr,
       how_to_receive: howToReceive,
-      btn1_url: liffUrl,
-      btn2_url: liffUrl,
-      btn3_url: liffUrl,
-      btn4_url: liffUrl,
+      btn1_url: orderDetailUrl,
+      btn2_url: liffBase,
+      btn3_url: liffBase,
+      btn4_url: liffBase,
     };
 
     const msgRes = await fetch("https://api.line.me/message/v3/notifier/send?target=service", {

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { Calendar, ShoppingBag, CreditCard, Package } from "lucide-react";
 
@@ -55,24 +54,17 @@ export default function CustomerOrderDetailPage() {
   useEffect(() => {
     if (!orderId) return;
     (async () => {
-      const { data, error: err } = await supabase
-        .from("orders")
-        .select(`
-          id, order_no, order_type, pickup_date, pickup_time,
-          total_amount, subtotal, discount_amount,
-          customer_name_snapshot, order_status, payment_status,
-          stores(name, address),
-          order_items(product_name_snapshot, quantity, unit_price, subtotal)
-        `)
-        .eq("id", orderId)
-        .maybeSingle();
-
-      if (err) {
+      try {
+        const res = await fetch(`/api/orders/${orderId}`);
+        if (res.status === 404) {
+          setError("注文が見つかりませんでした");
+        } else if (!res.ok) {
+          setError("注文情報の取得に失敗しました");
+        } else {
+          setOrder(await res.json());
+        }
+      } catch {
         setError("注文情報の取得に失敗しました");
-      } else if (!data) {
-        setError("注文が見つかりませんでした");
-      } else {
-        setOrder(data as unknown as OrderDetail);
       }
       setLoading(false);
     })();

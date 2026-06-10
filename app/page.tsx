@@ -82,11 +82,22 @@ export default function Home() {
 
     setIsLiffCallback(true);
     (async () => {
+      // 認証不要なパスは直接遷移
+      const liffState = params.get("liff.state");
+      if (liffState) {
+        const decoded = decodeURIComponent(liffState);
+        const pathOnly = decoded.split("?")[0];
+        if (pathOnly.startsWith("/customer/orders/")) {
+          router.replace(pathOnly);
+          return;
+        }
+      }
+
       const storeId = parseLiffStateStoreId();
       const liffId = await getLiffId(storeId);
       handleLiffCallback(liffId, storeId);
     })();
-  }, [handleLiffCallback]);
+  }, [handleLiffCallback, router]);
 
   if (isLiffCallback) {
     return (

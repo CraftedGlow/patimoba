@@ -125,7 +125,6 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
       parts.push(line(label))
     }
 
-    parts.push(blank())
   }
 
   parts.push(line(SEP))
@@ -138,9 +137,8 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   parts.push(cmd(ESC, 0x61, 0x01))
   parts.push(line("お支払金額"))
   parts.push(line(`¥${data.totalAmount.toLocaleString()}`))
-  parts.push(blank())
 
-  parts.push(cmd(ESC, 0x64, 0x03))  // 3行フィード
+  parts.push(cmd(ESC, 0x64, 0x02))  // 2行フィード
   parts.push(cmd(ESC, 0x69))        // フルカット (Star専用)
 
   return Buffer.concat(parts)

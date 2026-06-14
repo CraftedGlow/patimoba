@@ -45,14 +45,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
     cmd(ESC, 0x40),        // 初期化
     cmd(ESC, 0x4D, 0x01),  // フォントB
     cmd(ESC, 0x33, 16),    // 行間 16ドット
-    SIZE_1_5X,             // フォントBの1.5倍サイズ（高さ2倍・幅1倍）
-    blank(),
-    // 店名: 太字・中央
-    cmd(ESC, 0x61, 0x01),  // センター
-    cmd(ESC, 0x45, 0x01),  // 太字ON
-    line(data.storeName),
-    cmd(ESC, 0x45, 0x00),  // 太字OFF
-    line(SEP),
+    SIZE_1X,
     cmd(ESC, 0x61, 0x00),  // 左揃え
   ]
 

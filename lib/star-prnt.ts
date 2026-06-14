@@ -39,6 +39,28 @@ const SIZE_1_5X = size(2, 1)  // 高さ2倍・幅1倍（≒1.5倍）
 const SIZE_2X   = size(2, 2)
 
 const SEP = "------------------------"
+const LINE_COLS = 24
+
+function strWidth(s: string): number {
+  let w = 0
+  for (const c of s) w += c.charCodeAt(0) > 0x7f ? 2 : 1
+  return w
+}
+
+function itemLine(name: string, quantity: number): string {
+  const suffix = `  x${quantity}`
+  const suffixW = strWidth(suffix)
+  const nameMax = LINE_COLS - suffixW
+  let nameStr = ""
+  let nameW = 0
+  for (const c of name) {
+    const cw = c.charCodeAt(0) > 0x7f ? 2 : 1
+    if (nameW + cw > nameMax) { nameStr += "…"; break }
+    nameStr += c
+    nameW += cw
+  }
+  return nameStr + suffix
+}
 
 export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   const parts: Buffer[] = [
@@ -70,7 +92,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   for (const item of data.items) {
     // 商品名と個数を同じ行に（太字）
     parts.push(cmd(ESC, 0x45, 0x01))
-    parts.push(line(`${item.name}  x${item.quantity}`))
+    parts.push(line(itemLine(item.name, item.quantity)))
     parts.push(cmd(ESC, 0x45, 0x00))
 
     // バリアント（ホールサイズ等）

@@ -250,6 +250,7 @@ export default function TakeoutConfirmPage() {
     const result = await createOrder({
       storeId: storeIdForOrder,
       customerId: userId,
+      customerName: `${lastName} ${firstName}`.trim() || null,
       paymentStatus: paymentMethod === "credit" ? "paid" : "unpaid",
       items: cartItems,
       subtotal,

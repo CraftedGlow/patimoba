@@ -6,6 +6,7 @@ import type { OrderStatus, UICartItem } from "@/lib/types"
 interface CreateOrderInput {
   storeId: string
   customerId: string | null
+  customerName?: string | null
   paymentStatus?: string
   items: UICartItem[]
   subtotal: number
@@ -48,6 +49,7 @@ export function useOrderMutations() {
       .insert({
         store_id: input.storeId,
         customer_id: input.customerId,
+        customer_name_snapshot: input.customerName ?? null,
         order_type: derived.type,
         order_status: "pending",
         payment_status: input.paymentStatus ?? "unpaid",

@@ -48,7 +48,7 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   const push = (...s: string[]) => lines.push(...s)
 
   // 全体をFont B（小さめ）に設定
-  push("[font: name a]")
+  push("[font: name b]")
 
   push("[align: left]")
 

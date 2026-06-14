@@ -57,7 +57,7 @@ export async function POST(
 
   return NextResponse.json({
     jobReady: true,
-    mediaTypes: ["text/vnd.star.markup", "application/vnd.star.starprnt"],
+    mediaTypes: ["application/vnd.star.starprnt"],
     jobToken,
   })
 }

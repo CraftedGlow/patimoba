@@ -39,7 +39,7 @@ const SIZE_1_5X = size(2, 1)  // 高さ2倍・幅1倍（≒1.5倍）
 const SIZE_2X   = size(2, 2)
 
 const SEP = "------------------------"
-const LINE_COLS = 24
+const LINE_COLS = 22
 
 function charW(c: string): number {
   return c.charCodeAt(0) > 0x7f ? 2 : 1
@@ -137,9 +137,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
 
   parts.push(cmd(ESC, 0x61, 0x01))
   parts.push(line("お支払金額"))
-  parts.push(SIZE_2X)
   parts.push(line(`¥${data.totalAmount.toLocaleString()}`))
-  parts.push(SIZE_1X)
   parts.push(blank())
 
   parts.push(cmd(ESC, 0x64, 0x03))  // 3行フィード

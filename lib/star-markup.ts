@@ -28,7 +28,7 @@ export interface ReceiptData {
 }
 
 const SEP = "------------------------"
-const MARKUP_COLS = 24
+const MARKUP_COLS = 22
 
 function charW(c: string): number {
   return c.charCodeAt(0) > 0x7f ? 2 : 1
@@ -134,10 +134,8 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   push(SEP)
 
   push("[align: center]")
-  push("[mag: w 2; h 2]")
   push(`お支払金額`)
   push(`¥${data.totalAmount.toLocaleString()}`)
-  push("[mag]")
   push("[align: left]")
 
   push("[cut]")

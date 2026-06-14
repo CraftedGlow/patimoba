@@ -46,7 +46,7 @@ function charW(c: string): number {
 }
 
 function itemLine(name: string, quantity: number): string {
-  const suffix = `  x${quantity}`
+  const suffix = ` x${quantity}`
   const suffixW = suffix.split("").reduce((s, c) => s + charW(c), 0)
   const maxFull  = LINE_COLS - suffixW      // 省略なしで使える幅
   const maxTrunc = maxFull - 2              // 「…」(全角2)込みで使える幅
@@ -90,23 +90,15 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   if (data.phone)        parts.push(line(`電話番号: ${data.phone}`))
   if (data.orderDate)    parts.push(line(`注文日時: ${data.orderDate}`))
 
-  // 受取日時: 太字で目立たせる
   const dt = fmtDate(data.pickupDate, data.pickupTime)
-  if (dt) {
-    parts.push(cmd(ESC, 0x45, 0x01))
-    parts.push(line(`受取日時: ${dt}`))
-    parts.push(cmd(ESC, 0x45, 0x00))
-  }
+  if (dt) parts.push(line(`受取日時: ${dt}`))
 
   if (data.paymentStatus) parts.push(line(`お支払い: ${data.paymentStatus}`))
 
   parts.push(line(SEP))
 
   for (const item of data.items) {
-    // 商品名と個数を同じ行に（太字）
-    parts.push(cmd(ESC, 0x45, 0x01))
     parts.push(line(itemLine(item.name, item.quantity)))
-    parts.push(cmd(ESC, 0x45, 0x00))
 
     // バリアント（ホールサイズ等）
     if (item.variantName) parts.push(line(item.variantName))
@@ -143,14 +135,11 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   }
   parts.push(line(SEP))
 
-  // お支払金額: 中央・2倍サイズ・太字
   parts.push(cmd(ESC, 0x61, 0x01))
   parts.push(line("お支払金額"))
-  parts.push(cmd(ESC, 0x45, 0x01))
   parts.push(SIZE_2X)
   parts.push(line(`¥${data.totalAmount.toLocaleString()}`))
   parts.push(SIZE_1X)
-  parts.push(cmd(ESC, 0x45, 0x00))
   parts.push(blank())
 
   parts.push(cmd(ESC, 0x64, 0x03))  // 3行フィード

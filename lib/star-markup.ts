@@ -27,15 +27,15 @@ export interface ReceiptData {
   totalAmount: number
 }
 
-const SEP = "----------------------------------------"
-const MARKUP_COLS = 40
+const SEP = "------------------------"
+const MARKUP_COLS = 24
 
 function charW(c: string): number {
   return c.charCodeAt(0) > 0x7f ? 2 : 1
 }
 
 function itemLine(name: string, quantity: number): string {
-  const suffix = `  x${quantity}`
+  const suffix = ` x${quantity}`
   const suffixW = suffix.split("").reduce((s, c) => s + charW(c), 0)
   const maxFull  = MARKUP_COLS - suffixW
   const maxTrunc = maxFull - 2
@@ -92,13 +92,8 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   if (data.phone) push(`電話番号: ${data.phone}`)
   if (data.orderDate) push(`注文日時: ${data.orderDate}`)
 
-  // 受取日時 - 太字で目立たせる
   const dt = fmtDate(data.pickupDate, data.pickupTime)
-  if (dt) {
-    push("[bold: on]")
-    push(`受取日時: ${dt}`)
-    push("[bold: off]")
-  }
+  if (dt) push(`受取日時: ${dt}`)
 
   if (data.paymentStatus) push(`お支払い: ${data.paymentStatus}`)
 
@@ -138,14 +133,11 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   }
   push(SEP)
 
-  // お支払金額 - 2倍・太字・中央揃え
   push("[align: center]")
-  push("[bold: on]")
   push("[mag: w 2; h 2]")
   push(`お支払金額`)
   push(`¥${data.totalAmount.toLocaleString()}`)
   push("[mag]")
-  push("[bold: off]")
   push("[align: left]")
 
   push("[cut]")

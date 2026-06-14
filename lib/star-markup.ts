@@ -48,17 +48,9 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   const push = (...s: string[]) => lines.push(...s)
 
   // 全体をFont B（小さめ）に設定
-  push("[font: name b]")
+  push("[font: name a]")
 
-  // 店名 - 太字・中央揃え
-  push(
-    "[align: center]",
-    "[bold: on]",
-    data.storeName,
-    "[bold: off]",
-    SEP,
-    "[align: left]",
-  )
+  push("[align: left]")
 
   if (data.customerName) push(`名前: ${data.customerName}様`)
   if (data.lineName) push(`LINE: ${data.lineName}`)

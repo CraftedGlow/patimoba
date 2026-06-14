@@ -116,17 +116,7 @@ export async function GET(
     })
   }
 
-  // Accept ヘッダーに応じてフォーマットを切り替え
-  const useMarkup = accept.includes("text/vnd.star.markup")
-
-  if (useMarkup) {
-    log("GET", params.storeId, `→ 200 markup jobId=${job.id} markupPreview=${job.markup.slice(0, 200)}`)
-    return new NextResponse(job.markup, {
-      headers: { "Content-Type": "text/vnd.star.markup" },
-    })
-  }
-
-  // デフォルト: StarPRNT バイナリ
+  // 常に StarPRNT バイナリで返す
   // 注文データを再取得してレシートを生成
   const { data: order } = await supabaseAdmin
     .from("orders")

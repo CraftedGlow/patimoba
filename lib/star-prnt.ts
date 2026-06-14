@@ -41,25 +41,38 @@ const SIZE_2X   = size(2, 2)
 const SEP = "------------------------"
 const LINE_COLS = 24
 
-function strWidth(s: string): number {
-  let w = 0
-  for (const c of s) w += c.charCodeAt(0) > 0x7f ? 2 : 1
-  return w
+function charW(c: string): number {
+  return c.charCodeAt(0) > 0x7f ? 2 : 1
 }
 
 function itemLine(name: string, quantity: number): string {
   const suffix = `  x${quantity}`
-  const suffixW = strWidth(suffix)
-  const nameMax = LINE_COLS - suffixW
+  const suffixW = suffix.split("").reduce((s, c) => s + charW(c), 0)
+  const maxFull  = LINE_COLS - suffixW      // 省略なしで使える幅
+  const maxTrunc = maxFull - 2              // 「…」(全角2)込みで使える幅
+
   let nameStr = ""
   let nameW = 0
+  let truncate = false
+
   for (const c of name) {
-    const cw = c.charCodeAt(0) > 0x7f ? 2 : 1
-    if (nameW + cw > nameMax) { nameStr += "…"; break }
+    const cw = charW(c)
+    if (nameW + cw > maxFull) { truncate = true; break }
     nameStr += c
     nameW += cw
   }
-  return nameStr + suffix
+
+  if (!truncate) return nameStr + suffix
+
+  nameStr = ""
+  nameW = 0
+  for (const c of name) {
+    const cw = charW(c)
+    if (nameW + cw > maxTrunc) break
+    nameStr += c
+    nameW += cw
+  }
+  return nameStr + "…" + suffix
 }
 
 export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
@@ -140,8 +153,8 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   parts.push(cmd(ESC, 0x45, 0x00))
   parts.push(blank())
 
-  parts.push(cmd(ESC, 0x64, 0x03))        // 3行フィード
-  parts.push(cmd(GS,  0x56, 0x41, 0x00))  // フルカット
+  parts.push(cmd(ESC, 0x64, 0x03))  // 3行フィード
+  parts.push(cmd(ESC, 0x69))        // フルカット (Star専用)
 
   return Buffer.concat(parts)
 }

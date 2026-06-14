@@ -28,6 +28,41 @@ export interface ReceiptData {
 }
 
 const SEP = "----------------------------------------"
+const MARKUP_COLS = 40
+
+function charW(c: string): number {
+  return c.charCodeAt(0) > 0x7f ? 2 : 1
+}
+
+function itemLine(name: string, quantity: number): string {
+  const suffix = `  x${quantity}`
+  const suffixW = suffix.split("").reduce((s, c) => s + charW(c), 0)
+  const maxFull  = MARKUP_COLS - suffixW
+  const maxTrunc = maxFull - 2
+
+  let nameStr = ""
+  let nameW = 0
+  let truncate = false
+
+  for (const c of name) {
+    const cw = charW(c)
+    if (nameW + cw > maxFull) { truncate = true; break }
+    nameStr += c
+    nameW += cw
+  }
+
+  if (!truncate) return nameStr + suffix
+
+  nameStr = ""
+  nameW = 0
+  for (const c of name) {
+    const cw = charW(c)
+    if (nameW + cw > maxTrunc) break
+    nameStr += c
+    nameW += cw
+  }
+  return nameStr + "…" + suffix
+}
 
 function fmtDate(d?: string | null, t?: string | null): string {
   const parts: string[] = []
@@ -71,7 +106,7 @@ export function buildReceiptMarkup(data: ReceiptData): string {
 
   for (const item of data.items) {
     // 商品名と個数
-    push(`${item.name}  x${item.quantity}`)
+    push(itemLine(item.name, item.quantity))
     // バリアント（ホールサイズ等）
     if (item.variantName) push(`  ${item.variantName}`)
     // メッセージをサイズの直下に出力

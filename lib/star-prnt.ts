@@ -79,7 +79,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   const parts: Buffer[] = [
     cmd(ESC, 0x40),        // 初期化
     cmd(ESC, 0x4D, 0x01),  // フォントB
-    cmd(ESC, 0x33, 16),    // 行間 16ドット
+    cmd(ESC, 0x33, 10),    // 行間 10ドット
     SIZE_1X,
     cmd(ESC, 0x61, 0x00),  // 左揃え
   ]

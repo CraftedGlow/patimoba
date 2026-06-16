@@ -1,16 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check } from "lucide-react";
+import { Check, Cherry, StickyNote, Candy, IceCream2, Tag, type LucideIcon } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import type { WholeCakeProduct, DecorationGroupWithItems } from "@/lib/types";
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  fruit: "🍓",
-  plate: "🍫",
-  topping: "✨",
-  cream: "🍦",
-  other: "🎂",
+const CATEGORY_ICON: Record<string, LucideIcon> = {
+  fruit: Cherry,
+  plate: StickyNote,
+  topping: Candy,
+  cream: IceCream2,
+  other: Tag,
 };
 
 interface OptionsStepProps {
@@ -147,8 +147,17 @@ export function WholeCakeOptionsStep({
                                 alt={deco.name}
                                 className="w-full h-full object-cover"
                               />
+                            ) : deco.category === "print" ? (
+                              <img
+                                src="/print-decoration-option-default.jpg"
+                                alt={deco.name}
+                                className="w-full h-full object-cover"
+                              />
                             ) : (
-                              <span className="text-3xl">{CATEGORY_EMOJI[deco.category] ?? "🎂"}</span>
+                              (() => {
+                                const Icon = CATEGORY_ICON[deco.category] ?? Tag;
+                                return <Icon className="w-8 h-8 text-gray-400" strokeWidth={1.5} />;
+                              })()
                             )}
                           </div>
 

@@ -149,30 +149,26 @@ export default function TakeoutProductsPage() {
   const [printDecoData, setPrintDecoData] = useState<{ price: number; image: string } | null>(null);
 
   useEffect(() => {
-    if (!storeId || cakesLoading || wholeCakes.length === 0) return;
+    if (!storeId || cakesLoading) return;
+    const hasPrintCake = wholeCakes.some((c) => c.printDecorationEnabled);
+    if (!hasPrintCake) {
+      setPrintDecoData(null);
+      return;
+    }
     let cancelled = false;
     (async () => {
-      const { data: groups } = await supabase
-        .from("decoration_groups")
-        .select("id, decoration_group_items(decorations(price))")
+      const { data: deco } = await supabase
+        .from("decorations")
+        .select("price")
         .eq("store_id", storeId)
-        .ilike("name", "%プリントデコレーション%")
-        .limit(1);
-      const group = groups?.[0];
-      if (!group || cancelled) return;
-      const { data: links } = await supabase
-        .from("product_decoration_groups")
-        .select("product_id")
-        .eq("group_id", group.id);
-      const cakeIds = (links ?? []).map((l: any) => String(l.product_id));
-      const hasCakes = wholeCakes.some((c) => cakeIds.includes(c.id));
-      if (!hasCakes || cancelled) return;
-      const price = (group.decoration_group_items as any[])?.[0]?.decorations?.price || 0;
-      const firstCake = wholeCakes.find((c) => cakeIds.includes(c.id));
-      if (!cancelled) setPrintDecoData({ price, image: "" });
+        .eq("category", "print")
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled) setPrintDecoData(deco ? { price: Number(deco.price) || 0, image: "" } : null);
     })();
     return () => { cancelled = true; };
-  }, [storeId, cakesLoading, wholeCakes.length]);
+  }, [storeId, cakesLoading, wholeCakes]);
   const [selectedCategory, setSelectedCategory] = useState("すべて");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);

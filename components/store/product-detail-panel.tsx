@@ -6,6 +6,7 @@ import { X, Check, Trash2, ImagePlus, Plus, GripVertical } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useProductTypes } from "@/hooks/use-product-types";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
+import { supabase } from "@/lib/supabase";
 import type { ProductRegistration, ProductCustomOption } from "@/hooks/use-product-registrations";
 import { ProductCustomOptionPresetChips } from "@/components/store/product-custom-option-preset-chips";
 
@@ -48,6 +49,12 @@ export function ProductDetailPanel({
   const [customOptions, setCustomOptions] = useState<ProductCustomOption[]>(product.custom_options);
   const [category, setCategory] = useState("");
   const [image, setImage] = useState(product.image ?? "");
+  const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
+  const [printDecorationEnabled, setPrintDecorationEnabled] = useState(
+    product.print_decoration_enabled
+  );
+
+  const isHole = category === "ホール";
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -98,6 +105,7 @@ export function ProductDetailPanel({
     setIsEc(product.is_ec);
     setCustomOptions(product.custom_options);
     setImage(product.image ?? "");
+    setPrintDecorationEnabled(product.print_decoration_enabled);
 
     const typeMatch = productTypes.find(
       (t) => t.productType === product.category_name
@@ -105,6 +113,22 @@ export function ProductDetailPanel({
     setCategory(typeMatch?.productType ?? categories[0] ?? "");
     setError(null);
     setSaved(false);
+
+    setSizes([]);
+    supabase
+      .from("product_variants")
+      .select("id, name, price")
+      .eq("product_id", product.id)
+      .order("display_order", { ascending: true })
+      .then(({ data: variants }) => {
+        setSizes(
+          (variants || []).map((v: any) => ({
+            id: v.id,
+            name: v.name ?? "",
+            price: String(v.price ?? ""),
+          }))
+        );
+      });
   }, [product, productTypes]);
 
   const parsePriceValue = (v: string): number =>
@@ -120,7 +144,7 @@ export function ProductDetailPanel({
       const { error: err } = await onSave(product.id, {
         name: name.trim(),
         description: description.trim(),
-        base_price: parsePriceValue(price),
+        base_price: isHole ? 0 : parsePriceValue(price),
         category_name: category || null,
         image: image || null,
         preparation_days: Number(prepDays) || 0,
@@ -128,8 +152,26 @@ export function ProductDetailPanel({
         is_takeout: isTakeout,
         is_ec: isEc,
         custom_options: customOptions as any,
+        print_decoration_enabled: isHole ? printDecorationEnabled : false,
       });
       if (err) throw new Error(err);
+
+      if (isHole) {
+        await supabase.from("product_variants").delete().eq("product_id", product.id);
+        const validSizes = sizes.filter((s) => s.name.trim());
+        if (validSizes.length > 0) {
+          await supabase.from("product_variants").insert(
+            validSizes.map((s, idx) => ({
+              product_id: product.id,
+              name: s.name.trim(),
+              price: parsePriceValue(s.price),
+              is_active: true,
+              display_order: idx,
+            })) as any
+          );
+        }
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e: any) {
@@ -298,15 +340,87 @@ export function ProductDetailPanel({
           />
         </div>
 
-        <div>
-          <label className="text-sm font-bold block mb-1">商品の金額</label>
-          <input
-            type="text"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
-          />
-        </div>
+        {isHole ? (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-bold">サイズごとの金額</label>
+              <button
+                type="button"
+                onClick={() =>
+                  setSizes((prev) => [...prev, { name: "", price: "" }])
+                }
+                className="text-xs text-amber-600 hover:text-amber-700 flex items-center gap-0.5"
+              >
+                <Plus className="w-3 h-3" /> サイズ追加
+              </button>
+            </div>
+            <div className="space-y-2">
+              {sizes.map((s, i) => (
+                <div key={s.id ?? i} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={s.name}
+                    onChange={(e) => {
+                      const next = [...sizes];
+                      next[i] = { ...next[i], name: e.target.value };
+                      setSizes(next);
+                    }}
+                    placeholder="サイズ名（例: 5号）"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
+                  />
+                  <input
+                    type="text"
+                    value={s.price}
+                    onChange={(e) => {
+                      const next = [...sizes];
+                      next[i] = { ...next[i], price: e.target.value };
+                      setSizes(next);
+                    }}
+                    placeholder="¥金額"
+                    className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSizes(sizes.filter((_, idx) => idx !== i))}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              {sizes.length === 0 && (
+                <p className="text-xs text-gray-400">サイズが登録されていません</p>
+              )}
+            </div>
+
+            <div className="space-y-2 pt-3">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={printDecorationEnabled}
+                  onChange={(e) => setPrintDecorationEnabled(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500"
+                />
+                プリントデコレーション対応
+              </label>
+              {printDecorationEnabled && (
+                <p className="text-xs text-gray-400 pl-6">
+                  プリントデコレーションの注文フローでこのケーキが選択できるようになります
+                </p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <label className="text-sm font-bold block mb-1">商品の金額</label>
+            <input
+              type="text"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
+            />
+          </div>
+        )}
 
         <div>
           <label className="text-sm font-bold block mb-1">最大個数（/日）</label>
@@ -575,10 +689,17 @@ export function ProductDetailPanel({
               <p className="text-lg font-bold text-center mb-2">
                 この商品を削除しますか？
               </p>
-              <p className="text-sm text-gray-500 text-center mb-6">
+              <p className="text-sm text-gray-500 text-center mb-2">
                 {product.name || "選択中の商品"}
               </p>
-              <div className="flex gap-3 justify-center">
+              {error && (
+                <p className="text-sm text-red-500 text-center mb-4">
+                  {error.includes("foreign key") || error.includes("violates")
+                    ? "この商品は注文履歴があるため削除できません。販売を停止する場合は「販売チャネル」のチェックを外してください。"
+                    : error}
+                </p>
+              )}
+              <div className="flex gap-3 justify-center mt-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

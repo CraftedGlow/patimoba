@@ -37,6 +37,7 @@ export interface ProductRegistration {
   custom_options: ProductCustomOption[]
   noshi_enabled: boolean
   noshi_ids: string[]
+  print_decoration_enabled: boolean
   minVariantPrice?: number
   shipping_method: string | null
   storage_method: string | null
@@ -102,6 +103,7 @@ function mapRow(row: any): ProductRegistration {
     custom_options: normalizeCustomOptions(row.custom_options),
     noshi_enabled: row.noshi_enabled ?? false,
     noshi_ids: Array.isArray(row.noshi_ids) ? row.noshi_ids : [],
+    print_decoration_enabled: row.print_decoration_enabled ?? false,
     minVariantPrice,
     shipping_method: row.shipping_method ?? null,
     storage_method: row.storage_method ?? null,
@@ -184,6 +186,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.daily_max_quantity !== undefined) payload.daily_max_quantity = updates.daily_max_quantity
     if (updates.preparation_days !== undefined) payload.preparation_days = updates.preparation_days
     if (updates.custom_options !== undefined) payload.custom_options = updates.custom_options
+    if (updates.print_decoration_enabled !== undefined) payload.print_decoration_enabled = updates.print_decoration_enabled
 
     const { error } = await supabase
       .from("products")

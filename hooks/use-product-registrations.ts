@@ -198,11 +198,15 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
   }
 
   const deleteProduct = async (id: string) => {
+    const { data: variants } = await supabase.from("product_variants").select("id").eq("product_id", id)
+    const variantIds = (variants ?? []).map((v: any) => v.id)
+    await supabase.from("order_items").update({ product_id: null, product_variant_id: null }).eq("product_id", id)
+    if (variantIds.length > 0) {
+      await supabase.from("order_items").update({ product_variant_id: null }).in("product_variant_id", variantIds)
+    }
+    await supabase.from("product_decoration_groups").delete().eq("product_id", id)
     await supabase.from("product_variants").delete().eq("product_id", id)
-    const { error } = await supabase
-      .from("products")
-      .delete()
-      .eq("id", id)
+    const { error } = await supabase.from("products").delete().eq("id", id)
 
     if (!error) await fetchProducts()
     return { error: error?.message || null }

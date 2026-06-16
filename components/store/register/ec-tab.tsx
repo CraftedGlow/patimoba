@@ -213,6 +213,13 @@ export function EcTab() {
       if (mainImage) await deleteProductImage(mainImage);
       if (crossImage) await deleteProductImage(crossImage);
       if (extraImage) await deleteProductImage(extraImage);
+      const { data: variants } = await supabase.from("product_variants").select("id").eq("product_id", selectedId);
+      const variantIds = (variants ?? []).map((v: any) => v.id);
+      await supabase.from("order_items").update({ product_id: null, product_variant_id: null }).eq("product_id", selectedId);
+      if (variantIds.length > 0) {
+        await supabase.from("order_items").update({ product_variant_id: null }).in("product_variant_id", variantIds);
+      }
+      await supabase.from("product_decoration_groups").delete().eq("product_id", selectedId);
       await supabase.from("product_variants").delete().eq("product_id", selectedId);
       const { error: err } = await supabase.from("products").delete().eq("id", selectedId);
       if (err) throw err;

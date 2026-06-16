@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trash2, Check, ImagePlus, Plus } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
-import type { ProductCustomOption } from "@/lib/types";
+import type { ProductCustomOption, ProductCustomOptionValue } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useProductTypes } from "@/hooks/use-product-types";
@@ -12,7 +12,7 @@ import { useProductCategories } from "@/hooks/use-product-categories";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
 import { useNoshi } from "@/hooks/use-noshi";
-import { PRODUCT_CUSTOM_OPTION_PRESET_METAS } from "@/lib/constants/product-custom-option-presets";
+import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
 import Link from "next/link";
 
 interface ProductRow {
@@ -109,9 +109,20 @@ export function CakeTab() {
     if (isHole) {
       setCustomOptions((prev) => {
         if (prev.length > 0) return prev;
-        return PRODUCT_CUSTOM_OPTION_PRESET_METAS
-          .filter((m) => m.id === "candles" || m.id === "message")
-          .map((m) => m.create());
+        return [
+          {
+            name: "ろうそく",
+            type: "multiple",
+            required: false,
+            values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price })),
+          },
+          {
+            name: "メッセージプレート",
+            type: "text",
+            required: false,
+            values: [],
+          },
+        ];
       });
     } else {
       setCustomOptions([]);
@@ -355,12 +366,32 @@ export function CakeTab() {
     try {
       if (mainImage) await deleteProductImage(mainImage);
       if (crossImage) await deleteProductImage(crossImage);
+
+      // バリアントIDを先に取得
+      const { data: variants } = await supabase
+        .from("product_variants")
+        .select("id")
+        .eq("product_id", selectedId);
+      const variantIds = (variants ?? []).map((v: any) => v.id);
+
+      // order_items のFK参照をnullにしてからでないと削除できない
+      await supabase
+        .from("order_items")
+        .update({ product_id: null, product_variant_id: null })
+        .eq("product_id", selectedId);
+      if (variantIds.length > 0) {
+        await supabase
+          .from("order_items")
+          .update({ product_variant_id: null })
+          .in("product_variant_id", variantIds);
+      }
+
+      // 関連テーブルを削除してから本体を削除
+      await supabase.from("product_decoration_groups").delete().eq("product_id", selectedId);
       await supabase.from("product_variants").delete().eq("product_id", selectedId);
-      const { error: err } = await supabase
-        .from("products")
-        .delete()
-        .eq("id", selectedId);
+      const { error: err } = await supabase.from("products").delete().eq("id", selectedId);
       if (err) throw err;
+
       await fetchProducts();
       clearForm();
       setShowDeleteConfirm(false);
@@ -585,7 +616,6 @@ export function CakeTab() {
           </div>
         </div>
 
-        {/* カスタムオプション（ホールのみ） */}
         {/* ホールケーキ サイズ管理 */}
         {isHole && (
           <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-3">
@@ -629,102 +659,131 @@ export function CakeTab() {
           </div>
         )}
 
-        {/* ろうそく・メッセージプレート（ホールのみ） */}
-        {isHole && customOptions.length > 0 && (
-          <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-4">
-            <span className="text-base font-bold text-amber-800">オプション設定</span>
-            {customOptions.map((opt, oi) => {
-              const typeLabels = { single: "単一選択", multiple: "複数選択", text: "自由入力" } as const;
-              const typeList: ProductCustomOption["type"][] = ["single", "multiple", "text"];
-              return (
-                <div key={oi} className="border border-amber-200 rounded-xl p-4 bg-white space-y-3 shadow-sm">
-                  <div className="flex items-start gap-2">
-                    <input
-                      type="text"
-                      value={opt.name}
-                      onChange={(e) => setCustomOptions((prev) => prev.map((o, i) => i === oi ? { ...o, name: e.target.value } : o))}
-                      placeholder="オプション名"
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-amber-300 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setCustomOptions((prev) => prev.filter((_, i) => i !== oi))}
-                      className="p-2 rounded-lg text-red-500 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-gray-500">入力形式</span>
-                    {typeList.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setCustomOptions((prev) => prev.map((o, i) => i === oi ? { ...o, type: t, values: t === "text" ? [] : o.values } : o))}
-                        className={`px-3 py-1.5 rounded-full text-sm border transition-all ${opt.type === t ? "bg-amber-500 text-white border-amber-500" : "bg-white text-gray-600 border-gray-300 hover:border-amber-400"}`}
-                      >
-                        {typeLabels[t]}
-                      </button>
-                    ))}
-                    <label className="flex items-center gap-1.5 text-sm ml-auto cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={opt.required}
-                        onChange={(e) => setCustomOptions((prev) => prev.map((o, i) => i === oi ? { ...o, required: e.target.checked } : o))}
-                        className="w-4 h-4 accent-amber-500"
-                      />
-                      必須
-                    </label>
-                  </div>
-                  {opt.type !== "text" && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 block">選択肢</label>
-                      <div className="flex flex-wrap gap-2">
-                        {opt.values.map((v, vi) => (
-                          <div key={vi} className="inline-flex items-center gap-1 bg-amber-50 border border-amber-300 rounded-full pl-3 pr-1 py-1">
-                            <input
-                              type="text"
-                              value={v.label}
-                              onChange={(e) => setCustomOptions((prev) => prev.map((o, i) => i === oi ? { ...o, values: o.values.map((vv, vj) => vj === vi ? { ...vv, label: e.target.value } : vv) } : o))}
-                              placeholder="選択肢名"
-                              className="bg-transparent outline-none text-sm font-medium w-28"
-                            />
-                            <span className="text-xs text-gray-500">+¥</span>
-                            <input
-                              type="number"
-                              value={v.additional_price}
-                              onChange={(e) => setCustomOptions((prev) => prev.map((o, i) => i === oi ? { ...o, values: o.values.map((vv, vj) => vj === vi ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 } : vv) } : o))}
-                              placeholder="0"
-                              className="bg-transparent outline-none text-sm w-14 text-right"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setCustomOptions((prev) => prev.map((o, i) => i === oi ? { ...o, values: o.values.filter((_, vj) => vj !== vi) } : o))}
-                              className="w-6 h-6 rounded-full bg-white/70 hover:bg-red-100 text-red-500 flex items-center justify-center"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ))}
+        {/* ろうそく・メッセージプレート設定（ホールのみ） */}
+        {isHole && (() => {
+          const candleOpt = customOptions.find((o) => o.name === "ろうそく");
+          const hasCandles = !!candleOpt;
+          const candleValues = candleOpt?.values ?? [];
+          const msgOpt = customOptions.find((o) => o.name === "メッセージプレート");
+          const hasMessagePlate = !!msgOpt;
+          const msgRequired = msgOpt?.required ?? false;
+
+          const toggleCandles = (enabled: boolean) => {
+            if (enabled) {
+              setCustomOptions((prev) => {
+                if (prev.some((o) => o.name === "ろうそく")) return prev;
+                return [...prev, { name: "ろうそく", type: "multiple", required: false, values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price })) }];
+              });
+            } else {
+              setCustomOptions((prev) => prev.filter((o) => o.name !== "ろうそく"));
+            }
+          };
+
+          const updateCandleValues = (values: ProductCustomOptionValue[]) => {
+            setCustomOptions((prev) => prev.map((o) => o.name === "ろうそく" ? { ...o, values } : o));
+          };
+
+          const toggleMessagePlate = (enabled: boolean) => {
+            if (enabled) {
+              setCustomOptions((prev) => {
+                if (prev.some((o) => o.name === "メッセージプレート")) return prev;
+                return [...prev, { name: "メッセージプレート", type: "text", required: false, values: [] }];
+              });
+            } else {
+              setCustomOptions((prev) => prev.filter((o) => o.name !== "メッセージプレート"));
+            }
+          };
+
+          const setMsgRequired = (required: boolean) => {
+            setCustomOptions((prev) => prev.map((o) => o.name === "メッセージプレート" ? { ...o, required } : o));
+          };
+
+          return (
+            <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-4">
+              <span className="text-base font-bold text-amber-800">オプション設定</span>
+
+              {/* ろうそく */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasCandles}
+                    onChange={(e) => toggleCandles(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  ろうそくを使用する
+                </label>
+                {hasCandles && (
+                  <div className="pl-6 space-y-2">
+                    <p className="text-xs text-gray-500">種類と追加料金を設定してください</p>
+                    {candleValues.map((v, vi) => (
+                      <div key={vi} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={v.label}
+                          onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, label: e.target.value } : vv))}
+                          placeholder="ろうそく名"
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
+                        />
+                        <span className="text-xs text-gray-500 shrink-0">+¥</span>
+                        <input
+                          type="number"
+                          value={v.additional_price}
+                          onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 } : vv))}
+                          placeholder="0"
+                          className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-amber-300"
+                        />
                         <button
                           type="button"
-                          onClick={() => setCustomOptions((prev) => prev.map((o, i) => i === oi ? { ...o, values: [...o.values, { label: "", additional_price: 0 }] } : o))}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-amber-400 text-sm text-amber-700 hover:bg-amber-50"
+                          onClick={() => updateCandleValues(candleValues.filter((_, j) => j !== vi))}
+                          className="text-red-400 hover:text-red-600 shrink-0"
                         >
-                          <Plus className="w-3.5 h-3.5" />
-                          選択肢を追加
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
-                    </div>
-                  )}
-                  {opt.type === "text" && (
-                    <p className="text-xs text-gray-500">購入者がメッセージを自由に入力できます</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => updateCandleValues([...candleValues, { label: "", additional_price: 0 }])}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-amber-400 text-sm text-amber-700 hover:bg-amber-50"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      ろうそく種類を追加
+                    </button>
+                    <p className="text-xs text-gray-400">※「ナンバーキャンドル」という名前の種類は、顧客画面で数字（0〜9）を指定できます</p>
+                  </div>
+                )}
+              </div>
+
+              {/* メッセージプレート */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasMessagePlate}
+                    onChange={(e) => toggleMessagePlate(e.target.checked)}
+                    className="w-4 h-4 accent-amber-500"
+                  />
+                  メッセージプレートを使用する
+                </label>
+                {hasMessagePlate && (
+                  <div className="pl-6">
+                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={msgRequired}
+                        onChange={(e) => setMsgRequired(e.target.checked)}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      メッセージの入力を必須にする
+                    </label>
+                    <p className="text-xs text-gray-400 mt-1">顧客画面でメッセージのテキスト入力欄が表示されます</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">タグ（シーズン・用途）</label>

@@ -23,8 +23,8 @@ const channelTabs: { label: string; value: "" | OrderChannel }[] = [
 type FulfillmentFilter = "" | FulfillmentStatus;
 const fulfillmentOptions: { label: string; value: FulfillmentFilter }[] = [
   { label: "すべて", value: "" },
-  { label: "準備中", value: "pending" },
-  { label: "準備完了", value: "fulfilled" },
+  { label: "未確認", value: "pending" },
+  { label: "確認済", value: "fulfilled" },
 ];
 
 function formatFulfilledAt(iso: string | null): string {
@@ -109,8 +109,8 @@ function buildCSV(orders: Order[], optionsMap: Map<string, OrderItemOption[]>): 
     "合計",
     "支払状況",
     "注文状態",
-    "提供状況",
-    "提供日時",
+    "確認済",
+    "確認日時",
     "デコレーション",
     "備考",
   ];
@@ -212,7 +212,7 @@ function printOrdersPDF(
 <thead>
 <tr>
   <th>注文番号</th><th>顧客名</th><th>区分</th><th>受取日時</th>
-  <th>商品</th><th class="num">合計</th><th>支払</th><th>提供状況</th>
+  <th>商品</th><th class="num">合計</th><th>支払</th><th>確認済</th>
   <th>デコレーション</th><th>備考</th>
 </tr>
 </thead>
@@ -657,7 +657,7 @@ export default function StoreOrdersPage() {
               <span>来店/発送</span>
               <span>注文内容</span>
               <span>合計金額</span>
-              <span className="text-center">提供状況</span>
+              <span className="text-center">確認済</span>
             </div>
 
             {manageLoading && (
@@ -909,7 +909,7 @@ export default function StoreOrdersPage() {
               <span>受取/発送</span>
               <span>注文内容</span>
               <span>合計金額</span>
-              <span className="text-center">提供状況</span>
+              <span className="text-center">確認済</span>
             </div>
 
             {historyLoading && (
@@ -1013,16 +1013,16 @@ export default function StoreOrdersPage() {
                 </>
               ) : confirmAction.toFulfilled ? (
                 <>
-                  <h3 className="text-base font-bold text-center mb-2">準備完了にします</h3>
+                  <h3 className="text-base font-bold text-center mb-2">確認完了にします</h3>
                   <p className="text-xs text-gray-500 text-center mb-5">
-                    この注文を準備完了にしますか？
+                    この注文を確認完了にしますか？
                   </p>
                 </>
               ) : (
                 <>
-                  <h3 className="text-base font-bold text-center mb-2">準備未完了に戻す</h3>
+                  <h3 className="text-base font-bold text-center mb-2">確認済を解除します</h3>
                   <p className="text-xs text-gray-500 text-center mb-5">
-                    この注文を準備未完了に戻しますか？
+                    確認済を解除しますか？
                   </p>
                 </>
               )}
@@ -1053,7 +1053,7 @@ export default function StoreOrdersPage() {
 
       <AnimatePresence>
         {selectedOrder && (
-          <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+          <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onConfirmed={refetchManage} />
         )}
       </AnimatePresence>
 

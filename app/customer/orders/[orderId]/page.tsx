@@ -5,11 +5,20 @@ import { useParams } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { Calendar, ShoppingBag, CreditCard, Package } from "lucide-react";
 
+type OrderItemOption = {
+  option_group_name_snapshot: string | null;
+  option_item_name_snapshot: string | null;
+  price_delta: number | null;
+  quantity: number | null;
+};
+
 type OrderItem = {
+  id: string;
   product_name_snapshot: string;
   quantity: number;
   unit_price: number;
   subtotal: number;
+  order_item_options: OrderItemOption[];
 };
 
 type OrderDetail = {
@@ -41,6 +50,22 @@ function formatPickupDateTime(date: string | null, time: string | null): string 
   const wday = WEEKDAY[d.getDay()];
   const base = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${wday}）`;
   return time ? `${base} ${time.slice(0, 5)}` : base;
+}
+
+function getOptionPrice(opt: OrderItemOption): number {
+  const price = opt.price_delta ?? 0;
+  const qty = opt.quantity ?? 1;
+  return opt.option_group_name_snapshot === "ろうそく" ? price * qty : price;
+}
+
+function getOptionLabel(opt: OrderItemOption): string {
+  const group = opt.option_group_name_snapshot ?? "";
+  const name = opt.option_item_name_snapshot ?? "";
+  const qty = opt.quantity ?? 1;
+  if (group === "サイズ") return `サイズ：${name}`;
+  if (group === "ろうそく") return qty > 1 ? `ろうそく：${name} ×${qty}` : `ろうそく：${name}`;
+  if (group === "メッセージ") return `プレート：${name}`;
+  return name;
 }
 
 export default function CustomerOrderDetailPage() {
@@ -118,13 +143,62 @@ export default function CustomerOrderDetailPage() {
             <ShoppingBag className="w-4 h-4 text-pink-400 flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">注文内容</span>
           </div>
-          <div className="pl-6 space-y-2">
-            {order.order_items.map((item, i) => (
-              <div key={i} className="flex items-center justify-between gap-2">
-                <span className="text-sm text-gray-800 leading-snug">{item.product_name_snapshot}</span>
-                <span className="text-sm text-gray-500 whitespace-nowrap">×{item.quantity}</span>
-              </div>
-            ))}
+          <div className="pl-6 space-y-3">
+            {order.order_items.map((item, i) => {
+              const opts = (item.order_item_options ?? []).filter(
+                (o) => o.option_group_name_snapshot !== "アレルギー"
+              );
+              const hasOptions = opts.length > 0;
+
+              if (!hasOptions) {
+                return (
+                  <div key={i} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-800 leading-snug">
+                      {item.product_name_snapshot}
+                    </span>
+                    <span className="text-sm text-gray-600 whitespace-nowrap">
+                      ×{item.quantity}　¥{Number(item.subtotal).toLocaleString()}
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={i}
+                  className="space-y-1 pb-3 border-b border-gray-100 last:border-0 last:pb-0"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-800">
+                      {item.product_name_snapshot}
+                    </span>
+                    <span className="text-sm text-gray-500 whitespace-nowrap">×{item.quantity}</span>
+                  </div>
+                  <div className="pl-2 space-y-0.5">
+                    {opts.map((opt, j) => {
+                      const label = getOptionLabel(opt);
+                      const price = getOptionPrice(opt);
+                      return (
+                        <div key={j} className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-gray-500">{label}</span>
+                          {price > 0 && (
+                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                              ¥{price.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-50">
+                    <span className="text-xs text-gray-400">小計</span>
+                    <span className="text-sm font-medium text-gray-700">
+                      ¥{Number(item.subtotal).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -147,7 +221,7 @@ export default function CustomerOrderDetailPage() {
             )}
             <div className="flex justify-between text-base font-bold text-gray-900 pt-1.5 border-t border-gray-100 mt-0.5">
               <span>合計</span>
-              <span>¥{Number(order.total_amount).toLocaleString()}</span>
+              <span>¥{Number(order.total_amount).toLocaleString()}<span className="text-sm font-normal text-gray-500">（税込）</span></span>
             </div>
           </div>
         </div>
@@ -162,6 +236,11 @@ export default function CustomerOrderDetailPage() {
           {order.stores?.name && (
             <p className="text-xs text-gray-500 pl-6 mt-0.5">{order.stores.name}</p>
           )}
+          <p className="text-xs text-gray-500 pl-6 mt-2 leading-relaxed">
+            {order.order_type === "takeout"
+              ? "受け取り日時に、こちらの画面を店頭スタッフへご提示ください。"
+              : "発送完了後、改めてご案内いたします。商品到着まで今しばらくお待ちください。"}
+          </p>
         </div>
       </div>
     </div>

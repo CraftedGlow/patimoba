@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         service_notification_token,
         stores(name, address, liff_id, line_channel_access_token, line_channel_secret),
         users!orders_customer_id_fkey(name),
-        order_items(product_name_snapshot, quantity)
+        order_items(product_name_snapshot, quantity, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity))
       `)
       .eq("id", orderId)
       .maybeSingle() as any;
@@ -83,11 +83,42 @@ export async function POST(req: NextRequest) {
     }
 
     // 注文商品
-    const items: Array<{ product_name_snapshot: string; quantity: number }> = order.order_items || [];
-    const orderDetail = items
-      .map((i) => `${i.product_name_snapshot} ×${i.quantity}`)
-      .join("\n");
-    const sumStr = `${Number(order.total_amount || 0).toLocaleString()} 円`;
+    const items: Array<{
+      product_name_snapshot: string;
+      quantity: number;
+      subtotal: number;
+      order_item_options: Array<{
+        option_group_name_snapshot: string | null;
+        option_item_name_snapshot: string | null;
+        price_delta: number | null;
+        quantity: number | null;
+      }>;
+    }> = order.order_items || [];
+
+    const orderDetail = items.map((item) => {
+      const opts = (item.order_item_options ?? []).filter(
+        (o) => o.option_group_name_snapshot !== "アレルギー"
+      );
+      const lines: string[] = [`${item.product_name_snapshot} ×${item.quantity}`];
+      for (const opt of opts) {
+        const group = opt.option_group_name_snapshot ?? "";
+        const name = opt.option_item_name_snapshot ?? "";
+        const price = opt.price_delta ?? 0;
+        const qty = opt.quantity ?? 1;
+        const totalPrice = group === "ろうそく" ? price * qty : price;
+
+        let label: string;
+        if (group === "サイズ") label = `  サイズ：${name}`;
+        else if (group === "ろうそく") label = `  ろうそく：${name}${qty > 1 ? `×${qty}` : ""}`;
+        else if (group === "メッセージ") label = `  プレート：${name}`;
+        else label = `  ${name}`;
+
+        lines.push(totalPrice > 0 ? `${label}　¥${totalPrice.toLocaleString()}` : label);
+      }
+      return lines.join("\n");
+    }).join("\n");
+
+    const sumStr = `¥${Number(order.total_amount || 0).toLocaleString()}（税込）`;
 
     const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
     const orderDetailUrl = `${liffBase}/customer/orders/${orderId}`;

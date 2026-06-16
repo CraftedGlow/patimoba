@@ -285,7 +285,7 @@ export default function StoreDashboardPage() {
           <span>来店/発送</span>
           <span className="pl-3">注文内容</span>
           <span>合計金額</span>
-          <span className="text-center">準備</span>
+          <span className="text-center">確認済</span>
         </div>
 
         {sortedOrders.length === 0 ? (
@@ -297,7 +297,7 @@ export default function StoreDashboardPage() {
             const isEc = order.orderType === "ec";
             const isPrepared = isEc
               ? order.fulfillmentStatus === "fulfilled"
-              : order.orderStatus === "ready" || order.orderStatus === "completed";
+              : order.orderStatus === "ready" || order.orderStatus === "completed" || order.fulfillmentStatus === "fulfilled";
 
             const readyButton = (
               <motion.button
@@ -452,7 +452,7 @@ export default function StoreDashboardPage() {
 
       <AnimatePresence>
         {selectedOrder && (
-          <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+          <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} onConfirmed={refetchOrders} />
         )}
       </AnimatePresence>
 
@@ -532,12 +532,12 @@ export default function StoreDashboardPage() {
               ) : (
                 <>
                   <h3 className="text-base font-bold text-center mb-2">
-                    {confirmAction.toReady ? "準備完了にします" : "準備未完了に戻す"}
+                    {confirmAction.toReady ? "確認完了にします" : "確認済を解除します"}
                   </h3>
                   <p className="text-xs text-gray-500 text-center mb-5">
                     {confirmAction.toReady
-                      ? "この注文を準備完了にしますか？"
-                      : "この注文を未準備に戻しますか？"}
+                      ? "この注文を確認完了にしますか？"
+                      : "確認済を解除しますか？"}
                   </p>
                 </>
               )}

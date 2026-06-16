@@ -24,9 +24,10 @@ interface OrderItemWithOptions {
 interface OrderDetailModalProps {
   order: Order;
   onClose: () => void;
+  onConfirmed?: () => void;
 }
 
-export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
+export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailModalProps) {
   const [items, setItems] = useState<OrderItemWithOptions[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [printing, setPrinting] = useState(false);
@@ -103,7 +104,12 @@ export function OrderDetailModal({ order, onClose }: OrderDetailModalProps) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? `HTTP ${res.status}`);
       }
+      await supabase
+        .from("orders")
+        .update({ fulfillment_status: "fulfilled", fulfilled_at: new Date().toISOString() })
+        .eq("id", order.id);
       setPrintDone(true);
+      onConfirmed?.();
     } catch (e) {
       setPrintError(e instanceof Error ? e.message : "印刷に失敗しました");
     } finally {

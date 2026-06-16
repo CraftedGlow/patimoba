@@ -784,14 +784,6 @@ export function CakeTab() {
                           placeholder="プレート名"
                           className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
                         />
-                        <span className="text-xs text-gray-500 shrink-0">+¥</span>
-                        <input
-                          type="number"
-                          value={v.additional_price}
-                          onChange={(e) => updateMessagePlateValues(msgValues.map((vv, j) => j === vi ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 } : vv))}
-                          placeholder="0"
-                          className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-amber-300"
-                        />
                         <button
                           type="button"
                           onClick={() => updateMessagePlateValues(msgValues.filter((_, j) => j !== vi))}
@@ -807,7 +799,7 @@ export function CakeTab() {
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-amber-400 text-sm text-amber-700 hover:bg-amber-50"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      プレート種類を追加
+                      プレート種類を追加（無料）
                     </button>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input

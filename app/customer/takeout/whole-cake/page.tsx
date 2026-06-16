@@ -183,12 +183,7 @@ export default function WholeCakePage() {
     }, 0);
   }, 0);
 
-  const messagePlatePrice = (() => {
-    const idx = parseInt(selectedMessagePlateIdx, 10);
-    return isNaN(idx) ? 0 : (messagePlateSizes[idx]?.additional_price ?? 0);
-  })();
-
-  const total = sizePrice + candleTotal + decorationTotal + messagePlatePrice;
+  const total = sizePrice + candleTotal + decorationTotal;
 
   const handlePrintPhotoUpload = async (file: File) => {
     if (!selectedStoreId) return;

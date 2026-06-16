@@ -123,13 +123,10 @@ export function WholeCakeConfirmStep({
             const idx = selectedMessagePlateIdx !== undefined ? parseInt(selectedMessagePlateIdx, 10) : NaN;
             const plateSize = !isNaN(idx) ? messagePlateSizes?.[idx] : undefined;
             return plateSize ? (
-              <div className="flex justify-between items-start">
-                <div>
-                  <span className="text-sm font-bold">メッセージプレート：</span>
-                  <span className="text-sm">{plateSize.label}</span>
-                  {messageText && <span className="text-sm">「{messageText}」</span>}
-                </div>
-                <span className="text-sm">{plateSize.additional_price > 0 ? `+¥${plateSize.additional_price.toLocaleString()}` : "無料"}</span>
+              <div>
+                <span className="text-sm font-bold">メッセージプレート：</span>
+                <span className="text-sm">{plateSize.label}</span>
+                {messageText && <span className="text-sm">「{messageText}」</span>}
               </div>
             ) : messageText ? (
               <div>

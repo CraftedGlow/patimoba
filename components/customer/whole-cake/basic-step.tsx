@@ -278,7 +278,7 @@ export function WholeCakeBasicStep({
                     <option value="">プレートの種類を選択</option>
                     {messagePlateSizes.map((s, i) => (
                       <option key={i} value={String(i)}>
-                        {s.label}{s.additional_price > 0 ? ` (+¥${s.additional_price.toLocaleString()})` : ""}
+                        {s.label}
                       </option>
                     ))}
                   </select>

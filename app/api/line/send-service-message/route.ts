@@ -96,9 +96,16 @@ export async function POST(req: NextRequest) {
     }> = order.order_items || [];
 
     const orderDetail = items.map((item) => {
-      const opts = (item.order_item_options ?? []).filter(
+      const allOpts = (item.order_item_options ?? []).filter(
         (o) => o.option_group_name_snapshot !== "アレルギー"
       );
+      const plateOpt = allOpts.find(o => o.option_group_name_snapshot === "メッセージプレート");
+      const messageOpt = allOpts.find(o => o.option_group_name_snapshot === "メッセージ");
+      const opts = allOpts.filter(o =>
+        o.option_group_name_snapshot !== "メッセージプレート" &&
+        o.option_group_name_snapshot !== "メッセージ"
+      );
+
       const lines: string[] = [`${item.product_name_snapshot} ×${item.quantity}`];
       for (const opt of opts) {
         const group = opt.option_group_name_snapshot ?? "";
@@ -110,11 +117,17 @@ export async function POST(req: NextRequest) {
         let label: string;
         if (group === "サイズ") label = `  サイズ：${name}`;
         else if (group === "ろうそく") label = `  ろうそく：${name}${qty > 1 ? `×${qty}` : ""}`;
-        else if (group === "メッセージ") label = `  プレート：${name}`;
         else label = `  ${name}`;
 
         lines.push(totalPrice > 0 ? `${label}　¥${totalPrice.toLocaleString()}` : label);
       }
+
+      if (plateOpt || messageOpt) {
+        const plate = plateOpt?.option_item_name_snapshot ?? "";
+        const msg = messageOpt?.option_item_name_snapshot ?? "";
+        lines.push(`  メッセージ：${plate}${msg ? `「${msg}」` : ""}`);
+      }
+
       return lines.join("\n");
     }).join("\n");
 

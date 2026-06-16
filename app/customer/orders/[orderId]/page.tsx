@@ -64,7 +64,6 @@ function getOptionLabel(opt: OrderItemOption): string {
   const qty = opt.quantity ?? 1;
   if (group === "サイズ") return `サイズ：${name}`;
   if (group === "ろうそく") return qty > 1 ? `ろうそく：${name} ×${qty}` : `ろうそく：${name}`;
-  if (group === "メッセージ") return `プレート：${name}`;
   return name;
 }
 
@@ -175,20 +174,43 @@ export default function CustomerOrderDetailPage() {
                     <span className="text-sm text-gray-500 whitespace-nowrap">×{item.quantity}</span>
                   </div>
                   <div className="pl-2 space-y-0.5">
-                    {opts.map((opt, j) => {
-                      const label = getOptionLabel(opt);
-                      const price = getOptionPrice(opt);
-                      return (
-                        <div key={j} className="flex items-center justify-between gap-2">
-                          <span className="text-xs text-gray-500">{label}</span>
-                          {price > 0 && (
-                            <span className="text-xs text-gray-500 whitespace-nowrap">
-                              ¥{price.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
+                    {(() => {
+                      const plateOpt = opts.find(o => o.option_group_name_snapshot === "メッセージプレート");
+                      const messageOpt = opts.find(o => o.option_group_name_snapshot === "メッセージ");
+                      const filteredOpts = opts.filter(o =>
+                        o.option_group_name_snapshot !== "メッセージプレート" &&
+                        o.option_group_name_snapshot !== "メッセージ"
                       );
-                    })}
+                      const combinedMessageLabel = (() => {
+                        if (!plateOpt && !messageOpt) return null;
+                        const plate = plateOpt?.option_item_name_snapshot ?? "";
+                        const msg = messageOpt?.option_item_name_snapshot ?? "";
+                        return `メッセージ：${plate}${msg ? `「${msg}」` : ""}`;
+                      })();
+                      return (
+                        <>
+                          {filteredOpts.map((opt, j) => {
+                            const label = getOptionLabel(opt);
+                            const price = getOptionPrice(opt);
+                            return (
+                              <div key={j} className="flex items-center justify-between gap-2">
+                                <span className="text-xs text-gray-500">{label}</span>
+                                {price > 0 && (
+                                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                                    ¥{price.toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {combinedMessageLabel && (
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-gray-500">{combinedMessageLabel}</span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-50">
                     <span className="text-xs text-gray-400">小計</span>

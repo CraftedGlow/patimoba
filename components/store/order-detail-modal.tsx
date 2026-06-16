@@ -215,27 +215,24 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
 
                     {/* ろうそく */}
                     {item.options.filter(opt => opt.groupName === "ろうそく").map((opt, j) => (
-                      <div key={`candle-${j}`} className="flex items-start gap-1 text-xs text-gray-600 mt-0.5 ml-2">
-                        <span className="text-gray-400 shrink-0 mt-px">・</span>
-                        <span className="leading-snug">
-                          ろうそく：{opt.itemName}
-                          {opt.quantity != null && `×${opt.quantity}本`}
-                          {opt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
-                        </span>
+                      <div key={`candle-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
+                        ろうそく：{opt.itemName}{opt.quantity != null && `×${opt.quantity}本`}
+                        {opt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
                       </div>
                     ))}
 
-                    {/* プレート種類 + メッセージ */}
+                    {/* メッセージプレート種類 + メッセージ（2行表示） */}
                     {(() => {
                       const plateOpt = item.options.find(opt => opt.groupName === "メッセージプレート");
                       const messageOpt = item.options.find(opt => opt.groupName === "メッセージ");
                       if (!plateOpt && !messageOpt) return null;
-                      const plateLabel = plateOpt ? `プレート：${plateOpt.itemName}` : "メッセージ";
-                      const messageLabel = messageOpt ? `「${messageOpt.itemName}」` : "";
                       return (
-                        <div className="flex items-start gap-1 text-xs text-gray-600 mt-0.5 ml-2">
-                          <span className="text-gray-400 shrink-0 mt-px">・</span>
-                          <span className="leading-snug">{plateLabel}{messageLabel}</span>
+                        <div className="text-xs text-gray-500 mt-0.5 ml-2 flex gap-1">
+                          <span className="shrink-0">メッセージ：</span>
+                          <span>
+                            {plateOpt?.itemName}
+                            {messageOpt && <><br />「{messageOpt.itemName}」</>}
+                          </span>
                         </div>
                       );
                     })()}
@@ -244,12 +241,9 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                     {item.options.filter(opt =>
                       !["ろうそく", "メッセージプレート", "メッセージ", "アレルギー", "サイズ"].includes(opt.groupName)
                     ).map((opt, j) => (
-                      <div key={`other-${j}`} className="flex items-start gap-1 text-xs text-gray-600 mt-0.5 ml-2">
-                        <span className="text-gray-400 shrink-0 mt-px">・</span>
-                        <span className="leading-snug">
-                          {opt.groupName}：{opt.itemName}
-                          {opt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
-                        </span>
+                      <div key={`other-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
+                        {opt.groupName}：{opt.itemName}
+                        {opt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
                       </div>
                     ))}
                   </div>

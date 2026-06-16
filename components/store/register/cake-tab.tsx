@@ -683,15 +683,21 @@ export function CakeTab() {
             setCustomOptions((prev) => prev.map((o) => o.name === "ろうそく" ? { ...o, values } : o));
           };
 
+          const msgValues = msgOpt?.values ?? [];
+
           const toggleMessagePlate = (enabled: boolean) => {
             if (enabled) {
               setCustomOptions((prev) => {
                 if (prev.some((o) => o.name === "メッセージプレート")) return prev;
-                return [...prev, { name: "メッセージプレート", type: "text", required: false, values: [] }];
+                return [...prev, { name: "メッセージプレート", type: "single", required: false, values: [] }];
               });
             } else {
               setCustomOptions((prev) => prev.filter((o) => o.name !== "メッセージプレート"));
             }
+          };
+
+          const updateMessagePlateValues = (values: ProductCustomOptionValue[]) => {
+            setCustomOptions((prev) => prev.map((o) => o.name === "メッセージプレート" ? { ...o, values } : o));
           };
 
           const setMsgRequired = (required: boolean) => {
@@ -767,7 +773,42 @@ export function CakeTab() {
                   メッセージプレートを使用する
                 </label>
                 {hasMessagePlate && (
-                  <div className="pl-6">
+                  <div className="pl-6 space-y-2">
+                    <p className="text-xs text-gray-500">種類と追加料金を設定してください（種類なしの場合はテキスト入力のみ）</p>
+                    {msgValues.map((v, vi) => (
+                      <div key={vi} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={v.label}
+                          onChange={(e) => updateMessagePlateValues(msgValues.map((vv, j) => j === vi ? { ...vv, label: e.target.value } : vv))}
+                          placeholder="プレート名"
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
+                        />
+                        <span className="text-xs text-gray-500 shrink-0">+¥</span>
+                        <input
+                          type="number"
+                          value={v.additional_price}
+                          onChange={(e) => updateMessagePlateValues(msgValues.map((vv, j) => j === vi ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 } : vv))}
+                          placeholder="0"
+                          className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-amber-300"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateMessagePlateValues(msgValues.filter((_, j) => j !== vi))}
+                          className="text-red-400 hover:text-red-600 shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => updateMessagePlateValues([...msgValues, { label: "", additional_price: 0 }])}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-amber-400 text-sm text-amber-700 hover:bg-amber-50"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      プレート種類を追加
+                    </button>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input
                         type="checkbox"
@@ -775,9 +816,8 @@ export function CakeTab() {
                         onChange={(e) => setMsgRequired(e.target.checked)}
                         className="w-4 h-4 accent-amber-500"
                       />
-                      メッセージの入力を必須にする
+                      {msgValues.length > 0 ? "種類の選択を必須にする" : "メッセージの入力を必須にする"}
                     </label>
-                    <p className="text-xs text-gray-400 mt-1">顧客画面でメッセージのテキスト入力欄が表示されます</p>
                   </div>
                 )}
               </div>

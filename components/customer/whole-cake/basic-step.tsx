@@ -14,12 +14,20 @@ export interface CandleEntry {
   digit?: string;
 }
 
+interface MessagePlateSize {
+  label: string;
+  additional_price: number;
+}
+
 interface BasicStepProps {
   cake: WholeCakeProduct | null;
   candleOptions: CandleOption[];
   hasCandles: boolean;
   hasMessagePlate: boolean;
   messagePlateRequired: boolean;
+  messagePlateSizes: MessagePlateSize[];
+  selectedMessagePlateIdx: string;
+  onMessagePlateIdxChange: (idx: string) => void;
   selectedSizeId: string;
   onSizeChange: (id: string) => void;
   candles: CandleEntry[];
@@ -46,6 +54,9 @@ export function WholeCakeBasicStep({
   hasCandles,
   hasMessagePlate,
   messagePlateRequired,
+  messagePlateSizes,
+  selectedMessagePlateIdx,
+  onMessagePlateIdxChange,
   selectedSizeId,
   onSizeChange,
   candles,
@@ -251,22 +262,42 @@ export function WholeCakeBasicStep({
             {hasMessagePlate && (
               <div className="mb-6">
                 <div className="flex items-center gap-1.5 mb-2">
-                  <p className="text-sm font-medium text-gray-700">メッセージプレートの文字を入力</p>
+                  <p className="text-sm font-medium text-gray-700">メッセージプレート</p>
                   {messagePlateRequired && (
                     <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">必須</span>
                   )}
                 </div>
-                <input
-                  type="text"
-                  placeholder="例）Happy birthday!!"
-                  value={messageText}
-                  onChange={(e) => onMessageChange(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                />
-                {!messagePlateRequired && (
-                  <p className="text-xs text-gray-400 mt-1.5">
-                    メッセージが必要ない方は空欄のままで構いません
-                  </p>
+
+                {/* プレート種類が設定されている場合は選択ドロップダウンを表示 */}
+                {messagePlateSizes.length > 0 && (
+                  <select
+                    value={selectedMessagePlateIdx}
+                    onChange={(e) => onMessagePlateIdxChange(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent mb-3"
+                  >
+                    <option value="">プレートの種類を選択</option>
+                    {messagePlateSizes.map((s, i) => (
+                      <option key={i} value={String(i)}>
+                        {s.label}{s.additional_price > 0 ? ` (+¥${s.additional_price.toLocaleString()})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                {/* テキスト入力：種類なし または 種類選択済みの場合に表示 */}
+                {(messagePlateSizes.length === 0 || selectedMessagePlateIdx !== "") && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="例）Happy birthday!!"
+                      value={messageText}
+                      onChange={(e) => onMessageChange(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-400 mt-1.5">
+                      メッセージが必要ない方は空欄のままで構いません
+                    </p>
+                  </>
                 )}
               </div>
             )}

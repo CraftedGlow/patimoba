@@ -8,12 +8,19 @@ import type { WholeCakeProduct, WholeCakeSize, DecorationGroupWithItems } from "
 import type { CandleOption } from "@/hooks/use-whole-cakes";
 import type { CandleEntry } from "./basic-step";
 
+interface MessagePlateSize {
+  label: string;
+  additional_price: number;
+}
+
 interface ConfirmStepProps {
   cake: WholeCakeProduct;
   candleOptions: CandleOption[];
   selectedSize: WholeCakeSize;
   candles: CandleEntry[];
   messageText: string;
+  selectedMessagePlateIdx?: string;
+  messagePlateSizes?: MessagePlateSize[];
   decorationGroups: DecorationGroupWithItems[];
   selectedDecorations: Record<string, string[]>;
   allergyNote: string;
@@ -34,6 +41,8 @@ export function WholeCakeConfirmStep({
   selectedSize,
   candles,
   messageText,
+  selectedMessagePlateIdx,
+  messagePlateSizes,
   decorationGroups,
   selectedDecorations,
   allergyNote,
@@ -109,13 +118,26 @@ export function WholeCakeConfirmStep({
             </div>
           )}
 
-          {/* メッセージ */}
-          {messageText && (
-            <div>
-              <span className="text-sm font-bold">メッセージ：</span>
-              <span className="text-sm">「{messageText}」</span>
-            </div>
-          )}
+          {/* メッセージプレート */}
+          {(() => {
+            const idx = selectedMessagePlateIdx !== undefined ? parseInt(selectedMessagePlateIdx, 10) : NaN;
+            const plateSize = !isNaN(idx) ? messagePlateSizes?.[idx] : undefined;
+            return plateSize ? (
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-sm font-bold">メッセージプレート：</span>
+                  <span className="text-sm">{plateSize.label}</span>
+                  {messageText && <span className="text-sm">「{messageText}」</span>}
+                </div>
+                <span className="text-sm">{plateSize.additional_price > 0 ? `+¥${plateSize.additional_price.toLocaleString()}` : "無料"}</span>
+              </div>
+            ) : messageText ? (
+              <div>
+                <span className="text-sm font-bold">メッセージ：</span>
+                <span className="text-sm">「{messageText}」</span>
+              </div>
+            ) : null;
+          })()}
 
           {/* デコレーション */}
           {selectedDecorationsByGroup.map(({ group, items }) => (

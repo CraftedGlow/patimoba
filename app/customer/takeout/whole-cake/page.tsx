@@ -107,10 +107,12 @@ export default function WholeCakePage() {
   const messagePlateOption = selectedCake?.customOptions?.find((o) => o.name === "メッセージプレート");
   const hasMessagePlate = !!messagePlateOption;
   const messagePlateRequired = messagePlateOption?.required ?? false;
+  const messagePlateSizes = messagePlateOption?.values ?? [];
 
   const [selectedSizeId, setSelectedSizeId] = useState("");
   const [candles, setCandles] = useState<CandleEntry[]>([]);
   const [messageText, setMessageText] = useState("");
+  const [selectedMessagePlateIdx, setSelectedMessagePlateIdx] = useState("");
   const [selectedDecorations, setSelectedDecorations] = useState<Record<string, string[]>>({});
   const [allergyNote, setAllergyNote] = useState("");
   const [printPhotoUrl, setPrintPhotoUrl] = useState<string | null>(null);
@@ -121,6 +123,7 @@ export default function WholeCakePage() {
     setSelectedSizeId("");
     setCandles([]);
     setMessageText("");
+    setSelectedMessagePlateIdx("");
   }, [selectedCakeIdForPrint]);
 
   const { groups: linkedDecorationGroups, loading: groupsLoading } = useProductDecorationGroups(
@@ -180,7 +183,12 @@ export default function WholeCakePage() {
     }, 0);
   }, 0);
 
-  const total = sizePrice + candleTotal + decorationTotal;
+  const messagePlatePrice = (() => {
+    const idx = parseInt(selectedMessagePlateIdx, 10);
+    return isNaN(idx) ? 0 : (messagePlateSizes[idx]?.additional_price ?? 0);
+  })();
+
+  const total = sizePrice + candleTotal + decorationTotal + messagePlatePrice;
 
   const handlePrintPhotoUpload = async (file: File) => {
     if (!selectedStoreId) return;
@@ -221,6 +229,20 @@ export default function WholeCakePage() {
         }];
       });
     });
+
+    // 選択されたメッセージプレート種類をオプションに追加
+    if (hasMessagePlate && messagePlateSizes.length > 0 && selectedMessagePlateIdx !== "") {
+      const idx = parseInt(selectedMessagePlateIdx, 10);
+      const plateSize = messagePlateSizes[idx];
+      if (plateSize) {
+        cakeOptions.push({
+          wholeCakeOptionId: `plate-${idx}`,
+          name: plateSize.label,
+          price: plateSize.additional_price,
+          groupName: "メッセージプレート",
+        });
+      }
+    }
 
     return {
       productId: selectedCake.id,
@@ -269,7 +291,9 @@ export default function WholeCakePage() {
   );
 
   // Step 1 can proceed
-  const messagePlateOk = !hasMessagePlate || !messagePlateRequired || messageText.trim() !== "";
+  const messagePlateOk = !hasMessagePlate || !messagePlateRequired || (
+    messagePlateSizes.length > 0 ? selectedMessagePlateIdx !== "" : messageText.trim() !== ""
+  );
   const canProceedStep1 = isPrintMode
     ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messagePlateOk && !!printPhotoUrl)
     : (selectedSizeId !== "" && messagePlateOk);
@@ -350,6 +374,9 @@ export default function WholeCakePage() {
           hasCandles={hasCandles}
           hasMessagePlate={hasMessagePlate}
           messagePlateRequired={messagePlateRequired}
+          messagePlateSizes={messagePlateSizes}
+          selectedMessagePlateIdx={selectedMessagePlateIdx}
+          onMessagePlateIdxChange={setSelectedMessagePlateIdx}
           selectedSizeId={selectedSizeId}
           onSizeChange={setSelectedSizeId}
           candles={candles}
@@ -391,6 +418,8 @@ export default function WholeCakePage() {
           selectedSize={selectedSize}
           candles={candles}
           messageText={messageText}
+          selectedMessagePlateIdx={selectedMessagePlateIdx}
+          messagePlateSizes={messagePlateSizes}
           decorationGroups={decorationGroups}
           selectedDecorations={selectedDecorations}
           allergyNote={allergyNote}

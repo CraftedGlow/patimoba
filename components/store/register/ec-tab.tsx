@@ -480,7 +480,7 @@ export function EcTab() {
                       onChange={(e) => setNoshiIds((prev) => e.target.checked ? [...prev, n.id] : prev.filter((id) => id !== n.id))}
                       className="w-4 h-4 accent-amber-500"
                     />
-                    {n.imageUrl && <img src={n.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />}
+                    <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
                     <span>{n.name}</span>
                     {n.price > 0 && <span className="text-xs text-gray-400">+¥{n.price.toLocaleString()}</span>}
                   </label>

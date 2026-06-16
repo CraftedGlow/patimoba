@@ -420,7 +420,7 @@ export default function TakeoutProductDetailPage() {
                     >
                       <span className="flex items-center gap-2">
                         <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${selectedNoshiId === n.id ? "border-amber-500 bg-amber-500" : "border-gray-300"}`} />
-                        {n.imageUrl && <img src={n.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />}
+                        <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-8 h-8 rounded object-cover" />
                         {n.name}
                       </span>
                       {n.price > 0 && <span className="text-xs text-gray-600">+¥{n.price.toLocaleString()}</span>}

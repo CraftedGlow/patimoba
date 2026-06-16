@@ -213,11 +213,11 @@ export function NoshiTab() {
                         : "bg-gray-50 border-transparent"
                     }`}
                   >
-                    {item.imageUrl ? (
-                      <img src={item.imageUrl} alt="" className="w-9 h-9 object-cover rounded flex-shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded bg-gray-200 flex-shrink-0" />
-                    )}
+                    <img
+                      src={item.imageUrl || "/noshi-default.jpg"}
+                      alt=""
+                      className="w-9 h-9 object-cover rounded flex-shrink-0"
+                    />
                     <span className="flex-1 truncate text-gray-700 font-medium">{item.name}</span>
                     <span className="text-xs text-gray-400 flex-shrink-0 mr-1">¥{item.price.toLocaleString()}</span>
                     <button

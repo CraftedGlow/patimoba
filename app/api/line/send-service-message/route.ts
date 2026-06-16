@@ -123,8 +123,8 @@ export async function POST(req: NextRequest) {
     const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
     const orderDetailUrl = `${liffBase}/customer/orders/${orderId}`;
     const howToReceive = isEc
-      ? "発送完了後、追ってご連絡いたします。"
-      : "準備完了のご連絡をLINEでお送りします。カウンターでお受け取りください。";
+      ? "発送完了後、改めてご案内いたします。商品到着まで今しばらくお待ちください。"
+      : "受け取り日時に、こちらの画面を店頭スタッフへご提示ください。";
 
     const params: Record<string, string> = {
       date: dateStr,

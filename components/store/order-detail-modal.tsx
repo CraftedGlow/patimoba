@@ -221,18 +221,16 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                       </div>
                     ))}
 
-                    {/* メッセージプレート種類 + メッセージ（2行表示） */}
+                    {/* メッセージプレート種類 + メッセージ（1行表示） */}
                     {(() => {
                       const plateOpt = item.options.find(opt => opt.groupName === "メッセージプレート");
                       const messageOpt = item.options.find(opt => opt.groupName === "メッセージ");
                       if (!plateOpt && !messageOpt) return null;
+                      const plate = plateOpt?.itemName ?? "";
+                      const msg = messageOpt?.itemName ?? "";
                       return (
-                        <div className="text-xs text-gray-500 mt-0.5 ml-2 flex gap-1">
-                          <span className="shrink-0">メッセージ：</span>
-                          <span>
-                            {plateOpt?.itemName}
-                            {messageOpt && <><br />「{messageOpt.itemName}」</>}
-                          </span>
+                        <div className="text-xs text-gray-500 mt-0.5 ml-2">
+                          メッセージ：{plate}{msg && `「${msg}」`}
                         </div>
                       );
                     })()}

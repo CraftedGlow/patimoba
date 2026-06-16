@@ -43,26 +43,36 @@ export default function WholeCakePage() {
 
   const { wholeCakes, candleOptions, loading } = useWholeCakes(selectedStoreId ?? "");
 
-  // Print mode: カテゴリ=printのデコレーションを直接取得（グループ不要）
-  const [printDeco, setPrintDeco] = useState<{ id: string; price: number } | null>(null);
+  // カテゴリ=printのデコレーションを直接取得（グループ紐付け不要）
+  const [printDeco, setPrintDeco] = useState<{ id: string; name: string; price: number; imageUrl: string | null; preparationDays: number | null } | null>(null);
   const [printGroupLoading, setPrintGroupLoading] = useState(false);
 
   useEffect(() => {
-    if (!isPrintMode || !selectedStoreId || loading) return;
+    if (!selectedStoreId || loading) return;
     setPrintGroupLoading(true);
     supabase
       .from("decorations")
-      .select("id, price")
+      .select("id, name, price, image_url, preparation_days")
       .eq("store_id", selectedStoreId)
       .eq("category", "print")
       .eq("is_active", true)
       .limit(1)
       .maybeSingle()
       .then(({ data }) => {
-        setPrintDeco(data ? { id: String(data.id), price: Number(data.price) || 0 } : null);
+        setPrintDeco(
+          data
+            ? {
+                id: String(data.id),
+                name: data.name ?? "プリントデコレーション",
+                price: Number(data.price) || 0,
+                imageUrl: data.image_url ?? null,
+                preparationDays: data.preparation_days != null ? Number(data.preparation_days) : null,
+              }
+            : null
+        );
         setPrintGroupLoading(false);
       });
-  }, [isPrintMode, selectedStoreId, loading]);
+  }, [selectedStoreId, loading]);
 
   // プリントデコレーション対応ケーキのみ対象
   const printCakes = useMemo(() => {
@@ -96,11 +106,44 @@ export default function WholeCakePage() {
     setSelectedSizeId("");
   }, [selectedCakeIdForPrint]);
 
-  const { groups: decorationGroups, loading: groupsLoading } = useProductDecorationGroups(
+  const { groups: linkedDecorationGroups, loading: groupsLoading } = useProductDecorationGroups(
     selectedCake?.id
   );
 
-  // プリントモード時はprintDecoを自動選択済みとして扱う（selectedDecorationsには乗せない）
+  // 通常モードでprint_decoration_enabledのケーキには、グループ紐付け不要で
+  // プリントデコレーションの選択肢を自動的に差し込む
+  const decorationGroups = useMemo<DecorationGroupWithItems[]>(() => {
+    if (isPrintMode || !selectedCake?.printDecorationEnabled || !printDeco) return linkedDecorationGroups;
+    const alreadyLinked = linkedDecorationGroups.some((g) =>
+      g.items.some((item) => item.category === "print")
+    );
+    if (alreadyLinked) return linkedDecorationGroups;
+    const printGroup: DecorationGroupWithItems = {
+      id: "print-deco-virtual",
+      storeId: selectedCake.storeId,
+      name: "プリントデコレーション",
+      description: null,
+      selectionType: "single",
+      maxSelections: null,
+      required: false,
+      displayOrder: 9999,
+      items: [{
+        id: printDeco.id,
+        name: printDeco.name,
+        description: null,
+        imageUrl: printDeco.imageUrl,
+        category: "print",
+        price: printDeco.price,
+        isActive: true,
+        isSeasonal: false,
+        seasonStart: null,
+        seasonEnd: null,
+        preparationDays: printDeco.preparationDays,
+        displayOrder: 9999,
+      }],
+    };
+    return [...linkedDecorationGroups, printGroup];
+  }, [isPrintMode, selectedCake, printDeco, linkedDecorationGroups]);
 
 
   const selectedSize = selectedCake?.sizes.find((s) => s.id === selectedSizeId);

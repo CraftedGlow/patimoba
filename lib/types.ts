@@ -182,7 +182,6 @@ export interface DecorationGroupWithItems {
   selectionType: 'single' | 'multiple'
   maxSelections: number | null
   required: boolean
-  preparationDays: number | null
   displayOrder: number
   items: DecorationItem[]
 }

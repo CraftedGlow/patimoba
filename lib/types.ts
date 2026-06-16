@@ -142,6 +142,7 @@ export interface WholeCakeProduct {
   printDecorationEnabled: boolean
   isActive?: boolean
   sameDayOrderAllowed?: boolean
+  customOptions: ProductCustomOption[]
 }
 
 export interface CartCandleEntry {

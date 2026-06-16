@@ -25,6 +25,7 @@ import type {
   DecorationGroupWithItems,
   WholeCakeProduct,
 } from "@/lib/types";
+import type { CandleOption } from "@/hooks/use-whole-cakes";
 
 const wholeCakeSteps = ["基本選択", "デコレーション", "内容確認"];
 
@@ -41,7 +42,7 @@ export default function WholeCakePage() {
   const [step, setStep] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const { wholeCakes, candleOptions, loading } = useWholeCakes(selectedStoreId ?? "");
+  const { wholeCakes, loading } = useWholeCakes(selectedStoreId ?? "");
 
   // カテゴリ=printのデコレーションを直接取得（グループ紐付け不要）
   const [printDeco, setPrintDeco] = useState<{ id: string; name: string; price: number; imageUrl: string | null; preparationDays: number | null } | null>(null);
@@ -93,6 +94,20 @@ export default function WholeCakePage() {
     return wholeCakes[0] ?? null;
   }, [isPrintMode, selectedCakeIdForPrint, wholeCakes, cakeIdParam]);
 
+  // 選択中ケーキの custom_options からろうそく・プレート設定を導出
+  const candleCustomOption = selectedCake?.customOptions?.find((o) => o.name === "ろうそく");
+  const candleOptions: CandleOption[] = (candleCustomOption?.values ?? []).map((v, i) => ({
+    id: String(i),
+    name: v.label,
+    price: v.additional_price,
+    storeId: selectedStoreId ?? "",
+  }));
+  const hasCandles = !!candleCustomOption;
+
+  const messagePlateOption = selectedCake?.customOptions?.find((o) => o.name === "メッセージプレート");
+  const hasMessagePlate = !!messagePlateOption;
+  const messagePlateRequired = messagePlateOption?.required ?? false;
+
   const [selectedSizeId, setSelectedSizeId] = useState("");
   const [candles, setCandles] = useState<CandleEntry[]>([]);
   const [messageText, setMessageText] = useState("");
@@ -101,9 +116,11 @@ export default function WholeCakePage() {
   const [printPhotoUrl, setPrintPhotoUrl] = useState<string | null>(null);
   const [uploadingPrintPhoto, setUploadingPrintPhoto] = useState(false);
 
-  // Reset size when cake changes in print mode
+  // ケーキ切り替え時にサイズ・ろうそく・メッセージをリセット
   useEffect(() => {
     setSelectedSizeId("");
+    setCandles([]);
+    setMessageText("");
   }, [selectedCakeIdForPrint]);
 
   const { groups: linkedDecorationGroups, loading: groupsLoading } = useProductDecorationGroups(
@@ -252,9 +269,10 @@ export default function WholeCakePage() {
   );
 
   // Step 1 can proceed
+  const messagePlateOk = !hasMessagePlate || !messagePlateRequired || messageText.trim() !== "";
   const canProceedStep1 = isPrintMode
-    ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messageText.trim() !== "" && !!printPhotoUrl)
-    : (selectedSizeId !== "" && messageText.trim() !== "");
+    ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messagePlateOk && !!printPhotoUrl)
+    : (selectedSizeId !== "" && messagePlateOk);
 
   const isPageLoading = loading || (isPrintMode && printGroupLoading);
 
@@ -329,6 +347,9 @@ export default function WholeCakePage() {
         <WholeCakeBasicStep
           cake={selectedCake}
           candleOptions={candleOptions}
+          hasCandles={hasCandles}
+          hasMessagePlate={hasMessagePlate}
+          messagePlateRequired={messagePlateRequired}
           selectedSizeId={selectedSizeId}
           onSizeChange={setSelectedSizeId}
           candles={candles}

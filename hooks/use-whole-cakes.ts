@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
-import { CANDLE_OPTIONS } from "@/lib/constants/product-master"
 import {
   WholeCakeProduct,
   toUIWholeCakeSize,
@@ -19,14 +18,6 @@ export function useWholeCakes(storeId?: string) {
   const [wholeCakes, setWholeCakes] = useState<WholeCakeProduct[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  // ろうそくは定数から取得
-  const candleOptions: CandleOption[] = CANDLE_OPTIONS.map((c) => ({
-    id: c.id,
-    name: c.name,
-    price: c.price,
-    storeId: storeId ?? "",
-  }))
 
   const fetchWholeCakes = async () => {
     setLoading(true)
@@ -57,6 +48,7 @@ export function useWholeCakes(storeId?: string) {
         printDecorationEnabled: product.print_decoration_enabled ?? false,
         isActive: product.is_active ?? true,
         sameDayOrderAllowed: product.same_day_order_allowed ?? false,
+        customOptions: Array.isArray(product.custom_options) ? product.custom_options : [],
       }))
 
       setWholeCakes(cakes)
@@ -70,5 +62,5 @@ export function useWholeCakes(storeId?: string) {
     fetchWholeCakes()
   }, [storeId])
 
-  return { wholeCakes, candleOptions, loading, error, refetch: fetchWholeCakes }
+  return { wholeCakes, loading, error, refetch: fetchWholeCakes }
 }

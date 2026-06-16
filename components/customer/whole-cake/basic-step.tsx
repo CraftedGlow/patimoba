@@ -17,6 +17,9 @@ export interface CandleEntry {
 interface BasicStepProps {
   cake: WholeCakeProduct | null;
   candleOptions: CandleOption[];
+  hasCandles: boolean;
+  hasMessagePlate: boolean;
+  messagePlateRequired: boolean;
   selectedSizeId: string;
   onSizeChange: (id: string) => void;
   candles: CandleEntry[];
@@ -40,6 +43,9 @@ interface BasicStepProps {
 export function WholeCakeBasicStep({
   cake,
   candleOptions,
+  hasCandles,
+  hasMessagePlate,
+  messagePlateRequired,
   selectedSizeId,
   onSizeChange,
   candles,
@@ -169,93 +175,101 @@ export function WholeCakeBasicStep({
               </select>
             </div>
 
-            <div className="mb-6">
-              <div className="flex items-baseline gap-2 mb-2">
-                <p className="text-sm font-medium text-gray-700">ろうそくを選択</p>
-                <span className="text-xs text-gray-400">複数選択可能です</span>
-              </div>
+            {hasCandles && (
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2 mb-2">
+                  <p className="text-sm font-medium text-gray-700">ろうそくを選択</p>
+                  <span className="text-xs text-gray-400">複数選択可能です</span>
+                </div>
 
-              {candles.map((candle) => (
-                <div key={candle.id} className="mb-3">
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={candle.candleOptionId}
-                      onChange={(e) => updateCandle(candle.id, "candleOptionId", e.target.value)}
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                    >
-                      <option value="">種類を選択</option>
-                      {candleOptions.map((opt) => (
-                        <option key={opt.id} value={opt.id}>
-                          {opt.name} &yen;{opt.price.toLocaleString()}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => removeCandle(candle.id)}
-                      className="shrink-0 text-gray-400 hover:text-gray-600 p-1"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                  {candle.candleOptionId && (
-                    <div className="flex items-center gap-2 mt-2">
-                      {isNumberCandle(candle.candleOptionId) && (
-                        <select
-                          value={candle.digit ?? ""}
-                          onChange={(e) => updateCandle(candle.id, "digit", e.target.value)}
-                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                        >
-                          <option value="">数字を選択</option>
-                          {["0","1","2","3","4","5","6","7","8","9"].map((d) => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </select>
-                      )}
+                {candles.map((candle) => (
+                  <div key={candle.id} className="mb-3">
+                    <div className="flex items-center gap-2">
                       <select
-                        value={candle.quantity}
-                        onChange={(e) => updateCandle(candle.id, "quantity", e.target.value)}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                        value={candle.candleOptionId}
+                        onChange={(e) => updateCandle(candle.id, "candleOptionId", e.target.value)}
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                       >
-                        <option value="">本数を選択</option>
-                        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                          <option key={n} value={String(n)}>{n}</option>
+                        <option value="">種類を選択</option>
+                        {candleOptions.map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.name} &yen;{opt.price.toLocaleString()}
+                          </option>
                         ))}
                       </select>
-                      <span className="text-sm font-medium shrink-0">本</span>
+                      <button
+                        onClick={() => removeCandle(candle.id)}
+                        className="shrink-0 text-gray-400 hover:text-gray-600 p-1"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
+                    {candle.candleOptionId && (
+                      <div className="flex items-center gap-2 mt-2">
+                        {isNumberCandle(candle.candleOptionId) && (
+                          <select
+                            value={candle.digit ?? ""}
+                            onChange={(e) => updateCandle(candle.id, "digit", e.target.value)}
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                          >
+                            <option value="">数字を選択</option>
+                            {["0","1","2","3","4","5","6","7","8","9"].map((d) => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                        )}
+                        <select
+                          value={candle.quantity}
+                          onChange={(e) => updateCandle(candle.id, "quantity", e.target.value)}
+                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                        >
+                          <option value="">本数を選択</option>
+                          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                            <option key={n} value={String(n)}>{n}</option>
+                          ))}
+                        </select>
+                        <span className="text-sm font-medium shrink-0">本</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="flex justify-center">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={addCandle}
+                    className="flex items-center gap-1.5 border-2 border-amber-400 text-amber-600 font-bold px-5 py-2 rounded-lg text-sm hover:bg-amber-50 transition-colors"
+                  >
+                    <CandlestickChart className="w-4 h-4" />
+                    ろうそくを追加
+                  </motion.button>
+                </div>
+              </div>
+            )}
+
+            {hasMessagePlate && (
+              <div className="mb-6">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <p className="text-sm font-medium text-gray-700">メッセージプレートの文字を入力</p>
+                  {messagePlateRequired && (
+                    <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">必須</span>
                   )}
                 </div>
-              ))}
-
-              <div className="flex justify-center">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={addCandle}
-                  className="flex items-center gap-1.5 border-2 border-amber-400 text-amber-600 font-bold px-5 py-2 rounded-lg text-sm hover:bg-amber-50 transition-colors"
-                >
-                  <CandlestickChart className="w-4 h-4" />
-                  ろうそくを追加
-                </motion.button>
+                <input
+                  type="text"
+                  placeholder="例）Happy birthday!!"
+                  value={messageText}
+                  onChange={(e) => onMessageChange(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                />
+                {!messagePlateRequired && (
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    メッセージが必要ない方は空欄のままで構いません
+                  </p>
+                )}
               </div>
-            </div>
-
-            <div className="mb-6">
-              <div className="flex items-center gap-1.5 mb-2">
-                <p className="text-sm font-medium text-gray-700">メッセージプレートの文字を入力</p>
-                <span className="text-xs font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">必須</span>
-              </div>
-              <input
-                type="text"
-                placeholder="例）Happy birthday!!"
-                value={messageText}
-                onChange={(e) => onMessageChange(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-400 mt-1.5">
-                メッセージが必要ない方は「なし」とご入力ください
-              </p>
-            </div>
+            )}
 
             {/* プリント写真アップロード（プリントモードのみ） */}
             {isPrintMode && (

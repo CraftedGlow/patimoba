@@ -34,34 +34,37 @@ function charW(c: string): number {
   return c.charCodeAt(0) > 0x7f ? 2 : 1
 }
 
+const QTY_COLS = 6 // 個数欄の幅（右端固定）
+
 function itemLine(name: string, quantity: number): string {
-  const suffix = ` x${quantity}`
-  const suffixW = suffix.split("").reduce((s, c) => s + charW(c), 0)
-  const maxFull  = MARKUP_COLS - suffixW
-  const maxTrunc = maxFull - 2
+  const qty = `x${quantity}`
+  const qtyW = qty.split("").reduce((s, c) => s + charW(c), 0)
+  const nameFirstMax = MARKUP_COLS - QTY_COLS
 
-  let nameStr = ""
-  let nameW = 0
-  let truncate = false
+  const lines: string[] = []
+  let cur = ""
+  let curW = 0
+  let isFirst = true
 
   for (const c of name) {
     const cw = charW(c)
-    if (nameW + cw > maxFull) { truncate = true; break }
-    nameStr += c
-    nameW += cw
+    const maxW = isFirst ? nameFirstMax : MARKUP_COLS
+    if (curW + cw > maxW) {
+      lines.push(cur)
+      cur = ""
+      curW = 0
+      isFirst = false
+    }
+    cur += c
+    curW += cw
   }
+  lines.push(cur)
 
-  if (!truncate) return nameStr + suffix
+  const firstW = lines[0].split("").reduce((s, c) => s + charW(c), 0)
+  const pad = " ".repeat(Math.max(1, MARKUP_COLS - firstW - qtyW))
+  lines[0] = lines[0] + pad + qty
 
-  nameStr = ""
-  nameW = 0
-  for (const c of name) {
-    const cw = charW(c)
-    if (nameW + cw > maxTrunc) break
-    nameStr += c
-    nameW += cw
-  }
-  return nameStr + "…" + suffix
+  return lines.join("\n")
 }
 
 function fmtDate(d?: string | null, t?: string | null): string {
@@ -69,7 +72,7 @@ function fmtDate(d?: string | null, t?: string | null): string {
   if (d) {
     const dt = new Date(d)
     parts.push(
-      `${dt.getFullYear()}/${String(dt.getMonth() + 1).padStart(2, "0")}/${String(dt.getDate()).padStart(2, "0")}`
+      `${String(dt.getMonth() + 1).padStart(2, "0")}/${String(dt.getDate()).padStart(2, "0")}`
     )
   }
   if (t) parts.push(t)
@@ -133,10 +136,12 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   }
   push(SEP)
 
-  push("[align: center]")
-  push(`お支払金額`)
-  push(`¥${data.totalAmount.toLocaleString()}`)
-  push("[align: left]")
+  const amountStr = `¥${data.totalAmount.toLocaleString()}`
+  const amountW = amountStr.split("").reduce((s, c) => s + charW(c), 0)
+  const labelStr = "お支払金額"
+  const labelW = labelStr.split("").reduce((s, c) => s + charW(c), 0)
+  const amountPad = " ".repeat(Math.max(1, MARKUP_COLS - labelW - amountW))
+  push(`${labelStr}${amountPad}${amountStr}`)
 
   push("[cut]")
 

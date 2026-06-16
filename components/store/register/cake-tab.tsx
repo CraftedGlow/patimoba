@@ -141,7 +141,7 @@ export function CakeTab() {
       .select("*")
       .eq("store_id", storeId)
       .order("display_order", { ascending: true });
-    const rows = (data ?? []) as unknown as ProductRow[];
+    const rows = ((data ?? []) as unknown as ProductRow[]).filter((p) => p.category_name !== "ec");
 
     // 期間限定商品の自動オフ: 受取終了日 - 準備日数 <= 今日 なら is_active を false に
     const today = new Date();

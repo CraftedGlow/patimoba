@@ -12,6 +12,7 @@ import { ProductCard } from "@/components/customer/product-card";
 import { useProducts } from "@/hooks/use-products";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
+import { supabase } from "@/lib/supabase";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
@@ -19,15 +20,22 @@ export default function ECProductsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const storeFromUrl = searchParams.get("store");
-  const { selectedStoreId, setSelectedStoreId, selectedStoreName, profile,
+  const { selectedStoreId, setSelectedStoreId, selectedStoreName, setSelectedStoreName, profile,
     points, } = useCustomerContext();
 
-  // URLパラメータからstoreIdをセット（直リンク対応）
+  // URLパラメータのstoreIdを優先（直リンクで以前選択していた別店舗が残っていても上書きする）
   useEffect(() => {
-    if (storeFromUrl && !selectedStoreId) {
-      setSelectedStoreId(storeFromUrl);
-    }
-  }, [storeFromUrl, selectedStoreId, setSelectedStoreId]);
+    if (!storeFromUrl || storeFromUrl === selectedStoreId) return;
+    setSelectedStoreId(storeFromUrl);
+    supabase
+      .from("stores")
+      .select("name")
+      .eq("id", storeFromUrl)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) setSelectedStoreName(data.name);
+      });
+  }, [storeFromUrl, selectedStoreId, setSelectedStoreId, setSelectedStoreName]);
 
   const effectiveStoreId = selectedStoreId ?? storeFromUrl;
   const { itemCount } = useCart();

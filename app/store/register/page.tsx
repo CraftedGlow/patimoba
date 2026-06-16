@@ -9,7 +9,7 @@ import { NoshiTab } from "@/components/store/register/noshi-tab";
 type TabId = "cake" | "ec" | "noshi";
 
 const tabs: { id: TabId; label: string }[] = [
-  { id: "cake", label: "ケーキ" },
+  { id: "cake", label: "テイクアウト" },
   { id: "ec", label: "EC商品" },
   { id: "noshi", label: "のし管理" },
 ];

@@ -10,6 +10,7 @@ import type { Order } from "@/lib/types";
 interface WholeCakeOption {
   group: string;
   item: string;
+  itemSub?: string;
   price: number;
   quantity: number | null;
 }
@@ -48,7 +49,28 @@ export function WholeCakeDetailModal({ order, onClose }: Props) {
           });
         }
       }
-      setOptions(opts);
+
+      // メッセージプレートとメッセージを1行にまとめる
+      const plateIdx = opts.findIndex(o => o.group === "メッセージプレート");
+      const msgIdx = opts.findIndex(o => o.group === "メッセージ");
+      if (plateIdx !== -1 || msgIdx !== -1) {
+        const plateOpt = plateIdx !== -1 ? opts[plateIdx] : null;
+        const msgOpt = msgIdx !== -1 ? opts[msgIdx] : null;
+        const insertAt = plateIdx !== -1 ? plateIdx : msgIdx;
+        const skipSet = new Set([plateIdx, msgIdx].filter(i => i !== -1));
+        const merged: WholeCakeOption = {
+          group: "メッセージ",
+          item: plateOpt?.item ?? "",
+          itemSub: msgOpt ? `「${msgOpt.item}」` : undefined,
+          price: 0,
+          quantity: null,
+        };
+        const newOpts = opts.filter((_, i) => !skipSet.has(i));
+        newOpts.splice(insertAt, 0, merged);
+        setOptions(newOpts);
+      } else {
+        setOptions(opts);
+      }
       setLoading(false);
     }
     fetch();
@@ -132,14 +154,14 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
             <div className="space-y-2">
               {options.map((o, i) => (
                 <div key={i} className="flex items-start justify-between py-3 border-b border-gray-50 last:border-0">
-                  <div className="flex-1">
-                    <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded mr-2">
+                  <div className="flex-1 flex items-start gap-2">
+                    <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded shrink-0 mt-0.5">
                       {o.group}
                     </span>
-                    <span className="text-sm text-gray-900">
-                      {o.item}
-                      {o.quantity != null && o.group !== "メッセージ" && ` ×${o.quantity}`}
-                    </span>
+                    <div className="text-sm text-gray-900">
+                      <div>{o.item}{o.quantity != null && ` ×${o.quantity}`}</div>
+                      {o.itemSub && <div>{o.itemSub}</div>}
+                    </div>
                   </div>
                   {o.price > 0 && (
                     <span className="text-xs text-gray-500 shrink-0 ml-8">+¥{o.price.toLocaleString()}</span>

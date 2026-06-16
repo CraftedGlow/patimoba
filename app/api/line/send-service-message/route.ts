@@ -118,6 +118,10 @@ export async function POST(req: NextRequest) {
       return lines.join("\n");
     }).join("\n");
 
+    const truncatedOrderDetail = orderDetail.length > 45
+      ? orderDetail.slice(0, 45) + "..."
+      : orderDetail;
+
     const sumStr = `¥${Number(order.total_amount || 0).toLocaleString()}（税込）`;
 
     const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
@@ -128,7 +132,7 @@ export async function POST(req: NextRequest) {
 
     const params: Record<string, string> = {
       date: dateStr,
-      order_detail: orderDetail,
+      order_detail: truncatedOrderDetail,
       shop_name: storeName,
       sum: sumStr,
       how_to_receive: howToReceive,

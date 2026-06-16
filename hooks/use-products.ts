@@ -31,6 +31,8 @@ export function useProducts(options: UseProductsOptions = {}) {
     }
     if (options.publishedOnly) {
       query = query.eq("is_active", true)
+      const todayStr = new Date().toISOString().split("T")[0]
+      query = query.or(`limited_until.is.null,limited_until.gte.${todayStr}`)
     }
     if (options.ecOnly) {
       query = query.eq("is_ec", true)

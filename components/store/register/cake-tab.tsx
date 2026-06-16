@@ -770,7 +770,7 @@ export function CakeTab() {
                     onChange={(e) => toggleMessagePlate(e.target.checked)}
                     className="w-4 h-4 accent-amber-500"
                   />
-                  メッセージプレートを使用する
+                  メッセージプレートを使用する（無料）
                 </label>
                 {hasMessagePlate && (
                   <div className="pl-6 space-y-2">
@@ -799,7 +799,7 @@ export function CakeTab() {
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-amber-400 text-sm text-amber-700 hover:bg-amber-50"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      プレート種類を追加（無料）
+                      プレート種類を追加
                     </button>
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input

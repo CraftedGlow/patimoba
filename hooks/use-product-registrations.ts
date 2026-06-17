@@ -38,6 +38,7 @@ export interface ProductRegistration {
   noshi_enabled: boolean
   noshi_ids: string[]
   print_decoration_enabled: boolean
+  tags: string[] | null
   minVariantPrice?: number
   shipping_method: string | null
   storage_method: string | null
@@ -104,6 +105,7 @@ function mapRow(row: any): ProductRegistration {
     noshi_enabled: row.noshi_enabled ?? false,
     noshi_ids: Array.isArray(row.noshi_ids) ? row.noshi_ids : [],
     print_decoration_enabled: row.print_decoration_enabled ?? false,
+    tags: Array.isArray(row.tags) ? row.tags : null,
     minVariantPrice,
     shipping_method: row.shipping_method ?? null,
     storage_method: row.storage_method ?? null,
@@ -187,6 +189,18 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.preparation_days !== undefined) payload.preparation_days = updates.preparation_days
     if (updates.custom_options !== undefined) payload.custom_options = updates.custom_options
     if (updates.print_decoration_enabled !== undefined) payload.print_decoration_enabled = updates.print_decoration_enabled
+    if (updates.noshi_enabled !== undefined) payload.noshi_enabled = updates.noshi_enabled
+    if (updates.noshi_ids !== undefined) payload.noshi_ids = updates.noshi_ids
+    if (updates.limited_from !== undefined) payload.limited_from = updates.limited_from
+    if (updates.limited_until !== undefined) payload.limited_until = updates.limited_until
+    if (updates.tags !== undefined) payload.tags = updates.tags
+    if (updates.same_day_order_allowed !== undefined) payload.same_day_order_allowed = updates.same_day_order_allowed
+    if (updates.cross_section_image !== undefined) payload.cross_section_image = updates.cross_section_image
+    if (updates.shipping_method !== undefined) payload.shipping_method = updates.shipping_method
+    if (updates.storage_method !== undefined) payload.storage_method = updates.storage_method
+    if (updates.ingredients !== undefined) payload.ingredients = updates.ingredients
+    if (updates.best_before_days !== undefined) payload.best_before_days = updates.best_before_days
+    if (updates.content_quantity !== undefined) payload.content_quantity = updates.content_quantity
 
     const { error } = await supabase
       .from("products")

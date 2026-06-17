@@ -179,28 +179,30 @@ export default function ECProductDetailPage() {
 
       <StepProgress currentStep={2} steps={ecSteps} />
 
-      <div className="px-4 pb-8">
-        <div className="flex justify-center mb-6">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
-            className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-square shadow-[0_8px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 w-[65%] max-w-[80%]"
-          >
-            {product.image ? (
-              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
-            )}
-          </motion.div>
-        </div>
+      <div className="px-4 pb-8 lg:px-8 lg:max-w-5xl lg:mx-auto">
+        <div className="lg:flex lg:gap-10 lg:items-start">
+          <div className="flex justify-center mb-6 lg:mb-0 lg:w-[42%] lg:shrink-0 lg:sticky lg:top-24">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-square shadow-[0_8px_30px_rgba(0,0,0,0.08)] ring-1 ring-black/5 w-[65%] max-w-[80%] lg:w-full lg:max-w-none"
+            >
+              {product.image ? (
+                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
+              )}
+            </motion.div>
+          </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <h1 className="text-xl font-bold text-gray-900">{product.name}</h1>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:flex-1 lg:min-w-0"
+          >
+            <h1 className="text-xl font-bold text-gray-900">{product.name}</h1>
 
           <div className="flex items-start justify-between mt-3 gap-4">
             <div>
@@ -366,7 +368,8 @@ export default function ECProductDetailPage() {
               ))}
             </div>
           )}
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
 
       <AnimatePresence>

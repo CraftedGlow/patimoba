@@ -12,6 +12,8 @@ export interface NoshiItem {
   imageUrl: string | null;
   price: number;
   displayOrder: number;
+  supportedPurposes: string[];
+  nameInputEnabled: boolean;
 }
 
 function toNoshi(row: any): NoshiItem {
@@ -22,6 +24,8 @@ function toNoshi(row: any): NoshiItem {
     imageUrl: row.image_url ?? null,
     price: row.price ?? 0,
     displayOrder: row.display_order ?? 0,
+    supportedPurposes: Array.isArray(row.supported_purposes) ? row.supported_purposes : [],
+    nameInputEnabled: row.name_input_enabled ?? false,
   };
 }
 
@@ -43,24 +47,28 @@ export function useNoshi(storeId: string | undefined) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const addNoshi = async (payload: { name: string; imageUrl: string | null; price: number }) => {
+  const addNoshi = async (payload: { name: string; imageUrl: string | null; price: number; supportedPurposes: string[]; nameInputEnabled: boolean }) => {
     if (!storeId) return { error: "storeId missing" };
     const { error } = await db.from("noshi").insert({
       store_id: storeId,
       name: payload.name,
       image_url: payload.imageUrl,
       price: payload.price,
+      supported_purposes: payload.supportedPurposes,
+      name_input_enabled: payload.nameInputEnabled,
       display_order: noshiList.length,
     });
     if (!error) await fetch();
     return { error: error?.message ?? null };
   };
 
-  const updateNoshi = async (id: string, payload: { name: string; imageUrl: string | null; price: number }) => {
+  const updateNoshi = async (id: string, payload: { name: string; imageUrl: string | null; price: number; supportedPurposes: string[]; nameInputEnabled: boolean }) => {
     const { error } = await db.from("noshi").update({
       name: payload.name,
       image_url: payload.imageUrl,
       price: payload.price,
+      supported_purposes: payload.supportedPurposes,
+      name_input_enabled: payload.nameInputEnabled,
     }).eq("id", id);
     if (!error) await fetch();
     return { error: error?.message ?? null };

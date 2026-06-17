@@ -7,20 +7,19 @@ import { useAuth } from "@/lib/auth-context";
 import { useNoshi, NoshiItem } from "@/hooks/use-noshi";
 import { uploadNoshiImage } from "@/lib/upload-image";
 
+const NOSHI_PRESETS = ["御祝", "内祝", "御礼", "御中元", "御歳暮", "結婚祝", "出産祝", "快気祝", "御供", "志", "その他"];
+
 export function NoshiTab() {
   const { user } = useAuth();
   const storeId = user?.storeId ?? undefined;
   const { noshiList, loading, addNoshi, updateNoshi, deleteNoshi } = useNoshi(storeId);
 
-  const NOSHI_PRESETS = ["御祝", "内祝", "御礼", "御中元", "御歳暮", "結婚祝", "出産祝", "快気祝", "御供", "志", "その他"];
-
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [namePreset, setNamePreset] = useState("");
-  const [nameCustom, setNameCustom] = useState("");
+  const [designName, setDesignName] = useState("");
   const [price, setPrice] = useState("");
-
-  const name = namePreset === "その他" ? nameCustom : namePreset;
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
+  const [nameInputEnabled, setNameInputEnabled] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -31,22 +30,29 @@ export function NoshiTab() {
 
   const clearForm = () => {
     setEditingId(null);
-    setNamePreset("");
-    setNameCustom("");
+    setDesignName("");
     setPrice("");
     setImageUrl(null);
+    setSelectedPurposes([]);
+    setNameInputEnabled(false);
     setError(null);
   };
 
   const startEdit = (item: NoshiItem) => {
     setEditingId(item.id);
-    const isPreset = NOSHI_PRESETS.includes(item.name) && item.name !== "その他";
-    setNamePreset(isPreset ? item.name : "その他");
-    setNameCustom(isPreset ? "" : item.name);
+    setDesignName(item.name);
     setPrice(String(item.price));
     setImageUrl(item.imageUrl);
+    setSelectedPurposes(item.supportedPurposes);
+    setNameInputEnabled(item.nameInputEnabled);
     setError(null);
     setSaved(false);
+  };
+
+  const togglePurpose = (p: string) => {
+    setSelectedPurposes((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
   };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,16 +67,20 @@ export function NoshiTab() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { setError("用途を選択または入力してください"); return; }
+    if (!designName.trim()) { setError("デザイン名を入力してください"); return; }
     const priceNum = parseInt(price) || 0;
     setSaving(true);
     setError(null);
-    let result;
-    if (editingId) {
-      result = await updateNoshi(editingId, { name: name.trim(), imageUrl, price: priceNum });
-    } else {
-      result = await addNoshi({ name: name.trim(), imageUrl, price: priceNum });
-    }
+    const payload = {
+      name: designName.trim(),
+      imageUrl,
+      price: priceNum,
+      supportedPurposes: selectedPurposes,
+      nameInputEnabled,
+    };
+    const result = editingId
+      ? await updateNoshi(editingId, payload)
+      : await addNoshi(payload);
     setSaving(false);
     if (result.error) { setError(result.error); return; }
     setSaved(true);
@@ -88,7 +98,6 @@ export function NoshiTab() {
 
   return (
     <>
-      {/* 650px以下: 縦並び、650px超: 横並び（フォーム左・一覧右） */}
       <div className="flex flex-col gap-6 [@media(min-width:650px)]:flex-row">
 
         {/* フォーム - LEFT */}
@@ -124,28 +133,56 @@ export function NoshiTab() {
               )}
             </div>
 
-            {/* Name */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-gray-600">用途</label>
-              <select
-                value={namePreset}
-                onChange={(e) => { setNamePreset(e.target.value); setNameCustom(""); }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 bg-white"
-              >
-                <option value="">用途を選択</option>
-                {NOSHI_PRESETS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-              {namePreset === "その他" && (
-                <input
-                  type="text"
-                  value={nameCustom}
-                  onChange={(e) => setNameCustom(e.target.value)}
-                  placeholder="用途を入力"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
-                />
+            {/* Design Name */}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1.5">デザイン名</label>
+              <input
+                type="text"
+                value={designName}
+                onChange={(e) => setDesignName(e.target.value)}
+                placeholder="例：蝶結び、のし袋 など"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
+              />
+            </div>
+
+            {/* Supported Purposes */}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-2">対応用途（複数選択可）</label>
+              <div className="flex flex-wrap gap-2">
+                {NOSHI_PRESETS.map((p) => {
+                  const active = selectedPurposes.includes(p);
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => togglePurpose(p)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        active
+                          ? "bg-amber-400 border-amber-400 text-white"
+                          : "bg-white border-gray-200 text-gray-600 hover:border-amber-300"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+              {selectedPurposes.length === 0 && (
+                <p className="text-xs text-gray-400 mt-1.5">未選択の場合、顧客側で用途選択ステップが省略されます</p>
               )}
+            </div>
+
+            {/* Name input toggle */}
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => setNameInputEnabled((v) => !v)}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${nameInputEnabled ? "bg-amber-400" : "bg-gray-200"}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${nameInputEnabled ? "translate-x-4" : ""}`} />
+                </div>
+                <span className="text-xs font-bold text-gray-700">名前・会社名の入力を受け付ける</span>
+              </label>
             </div>
 
             {/* Price */}
@@ -193,7 +230,7 @@ export function NoshiTab() {
           </div>
         </div>
 
-        {/* 一覧 - RIGHT (650px超) / BOTTOM (650px以下) */}
+        {/* 一覧 - RIGHT */}
         <div className="w-full [@media(min-width:650px)]:w-80 [@media(min-width:650px)]:flex-shrink-0">
           <h3 className="text-sm font-bold text-gray-700 mb-3">のし一覧</h3>
           {loading ? (
@@ -203,11 +240,11 @@ export function NoshiTab() {
           ) : noshiList.length === 0 ? (
             <p className="text-xs text-gray-400 py-4 text-center">のしが登録されていません</p>
           ) : (
-            <ul className="space-y-1.5 overflow-y-auto max-h-[420px] pr-1">
+            <ul className="space-y-1.5 overflow-y-auto max-h-[480px] pr-1">
               {noshiList.map((item) => (
                 <li key={item.id}>
                   <div
-                    className={`w-full px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 border transition-colors ${
+                    className={`w-full px-3 py-2.5 rounded-lg text-sm flex items-start gap-2 border transition-colors ${
                       editingId === item.id
                         ? "bg-amber-50 border-amber-200"
                         : "bg-gray-50 border-transparent"
@@ -216,10 +253,20 @@ export function NoshiTab() {
                     <img
                       src={item.imageUrl || "/noshi-default.jpg"}
                       alt=""
-                      className="w-9 h-9 object-cover rounded flex-shrink-0"
+                      className="w-9 h-9 object-cover rounded flex-shrink-0 mt-0.5"
                     />
-                    <span className="flex-1 truncate text-gray-700 font-medium">{item.name}</span>
-                    <span className="text-xs text-gray-400 flex-shrink-0 mr-1">¥{item.price.toLocaleString()}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-700 truncate">{item.name}</p>
+                      {item.supportedPurposes.length > 0 && (
+                        <p className="text-[11px] text-gray-400 truncate mt-0.5">{item.supportedPurposes.join("・")}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-gray-400">¥{item.price.toLocaleString()}</span>
+                        {item.nameInputEnabled && (
+                          <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">名前入力あり</span>
+                        )}
+                      </div>
+                    </div>
                     <button
                       onClick={() => startEdit(item)}
                       className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${

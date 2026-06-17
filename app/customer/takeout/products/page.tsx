@@ -114,8 +114,8 @@ function WholeCakeCard({ cake }: { cake: WholeCakeProduct }) {
               No Image
             </div>
           )}
-          <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none" style={{ backgroundColor: "#f59e0b" }}>
-            ホールケーキ
+          <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none" style={{ backgroundColor: cake.tags.length > 0 ? "#8b5cf6" : "#f59e0b" }}>
+            {cake.tags.length > 0 ? cake.tags[0] : "ホールケーキ"}
           </span>
         </div>
         <h3 className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">

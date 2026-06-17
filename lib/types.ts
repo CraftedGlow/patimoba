@@ -143,6 +143,7 @@ export interface WholeCakeProduct {
   isActive?: boolean
   sameDayOrderAllowed?: boolean
   customOptions: ProductCustomOption[]
+  tags: string[]
 }
 
 export interface CartCandleEntry {

@@ -35,9 +35,11 @@ export default function TakeoutProductDetailPage() {
   // ナンバーキャンドルの index（customOptions の何番目か）
   const [numberCandleOptionIndex, setNumberCandleOptionIndex] = useState<number>(-1);
 
-  // のし
+  // のし（3ステップ: デザイン選択 → 用途選択 → 名前入力）
   const [noshiItems, setNoshiItems] = useState<NoshiItem[]>([]);
+  const [useNoshi, setUseNoshi] = useState(false);
   const [selectedNoshiId, setSelectedNoshiId] = useState<string | null>(null);
+  const [selectedNoshiPurpose, setSelectedNoshiPurpose] = useState<string>("");
   const [noshiName, setNoshiName] = useState("");
 
   useEffect(() => {
@@ -45,6 +47,8 @@ export default function TakeoutProductDetailPage() {
       fetchNoshiByIds(product.noshi_ids).then(setNoshiItems);
     }
   }, [product?.id, product?.noshi_enabled]);
+
+  const selectedNoshiDesign = noshiItems.find((n) => n.id === selectedNoshiId) ?? null;
 
   // ナンバーキャンドルのインデックスを特定
   useEffect(() => {
@@ -97,8 +101,7 @@ export default function TakeoutProductDetailPage() {
   });
 
   // 合計追加金額
-  const selectedNoshi = noshiItems.find((n) => n.id === selectedNoshiId) ?? null;
-  const noshiAdditional = selectedNoshi?.price ?? 0;
+  const noshiAdditional = (useNoshi && selectedNoshiDesign) ? selectedNoshiDesign.price : 0;
 
   const numberCandleTotalCount = numberCandleSelections.reduce((s, r) => s + r.qty, 0);
 
@@ -147,10 +150,18 @@ export default function TakeoutProductDetailPage() {
       quantity,
       storeId: product.store_id,
       isTakeout: true,
-      customization: (cartCustomOptions.length > 0 || selectedNoshi)
+      customization: (cartCustomOptions.length > 0 || (useNoshi && selectedNoshiDesign))
         ? {
             customOptions: cartCustomOptions,
-            ...(selectedNoshi ? { noshi: { id: selectedNoshi.id, name: selectedNoshi.name, displayName: noshiName.trim() || undefined, price: selectedNoshi.price } } : {}),
+            ...(useNoshi && selectedNoshiDesign ? {
+        noshi: {
+          id: selectedNoshiDesign.id,
+          name: selectedNoshiDesign.name,
+          purpose: selectedNoshiPurpose || undefined,
+          displayName: noshiName.trim() || undefined,
+          price: selectedNoshiDesign.price,
+        }
+      } : {}),
           }
         : undefined,
     });
@@ -398,50 +409,95 @@ export default function TakeoutProductDetailPage() {
             </div>
           )}
 
-          {/* のし選択 */}
+          {/* のし（3ステップ） */}
           {product.noshi_enabled && noshiItems.length > 0 && (
-            <div className="mt-6 space-y-2">
+            <div className="mt-6 space-y-4">
               <h3 className="text-sm font-bold text-gray-900">のし</h3>
-              <div className="space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => { setSelectedNoshiId(null); setNoshiName(""); }}
-                  className={`w-full flex items-center px-3 py-2.5 rounded-lg border text-sm transition-colors ${selectedNoshiId === null ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
-                >
-                  <span className={`w-4 h-4 rounded-full border-2 mr-2 flex-shrink-0 ${selectedNoshiId === null ? "border-amber-500 bg-amber-500" : "border-gray-300"}`} />
-                  なし
-                </button>
-                {noshiItems.map((n) => (
-                  <div key={n.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedNoshiId(n.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${selectedNoshiId === n.id ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${selectedNoshiId === n.id ? "border-amber-500 bg-amber-500" : "border-gray-300"}`} />
-                        <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-8 h-8 rounded object-cover" />
-                        {n.name}
-                      </span>
-                      {n.price > 0 && <span className="text-xs text-gray-600">+¥{n.price.toLocaleString()}</span>}
-                    </button>
 
-                    {/* のし名前入力 */}
-                    {selectedNoshiId === n.id && (
-                      <div className="mt-2 ml-6 space-y-1.5">
-                        <label className="text-xs font-bold text-gray-600 block">お名前（のし上の表記）</label>
-                        <textarea
-                          value={noshiName}
-                          onChange={(e) => setNoshiName(e.target.value)}
-                          placeholder={"例：山田 太郎\n（改行可）"}
-                          rows={2}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 resize-none"
-                        />
-                      </div>
-                    )}
+              {/* Step 1: のしを使うかチェック */}
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => {
+                    setUseNoshi((v) => !v);
+                    setSelectedNoshiId(null);
+                    setSelectedNoshiPurpose("");
+                    setNoshiName("");
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${useNoshi ? "bg-amber-400" : "bg-gray-200"}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${useNoshi ? "translate-x-4" : ""}`} />
+                </div>
+                <span className="text-sm text-gray-700 font-medium">のしを付ける</span>
+              </label>
+
+              {useNoshi && (
+                <div className="space-y-4 pl-1">
+                  {/* Step 2: デザイン選択 */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-600">デザインを選択</p>
+                    <div className="space-y-1.5">
+                      {noshiItems.map((n) => {
+                        const active = selectedNoshiId === n.id;
+                        return (
+                          <button
+                            key={n.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedNoshiId(n.id);
+                              setSelectedNoshiPurpose("");
+                              setNoshiName("");
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${active ? "border-amber-500 bg-amber-500" : "border-gray-300"}`} />
+                              <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                              <span className="font-medium">{n.name}</span>
+                            </span>
+                            {n.price > 0 && <span className="text-xs text-gray-500 flex-shrink-0">+¥{n.price.toLocaleString()}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Step 3: 用途選択（supportedPurposesがある場合のみ） */}
+                  {selectedNoshiDesign && selectedNoshiDesign.supportedPurposes.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-gray-600">用途を選択</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNoshiDesign.supportedPurposes.map((p) => {
+                          const active = selectedNoshiPurpose === p;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => setSelectedNoshiPurpose(active ? "" : p)}
+                              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${active ? "bg-amber-400 border-amber-400 text-white font-medium" : "bg-white border-gray-200 text-gray-600 hover:border-amber-300"}`}
+                            >
+                              {p}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 4: 名前入力（nameInputEnabledの場合のみ） */}
+                  {selectedNoshiDesign && selectedNoshiDesign.nameInputEnabled && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-600 block">お名前・会社名</label>
+                      <textarea
+                        value={noshiName}
+                        onChange={(e) => setNoshiName(e.target.value)}
+                        placeholder={"例：山田 太郎\n（改行可）"}
+                        rows={2}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 resize-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

@@ -46,6 +46,13 @@ export default function ECProductsPage() {
   const loading = productsLoading;
   const filtered = products;
 
+  // PC表示時のカード幅: 件数が少ない場合は均等割りせず、わざと余白を残すサイズにする
+  const lgCardWidthClass =
+    filtered.length === 1 ? "lg:w-[25%]" :
+    filtered.length === 2 ? "lg:w-[40%]" :
+    filtered.length === 3 ? "lg:w-[30%]" :
+    "lg:w-[23%]";
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -72,13 +79,14 @@ export default function ECProductsPage() {
           <div className="h-1 w-20 bg-amber-400 rounded mt-1" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap">
           {filtered.map((product, i) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
+              className={`${lgCardWidthClass} lg:shrink-0`}
             >
               <ProductCard product={product} basePath="/customer/ec" />
             </motion.div>

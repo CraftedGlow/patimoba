@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useNoshi, NoshiItem } from "@/hooks/use-noshi";
 import { uploadNoshiImage } from "@/lib/upload-image";
 
-const NOSHI_PRESETS = ["御祝", "内祝", "御礼", "御中元", "御歳暮", "結婚祝", "出産祝", "快気祝", "御供", "志", "その他"];
+const NOSHI_PRESETS = ["御祝", "内祝", "御礼", "御中元", "御歳暮", "結婚祝", "出産祝", "快気祝", "御供", "志"];
 
 export function NoshiTab() {
   const { user } = useAuth();

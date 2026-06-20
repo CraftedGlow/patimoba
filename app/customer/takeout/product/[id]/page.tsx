@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { Check } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
@@ -412,8 +413,6 @@ export default function TakeoutProductDetailPage() {
           {/* のし（3ステップ） */}
           {product.noshi_enabled && noshiItems.length > 0 && (
             <div className="mt-6 space-y-4">
-              <h3 className="text-sm font-bold text-gray-900">のし</h3>
-
               {/* Step 1: のしを使うかチェック */}
               <label className="flex items-center gap-3 cursor-pointer">
                 <div
@@ -435,27 +434,40 @@ export default function TakeoutProductDetailPage() {
                   {/* Step 2: デザイン選択 */}
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-gray-600">デザインを選択</p>
-                    <div className="space-y-1.5">
+                    <div className="grid grid-cols-3 gap-2">
                       {noshiItems.map((n) => {
                         const active = selectedNoshiId === n.id;
                         return (
-                          <button
+                          <motion.button
                             key={n.id}
                             type="button"
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => {
                               setSelectedNoshiId(n.id);
                               setSelectedNoshiPurpose("");
                               setNoshiName("");
                             }}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
+                            className={`relative rounded-xl overflow-hidden border-2 text-left transition-colors ${
+                              active
+                                ? "border-amber-400 bg-amber-50"
+                                : "border-gray-200 bg-white hover:border-amber-200 hover:bg-amber-50/30"
+                            }`}
                           >
-                            <span className="flex items-center gap-2.5">
-                              <span className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${active ? "border-amber-500 bg-amber-500" : "border-gray-300"}`} />
-                              <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
-                              <span className="font-medium">{n.name}</span>
-                            </span>
-                            {n.price > 0 && <span className="text-xs text-gray-500 flex-shrink-0">+¥{n.price.toLocaleString()}</span>}
-                          </button>
+                            <div className="w-full aspect-square bg-gray-100 overflow-hidden">
+                              <img src={n.imageUrl || "/noshi-default.jpg"} alt={n.name} className="w-full h-full object-cover" />
+                            </div>
+                            {active && (
+                              <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center">
+                                <Check className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                            <div className="p-2">
+                              <p className="text-xs font-bold leading-tight line-clamp-2">{n.name}</p>
+                              <p className={`text-xs mt-0.5 font-medium ${n.price === 0 ? "text-green-600" : "text-amber-600"}`}>
+                                {n.price === 0 ? "無料" : `+¥${n.price.toLocaleString()}`}
+                              </p>
+                            </div>
+                          </motion.button>
                         );
                       })}
                     </div>

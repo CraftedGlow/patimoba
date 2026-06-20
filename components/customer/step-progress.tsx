@@ -10,7 +10,7 @@ interface StepProgressProps {
 
 export function StepProgress({ currentStep, steps, onStepClick }: StepProgressProps) {
   return (
-    <div className="flex items-center justify-between px-4 pt-[10px] pb-3">
+    <div className="flex items-center justify-between px-4 pt-[10px] pb-3 max-w-5xl mx-auto">
       {steps.map((label, i) => {
         const stepNum = i + 1;
         const isActive = stepNum <= currentStep;

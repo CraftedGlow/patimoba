@@ -73,13 +73,13 @@ export default function ECProductsPage() {
 
       <StepProgress currentStep={2} steps={ecSteps} />
 
-      <div className={`px-4 ${itemCount > 0 ? "pb-28" : "pb-8"}`}>
+      <div className={`px-4 max-w-5xl mx-auto ${itemCount > 0 ? "pb-28" : "pb-8"}`}>
         <div className="mb-4">
           <h2 className="text-lg font-bold">EC商品一覧</h2>
           <div className="h-1 w-20 bg-amber-400 rounded mt-1" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap">
+        <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:justify-center">
           {filtered.map((product, i) => (
             <motion.div
               key={product.id}

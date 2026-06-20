@@ -179,7 +179,7 @@ export default function ECProductDetailPage() {
 
       <StepProgress currentStep={2} steps={ecSteps} />
 
-      <div className="px-4 pb-8 lg:px-8 lg:max-w-5xl lg:mx-auto">
+      <div className="px-4 pb-8 lg:px-8 max-w-5xl mx-auto">
         <div className="lg:flex lg:gap-10 lg:items-start">
           <div className="flex justify-center mb-6 lg:mb-0 lg:w-[42%] lg:shrink-0 lg:sticky lg:top-24">
             <motion.div

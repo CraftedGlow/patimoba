@@ -32,8 +32,6 @@ export function LineLoginScreen({
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
-
       {onBack ? (
         <div className="px-4 pt-3 pb-1">
           <button

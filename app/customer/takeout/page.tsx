@@ -158,7 +158,6 @@ export default function TakeoutStorePage() {
   if (!loginDone) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
-        <div className="bg-[#FFF9C4] h-2.5 shrink-0" aria-hidden />
         <div className="flex-1 relative flex items-center justify-center px-8">
           <motion.div
             initial={{ opacity: 0, y: -8 }}

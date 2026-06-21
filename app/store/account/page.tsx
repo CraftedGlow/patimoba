@@ -543,7 +543,7 @@ export default function StoreAccountPage() {
                   </div>
                 </div>
               ) : (
-                <div className="w-16 h-16 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors">
+                <div className="w-16 h-16 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-600 hover:border-amber-400 hover:text-amber-500 transition-colors">
                   {logoUploading ? (
                     <LineSpinner size={20} />
                   ) : (
@@ -564,7 +564,7 @@ export default function StoreAccountPage() {
 
           <div>
             <p className="text-sm text-gray-500 mb-2">店舗外観写真</p>
-            <p className="text-xs text-gray-400 mb-3">顧客向けTOPページのヒーロー画像として表示されます</p>
+            <p className="text-xs text-gray-600 mb-3">顧客向けTOPページのヒーロー画像として表示されます</p>
             <input
               ref={imageInputRef}
               type="file"
@@ -597,7 +597,7 @@ export default function StoreAccountPage() {
                   )}
                 </div>
               ) : (
-                <div className="w-full h-36 max-w-sm rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 hover:border-amber-400 hover:text-amber-500 transition-colors">
+                <div className="w-full h-36 max-w-sm rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-600 hover:border-amber-400 hover:text-amber-500 transition-colors">
                   {imageUploading ? (
                     <LineSpinner size={20} />
                   ) : (
@@ -665,7 +665,7 @@ export default function StoreAccountPage() {
                 変更
               </motion.button>
             </div>
-            <p className="text-xs text-gray-400 mt-1">注文から受取まで最低限必要な時間</p>
+            <p className="text-xs text-gray-600 mt-1">注文から受取まで最低限必要な時間</p>
           </div>
 
           <div>
@@ -722,7 +722,7 @@ export default function StoreAccountPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400">定休日未設定</p>
+                <p className="text-sm text-gray-600">定休日未設定</p>
               )}
               <motion.button
                 type="button"
@@ -751,7 +751,7 @@ export default function StoreAccountPage() {
               </motion.button>
             </div>
             {blackoutPeriods.length === 0 ? (
-              <p className="text-xs text-gray-400">停止期間が設定されていません</p>
+              <p className="text-xs text-gray-600">停止期間が設定されていません</p>
             ) : (
               <div className="space-y-2">
                 {blackoutPeriods.map((p) => (
@@ -771,7 +771,7 @@ export default function StoreAccountPage() {
                 ))}
               </div>
             )}
-            <p className="text-xs text-gray-400 mt-1.5">この期間は顧客の予約受付を停止します</p>
+            <p className="text-xs text-gray-600 mt-1.5">この期間は顧客の予約受付を停止します</p>
           </div>
         </div>
       </div>
@@ -788,7 +788,7 @@ export default function StoreAccountPage() {
             <div>
               <label className="block text-sm text-gray-500 mb-1.5">現在のパスワード</label>
               <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                 <PasswordInput
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -803,7 +803,7 @@ export default function StoreAccountPage() {
               {hasPassword ? "新しいパスワード" : "パスワード"}
             </label>
             <div className="relative">
-              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
               <PasswordInput
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -817,7 +817,7 @@ export default function StoreAccountPage() {
               {hasPassword ? "新しいパスワード（確認）" : "パスワード（確認）"}
             </label>
             <div className="relative">
-              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
               <PasswordInput
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -1195,7 +1195,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            className="absolute top-4 right-4 text-gray-600 hover:text-gray-600 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

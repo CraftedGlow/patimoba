@@ -113,7 +113,7 @@ export function DatePickerPopup({
         </button>
       </div>
 
-      <div className="grid grid-cols-7 text-center text-xs text-gray-400 mb-1">
+      <div className="grid grid-cols-7 text-center text-xs text-gray-600 mb-1">
         {dayHeaders.map((d) => (
           <div key={d} className="py-1">
             {d}

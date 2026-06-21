@@ -59,7 +59,7 @@ function PrivacyContent() {
             {privacyPolicyText}
           </p>
         ) : (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-600">
             プライバシーポリシーは準備中です。詳しくは店舗までお問い合わせください。
           </p>
         )}

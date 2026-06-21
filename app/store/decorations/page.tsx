@@ -30,7 +30,7 @@ const CATEGORY_ICON: Record<string, LucideIcon> = {
 
 function CategoryIcon({ category, size = 16 }: { category: string; size?: number }) {
   const Icon = CATEGORY_ICON[category] ?? Tag
-  return <Icon size={size} className="text-gray-400" />
+  return <Icon size={size} className="text-gray-600" />
 }
 
 // ────────────────────────────────────────────
@@ -152,7 +152,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
             whileTap={{ scale: 0.98 }}
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="w-28 h-28 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-amber-400 hover:bg-amber-50 transition-colors"
+            className="w-28 h-28 rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 text-gray-600 hover:border-amber-400 hover:bg-amber-50 transition-colors"
           >
             {uploading ? <LineSpinner size={20} /> : <ImagePlus className="w-6 h-6" />}
             <span className="text-xs">画像を追加</span>
@@ -173,7 +173,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
             placeholder="0"
             className="w-32 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
           />
-          <span className="text-xs text-gray-400">（0 = 無料）</span>
+          <span className="text-xs text-gray-600">（0 = 無料）</span>
         </div>
       </div>
 
@@ -205,7 +205,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
             >
               <input type="date" value={seasonStart} onChange={(e) => setSeasonStart(e.target.value)}
                 className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
-              <span className="text-xs text-gray-400">〜</span>
+              <span className="text-xs text-gray-600">〜</span>
               <input type="date" value={seasonEnd} onChange={(e) => setSeasonEnd(e.target.value)}
                 className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm" />
             </motion.div>
@@ -322,7 +322,7 @@ function GroupForm({ initial, onSave, onClose }: GroupFormProps) {
               <input type="number" value={maxSelections} onChange={(e) => setMaxSelections(e.target.value)} min={1}
                 placeholder="上限なし"
                 className="w-28 border border-gray-300 rounded-lg px-3 py-1.5 text-sm" />
-              <span className="text-xs text-gray-400">個まで（空欄 = 上限なし）</span>
+              <span className="text-xs text-gray-600">個まで（空欄 = 上限なし）</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -459,7 +459,7 @@ export default function DecorationsPage() {
           </div>
 
           {filteredDecos.length === 0 ? (
-            <p className="text-sm text-gray-400 py-10 text-center">登録されたデコレーションがありません</p>
+            <p className="text-sm text-gray-600 py-10 text-center">登録されたデコレーションがありません</p>
           ) : (
             <div className="space-y-2">
               {filteredDecos.map((deco) => (
@@ -500,11 +500,11 @@ export default function DecorationsPage() {
                       <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${deco.isActive ? "translate-x-4" : "translate-x-0"}`} />
                     </button>
                     <button type="button" onClick={() => setDecoPanel(deco.id)}
-                      className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                      className="p-2 rounded-lg text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition-colors">
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button type="button" onClick={() => setDeleteDecoId(deco.id)}
-                      className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                      className="p-2 rounded-lg text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -531,7 +531,7 @@ export default function DecorationsPage() {
           </div>
 
           {groups.length === 0 ? (
-            <p className="text-sm text-gray-400 py-10 text-center">グループがありません</p>
+            <p className="text-sm text-gray-600 py-10 text-center">グループがありません</p>
           ) : (
             <div className="space-y-3">
               {groups.map((group) => {
@@ -540,7 +540,7 @@ export default function DecorationsPage() {
                   <div key={group.id} className="border border-gray-200 rounded-xl bg-white overflow-hidden">
                     <div className="flex items-center gap-3 px-4 py-3">
                       <button type="button" onClick={() => toggleExpand(group.id)}
-                        className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                        className="p-1 text-gray-600 hover:text-gray-600 transition-colors">
                         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
                       <div className="flex-1">
@@ -556,11 +556,11 @@ export default function DecorationsPage() {
                       </div>
                       <div className="flex gap-1">
                         <button type="button" onClick={() => setGroupPanel(group.id)}
-                          className="p-2 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                          className="p-2 rounded-lg text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition-colors">
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button type="button" onClick={() => setDeleteGroupId(group.id)}
-                          className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                          className="p-2 rounded-lg text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -576,7 +576,7 @@ export default function DecorationsPage() {
                         >
                           <div className="px-4 py-3 space-y-2">
                             {group.items.length === 0 ? (
-                              <p className="text-xs text-gray-400">まだデコレーションが追加されていません</p>
+                              <p className="text-xs text-gray-600">まだデコレーションが追加されていません</p>
                             ) : (
                               <>
                                 {group.items.every((i) => !i.isActive) && (
@@ -644,7 +644,7 @@ export default function DecorationsPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-base font-bold">{editingDeco ? "デコレーション編集" : "デコレーション登録"}</h2>
-                  <button type="button" onClick={() => setDecoPanel("closed")} className="text-gray-400 hover:text-gray-600">
+                  <button type="button" onClick={() => setDecoPanel("closed")} className="text-gray-600 hover:text-gray-600">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -693,7 +693,7 @@ export default function DecorationsPage() {
             >
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-base font-bold">{editingGroup ? "グループ編集" : "グループ作成"}</h2>
-                <button type="button" onClick={() => setGroupPanel("closed")} className="text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={() => setGroupPanel("closed")} className="text-gray-600 hover:text-gray-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -727,13 +727,13 @@ export default function DecorationsPage() {
             >
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base font-bold">「{addingGroup.name}」にデコレーションを追加</h2>
-                <button type="button" onClick={() => setAddToGroupId(null)} className="text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={() => setAddToGroupId(null)} className="text-gray-600 hover:text-gray-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="space-y-2">
                 {decorations.length === 0 && (
-                  <p className="text-sm text-gray-400 text-center py-4">先にデコレーションを登録してください</p>
+                  <p className="text-sm text-gray-600 text-center py-4">先にデコレーションを登録してください</p>
                 )}
                 {decorations.map((deco) => {
                   const alreadyIn = addingGroup.items.some((i) => i.id === deco.id)
@@ -746,7 +746,7 @@ export default function DecorationsPage() {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium">{deco.name}</p>
-                        <p className="text-xs text-gray-400">{deco.price === 0 ? "無料" : `+¥${deco.price.toLocaleString()}`}</p>
+                        <p className="text-xs text-gray-600">{deco.price === 0 ? "無料" : `+¥${deco.price.toLocaleString()}`}</p>
                       </div>
                       {alreadyIn ? (
                         <span className="flex items-center gap-1 text-xs text-green-600 font-bold">

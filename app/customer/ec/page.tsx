@@ -75,7 +75,7 @@ export default function ECStorePage() {
             <LineSpinner size={24} />
           </div>
         ) : filteredStores.length === 0 ? (
-          <div className="text-center py-20 text-gray-400 text-sm">
+          <div className="text-center py-20 text-gray-600 text-sm">
             店舗が見つかりませんでした
           </div>
         ) : (
@@ -100,7 +100,7 @@ export default function ECStorePage() {
                           className="w-full h-full object-contain p-1"
                         />
                       ) : (
-                        <span className="text-[10px] text-gray-400 font-medium text-center leading-tight px-1">
+                        <span className="text-[10px] text-gray-600 font-medium text-center leading-tight px-1">
                           {store.name.slice(0, 4)}
                         </span>
                       )}

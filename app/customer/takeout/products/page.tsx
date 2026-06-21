@@ -56,7 +56,7 @@ function RegistrationCard({ product, basePath }: { product: ProductRegistration;
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+            <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
               No Image
             </div>
           )}
@@ -110,7 +110,7 @@ function WholeCakeCard({ cake }: { cake: WholeCakeProduct }) {
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+            <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
               No Image
             </div>
           )}
@@ -279,7 +279,7 @@ export default function TakeoutProductsPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 transition-colors"
             >
               {selectedCategory}
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
+              <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
             </button>
 
             <AnimatePresence>
@@ -332,7 +332,7 @@ export default function TakeoutProductsPage() {
           </div>
         ) : selectedCategory === "すべて" ? (
           allGridItems.length === 0 ? (
-            <div className="text-center py-20 text-gray-400 text-sm">商品が見つかりませんでした</div>
+            <div className="text-center py-20 text-gray-600 text-sm">商品が見つかりませんでした</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
               {allGridItems.map((item, i) => (
@@ -350,7 +350,7 @@ export default function TakeoutProductsPage() {
             </div>
           )
         ) : filtered.length === 0 && visibleWholeCakes.length === 0 ? (
-          <div className="text-center py-20 text-gray-400 text-sm">
+          <div className="text-center py-20 text-gray-600 text-sm">
             商品が見つかりませんでした
           </div>
         ) : (

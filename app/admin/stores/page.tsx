@@ -168,7 +168,7 @@ export default function AdminStoresPage() {
       <div className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
             <input
               type="text"
               placeholder="店舗名、オーナー名、所在地で検索..."
@@ -301,7 +301,7 @@ export default function AdminStoresPage() {
             <LineSpinner size={30} />
           </div>
         ) : filteredStores.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-gray-600">
             店舗が見つかりません
           </div>
         ) : (
@@ -330,7 +330,7 @@ export default function AdminStoresPage() {
                           <p className="text-sm truncate">{store.name || "-"}</p>
                         </div>
                         <div className="flex items-start gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-gray-600 mt-0.5 flex-shrink-0" />
                           <div>
                             <p className="text-xs text-gray-500">所在地</p>
                             <p className="text-sm">{store.address || "-"}</p>
@@ -346,7 +346,7 @@ export default function AdminStoresPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
+                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
                         <span>登録日: {store.created_at ? new Date(store.created_at).toLocaleDateString("ja-JP") : "-"}</span>
                       </div>
                     </div>
@@ -357,28 +357,28 @@ export default function AdminStoresPage() {
                         title={store.email ? `${store.email} にメール` : "メール未登録"}
                         className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
                       >
-                        <Mail className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                        <Mail className="w-4 h-4 text-gray-600 group-hover:text-blue-500" />
                       </button>
                       <button
                         onClick={() => handlePhoneClick(store)}
                         title={store.phone ? `${store.phone} に電話` : "電話番号未登録"}
                         className="p-2 hover:bg-green-50 rounded-lg transition-colors group"
                       >
-                        <Phone className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
+                        <Phone className="w-4 h-4 text-gray-600 group-hover:text-green-500" />
                       </button>
                       <button
                         onClick={() => router.push(`/admin/stores/${store.id}/edit`)}
                         title="編集"
                         className="p-2 hover:bg-amber-50 rounded-lg transition-colors group"
                       >
-                        <Pencil className="w-4 h-4 text-gray-400 group-hover:text-amber-500" />
+                        <Pencil className="w-4 h-4 text-gray-600 group-hover:text-amber-500" />
                       </button>
                       <button
                         onClick={() => setDeleteTarget(store)}
                         title="削除"
                         className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
                       >
-                        <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
+                        <Trash2 className="w-4 h-4 text-gray-600 group-hover:text-red-500" />
                       </button>
                     </div>
                   </div>
@@ -409,7 +409,7 @@ export default function AdminStoresPage() {
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+                className="absolute top-3 right-3 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>

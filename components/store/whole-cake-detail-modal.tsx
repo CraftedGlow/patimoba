@@ -137,7 +137,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
               {order.pickupTime ? ` ${order.pickupTime.slice(0, 5)}` : ""}
             </p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-400">
+          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -149,7 +149,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
               <LineSpinner size={20} />
             </div>
           ) : options.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">詳細情報がありません</p>
+            <p className="text-sm text-gray-600 text-center py-8">詳細情報がありません</p>
           ) : (
             <div className="space-y-2">
               {options.map((o, i) => (

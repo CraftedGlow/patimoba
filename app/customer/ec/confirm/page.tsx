@@ -369,7 +369,7 @@ export default function ECConfirmPage() {
       <div className="px-4 md:px-8 pb-10 md:max-w-2xl md:mx-auto">
         <div className="text-center mb-5">
           <h2 className="text-lg font-bold">注文内容の確認</h2>
-          <p className="text-xs text-gray-400 mt-0.5">まだ注文は確定していません</p>
+          <p className="text-xs text-gray-600 mt-0.5">まだ注文は確定していません</p>
         </div>
 
         {/* お名前 */}
@@ -398,7 +398,7 @@ export default function ECConfirmPage() {
             placeholder="09012345678"
             maxLength={11}
             className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
-          <p className="text-xs text-gray-400 mt-1">※日中に連絡の取れる電話番号</p>
+          <p className="text-xs text-gray-600 mt-1">※日中に連絡の取れる電話番号</p>
         </div>
 
         {/* メールアドレス（ゲスト注文時のみ：名前→電話番号→メールの順） */}
@@ -411,7 +411,7 @@ export default function ECConfirmPage() {
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
               className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
-            <p className="text-xs text-gray-400 mt-1">※注文確認・発送通知をお送りします</p>
+            <p className="text-xs text-gray-600 mt-1">※注文確認・発送通知をお送りします</p>
           </div>
         )}
 
@@ -465,7 +465,7 @@ export default function ECConfirmPage() {
           {shippingAddress ? (
             <p className="text-sm text-gray-700 leading-relaxed">{fmtAddress(shippingAddress)}</p>
           ) : (
-            <p className="text-sm text-gray-400">未入力</p>
+            <p className="text-sm text-gray-600">未入力</p>
           )}
         </div>
 
@@ -517,7 +517,7 @@ export default function ECConfirmPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold">¥{lineTotal.toLocaleString()}</p>
-                    {item.quantity > 1 && <p className="text-xs text-gray-400">×{item.quantity}</p>}
+                    {item.quantity > 1 && <p className="text-xs text-gray-600">×{item.quantity}</p>}
                   </div>
                 </div>
               );
@@ -544,7 +544,7 @@ export default function ECConfirmPage() {
               <div className="text-right">
                 <span className="text-red-500 font-bold text-lg">{earnedPoints}</span>
                 <span className="text-red-500 text-sm ml-0.5">ポイント</span>
-                <p className="text-xs text-gray-400">1ポイント=1円</p>
+                <p className="text-xs text-gray-600">1ポイント=1円</p>
               </div>
             </div>
           </div>
@@ -578,7 +578,7 @@ export default function ECConfirmPage() {
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               className="fixed left-6 right-6 top-[25%] bg-white rounded-2xl shadow-2xl z-[70] p-6">
-              <button onClick={() => setShowPointModal(false)} className="absolute top-4 right-4 text-gray-400">
+              <button onClick={() => setShowPointModal(false)} className="absolute top-4 right-4 text-gray-600">
                 <X className="w-5 h-5" />
               </button>
               <div className="flex items-baseline justify-center gap-2 mb-6">
@@ -650,7 +650,7 @@ export default function ECConfirmPage() {
               <p className="text-sm text-gray-500 mb-5">
                 ご注文を受け付けました。準備が整い次第発送いたします。
               </p>
-              <p className="text-xs text-gray-400 mb-4">{countdown}秒後に自動で商品一覧に戻ります</p>
+              <p className="text-xs text-gray-600 mb-4">{countdown}秒後に自動で商品一覧に戻ります</p>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   console.log("[ec-confirm] 商品一覧に戻るボタン clicked");

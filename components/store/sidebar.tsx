@@ -79,7 +79,7 @@ export function StoreSidebar() {
       {/* モバイル: 閉じるボタン */}
       <button
         onClick={() => setMobileOpen(false)}
-        className="lg:hidden absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-600"
+        className="lg:hidden absolute top-3 right-3 p-1 text-gray-600 hover:text-gray-600"
         aria-label="メニューを閉じる"
       >
         <XIcon className="w-5 h-5" />

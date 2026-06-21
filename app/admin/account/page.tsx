@@ -340,7 +340,7 @@ export default function AdminAccountPage() {
                 メールアドレス <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                 <input
                   type="email"
                   value={email}
@@ -355,7 +355,7 @@ export default function AdminAccountPage() {
                 電話番号
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                 <input
                   type="tel"
                   value={phone}
@@ -372,7 +372,7 @@ export default function AdminAccountPage() {
                     パスワード <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                     <PasswordInput
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
@@ -386,7 +386,7 @@ export default function AdminAccountPage() {
                     パスワード（確認） <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                     <PasswordInput
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -423,7 +423,7 @@ export default function AdminAccountPage() {
                   新しいパスワード
                 </label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                   <PasswordInput
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -437,7 +437,7 @@ export default function AdminAccountPage() {
                   新しいパスワード（確認）
                 </label>
                 <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                   <PasswordInput
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -472,7 +472,7 @@ export default function AdminAccountPage() {
                 パスワードを変更
               </motion.button>
               {isNew && (
-                <p className="text-xs text-gray-400 text-center">
+                <p className="text-xs text-gray-600 text-center">
                   先にアカウントを登録してからパスワードを変更できます
                 </p>
               )}

@@ -119,7 +119,7 @@ export function NoshiTab() {
                 ) : imageUrl ? (
                   <img src={imageUrl} alt="のし" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="flex flex-col items-center gap-1 text-gray-400">
+                  <div className="flex flex-col items-center gap-1 text-gray-600">
                     <ImagePlus size={24} />
                     <span className="text-xs">画像を追加</span>
                   </div>
@@ -127,7 +127,7 @@ export function NoshiTab() {
               </div>
               <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               {imageUrl && (
-                <button onClick={() => setImageUrl(null)} className="mt-1 text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
+                <button onClick={() => setImageUrl(null)} className="mt-1 text-xs text-gray-600 hover:text-red-500 flex items-center gap-1">
                   <X size={12} />画像を削除
                 </button>
               )}
@@ -192,7 +192,7 @@ export function NoshiTab() {
                 })}
               </div>
               {selectedPurposes.length === 0 && (
-                <p className="text-xs text-gray-400 mt-1.5">未選択の場合、顧客側で用途選択ステップが省略されます</p>
+                <p className="text-xs text-gray-600 mt-1.5">未選択の場合、顧客側で用途選択ステップが省略されます</p>
               )}
             </div>
 
@@ -262,7 +262,7 @@ export function NoshiTab() {
               <LineSpinner size={20} />
             </div>
           ) : noshiList.length === 0 ? (
-            <p className="text-xs text-gray-400 py-4 text-center">のしが登録されていません</p>
+            <p className="text-xs text-gray-600 py-4 text-center">のしが登録されていません</p>
           ) : (
             <ul className="space-y-1.5 overflow-y-auto max-h-[480px] pr-1">
               {noshiList.map((item) => (
@@ -282,10 +282,10 @@ export function NoshiTab() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-700 truncate">{item.name}</p>
                       {item.supportedPurposes.length > 0 && (
-                        <p className="text-[11px] text-gray-400 truncate mt-0.5">{item.supportedPurposes.join("・")}</p>
+                        <p className="text-[11px] text-gray-600 truncate mt-0.5">{item.supportedPurposes.join("・")}</p>
                       )}
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-gray-400">¥{item.price.toLocaleString()}</span>
+                        <span className="text-xs text-gray-600">¥{item.price.toLocaleString()}</span>
                         {item.nameInputEnabled && (
                           <span className="text-[10px] bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded">名前入力あり</span>
                         )}

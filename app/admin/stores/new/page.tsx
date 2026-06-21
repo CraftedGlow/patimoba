@@ -287,16 +287,16 @@ export default function AdminStoreNewPage() {
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
-                  <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
+                  <Upload className="w-7 h-7 text-gray-600 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">ロゴをアップロード</p>
-                  <p className="text-xs text-gray-400 mt-1">JPEG, PNG, WebP対応</p>
+                  <p className="text-xs text-gray-600 mt-1">JPEG, PNG, WebP対応</p>
                 </div>
               )}
             </label>
           </Field>
 
           <Field label="店舗外観写真">
-            <p className="text-xs text-gray-400 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
+            <p className="text-xs text-gray-600 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
             <label className="block">
               <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
               {imagePreview ? (
@@ -308,9 +308,9 @@ export default function AdminStoreNewPage() {
                 </div>
               ) : (
                 <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
-                  <Upload className="w-7 h-7 text-gray-400 mx-auto mb-2" />
+                  <Upload className="w-7 h-7 text-gray-600 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">外観写真をアップロード</p>
-                  <p className="text-xs text-gray-400 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
+                  <p className="text-xs text-gray-600 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
                 </div>
               )}
             </label>
@@ -408,7 +408,7 @@ export default function AdminStoreNewPage() {
             className={`px-12 sm:px-16 py-3.5 rounded-full font-bold text-base transition-all flex items-center gap-2 ${
               !saving
                 ? "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-gray-200 text-gray-600 cursor-not-allowed"
             }`}
           >
             {saving && <LineSpinner size={20} />}

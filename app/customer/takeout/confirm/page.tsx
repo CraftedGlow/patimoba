@@ -366,7 +366,7 @@ export default function TakeoutConfirmPage() {
       <div className="px-4 md:px-8 lg:px-12 pb-10 md:max-w-2xl md:mx-auto">
         <div className="text-center mb-5">
           <h2 className="text-lg font-bold">注文内容の確認</h2>
-          <p className="text-xs text-gray-400 mt-0.5">まだ注文は確定していません</p>
+          <p className="text-xs text-gray-600 mt-0.5">まだ注文は確定していません</p>
         </div>
 
         {/* 受け取り日時 (表示のみ) */}
@@ -417,7 +417,7 @@ export default function TakeoutConfirmPage() {
             maxLength={11}
             className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent placeholder:text-gray-300"
           />
-          <p className="text-xs text-gray-400 mt-1">※日中に連絡の取れる電話番号</p>
+          <p className="text-xs text-gray-600 mt-1">※日中に連絡の取れる電話番号</p>
         </div>
 
         {/* ポイント利用 */}
@@ -524,7 +524,7 @@ export default function TakeoutConfirmPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-gray-900">¥{lineTotal.toLocaleString()}</p>
-                    {item.quantity > 1 && <p className="text-xs text-gray-400">×{item.quantity}</p>}
+                    {item.quantity > 1 && <p className="text-xs text-gray-600">×{item.quantity}</p>}
                   </div>
                 </div>
               );
@@ -545,7 +545,7 @@ export default function TakeoutConfirmPage() {
               <div className="text-right">
                 <span className="text-2xl font-bold">{total.toLocaleString()}</span>
                 <span className="text-base ml-0.5">円</span>
-                <span className="ml-1 text-gray-400" style={{ fontSize: 11 }}>(税込)</span>
+                <span className="ml-1 text-gray-600" style={{ fontSize: 11 }}>(税込)</span>
               </div>
             </div>
             <div className="flex justify-between items-start">
@@ -553,7 +553,7 @@ export default function TakeoutConfirmPage() {
               <div className="text-right">
                 <span className="text-red-500 font-bold text-lg">{earnedPoints}</span>
                 <span className="text-red-500 text-sm ml-0.5">ポイント</span>
-                <p className="text-xs text-gray-400">1ポイント=1円</p>
+                <p className="text-xs text-gray-600">1ポイント=1円</p>
               </div>
             </div>
           </div>
@@ -584,11 +584,11 @@ export default function TakeoutConfirmPage() {
         </div>
 
         <div className="text-center pt-2 pb-4">
-          <button onClick={() => setShowTermsModal(true)} className="text-xs text-gray-400 underline underline-offset-2">利用規約</button>
+          <button onClick={() => setShowTermsModal(true)} className="text-xs text-gray-600 underline underline-offset-2">利用規約</button>
           <span className="text-xs text-gray-300 mx-2">|</span>
-          <button onClick={() => setShowPrivacyModal(true)} className="text-xs text-gray-400 underline underline-offset-2">プライバシーポリシー</button>
+          <button onClick={() => setShowPrivacyModal(true)} className="text-xs text-gray-600 underline underline-offset-2">プライバシーポリシー</button>
           <span className="text-xs text-gray-300 mx-2">|</span>
-          <button onClick={() => setShowTokushoModal(true)} className="text-xs text-gray-400 underline underline-offset-2">特定商取引法</button>
+          <button onClick={() => setShowTokushoModal(true)} className="text-xs text-gray-600 underline underline-offset-2">特定商取引法</button>
         </div>
 
       </div>
@@ -612,7 +612,7 @@ export default function TakeoutConfirmPage() {
             >
               <button
                 onClick={() => setShowPointModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -676,7 +676,7 @@ export default function TakeoutConfirmPage() {
             >
               <button
                 onClick={() => { if (countdownRef.current) clearInterval(countdownRef.current); router.push(continueShoppingHref); }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -695,7 +695,7 @@ export default function TakeoutConfirmPage() {
                 来店時にLINEのメッセージをお見せください。
               </p>
               {countdown > 0 && (
-                <p className="text-xs text-gray-400 mb-4">
+                <p className="text-xs text-gray-600 mb-4">
                   {countdown}秒後に自動で商品一覧に戻ります
                 </p>
               )}
@@ -725,9 +725,9 @@ export default function TakeoutConfirmPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
                 <div>
                   <p className="font-bold text-gray-900 text-base">パティモバ 利用規約</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">最終改定日：2025年5月14日</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">最終改定日：2025年5月14日</p>
                 </div>
-                <button onClick={() => setShowTermsModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTermsModal(false)} className="text-gray-600 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
                 <p className="text-xs text-gray-600 leading-relaxed">本利用規約（以下「本規約」）は、パティモバ（以下「当サービス」）の提供に関する条件を定めたものです。ユーザーには本規約に従って当サービスをご利用いただきます。</p>
@@ -756,9 +756,9 @@ export default function TakeoutConfirmPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
                 <div>
                   <p className="font-bold text-gray-900 text-base">パティモバ プライバシーポリシー</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">最終改定日：2025年5月14日</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">最終改定日：2025年5月14日</p>
                 </div>
-                <button onClick={() => setShowPrivacyModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowPrivacyModal(false)} className="text-gray-600 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
                 <p className="text-xs text-gray-600 leading-relaxed">Crafted Glow株式会社（以下「運営者」）は、パティモバ（以下「当サービス」）において、ユーザーの個人情報を適切に取り扱うことが重要な責務であると認識し、以下のとおりプライバシーポリシーを定め、これを遵守します。</p>
@@ -786,7 +786,7 @@ export default function TakeoutConfirmPage() {
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
                 <p className="font-bold text-gray-900 text-base">特定商取引法に基づく表記</p>
-                <button onClick={() => setShowTokushoModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTokushoModal(false)} className="text-gray-600 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5">
                 {tokushoLoading ? (
@@ -794,7 +794,7 @@ export default function TakeoutConfirmPage() {
                 ) : tokushoText ? (
                   <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">{tokushoText}</pre>
                 ) : (
-                  <p className="text-xs text-gray-400 text-center py-10">各店舗の特定商取引法に基づく表記がこちらに表示されます。</p>
+                  <p className="text-xs text-gray-600 text-center py-10">各店舗の特定商取引法に基づく表記がこちらに表示されます。</p>
                 )}
               </div>
             </motion.div>

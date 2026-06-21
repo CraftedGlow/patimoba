@@ -78,7 +78,7 @@ export function CartModal({
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => onRemove(item.id)}
-                      className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                      className="shrink-0 text-gray-600 hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

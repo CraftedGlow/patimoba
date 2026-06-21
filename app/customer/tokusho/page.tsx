@@ -59,7 +59,7 @@ function TokushoContent() {
             {tokushoText}
           </p>
         ) : (
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-gray-600">
             特定商取引法に基づく表記は準備中です。詳しくは店舗までお問い合わせください。
           </p>
         )}

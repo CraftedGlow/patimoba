@@ -142,16 +142,16 @@ export default function StoreCustomersPage() {
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">{customer.lineName || customer.name || "-"}</p>
               {customer.phone && (
-                <p className="text-xs text-gray-400 truncate">{customer.phone}</p>
+                <p className="text-xs text-gray-600 truncate">{customer.phone}</p>
               )}
               {customer.email && (
-                <p className="text-xs text-gray-400 truncate">{customer.email}</p>
+                <p className="text-xs text-gray-600 truncate">{customer.email}</p>
               )}
             </div>
           </motion.div>
         ))}
         {customers.length === 0 && (
-          <div className="py-10 text-center text-sm text-gray-400">
+          <div className="py-10 text-center text-sm text-gray-600">
             顧客がいません
           </div>
         )}
@@ -191,7 +191,7 @@ export default function StoreCustomersPage() {
         ))}
 
         {customers.length === 0 && (
-          <div className="px-4 py-10 text-center text-sm text-gray-400">
+          <div className="px-4 py-10 text-center text-sm text-gray-600">
             顧客がいません
           </div>
         )}
@@ -244,7 +244,7 @@ export default function StoreCustomersPage() {
                     <div>
                       <p className="text-lg font-bold">{selectedCustomer.lineName || "-"}</p>
                       {selectedCustomer.name && selectedCustomer.name !== selectedCustomer.lineName && (
-                        <p className="text-xs text-gray-400">{selectedCustomer.name}</p>
+                        <p className="text-xs text-gray-600">{selectedCustomer.name}</p>
                       )}
                     </div>
                   </div>
@@ -317,7 +317,7 @@ export default function StoreCustomersPage() {
                   <div>
                     <p className="text-sm font-bold text-gray-700 mb-2">購入履歴（直近10件）</p>
                     {selectedCustomer.orders.length === 0 ? (
-                      <p className="text-sm text-gray-400">購入履歴なし</p>
+                      <p className="text-sm text-gray-600">購入履歴なし</p>
                     ) : (
                       <div className="space-y-3">
                         {selectedCustomer.orders.map((order) => (
@@ -326,7 +326,7 @@ export default function StoreCustomersPage() {
                             className="border border-gray-100 rounded-lg p-3"
                           >
                             <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-gray-600">
                                 {new Date(order.createdAt).toLocaleDateString("ja-JP")}
                               </span>
                               <span className="text-sm font-bold">

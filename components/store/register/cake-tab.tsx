@@ -525,7 +525,7 @@ export function CakeTab() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => mainInputRef.current?.click()}
                 disabled={uploadingMain}
-                className="w-full h-[160px] sm:h-[180px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className="w-full h-[160px] sm:h-[180px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-600 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingMain ? (
                   <LineSpinner size={24} />
@@ -555,7 +555,7 @@ export function CakeTab() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => crossInputRef.current?.click()}
                 disabled={uploadingCross}
-                className="w-full h-[160px] sm:h-[180px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                className="w-full h-[160px] sm:h-[180px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-600 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
               >
                 {uploadingCross ? (
                   <LineSpinner size={24} />
@@ -756,7 +756,7 @@ export function CakeTab() {
                       <Plus className="w-3.5 h-3.5" />
                       ろうそく種類を追加
                     </button>
-                    <p className="text-xs text-gray-400">※「ナンバーキャンドル」という名前の種類は、顧客画面で数字（0〜9）を指定できます</p>
+                    <p className="text-xs text-gray-600">※「ナンバーキャンドル」という名前の種類は、顧客画面で数字（0〜9）を指定できます</p>
                   </div>
                 )}
               </div>
@@ -885,7 +885,7 @@ export function CakeTab() {
                     className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
                   />
                 </div>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-600">
                   準備日数が設定されている場合、受取終了日の準備日数前に自動で受付停止になります
                 </p>
               </motion.div>
@@ -919,7 +919,7 @@ export function CakeTab() {
               </Link>
             </div>
             {allDecorationGroups.length === 0 ? (
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-600">
                 グループが未登録です。{" "}
                 <Link href="/store/decorations" className="text-amber-600 underline">
                   デコレーション管理
@@ -943,7 +943,7 @@ export function CakeTab() {
                       className="w-4 h-4 accent-amber-500"
                     />
                     <span>{group.name}</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-gray-600">
                       ({group.selectionType === "single" ? "単一" : "複数"}
                       {group.required ? "/必須" : "/任意"}
                       · {group.items.length}種)
@@ -968,7 +968,7 @@ export function CakeTab() {
               プリントデコレーション対応
             </label>
             {printDecorationEnabled && (
-              <p className="text-xs text-gray-400 pl-6">
+              <p className="text-xs text-gray-600 pl-6">
                 プリントデコレーションの注文フローでこのケーキが選択できるようになります
               </p>
             )}
@@ -992,7 +992,7 @@ export function CakeTab() {
             {noshiEnabled && (
               <div className="pl-6 space-y-1.5">
                 {noshiList.length === 0 ? (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-600">
                     のしが未登録です。{" "}
                     <Link href="/store/register" className="text-amber-600 underline">
                       のし管理
@@ -1015,7 +1015,7 @@ export function CakeTab() {
                       <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
                       <span>{n.name}</span>
                       {n.price > 0 && (
-                        <span className="text-xs text-gray-400">+¥{n.price.toLocaleString()}</span>
+                        <span className="text-xs text-gray-600">+¥{n.price.toLocaleString()}</span>
                       )}
                     </label>
                   ))
@@ -1055,7 +1055,7 @@ export function CakeTab() {
             >
               <button
                 onClick={() => setSaved(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>

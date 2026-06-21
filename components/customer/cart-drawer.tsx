@@ -104,7 +104,7 @@ export function CartDrawer({
                   <ShoppingBag className="w-10 h-10 text-gray-300" />
                 </div>
                 <p className="text-gray-500 text-base font-medium">カートは空です</p>
-                <p className="text-gray-400 text-sm mt-1">商品を追加してください</p>
+                <p className="text-gray-600 text-sm mt-1">商品を追加してください</p>
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={onClose}
@@ -258,7 +258,7 @@ export function CartDrawer({
                     {!readOnly ? (
                     <button
                       onClick={clear}
-                      className="text-xs text-gray-400 hover:text-red-500 transition-colors underline"
+                      className="text-xs text-gray-600 hover:text-red-500 transition-colors underline"
                     >
                       カートを空にする
                     </button>

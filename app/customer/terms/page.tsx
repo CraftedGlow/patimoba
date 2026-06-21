@@ -40,11 +40,11 @@ export default function TermsPage() {
         ) : text ? (
           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{text}</p>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-20">内容を準備中です。</p>
+          <p className="text-sm text-gray-600 text-center py-20">内容を準備中です。</p>
         )}
 
         <div className="mt-10 pt-6 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-400">Crafted Glow株式会社</p>
+          <p className="text-xs text-gray-600">Crafted Glow株式会社</p>
         </div>
       </div>
     </div>

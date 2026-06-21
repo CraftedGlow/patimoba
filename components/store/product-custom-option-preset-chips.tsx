@@ -46,7 +46,7 @@ export function ProductCustomOptionPresetChips({
               onClick={() => onAdd(meta.create())}
               className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
                 present
-                  ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                  ? "border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed"
                   : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 hover:border-amber-400"
               }`}
             >

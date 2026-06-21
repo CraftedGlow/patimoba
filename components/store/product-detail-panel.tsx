@@ -377,7 +377,7 @@ export function ProductDetailPanel({
                 </div>
                 {image && (
                   <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-                    className="text-xs text-gray-400 hover:text-amber-600">
+                    className="text-xs text-gray-600 hover:text-amber-600">
                     {uploading ? "..." : "変更"}
                   </button>
                 )}
@@ -409,7 +409,7 @@ export function ProductDetailPanel({
                 </div>
                 {crossImage && (
                   <button onClick={() => crossInputRef.current?.click()} disabled={uploadingCross}
-                    className="text-xs text-gray-400 hover:text-amber-600">
+                    className="text-xs text-gray-600 hover:text-amber-600">
                     {uploadingCross ? "..." : "変更"}
                   </button>
                 )}
@@ -449,12 +449,12 @@ export function ProductDetailPanel({
                       onChange={(e) => { const next = [...sizes]; next[i] = { ...next[i], price: e.target.value }; setSizes(next); }}
                       placeholder="¥金額"
                       className="w-28 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300" />
-                    <button type="button" onClick={() => setSizes(sizes.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-500">
+                    <button type="button" onClick={() => setSizes(sizes.filter((_, idx) => idx !== i))} className="text-gray-600 hover:text-red-500">
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
-                {sizes.length === 0 && <p className="text-xs text-gray-400">サイズが登録されていません</p>}
+                {sizes.length === 0 && <p className="text-xs text-gray-600">サイズが登録されていません</p>}
               </div>
               <div className="pt-3">
                 <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
@@ -634,13 +634,13 @@ export function ProductDetailPanel({
                       <option value="multiple">複数</option>
                       <option value="text">記入</option>
                     </select>
-                    <button type="button" onClick={() => setCustomOptions(customOptions.filter((_, i) => i !== oi))} className="text-gray-400 hover:text-red-500">
+                    <button type="button" onClick={() => setCustomOptions(customOptions.filter((_, i) => i !== oi))} className="text-gray-600 hover:text-red-500">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                   {opt.type === "text" && (
                     <textarea disabled rows={2} placeholder="（お客様が入力するフォームのプレビュー）"
-                      className="w-full border border-gray-200 bg-gray-50 rounded px-2 py-1 text-xs resize-none text-gray-400" />
+                      className="w-full border border-gray-200 bg-gray-50 rounded px-2 py-1 text-xs resize-none text-gray-600" />
                   )}
                   {opt.type !== "text" && (
                     <div className="space-y-1">
@@ -654,7 +654,7 @@ export function ProductDetailPanel({
                             placeholder="+¥" className="w-16 border border-gray-300 rounded px-1 py-0.5 text-xs" />
                           <button type="button"
                             onClick={() => { const next = [...customOptions]; next[oi] = { ...next[oi], values: next[oi].values.filter((_, i) => i !== vi) }; setCustomOptions(next); }}
-                            className="text-gray-400 hover:text-red-500">
+                            className="text-gray-600 hover:text-red-500">
                             <X className="w-3 h-3" />
                           </button>
                         </div>
@@ -680,7 +680,7 @@ export function ProductDetailPanel({
             {noshiEnabled && (
               <div className="pl-6 space-y-1.5">
                 {noshiList.length === 0 ? (
-                  <p className="text-xs text-gray-400">のしが未登録です。のし管理タブから登録してください。</p>
+                  <p className="text-xs text-gray-600">のしが未登録です。のし管理タブから登録してください。</p>
                 ) : (
                   noshiList.map((n) => (
                     <label key={n.id} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -689,7 +689,7 @@ export function ProductDetailPanel({
                         className="w-4 h-4 accent-amber-500" />
                       <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
                       <span>{n.name}</span>
-                      {n.price > 0 && <span className="text-xs text-gray-400">+¥{n.price.toLocaleString()}</span>}
+                      {n.price > 0 && <span className="text-xs text-gray-600">+¥{n.price.toLocaleString()}</span>}
                     </label>
                   ))
                 )}

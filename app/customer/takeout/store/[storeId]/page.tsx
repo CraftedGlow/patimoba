@@ -420,7 +420,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
               {/* 住所 */}
               {store.address && (
                 <div className="flex items-start gap-2 text-[13px] text-gray-500">
-                  <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-gray-400" />
+                  <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-gray-600" />
                   <span>
                     {store.postalCode && `〒${store.postalCode} `}
                     {store.address}
@@ -432,7 +432,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
               {/* 営業時間（1行サマリー） */}
               {businessHours.length > 0 && (
                 <div className="flex items-center gap-2 text-[13px] text-gray-500">
-                  <Clock className="w-4 h-4 shrink-0 text-gray-400" />
+                  <Clock className="w-4 h-4 shrink-0 text-gray-600" />
                   <span>{formatHoursLine(businessHours)}</span>
                 </div>
               )}
@@ -459,13 +459,13 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         >
           <div className="flex items-center gap-3 mb-1.5">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sameDayOk ? "bg-amber-100" : "bg-gray-100"}`}>
-              <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-400"}`} />
+              <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-600"}`} />
             </div>
-            <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-400"}`}>
+            <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-600"}`}>
               当日受取注文
             </span>
           </div>
-          <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-400"}`}>
+          <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-600"}`}>
             本日お店に並んでいる商品からご注文いただけます。
           </p>
           {sameDayOk && sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
@@ -514,11 +514,11 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
         {/* 利用規約・特商法リンク */}
         <div className="text-center space-y-2 pt-6 pb-2">
-          <button onClick={() => setShowTermsModal(true)} className="text-xs text-gray-400 underline underline-offset-2">利用規約</button>
+          <button onClick={() => setShowTermsModal(true)} className="text-xs text-gray-600 underline underline-offset-2">利用規約</button>
           <span className="text-xs text-gray-300 mx-2">|</span>
-          <button onClick={() => setShowPrivacyModal(true)} className="text-xs text-gray-400 underline underline-offset-2">プライバシーポリシー</button>
+          <button onClick={() => setShowPrivacyModal(true)} className="text-xs text-gray-600 underline underline-offset-2">プライバシーポリシー</button>
           <span className="text-xs text-gray-300 mx-2">|</span>
-          <button onClick={() => setShowTokushoModal(true)} className="text-xs text-gray-400 underline underline-offset-2">特定商取引法</button>
+          <button onClick={() => setShowTokushoModal(true)} className="text-xs text-gray-600 underline underline-offset-2">特定商取引法</button>
         </div>
       </div>
 
@@ -535,9 +535,9 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
                 <div>
                   <p className="font-bold text-gray-900 text-base">パティモバ 利用規約</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">最終改定日：2025年5月14日</p>
+                  <p className="text-[10px] text-gray-600 mt-0.5">最終改定日：2025年5月14日</p>
                 </div>
-                <button onClick={() => setShowTermsModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTermsModal(false)} className="text-gray-600 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5 space-y-5">
                 <p className="text-xs text-gray-600 leading-relaxed">本利用規約（以下「本規約」）は、パティモバ（以下「当サービス」）の提供に関する条件を定めたものです。ユーザーには本規約に従って当サービスをご利用いただきます。</p>
@@ -565,7 +565,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
                 <p className="font-bold text-gray-900 text-base">プライバシーポリシー</p>
-                <button onClick={() => setShowPrivacyModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowPrivacyModal(false)} className="text-gray-600 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5">
                 {privacyLoading ? (
@@ -573,7 +573,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                 ) : privacyPolicyText ? (
                   <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">{privacyPolicyText}</pre>
                 ) : (
-                  <p className="text-xs text-gray-400 text-center py-10">プライバシーポリシーは準備中です。</p>
+                  <p className="text-xs text-gray-600 text-center py-10">プライバシーポリシーは準備中です。</p>
                 )}
               </div>
             </motion.div>
@@ -593,7 +593,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
                 <p className="font-bold text-gray-900 text-base">特定商取引法に基づく表記</p>
-                <button onClick={() => setShowTokushoModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTokushoModal(false)} className="text-gray-600 hover:text-gray-600"><X className="w-5 h-5" /></button>
               </div>
               <div className="overflow-y-auto flex-1 px-5 py-5">
                 {tokushoLoading ? (
@@ -601,7 +601,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
                 ) : tokushoText ? (
                   <pre className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap font-sans">{tokushoText}</pre>
                 ) : (
-                  <p className="text-xs text-gray-400 text-center py-10">各店舗の特定商取引法に基づく表記がこちらに表示されます。</p>
+                  <p className="text-xs text-gray-600 text-center py-10">各店舗の特定商取引法に基づく表記がこちらに表示されます。</p>
                 )}
               </div>
             </motion.div>

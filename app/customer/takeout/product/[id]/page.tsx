@@ -214,7 +214,7 @@ export default function TakeoutProductDetailPage() {
           {product.image ? (
             <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
+            <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">No Image</div>
           )}
           {isLimited && (
             <span className="absolute top-3 left-3 bg-[#A855B7] text-white text-[11px] font-bold tracking-wide px-3.5 py-1.5 rounded-md shadow-sm">
@@ -292,7 +292,7 @@ export default function TakeoutProductDetailPage() {
                                 <button
                                   type="button"
                                   onClick={() => setNumberCandleSelections((prev) => prev.filter((_, j) => j !== ri))}
-                                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors text-lg leading-none"
+                                  className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors text-lg leading-none"
                                 >
                                   ×
                                 </button>
@@ -440,7 +440,7 @@ export default function TakeoutProductDetailPage() {
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${useNoshi ? "translate-x-4" : ""}`} />
                 </div>
-                <span className="text-[20px] text-gray-700 font-medium">のしを付ける</span>
+                <span className="text-[16px] text-gray-700 font-medium">のしを付ける</span>
               </label>
 
               {useNoshi && (

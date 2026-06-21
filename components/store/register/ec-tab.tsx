@@ -268,7 +268,7 @@ export function EcTab() {
           whileTap={{ scale: 0.98 }}
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="w-full max-w-[150px] h-[130px] sm:h-[150px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-400 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
+          className="w-full max-w-[150px] h-[130px] sm:h-[150px] rounded-lg bg-gray-100 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-xs text-gray-600 gap-2 hover:border-amber-400 hover:text-amber-500 transition-colors"
         >
           {uploading ? <LineSpinner size={24} /> : (
             <><ImagePlus className="w-8 h-8" /><span className="text-center px-2">{label}</span></>
@@ -477,7 +477,7 @@ export function EcTab() {
           {noshiEnabled && (
             <div className="pl-6 space-y-1.5">
               {noshiList.length === 0 ? (
-                <p className="text-xs text-gray-400">のしが未登録です。のし管理タブから登録してください。</p>
+                <p className="text-xs text-gray-600">のしが未登録です。のし管理タブから登録してください。</p>
               ) : (
                 noshiList.map((n) => (
                   <label key={n.id} className="flex items-center gap-2 text-sm cursor-pointer">
@@ -489,7 +489,7 @@ export function EcTab() {
                     />
                     <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
                     <span>{n.name}</span>
-                    {n.price > 0 && <span className="text-xs text-gray-400">+¥{n.price.toLocaleString()}</span>}
+                    {n.price > 0 && <span className="text-xs text-gray-600">+¥{n.price.toLocaleString()}</span>}
                   </label>
                 ))
               )}
@@ -530,7 +530,7 @@ export function EcTab() {
               className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 p-8 relative"
               onClick={(e) => e.stopPropagation()}
             >
-              <button onClick={() => setSaved(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              <button onClick={() => setSaved(false)} className="absolute top-4 right-4 text-gray-600 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
               <p className="text-lg font-bold text-center flex items-center justify-center gap-2">

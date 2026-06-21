@@ -120,7 +120,7 @@ export default function CustomerOrderDetailPage() {
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <h1 className="text-lg font-bold text-gray-900 text-center">注文詳細</h1>
         {order.order_no && (
-          <p className="text-xs text-gray-400 text-center mt-0.5">
+          <p className="text-xs text-gray-600 text-center mt-0.5">
             注文番号：{order.order_no}
           </p>
         )}
@@ -231,7 +231,7 @@ export default function CustomerOrderDetailPage() {
                     })()}
                   </div>
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-gray-50">
-                    <span className="text-xs text-gray-400">小計</span>
+                    <span className="text-xs text-gray-600">小計</span>
                     <span className="text-sm font-medium text-gray-700">
                       ¥{Number(item.subtotal).toLocaleString()}
                     </span>

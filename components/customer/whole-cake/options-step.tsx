@@ -87,7 +87,7 @@ export function WholeCakeOptionsStep({
             <LineSpinner size={20} />
           </div>
         ) : visibleGroups.length === 0 ? (
-          <div className="text-center py-10 text-sm text-gray-400">
+          <div className="text-center py-10 text-sm text-gray-600">
             このケーキにはデコレーションオプションがありません
           </div>
         ) : (
@@ -107,9 +107,9 @@ export function WholeCakeOptionsStep({
                       <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">任意</span>
                     )}
                     {group.selectionType === "single" ? (
-                      <span className="text-xs text-gray-400">どれか1つ</span>
+                      <span className="text-xs text-gray-600">どれか1つ</span>
                     ) : (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-600">
                         複数選択{group.maxSelections ? `（最大${group.maxSelections}個）` : ""}
                       </span>
                     )}
@@ -140,7 +140,7 @@ export function WholeCakeOptionsStep({
                           }`}
                         >
                           {/* 画像 */}
-                          <div className="w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+                          <div className="w-full aspect-[1/0.98] bg-gray-100 flex items-center justify-center overflow-hidden">
                             {deco.imageUrl ? (
                               <img
                                 src={deco.imageUrl}
@@ -156,7 +156,7 @@ export function WholeCakeOptionsStep({
                             ) : (
                               (() => {
                                 const Icon = CATEGORY_ICON[deco.category] ?? Tag;
-                                return <Icon className="w-8 h-8 text-gray-400" strokeWidth={1.5} />;
+                                return <Icon className="w-8 h-8 text-gray-600" strokeWidth={1.5} />;
                               })()
                             )}
                           </div>

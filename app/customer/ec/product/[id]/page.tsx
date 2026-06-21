@@ -191,7 +191,7 @@ export default function ECProductDetailPage() {
               {product.image ? (
                 <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">No Image</div>
+                <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">No Image</div>
               )}
             </motion.div>
           </div>
@@ -223,7 +223,7 @@ export default function ECProductDetailPage() {
               >
                 <span className="font-bold text-base">{quantity}</span>
                 <svg
-                  className={`w-4 h-4 text-gray-400 transition-transform ${showQuantityDropdown ? "rotate-180" : ""}`}
+                  className={`w-4 h-4 text-gray-600 transition-transform ${showQuantityDropdown ? "rotate-180" : ""}`}
                   fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

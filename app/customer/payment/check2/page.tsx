@@ -67,7 +67,7 @@ function Check2Content() {
       <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4 px-6 text-center">
         <p className="text-sm text-red-500">
           認証処理に失敗しました。<br />
-          {errorMsg && <span className="block text-xs mt-1 text-gray-400">{errorMsg}</span>}
+          {errorMsg && <span className="block text-xs mt-1 text-gray-600">{errorMsg}</span>}
           LINEアプリに戻って再度お試しください。
         </p>
       </div>

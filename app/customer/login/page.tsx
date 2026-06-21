@@ -221,7 +221,7 @@ export default function CustomerLoginPage() {
               >
                 <div className="flex items-center gap-3 w-full">
                   <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-xs text-gray-400">または</span>
+                  <span className="text-xs text-gray-600">または</span>
                   <div className="flex-1 h-px bg-gray-200" />
                 </div>
 
@@ -301,7 +301,7 @@ export default function CustomerLoginPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
-                className="mt-10 sm:mt-12 text-[10px] sm:text-xs text-gray-400 text-center leading-relaxed"
+                className="mt-10 sm:mt-12 text-[10px] sm:text-xs text-gray-600 text-center leading-relaxed"
               >
                 ログインすることで、
                 <br />

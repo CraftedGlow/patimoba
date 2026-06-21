@@ -230,7 +230,7 @@ export default function StoreProductsPage() {
             className={`relative px-6 py-2 text-sm font-bold border border-b-0 rounded-t-lg transition-all ${
               tab === "takeout"
                 ? "bg-white text-gray-900 border-gray-200 shadow-sm"
-                : "bg-gray-50 text-gray-400 border-transparent hover:text-gray-600"
+                : "bg-gray-50 text-gray-600 border-transparent hover:text-gray-600"
             }`}
           >
             テイクアウト
@@ -240,7 +240,7 @@ export default function StoreProductsPage() {
             className={`relative px-6 py-2 text-sm font-bold border border-b-0 rounded-t-lg transition-all ${
               tab === "ec"
                 ? "bg-white text-gray-900 border-gray-200 shadow-sm"
-                : "bg-gray-50 text-gray-400 border-transparent hover:text-gray-600"
+                : "bg-gray-50 text-gray-600 border-transparent hover:text-gray-600"
             }`}
           >
             EC
@@ -249,7 +249,7 @@ export default function StoreProductsPage() {
 
         {/* 商品一覧 */}
         {filtered.length === 0 ? (
-          <div className="px-4 py-12 text-center text-gray-400 text-sm border border-gray-200 rounded-lg">
+          <div className="px-4 py-12 text-center text-gray-600 text-sm border border-gray-200 rounded-lg">
             {search
               ? "検索結果がありません"
               : "登録された商品がありません"}

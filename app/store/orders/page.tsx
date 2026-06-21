@@ -479,7 +479,7 @@ export default function StoreOrdersPage() {
                 >
                   {managePickupDateFrom ? fmtDate(managePickupDateFrom) : "開始日"}
                 </button>
-                <span className="text-gray-400 text-sm">〜</span>
+                <span className="text-gray-600 text-sm">〜</span>
                 <button
                   onClick={() => setShowDatePickerFor(showDatePickerFor === "to" ? null : "to")}
                   className={`border rounded-lg px-3 py-2 text-sm transition-colors ${showDatePickerFor === "to" ? "border-amber-400 bg-amber-50 text-amber-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
@@ -548,10 +548,10 @@ export default function StoreOrdersPage() {
           {/* モバイル: カード形式 */}
           <div className="lg:hidden space-y-0 border border-gray-200 rounded-lg overflow-hidden">
             {manageLoading && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">読み込み中...</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-600 bg-white">読み込み中...</div>
             )}
             {!manageLoading && manageOrders.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">
+              <div className="px-4 py-8 text-center text-sm text-gray-600 bg-white">
                 該当する注文はありません
               </div>
             )}
@@ -613,7 +613,7 @@ export default function StoreOrdersPage() {
                               詳細
                             </button>
                           ) : (
-                            <span className="text-gray-400 text-xs shrink-0">×{item.quantity}</span>
+                            <span className="text-gray-600 text-xs shrink-0">×{item.quantity}</span>
                           )}
                         </div>
                       ))}
@@ -629,7 +629,7 @@ export default function StoreOrdersPage() {
                       <div className="flex items-center gap-2">
                         {order.fulfilledAt && (
                           <div className="text-right">
-                            <span className="text-[10px] text-gray-400 leading-none block">更新</span>
+                            <span className="text-[10px] text-gray-600 leading-none block">更新</span>
                             <span className="text-xs text-gray-700 font-medium tabular-nums">{formatFulfilledAt(order.fulfilledAt)}</span>
                           </div>
                         )}
@@ -661,10 +661,10 @@ export default function StoreOrdersPage() {
             </div>
 
             {manageLoading && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">読み込み中...</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-600">読み込み中...</div>
             )}
             {!manageLoading && manageOrders.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">
+              <div className="px-4 py-8 text-center text-sm text-gray-600 bg-white">
                 該当する注文はありません
               </div>
             )}
@@ -720,7 +720,7 @@ export default function StoreOrdersPage() {
                             詳細
                           </button>
                         ) : (
-                          <span className="text-gray-400 text-xs shrink-0">×{item.quantity}</span>
+                          <span className="text-gray-600 text-xs shrink-0">×{item.quantity}</span>
                         )}
                       </div>
                     ))}
@@ -742,7 +742,7 @@ export default function StoreOrdersPage() {
                     </motion.button>
                     {order.fulfilledAt && (
                       <div className="flex flex-col items-center">
-                        <span className="text-[10px] text-gray-400 leading-none">更新</span>
+                        <span className="text-[10px] text-gray-600 leading-none">更新</span>
                         <span className="text-xs text-gray-700 font-medium tabular-nums">{formatFulfilledAt(order.fulfilledAt)}</span>
                       </div>
                     )}
@@ -819,10 +819,10 @@ export default function StoreOrdersPage() {
           {/* モバイル: カード形式 */}
           <div className="lg:hidden space-y-0 border border-gray-200 rounded-lg overflow-hidden">
             {historyLoading && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">読み込み中...</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-600 bg-white">読み込み中...</div>
             )}
             {!historyLoading && historyOrders.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400 bg-white">注文履歴はありません</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-600 bg-white">注文履歴はありません</div>
             )}
             {historyOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
@@ -913,10 +913,10 @@ export default function StoreOrdersPage() {
             </div>
 
             {historyLoading && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">読み込み中...</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-600">読み込み中...</div>
             )}
             {!historyLoading && historyOrders.length === 0 && (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">注文履歴はありません</div>
+              <div className="px-4 py-8 text-center text-sm text-gray-600">注文履歴はありません</div>
             )}
 
             {historyOrders.map((order, i) => {

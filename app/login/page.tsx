@@ -276,14 +276,14 @@ export default function LoginPage() {
                         </span>
                       )
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                      <ChevronRight className="w-4 h-4 text-gray-600" />
                     )}
                   </motion.button>
                 ))}
               </div>
             </div>
 
-            <p className="text-center text-xs text-gray-400 mt-6">
+            <p className="text-center text-xs text-gray-600 mt-6">
               <Link
                 href="/"
                 className="hover:text-amber-600 transition-colors"
@@ -437,7 +437,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowResetModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>

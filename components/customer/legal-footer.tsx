@@ -85,7 +85,7 @@ default: return "";
             key={type}
             type="button"
             onClick={() => openModal(type)}
-            className="text-xs text-gray-400 underline underline-offset-2 hover:text-gray-600 transition-colors"
+            className="text-xs text-gray-600 underline underline-offset-2 hover:text-gray-600 transition-colors"
           >
             {titles[type]}を読む
           </button>
@@ -113,7 +113,7 @@ default: return "";
                 <h2 className="text-sm font-bold text-gray-900">{titles[activeModal]}</h2>
                 <button
                   onClick={() => setActiveModal(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-600 hover:text-gray-600 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>

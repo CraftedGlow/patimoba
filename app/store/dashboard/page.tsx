@@ -289,7 +289,7 @@ export default function StoreDashboardPage() {
         </div>
 
         {sortedOrders.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-gray-400 bg-white">
+          <div className="px-4 py-10 text-center text-sm text-gray-600 bg-white">
             表示する注文はありません
           </div>
         ) : (
@@ -357,7 +357,7 @@ export default function StoreDashboardPage() {
                                 詳細
                               </button>
                             ) : (
-                              <span className="shrink-0 text-gray-400 text-xs">×{item.quantity}</span>
+                              <span className="shrink-0 text-gray-600 text-xs">×{item.quantity}</span>
                             )}
                           </div>
                         ))}
@@ -416,7 +416,7 @@ export default function StoreDashboardPage() {
                             詳細
                           </button>
                         ) : (
-                          <span className="shrink-0 text-gray-400 text-xs">×{item.quantity}</span>
+                          <span className="shrink-0 text-gray-600 text-xs">×{item.quantity}</span>
                         )}
                       </div>
                     ))}

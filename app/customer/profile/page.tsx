@@ -456,7 +456,7 @@ export default function CustomerProfilePage() {
           </div>
 
           {anniversaries.length === 0 && (
-            <p className="text-xs text-gray-400 mb-2">
+            <p className="text-xs text-gray-600 mb-2">
               結婚記念日・お子様の誕生日などを登録すると、記念日に合わせたご提案をお届けします
             </p>
           )}
@@ -500,7 +500,7 @@ export default function CustomerProfilePage() {
                   <button
                     type="button"
                     onClick={() => setAnniversaries((prev) => prev.filter((_, i) => i !== idx))}
-                    className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-500"
+                    className="flex-shrink-0 p-1.5 text-gray-600 hover:text-red-500"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -569,7 +569,7 @@ export default function CustomerProfilePage() {
             >
               <button
                 onClick={() => setShowAnniversaryModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>

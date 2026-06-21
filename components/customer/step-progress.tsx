@@ -23,7 +23,7 @@ export function StepProgress({ currentStep, steps, onStepClick }: StepProgressPr
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && onStepClick(stepNum)}
-              className={`flex flex-col items-center ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+              className={`flex flex-col items-center min-w-[84px] ${isClickable ? "cursor-pointer" : "cursor-default"}`}
             >
               <motion.div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
@@ -39,7 +39,7 @@ export function StepProgress({ currentStep, steps, onStepClick }: StepProgressPr
               </motion.div>
               <span
                 className={`text-[11px] mt-1 whitespace-nowrap ${
-                  isActive ? "text-gray-900 font-medium" : "text-gray-400"
+                  isActive ? "text-gray-900 font-medium" : "text-gray-600"
                 }`}
               >
                 {label}

@@ -80,7 +80,7 @@ export default function CardAddPage() {
       <div className="px-4 pb-10">
         <div className="text-center mb-8">
           <h2 className="text-lg font-bold">クレジットカードの追加</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-600 mt-0.5">
             下記のボタンよりカード情報を入力してください
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function CardAddPage() {
 
         <div className="flex justify-center" ref={containerRef} />
 
-        <p className="text-xs text-gray-400 text-center mt-4">
+        <p className="text-xs text-gray-600 text-center mt-4">
           ※カード情報は安全に処理されます。当サイトにカード番号は保存されません。
         </p>
       </div>

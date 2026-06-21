@@ -43,7 +43,7 @@ function StoreCard({
               className="w-full h-full object-contain p-1"
             />
           ) : (
-            <span className="text-[10px] text-gray-400 font-medium text-center leading-tight px-1">
+            <span className="text-[10px] text-gray-600 font-medium text-center leading-tight px-1">
               {store.name.slice(0, 4)}
             </span>
           )}
@@ -214,7 +214,7 @@ export default function TakeoutStorePage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`flex-1 py-3 text-sm font-bold text-center relative transition-colors ${
-                activeTab === tab ? "text-gray-900" : "text-gray-400"
+                activeTab === tab ? "text-gray-900" : "text-gray-600"
               }`}
             >
               {tab}
@@ -252,7 +252,7 @@ export default function TakeoutStorePage() {
                   <LineSpinner size={24} />
                 </div>
               ) : filteredStores.length === 0 ? (
-                <div className="text-center py-20 text-gray-400 text-sm">
+                <div className="text-center py-20 text-gray-600 text-sm">
                   店舗が見つかりませんでした
                 </div>
               ) : (
@@ -300,7 +300,7 @@ export default function TakeoutStorePage() {
                   className="text-center py-20"
                 >
                   <Heart className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                  <p className="text-gray-400 text-sm">お気に入りの店舗はありません</p>
+                  <p className="text-gray-600 text-sm">お気に入りの店舗はありません</p>
                   <p className="text-gray-300 text-xs mt-1">
                     店舗一覧のハートをタップして追加できます
                   </p>
@@ -342,7 +342,7 @@ export default function TakeoutStorePage() {
                   className="text-center py-20"
                 >
                   <Search className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-                  <p className="text-gray-400 text-sm">閲覧履歴はありません</p>
+                  <p className="text-gray-600 text-sm">閲覧履歴はありません</p>
                   <p className="text-gray-300 text-xs mt-1">
                     店舗を選択すると履歴に表示されます
                   </p>

@@ -42,7 +42,7 @@ function RankIcon({ rank }: { rank: number }) {
       </svg>
     );
   }
-  return <span className="text-sm font-bold text-gray-400 w-5 shrink-0 text-center">{rank + 1}</span>;
+  return <span className="text-sm font-bold text-gray-600 w-5 shrink-0 text-center">{rank + 1}</span>;
 }
 import { supabase } from "@/lib/supabase";
 import { useStoreContext } from "@/lib/store-context";
@@ -332,10 +332,10 @@ export default function StoreReportPage() {
             variants={itemVariants}
             className="bg-white border border-gray-200 rounded-xl p-4"
           >
-            <card.icon className="w-5 h-5 text-gray-400 mb-2" />
+            <card.icon className="w-5 h-5 text-gray-600 mb-2" />
             <p className="text-xl sm:text-2xl font-bold">{card.value}</p>
             <p className="text-xs text-gray-500 mt-0.5">{card.label}</p>
-            <p className="text-[10px] text-gray-400 mt-1">{card.sub}</p>
+            <p className="text-[10px] text-gray-600 mt-1">{card.sub}</p>
             {card.note && (
               <p className="text-[10px] text-amber-500 mt-1 leading-tight">※ {card.note}</p>
             )}
@@ -366,7 +366,7 @@ export default function StoreReportPage() {
             <p className="text-2xl font-bold">{item.value}</p>
             <div className={`flex items-center gap-1 mt-1 text-xs ${item.up ? "text-green-600" : "text-red-500"}`}>
               {item.up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {item.change} <span className="text-gray-400">前月比</span>
+              {item.change} <span className="text-gray-600">前月比</span>
             </div>
           </motion.div>
         ))}
@@ -394,7 +394,7 @@ export default function StoreReportPage() {
               />
             ))}
           </div>
-          <div className="flex justify-between text-[9px] text-gray-400 mt-1">
+          <div className="flex justify-between text-[9px] text-gray-600 mt-1">
             <span>1日</span>
             <span>15日</span>
             <span>{new Date(year, month + 1, 0).getDate()}日</span>
@@ -441,7 +441,7 @@ export default function StoreReportPage() {
         >
           <h4 className="text-sm font-bold mb-3">商品ランキング TOP5</h4>
           {productRanking.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-8">データがありません</p>
+            <p className="text-xs text-gray-600 text-center py-8">データがありません</p>
           ) : (
             <div className="space-y-3">
               {productRanking.map((item, idx) => {
@@ -450,7 +450,7 @@ export default function StoreReportPage() {
                     <RankIcon rank={idx} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{item.name}</p>
-                      <p className="text-[10px] text-gray-400">{item.count}件の注文</p>
+                      <p className="text-[10px] text-gray-600">{item.count}件の注文</p>
                     </div>
                     <span className="text-sm font-bold shrink-0">¥{item.total.toLocaleString()}</span>
                   </div>
@@ -469,7 +469,7 @@ export default function StoreReportPage() {
         >
           <h4 className="text-sm font-bold mb-3">優良顧客リスト</h4>
           {customerRanking.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-8">データがありません</p>
+            <p className="text-xs text-gray-600 text-center py-8">データがありません</p>
           ) : (
             <div className="space-y-3">
               {customerRanking.map((c, i) => (
@@ -479,7 +479,7 @@ export default function StoreReportPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{c.name}</p>
-                    <p className="text-[10px] text-gray-400">{c.visits}回購入 · 最終: {formatDateShort(c.last)}</p>
+                    <p className="text-[10px] text-gray-600">{c.visits}回購入 · 最終: {formatDateShort(c.last)}</p>
                   </div>
                   <span className="text-sm font-bold shrink-0">¥{c.total.toLocaleString()}</span>
                 </div>
@@ -497,7 +497,7 @@ export default function StoreReportPage() {
         >
           <h4 className="text-sm font-bold mb-3">注文タイプ内訳</h4>
           {orders.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-8">データがありません</p>
+            <p className="text-xs text-gray-600 text-center py-8">データがありません</p>
           ) : (
             (() => {
               const byType = new Map<string, { count: number; total: number }>();
@@ -523,7 +523,7 @@ export default function StoreReportPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{labelMap[k] || k}</p>
-                        <p className="text-[10px] text-gray-400">{v.count}件</p>
+                        <p className="text-[10px] text-gray-600">{v.count}件</p>
                       </div>
                       <span className="text-sm font-bold shrink-0">¥{v.total.toLocaleString()}</span>
                     </div>
@@ -536,7 +536,7 @@ export default function StoreReportPage() {
       </div>
 
       {/* フッター */}
-      <div className="mt-8 text-center text-xs text-gray-400">
+      <div className="mt-8 text-center text-xs text-gray-600">
         © {year} パティモバ
       </div>
     </div>

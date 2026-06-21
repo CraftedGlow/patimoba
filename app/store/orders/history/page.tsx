@@ -268,11 +268,11 @@ export default function StoreOrderHistoryPage() {
         </div>
 
         {ordersLoading && (
-          <div className="px-4 py-8 text-center text-sm text-gray-400">読み込み中...</div>
+          <div className="px-4 py-8 text-center text-sm text-gray-600">読み込み中...</div>
         )}
 
         {!ordersLoading && orders.length === 0 && (
-          <div className="px-4 py-8 text-center text-sm text-gray-400">注文履歴はありません</div>
+          <div className="px-4 py-8 text-center text-sm text-gray-600">注文履歴はありません</div>
         )}
 
         {orders.map((order, i) => {

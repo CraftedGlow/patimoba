@@ -210,7 +210,7 @@ export default function AdminInsightsPage() {
             onChange={(e) => setDateFrom(e.target.value)}
             className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
-          <span className="text-gray-400">〜</span>
+          <span className="text-gray-600">〜</span>
           <input
             type="date"
             value={dateTo}
@@ -269,7 +269,7 @@ export default function AdminInsightsPage() {
               </div>
               <p className={`text-3xl font-bold ${metric.valueColor}`}>{metric.value}</p>
               <p className="text-xs text-gray-500 mt-2">{metric.description}</p>
-              <p className="text-xs text-gray-400 mt-1">・{metric.point}</p>
+              <p className="text-xs text-gray-600 mt-1">・{metric.point}</p>
             </motion.div>
           ))}
         </div>
@@ -361,7 +361,7 @@ export default function AdminInsightsPage() {
                       className="h-full bg-amber-400 rounded-full"
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">{opt.detail}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{opt.detail}</p>
                 </div>
               ))}
             </div>
@@ -426,7 +426,7 @@ export default function AdminInsightsPage() {
                 <p className="text-xs text-gray-500 mb-1">{item.label}</p>
                 <p className="text-lg font-bold">
                   {item.value}
-                  {item.unit && <span className="text-sm font-normal text-gray-400">{item.unit}</span>}
+                  {item.unit && <span className="text-sm font-normal text-gray-600">{item.unit}</span>}
                 </p>
               </div>
             ))}

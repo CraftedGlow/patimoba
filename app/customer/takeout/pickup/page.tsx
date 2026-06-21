@@ -315,7 +315,7 @@ export default function TakeoutPickupPage() {
                   if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear((y) => y - 1); }
                   else setCurrentMonth((m) => m - 1);
                 }}
-                className="p-1 text-gray-400 hover:text-gray-600 text-xl leading-none"
+                className="p-1 text-gray-600 hover:text-gray-600 text-xl leading-none"
               >‹</button>
               <div className="text-sm font-bold">{currentYear}年{currentMonth + 1}月</div>
               <button
@@ -323,13 +323,13 @@ export default function TakeoutPickupPage() {
                   if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear((y) => y + 1); }
                   else setCurrentMonth((m) => m + 1);
                 }}
-                className="p-1 text-gray-400 hover:text-gray-600 text-xl leading-none"
+                className="p-1 text-gray-600 hover:text-gray-600 text-xl leading-none"
               >›</button>
             </div>
 
             <div className="grid grid-cols-7 gap-0 text-center">
               {weekdays.map((wd, wi) => (
-                <div key={wd} className={`text-xs font-medium py-1.5 ${wi === 0 ? "text-red-500" : wi === 6 ? "text-blue-500" : "text-gray-400"}`}>{wd}</div>
+                <div key={wd} className={`text-xs font-medium py-1.5 ${wi === 0 ? "text-red-500" : wi === 6 ? "text-blue-500" : "text-gray-600"}`}>{wd}</div>
               ))}
               {calendarCells.map((day, i) => {
                 if (day === null) return <div key={`empty-${i}`} />;
@@ -376,7 +376,7 @@ export default function TakeoutPickupPage() {
         <div className="mb-6">
           <label className="block text-sm font-bold mb-2">時刻を選択</label>
           {timeSlots.length === 0 ? (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-600">
               {isSameDay ? "現在、当日注文の受付時間外です" : selectedDate ? "この日は営業していません" : "日付を選択してください"}
             </p>
           ) : (
@@ -400,7 +400,7 @@ export default function TakeoutPickupPage() {
           whileTap={{ scale: 0.98 }}
           onClick={handleProceed}
           disabled={!canProceed}
-          className="w-full md:max-w-md md:mx-auto md:block bg-amber-400 hover:bg-amber-500 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-3.5 rounded-full text-base transition-colors"
+          className="w-full md:max-w-md md:mx-auto md:block bg-amber-400 hover:bg-amber-500 disabled:bg-gray-200 disabled:text-gray-600 text-white font-bold py-3.5 rounded-full text-base transition-colors"
         >
           注文内容の確認へ
         </motion.button>

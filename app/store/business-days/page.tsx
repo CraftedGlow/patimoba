@@ -469,7 +469,7 @@ export default function BusinessDaysPage() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs md:text-sm text-gray-400">未設定</span>
+                  <span className="text-xs md:text-sm text-gray-600">未設定</span>
                 )}
                 <motion.button
                   type="button"
@@ -640,7 +640,7 @@ export default function BusinessDaysPage() {
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-lg relative sticky top-6">
               <button
                 onClick={() => setShowEditPanel(false)}
-                className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+                className="absolute top-3 right-3 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -684,7 +684,7 @@ export default function BusinessDaysPage() {
                     placeholder="例: ケーキの日、定休のためお休み など"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white resize-none"
                   />
-                  <p className="text-[11px] text-gray-400 mt-0.5">最大80文字</p>
+                  <p className="text-[11px] text-gray-600 mt-0.5">最大80文字</p>
                 </div>
               </div>
 
@@ -740,7 +740,7 @@ export default function BusinessDaysPage() {
               <button
                 type="button"
                 onClick={() => setShowHolidayModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

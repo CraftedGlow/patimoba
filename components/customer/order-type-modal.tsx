@@ -233,7 +233,7 @@ export function OrderTypeModal({
               <h2 className="text-base font-bold text-gray-900 text-center leading-snug">
                 ご注文方法を選択してください
               </h2>
-              <p className="text-xs text-gray-400 text-center mt-1">
+              <p className="text-xs text-gray-600 text-center mt-1">
                 シーンに合わせてお選びいただけます
               </p>
 
@@ -246,7 +246,7 @@ export function OrderTypeModal({
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <span className="text-[7px] text-gray-400 font-medium leading-tight text-center px-0.5">
+                    <span className="text-[7px] text-gray-600 font-medium leading-tight text-center px-0.5">
                       {store.name.slice(0, 4)}
                     </span>
                   )}
@@ -266,13 +266,13 @@ export function OrderTypeModal({
               >
                 <div className="flex items-center gap-3 mb-1.5">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sameDayOk ? "bg-amber-100" : "bg-gray-100"}`}>
-                    <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-400"}`} />
+                    <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-600"}`} />
                   </div>
-                  <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-400"}`}>
+                  <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-600"}`}>
                     当日受取注文
                   </span>
                 </div>
-                <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-400"}`}>
+                <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-600"}`}>
                   本日お店に並んでいる商品からご注文いただけます。
                 </p>
                 {sameDayOk && sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (

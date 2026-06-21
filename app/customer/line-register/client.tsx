@@ -245,7 +245,7 @@ export function LineRegisterClient({
             登録して店舗を選ぶ
           </motion.button>
 
-          <p className="text-center text-xs text-gray-400 mt-3">
+          <p className="text-center text-xs text-gray-600 mt-3">
             登録することで、<Link href="/customer/terms" className="underline underline-offset-2">利用規約</Link>および<Link href="/customer/privacy" className="underline underline-offset-2">プライバシーポリシー</Link>に同意したものとみなします
           </p>
 

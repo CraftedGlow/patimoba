@@ -527,7 +527,7 @@ export function CustomTab() {
                           onClick={() => handleAddPresetOption(preset)}
                           className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
                             added
-                              ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                              ? "border-gray-200 bg-gray-100 text-gray-600 cursor-not-allowed"
                               : "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
                           }`}
                         >
@@ -586,7 +586,7 @@ export function CustomTab() {
                           </motion.button>
                           <button
                             onClick={() => setEditId(null)}
-                            className="text-gray-400 hover:text-gray-600 p-1"
+                            className="text-gray-600 hover:text-gray-600 p-1"
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -688,7 +688,7 @@ export function CustomTab() {
             <div className="flex flex-wrap gap-2">
               {(subTab === "ろうそく" ? candles : options).length === 0 &&
               subTab === "オプション" ? (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-600">
                   左の定番をタップするとここに表示されます
                 </p>
               ) : (
@@ -744,7 +744,7 @@ export function CustomTab() {
             >
               <button
                 onClick={() => setToastMsg(null)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600"
               >
                 <X className="w-5 h-5" />
               </button>

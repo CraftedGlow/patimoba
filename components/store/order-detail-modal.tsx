@@ -217,7 +217,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                     {item.options.filter(opt => opt.groupName === "ろうそく").map((opt, j) => (
                       <div key={`candle-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
                         ろうそく：{opt.itemName}{opt.quantity != null && `×${opt.quantity}本`}
-                        {opt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
+                        {opt.priceDelta > 0 && <span className="text-gray-600 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
                       </div>
                     ))}
 
@@ -244,7 +244,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                       return (
                         <div className="text-xs text-gray-500 mt-0.5 ml-2">
                           のし：{noshiOpt.itemName}{purpose && `（${purpose}）`}{displayName && `「${displayName}」`}
-                          {noshiOpt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{noshiOpt.priceDelta.toLocaleString()}</span>}
+                          {noshiOpt.priceDelta > 0 && <span className="text-gray-600 ml-1">+¥{noshiOpt.priceDelta.toLocaleString()}</span>}
                         </div>
                       );
                     })()}
@@ -255,7 +255,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                     ).map((opt, j) => (
                       <div key={`other-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
                         {opt.groupName}：{opt.itemName}
-                        {opt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
+                        {opt.priceDelta > 0 && <span className="text-gray-600 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
                       </div>
                     ))}
                   </div>

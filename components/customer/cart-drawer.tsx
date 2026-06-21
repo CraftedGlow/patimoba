@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
@@ -48,35 +49,28 @@ export function CartDrawer({
 }: CartDrawerProps) {
   const router = useRouter();
   const { items, itemCount, total, updateQuantity, removeItem, clear } = useCart();
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const handleProceed = () => {
     onClose();
     router.push(proceedPath);
   };
 
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black z-[60]"
-            onClick={onClose}
-          />
-
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-3xl max-h-[85vh] flex flex-col"
-          >
-            <div className="flex items-center justify-center pt-3 pb-1">
-              <div className="w-10 h-1 rounded-full bg-gray-300" />
-            </div>
+  const panelContent = (
+    <>
+      {!isDesktop && (
+        <div className="flex items-center justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
+        </div>
+      )}
 
             <div className="flex items-center justify-between px-5 pb-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
@@ -284,7 +278,49 @@ export function CartDrawer({
                 </div>
               </>
             )}
-          </motion.div>
+    </>
+  );
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 bg-black z-[60]"
+            onClick={onClose}
+          />
+
+          {isDesktop ? (
+            <div
+              className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+              onClick={onClose}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-3xl shadow-2xl max-h-[85vh] w-full max-w-md flex flex-col"
+              >
+                {panelContent}
+              </motion.div>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-3xl max-h-[85vh] flex flex-col"
+            >
+              {panelContent}
+            </motion.div>
+          )}
         </>
       )}
     </AnimatePresence>

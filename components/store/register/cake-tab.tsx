@@ -8,7 +8,6 @@ import type { ProductCustomOption, ProductCustomOptionValue } from "@/lib/types"
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useProductTypes } from "@/hooks/use-product-types";
-import { useProductCategories } from "@/hooks/use-product-categories";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
 import { useNoshi } from "@/hooks/use-noshi";
@@ -51,7 +50,6 @@ export function CakeTab() {
   const { user } = useAuth();
   const storeId = user?.storeId ?? null;
   const { productTypes } = useProductTypes();
-  const { categories: productCategories } = useProductCategories(storeId ?? undefined);
 
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -467,21 +465,15 @@ export function CakeTab() {
           ))}
         </select>
 
-        {/* 商品名 (product_categories からドロップダウン + 自由入力) */}
+        {/* 商品名 */}
         <div className="relative">
           <input
             type="text"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
             placeholder="商品名"
-            list="product-name-list"
             className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
           />
-          <datalist id="product-name-list">
-            {productCategories.map((c) => (
-              <option key={c.id} value={c.name} />
-            ))}
-          </datalist>
         </div>
 
         {/* 画像アップロード */}

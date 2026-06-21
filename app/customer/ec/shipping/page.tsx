@@ -34,7 +34,7 @@ export default function ECShippingPage() {
 
       <StepProgress currentStep={3} steps={ecSteps} />
 
-      <div className="px-4 pb-8">
+      <div className="px-4 pb-8 max-w-[1100px] mx-auto">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-amber-500" />
           配送先住所

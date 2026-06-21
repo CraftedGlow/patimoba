@@ -147,7 +147,20 @@ export function NoshiTab() {
 
             {/* Supported Purposes */}
             <div>
-              <label className="block text-xs font-bold text-gray-600 mb-2">対応用途（複数選択可）</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-bold text-gray-600">対応用途（複数選択可）</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedPurposes((prev) =>
+                      prev.length === NOSHI_PRESETS.length ? [] : [...NOSHI_PRESETS]
+                    )
+                  }
+                  className="text-xs font-bold text-amber-600 hover:text-amber-700"
+                >
+                  {selectedPurposes.length === NOSHI_PRESETS.length ? "すべて解除" : "すべて選択"}
+                </button>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {NOSHI_PRESETS.map((p) => {
                   const active = selectedPurposes.includes(p);

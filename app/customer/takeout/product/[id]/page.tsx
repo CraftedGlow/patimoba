@@ -414,7 +414,7 @@ export default function TakeoutProductDetailPage() {
           {product.noshi_enabled && noshiItems.length > 0 && (
             <div className="mt-6 space-y-4">
               {/* Step 1: のしを使うかチェック */}
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer mt-1">
                 <div
                   onClick={() => {
                     setUseNoshi((v) => !v);

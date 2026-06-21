@@ -80,7 +80,10 @@ export default function TakeoutProductDetailPage() {
 
   if (!product) return null;
 
-  const customOptions = product.custom_options || [];
+  const isWholeCake = product.is_preorder_required;
+  // ホールケーキの「ろうそく」「メッセージプレート」は次のカスタマイズフロー
+  // (whole-cake/page.tsx) 側の専用UIで扱うため、詳細ページでは表示しない
+  const customOptions = isWholeCake ? [] : (product.custom_options || []);
   const maxQty = 10;
 
   // 期間限定
@@ -174,6 +177,17 @@ export default function TakeoutProductDetailPage() {
 
     // カート追加後は商品一覧に戻る
     router.push(selectedStoreId ? `/customer/takeout/products?store=${selectedStoreId}` : "/customer/takeout/products");
+  };
+
+  const handleProceedToWholeCake = () => {
+    const params = new URLSearchParams();
+    params.set("cakeId", product.id);
+    if (useNoshi && selectedNoshiDesign) {
+      params.set("noshiId", selectedNoshiDesign.id);
+      if (selectedNoshiPurpose) params.set("noshiPurpose", selectedNoshiPurpose);
+      if (noshiName.trim()) params.set("noshiName", noshiName.trim());
+    }
+    router.push(`/customer/takeout/whole-cake?${params.toString()}`);
   };
 
   return (
@@ -414,7 +428,7 @@ export default function TakeoutProductDetailPage() {
           {product.noshi_enabled && noshiItems.length > 0 && (
             <div className="mt-6 space-y-4">
               {/* Step 1: のしを使うかチェック */}
-              <label className="flex items-center gap-3 cursor-pointer mt-1">
+              <label className="flex items-center gap-3 cursor-pointer mt-2">
                 <div
                   onClick={() => {
                     setUseNoshi((v) => !v);
@@ -426,7 +440,7 @@ export default function TakeoutProductDetailPage() {
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${useNoshi ? "translate-x-4" : ""}`} />
                 </div>
-                <span className="text-sm text-gray-700 font-medium">のしを付ける</span>
+                <span className="text-[20px] text-gray-700 font-medium">のしを付ける</span>
               </label>
 
               {useNoshi && (
@@ -516,71 +530,73 @@ export default function TakeoutProductDetailPage() {
         </motion.div>
       </div>
 
-      {/* Sticky bottom: 価格・個数・カートボタン */}
+      {/* Sticky bottom: 価格・個数・カートボタン（ホールケーキは詳細入力に進むボタンのみ） */}
       <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-5 pt-2 pb-5 max-w-lg mx-auto">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <p className="flex items-baseline gap-0.5">
-              <span className="text-3xl font-bold text-gray-900 tabular-nums">
-                {((product.base_price + optionsAdditional + noshiAdditional) * quantity).toLocaleString()}
-              </span>
-              <span className="text-lg font-bold text-gray-900">円</span>
-            </p>
-            {quantity > 1 && (
-              <p className="text-xs text-gray-500">
-                ¥{(product.base_price + optionsAdditional + noshiAdditional).toLocaleString()} × {quantity}
+        {!isWholeCake && (
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="flex items-baseline gap-0.5">
+                <span className="text-3xl font-bold text-gray-900 tabular-nums">
+                  {((product.base_price + optionsAdditional + noshiAdditional) * quantity).toLocaleString()}
+                </span>
+                <span className="text-lg font-bold text-gray-900">円</span>
               </p>
-            )}
-          </div>
-
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowQuantityDropdown(!showQuantityDropdown)}
-              className="rounded-lg px-4 py-2 min-w-[4.5rem] flex items-center justify-center gap-2 bg-[#FFF9C4] border border-amber-200/80 shadow-sm"
-            >
-              <span className="font-bold text-lg text-gray-900 tabular-nums">{quantity}</span>
-              <svg className={`w-4 h-4 text-gray-500 transition-transform ${showQuantityDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            <AnimatePresence>
-              {showQuantityDropdown && (
-                <>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40" onClick={() => setShowQuantityDropdown(false)} />
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute bottom-full right-0 mb-2 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[5.5rem] max-h-52 overflow-y-auto"
-                  >
-                    {Array.from({ length: maxQty }, (_, i) => i + 1).map((num) => (
-                      <button
-                        key={num}
-                        type="button"
-                        onClick={() => { setQuantity(num); setShowQuantityDropdown(false); }}
-                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-[#FFFDE7] transition-colors flex items-center gap-2"
-                      >
-                        {quantity === num && <span className="text-amber-600 font-bold">&#10003;</span>}
-                        <span className="font-medium text-gray-900">{num}</span>
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
+              {quantity > 1 && (
+                <p className="text-xs text-gray-500">
+                  ¥{(product.base_price + optionsAdditional + noshiAdditional).toLocaleString()} × {quantity}
+                </p>
               )}
-            </AnimatePresence>
+            </div>
+
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowQuantityDropdown(!showQuantityDropdown)}
+                className="rounded-lg px-4 py-2 min-w-[4.5rem] flex items-center justify-center gap-2 bg-[#FFF9C4] border border-amber-200/80 shadow-sm"
+              >
+                <span className="font-bold text-lg text-gray-900 tabular-nums">{quantity}</span>
+                <svg className={`w-4 h-4 text-gray-500 transition-transform ${showQuantityDropdown ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              <AnimatePresence>
+                {showQuantityDropdown && (
+                  <>
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40" onClick={() => setShowQuantityDropdown(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute bottom-full right-0 mb-2 bg-white border border-gray-100 rounded-xl shadow-xl z-50 py-1.5 min-w-[5.5rem] max-h-52 overflow-y-auto"
+                    >
+                      {Array.from({ length: maxQty }, (_, i) => i + 1).map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => { setQuantity(num); setShowQuantityDropdown(false); }}
+                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-[#FFFDE7] transition-colors flex items-center gap-2"
+                        >
+                          {quantity === num && <span className="text-amber-600 font-bold">&#10003;</span>}
+                          <span className="font-medium text-gray-900">{num}</span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
+        )}
 
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={handleAddToCart}
+          onClick={isWholeCake ? handleProceedToWholeCake : handleAddToCart}
           className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-full text-base shadow-md shadow-amber-200/60 transition-colors"
         >
-          カートに追加
+          {isWholeCake ? "詳細入力に進む" : "カートに追加"}
         </motion.button>
       </div>
 

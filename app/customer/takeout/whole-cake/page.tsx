@@ -18,6 +18,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { uploadPrintPhoto } from "@/lib/upload-image";
 import { supabase } from "@/lib/supabase";
+import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
 import type {
   UICartItem,
   CartCandleEntry,
@@ -35,6 +36,15 @@ export default function WholeCakePage() {
   const cakeIdParam = searchParams.get("cakeId");
   const mode = searchParams.get("mode");
   const isPrintMode = mode === "print";
+  const noshiIdParam = searchParams.get("noshiId");
+  const noshiPurposeParam = searchParams.get("noshiPurpose") || undefined;
+  const noshiNameParam = searchParams.get("noshiName") || undefined;
+  const [noshiDesign, setNoshiDesign] = useState<NoshiItem | null>(null);
+
+  useEffect(() => {
+    if (!noshiIdParam) { setNoshiDesign(null); return; }
+    fetchNoshiByIds([noshiIdParam]).then((items) => setNoshiDesign(items[0] ?? null));
+  }, [noshiIdParam]);
 
   const { selectedStoreId, profile,
     points, } = useCustomerContext();
@@ -183,7 +193,7 @@ export default function WholeCakePage() {
     }, 0);
   }, 0);
 
-  const total = sizePrice + candleTotal + decorationTotal;
+  const total = sizePrice + candleTotal + decorationTotal + (noshiDesign?.price ?? 0);
 
   const handlePrintPhotoUpload = async (file: File) => {
     if (!selectedStoreId) return;
@@ -257,6 +267,15 @@ export default function WholeCakePage() {
         messagePlate: messageText || undefined,
         allergyNote: allergyNote || undefined,
         printPhotoUrl: printPhotoUrl || undefined,
+        ...(noshiDesign ? {
+          noshi: {
+            id: noshiDesign.id,
+            name: noshiDesign.name,
+            purpose: noshiPurposeParam,
+            displayName: noshiNameParam,
+            price: noshiDesign.price,
+          },
+        } : {}),
       },
     };
   };

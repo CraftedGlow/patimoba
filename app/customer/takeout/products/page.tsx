@@ -96,7 +96,7 @@ function WholeCakeCard({ cake }: { cake: WholeCakeProduct }) {
     : 0;
 
   return (
-    <Link href={`/customer/takeout/whole-cake?cakeId=${cake.id}`}>
+    <Link href={`/customer/takeout/product/${cake.id}`}>
       <motion.div
         className="group cursor-pointer"
         whileHover={{ y: -2 }}

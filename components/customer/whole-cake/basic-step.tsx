@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { motion } from "framer-motion";
-import { ChartCandlestick as CandlestickChart, X, Check, ImagePlus } from "lucide-react";
+import { X, Check, ImagePlus } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import type { WholeCakeProduct } from "@/lib/types";
 import type { CandleOption } from "@/hooks/use-whole-cakes";
@@ -252,7 +252,7 @@ export function WholeCakeBasicStep({
                     onClick={addCandle}
                     className="flex items-center gap-1.5 border-2 border-amber-400 text-amber-600 font-bold px-5 py-2 rounded-lg text-sm hover:bg-amber-50 transition-colors"
                   >
-                    <CandlestickChart className="w-4 h-4" />
+                    <img src="/candle-icon.png" alt="" className="w-5 h-5" />
                     ろうそくを追加
                   </motion.button>
                 </div>

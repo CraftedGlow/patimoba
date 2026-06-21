@@ -500,6 +500,7 @@ export default function TakeoutConfirmPage() {
                 ...(c?.candles ?? []).map((cd) => cd.price * cd.quantity),
                 ...(c?.options ?? []).map((op) => op.price),
                 ...(c?.customOptions ?? []).map((o) => o.additionalPrice || 0),
+                c?.noshi?.price ?? 0,
               ].reduce((s, v) => s + v, 0);
               const lineTotal = (item.price + optSum) * item.quantity;
               return (
@@ -515,6 +516,11 @@ export default function TakeoutConfirmPage() {
                     {(c?.customOptions ?? []).map((o, i) => (
                       <p key={i} className="text-xs text-gray-500">{o.name}: {(o.values ?? []).join("、")}</p>
                     ))}
+                    {c?.noshi && (
+                      <p className="text-xs text-gray-500">
+                        のし：{c.noshi.name}{c.noshi.purpose && `（${c.noshi.purpose}）`}{c.noshi.displayName && `「${c.noshi.displayName}」`}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-gray-900">¥{lineTotal.toLocaleString()}</p>

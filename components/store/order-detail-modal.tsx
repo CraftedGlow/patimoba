@@ -235,9 +235,23 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                       );
                     })()}
 
-                    {/* その他オプション（ろうそく・メッセージ・プレート・アレルギー・サイズ以外） */}
+                    {/* のし（デザイン + 用途 + 名前を1行表示） */}
+                    {(() => {
+                      const noshiOpt = item.options.find(opt => opt.groupName === "のし");
+                      if (!noshiOpt) return null;
+                      const purpose = item.options.find(opt => opt.groupName === "のし用途")?.itemName ?? "";
+                      const displayName = item.options.find(opt => opt.groupName === "のし名前")?.itemName ?? "";
+                      return (
+                        <div className="text-xs text-gray-500 mt-0.5 ml-2">
+                          のし：{noshiOpt.itemName}{purpose && `（${purpose}）`}{displayName && `「${displayName}」`}
+                          {noshiOpt.priceDelta > 0 && <span className="text-gray-400 ml-1">+¥{noshiOpt.priceDelta.toLocaleString()}</span>}
+                        </div>
+                      );
+                    })()}
+
+                    {/* その他オプション（ろうそく・メッセージ・プレート・アレルギー・サイズ・のし以外） */}
                     {item.options.filter(opt =>
-                      !["ろうそく", "メッセージプレート", "メッセージ", "アレルギー", "サイズ"].includes(opt.groupName)
+                      !["ろうそく", "メッセージプレート", "メッセージ", "アレルギー", "サイズ", "のし", "のし用途", "のし名前"].includes(opt.groupName)
                     ).map((opt, j) => (
                       <div key={`other-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
                         {opt.groupName}：{opt.itemName}

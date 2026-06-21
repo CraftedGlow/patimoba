@@ -156,9 +156,20 @@ export function NoshiTab() {
                       prev.length === NOSHI_PRESETS.length ? [] : [...NOSHI_PRESETS]
                     )
                   }
-                  className="text-xs font-bold text-amber-600 hover:text-amber-700"
+                  className="flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:text-amber-700"
                 >
-                  {selectedPurposes.length === NOSHI_PRESETS.length ? "すべて解除" : "すべて選択"}
+                  <div
+                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                      selectedPurposes.length === NOSHI_PRESETS.length
+                        ? "bg-amber-400 border-amber-400"
+                        : "bg-white border-gray-300"
+                    }`}
+                  >
+                    {selectedPurposes.length === NOSHI_PRESETS.length && (
+                      <Check size={11} className="text-white" />
+                    )}
+                  </div>
+                  すべて選択
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">

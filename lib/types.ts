@@ -213,6 +213,13 @@ export interface UICartItem {
       values: string[]
       additionalPrice: number
     }[]
+    noshi?: {
+      id: string
+      name: string
+      purpose?: string
+      displayName?: string
+      price: number
+    }
   }
 }
 

@@ -17,6 +17,7 @@ function itemCartKey(item: UICartItem): string {
   const customOptKey = (c.customOptions || [])
     .map((o) => `${o.name}=${(o.values || []).join(",")}`)
     .join("|");
+  const noshiKey = c.noshi ? `${c.noshi.id}=${c.noshi.purpose || ""}=${c.noshi.displayName || ""}` : "";
   return [
     item.productId,
     c.sizeId || "",
@@ -24,6 +25,7 @@ function itemCartKey(item: UICartItem): string {
     optionKey,
     c.messagePlate || "",
     customOptKey,
+    noshiKey,
   ].join(":");
 }
 
@@ -129,9 +131,10 @@ export function CartDrawer({
                         (s, o) => s + (o.additionalPrice || 0),
                         0
                       );
+                      const noshiPrice = c?.noshi?.price ?? 0;
                       const itemTotal =
                         item.price * item.quantity +
-                        ((c?.sizePrice || 0) + candleSum + optionSum + customOptSum) * item.quantity;
+                        ((c?.sizePrice || 0) + candleSum + optionSum + customOptSum + noshiPrice) * item.quantity;
                       const key = itemCartKey(item);
 
                       return (
@@ -190,6 +193,13 @@ export function CartDrawer({
                                     {(o.values || []).join("、") || "（未入力）"}
                                   </p>
                                 ))}
+                                {c.noshi && (
+                                  <p className="text-xs text-gray-500">
+                                    のし: {c.noshi.name}
+                                    {c.noshi.purpose && `（${c.noshi.purpose}）`}
+                                    {c.noshi.displayName && `「${c.noshi.displayName}」`}
+                                  </p>
+                                )}
                               </div>
                             )}
 

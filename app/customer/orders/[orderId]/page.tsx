@@ -177,15 +177,23 @@ export default function CustomerOrderDetailPage() {
                     {(() => {
                       const plateOpt = opts.find(o => o.option_group_name_snapshot === "メッセージプレート");
                       const messageOpt = opts.find(o => o.option_group_name_snapshot === "メッセージ");
+                      const noshiOpt = opts.find(o => o.option_group_name_snapshot === "のし");
+                      const noshiPurposeOpt = opts.find(o => o.option_group_name_snapshot === "のし用途");
+                      const noshiNameOpt = opts.find(o => o.option_group_name_snapshot === "のし名前");
                       const filteredOpts = opts.filter(o =>
-                        o.option_group_name_snapshot !== "メッセージプレート" &&
-                        o.option_group_name_snapshot !== "メッセージ"
+                        !["メッセージプレート", "メッセージ", "のし", "のし用途", "のし名前"].includes(o.option_group_name_snapshot ?? "")
                       );
                       const combinedMessageLabel = (() => {
                         if (!plateOpt && !messageOpt) return null;
                         const plate = plateOpt?.option_item_name_snapshot ?? "";
                         const msg = messageOpt?.option_item_name_snapshot ?? "";
                         return `メッセージ：${plate}${msg ? `「${msg}」` : ""}`;
+                      })();
+                      const combinedNoshiLabel = (() => {
+                        if (!noshiOpt) return null;
+                        const purpose = noshiPurposeOpt?.option_item_name_snapshot ?? "";
+                        const name = noshiNameOpt?.option_item_name_snapshot ?? "";
+                        return `のし：${noshiOpt.option_item_name_snapshot ?? ""}${purpose ? `（${purpose}）` : ""}${name ? `「${name}」` : ""}`;
                       })();
                       return (
                         <>
@@ -206,6 +214,16 @@ export default function CustomerOrderDetailPage() {
                           {combinedMessageLabel && (
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-xs text-gray-500">{combinedMessageLabel}</span>
+                            </div>
+                          )}
+                          {combinedNoshiLabel && (
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-gray-500">{combinedNoshiLabel}</span>
+                              {(noshiOpt?.price_delta ?? 0) > 0 && (
+                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                  ¥{Number(noshiOpt?.price_delta).toLocaleString()}
+                                </span>
+                              )}
                             </div>
                           )}
                         </>

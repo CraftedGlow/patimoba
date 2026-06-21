@@ -78,9 +78,11 @@ export function useOrderMutations() {
           0
         )
         const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0)
+        const customOptionSum = (c.customOptions || []).reduce((s, op) => s + (op.additionalPrice || 0), 0)
+        const noshiPrice = c.noshi?.price ?? 0
         return (
           item.price * item.quantity +
-          ((c.sizePrice ?? 0) + candleSum + optionSum) * item.quantity
+          ((c.sizePrice ?? 0) + candleSum + optionSum + customOptionSum + noshiPrice) * item.quantity
         )
       }
 
@@ -104,7 +106,7 @@ export function useOrderMutations() {
       for (let i = 0; i < input.items.length; i++) {
         const item = input.items[i]
         const insertedId = insertedItems?.[i]?.id
-        if (!item.isCustomCake || !item.customization || !insertedId) continue
+        if (!item.customization || !insertedId) continue
         const c = item.customization
 
         const options: any[] = []
@@ -150,6 +152,39 @@ export function useOrderMutations() {
             option_item_name_snapshot: c.allergyNote,
             price_delta: 0,
           })
+        }
+        for (const co of c.customOptions || []) {
+          if (!co.values?.length) continue
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: co.name,
+            option_item_name_snapshot: co.values.join("、"),
+            price_delta: co.additionalPrice || 0,
+          })
+        }
+        if (c.noshi) {
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "のし",
+            option_item_name_snapshot: c.noshi.name,
+            price_delta: c.noshi.price || 0,
+          })
+          if (c.noshi.purpose) {
+            options.push({
+              order_item_id: insertedId,
+              option_group_name_snapshot: "のし用途",
+              option_item_name_snapshot: c.noshi.purpose,
+              price_delta: 0,
+            })
+          }
+          if (c.noshi.displayName) {
+            options.push({
+              order_item_id: insertedId,
+              option_group_name_snapshot: "のし名前",
+              option_item_name_snapshot: c.noshi.displayName,
+              price_delta: 0,
+            })
+          }
         }
 
         if (options.length > 0) {

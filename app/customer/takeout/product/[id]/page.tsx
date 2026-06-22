@@ -200,7 +200,12 @@ export default function TakeoutProductDetailPage() {
         onCartClick={() => setCartOpen(true)}
       />
 
-      <StepProgress currentStep={2} steps={steps} onStepClick={handleStepClick} />
+      <StepProgress
+        currentStep={2}
+        steps={steps}
+        onStepClick={handleStepClick}
+        maxWidthClassName="max-w-lg mx-auto"
+      />
 
       <div className="px-5 pb-56 flex-1 max-w-lg mx-auto w-full">
         {/* 商品画像 */}

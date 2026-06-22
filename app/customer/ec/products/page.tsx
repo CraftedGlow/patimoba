@@ -71,7 +71,7 @@ export default function ECProductsPage() {
         showBack
       />
 
-      <StepProgress currentStep={2} steps={ecSteps} />
+      <StepProgress currentStep={2} steps={ecSteps} maxWidthClassName="max-w-5xl mx-auto" />
 
       <div className={`px-4 max-w-5xl mx-auto ${itemCount > 0 ? "pb-28" : "pb-8"}`}>
         <div className="mb-4">

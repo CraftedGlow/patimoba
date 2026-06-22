@@ -364,7 +364,7 @@ export default function ECConfirmPage() {
         </Link>
       </div>
 
-      <StepProgress currentStep={4} steps={ecSteps} />
+      <StepProgress currentStep={4} steps={ecSteps} maxWidthClassName="md:max-w-2xl md:mx-auto" />
 
       <div className="px-4 md:px-8 pb-10 md:max-w-2xl md:mx-auto">
         <div className="text-center mb-5">

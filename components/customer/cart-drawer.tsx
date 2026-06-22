@@ -72,7 +72,11 @@ export function CartDrawer({
         </div>
       )}
 
-            <div className="flex items-center justify-between px-5 pb-3 border-b border-gray-100">
+            <div
+              className={`flex items-center justify-between px-6 pb-4 border-b border-gray-100 ${
+                isDesktop ? "pt-6" : "pt-2"
+              }`}
+            >
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-5 h-5 text-amber-500" />
                 <h2 className="text-lg font-bold text-gray-900">
@@ -109,7 +113,7 @@ export function CartDrawer({
               </div>
             ) : (
               <>
-                <div className="flex-1 overflow-y-auto px-5 py-4">
+                <div className="flex-1 overflow-y-auto px-6 py-4">
                   <div className="space-y-0">
                     {items.map((item, index) => {
                       const c = item.customization;
@@ -247,7 +251,7 @@ export function CartDrawer({
                   </div>
                 </div>
 
-                <div className="border-t border-gray-100 px-5 pt-4 pb-6 bg-white">
+                <div className="border-t border-gray-100 px-6 pt-4 pb-6 bg-white">
                   <div className="flex items-center justify-between mb-4">
                     {!readOnly ? (
                     <button
@@ -305,7 +309,7 @@ export function CartDrawer({
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-3xl shadow-2xl max-h-[85vh] w-full max-w-md flex flex-col"
+                className="bg-white rounded-2xl shadow-2xl max-h-[85vh] w-full max-w-md flex flex-col overflow-hidden"
               >
                 {panelContent}
               </motion.div>

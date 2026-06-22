@@ -301,7 +301,7 @@ export default function TakeoutPickupPage() {
         onCartClick={() => setCartOpen(true)}
       />
 
-      <StepProgress currentStep={3} steps={steps} />
+      <StepProgress currentStep={3} steps={steps} maxWidthClassName="md:max-w-2xl md:mx-auto" />
 
       <div className="px-4 md:px-8 lg:px-12 pb-8 md:max-w-2xl md:mx-auto">
         <h2 className="text-base font-bold mb-4">受け取り日時を選択</h2>

@@ -177,7 +177,7 @@ export default function ECProductDetailPage() {
         showBack
       />
 
-      <StepProgress currentStep={2} steps={ecSteps} />
+      <StepProgress currentStep={2} steps={ecSteps} maxWidthClassName="max-w-5xl mx-auto" />
 
       <div className="px-4 pb-8 lg:px-8 max-w-5xl mx-auto">
         <div className="lg:flex lg:gap-10 lg:items-start">

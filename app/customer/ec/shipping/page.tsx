@@ -32,9 +32,9 @@ export default function ECShippingPage() {
     <div className="min-h-screen bg-white">
       <CustomerHeader showCart showBack backHref="/customer/ec/products" />
 
-      <StepProgress currentStep={3} steps={ecSteps} />
+      <StepProgress currentStep={3} steps={ecSteps} maxWidthClassName="max-w-[800px] mx-auto" />
 
-      <div className="px-4 pb-8 max-w-[1100px] mx-auto">
+      <div className="px-4 pb-8 max-w-[800px] mx-auto">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-amber-500" />
           配送先住所

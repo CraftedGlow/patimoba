@@ -361,7 +361,12 @@ export default function TakeoutConfirmPage() {
         onCartClick={() => setCartOpen(true)}
       />
 
-      <StepProgress currentStep={4} steps={steps} onStepClick={handleStepClick} />
+      <StepProgress
+        currentStep={4}
+        steps={steps}
+        onStepClick={handleStepClick}
+        maxWidthClassName="md:max-w-2xl md:mx-auto"
+      />
 
       <div className="px-4 md:px-8 lg:px-12 pb-10 md:max-w-2xl md:mx-auto">
         <div className="text-center mb-5">

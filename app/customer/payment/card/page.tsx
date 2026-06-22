@@ -76,7 +76,7 @@ export default function CardAddPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
       </div>
-      <StepProgress currentStep={4} steps={steps} />
+      <StepProgress currentStep={4} steps={steps} maxWidthClassName="max-w-[1000px] mx-auto" />
       <div className="px-4 pb-10 max-w-[1000px] mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-lg font-bold">クレジットカードの追加</h2>

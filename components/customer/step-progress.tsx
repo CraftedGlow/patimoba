@@ -6,11 +6,17 @@ interface StepProgressProps {
   currentStep: number;
   steps: string[];
   onStepClick?: (step: number) => void;
+  maxWidthClassName?: string;
 }
 
-export function StepProgress({ currentStep, steps, onStepClick }: StepProgressProps) {
+export function StepProgress({
+  currentStep,
+  steps,
+  onStepClick,
+  maxWidthClassName = "",
+}: StepProgressProps) {
   return (
-    <div className="flex items-center justify-between px-4 pt-[10px] pb-3">
+    <div className={`flex items-center justify-between px-4 pt-[10px] pb-3 ${maxWidthClassName}`}>
       {steps.map((label, i) => {
         const stepNum = i + 1;
         const isActive = stepNum <= currentStep;

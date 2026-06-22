@@ -43,10 +43,10 @@ export function LineCallbackClient({ user }: { user: UserRow }) {
         className="flex flex-col items-center gap-8"
       >
         <Image
-          src="/スクリーンショット_2026-04-09_14.49.59.png"
+          src="/パティモバ　ロゴ.png"
           alt="パティモバ"
           width={280}
-          height={80}
+          height={93}
           className="h-14 w-auto"
           priority
         />

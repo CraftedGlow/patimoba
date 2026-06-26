@@ -69,7 +69,6 @@ export default function Home() {
       return;
     }
 
-    setIsLiffCallback(true);
     (async () => {
       // 認証不要なパスは直接遷移
       const liffState = params.get("liff.state");

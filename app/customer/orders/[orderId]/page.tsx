@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { Calendar, ShoppingBag, CreditCard, Package, Download } from "lucide-react";
@@ -52,11 +52,6 @@ function formatPickupDateTime(date: string | null, time: string | null): string 
   return time ? `${base} ${time.slice(0, 5)}` : base;
 }
 
-function formatDate(date: Date): string {
-  const wday = WEEKDAY[date.getDay()];
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${wday}）`;
-}
-
 function getOptionPrice(opt: OrderItemOption): number {
   const price = opt.price_delta ?? 0;
   const qty = opt.quantity ?? 1;
@@ -72,95 +67,6 @@ function getOptionLabel(opt: OrderItemOption): string {
   return name;
 }
 
-function ReceiptView({ order, recipientName, description }: { order: OrderDetail; recipientName: string; description: string }) {
-  const total = Number(order.total_amount);
-  const tax = Math.floor(total * 10 / 110);
-  const pretax = total - tax;
-  const hasDiscount = order.discount_amount != null && Number(order.discount_amount) > 0;
-  const store = order.stores;
-
-  return (
-    <div
-      style={{
-        width: "560px",
-        backgroundColor: "#ffffff",
-        fontFamily: "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif",
-        padding: "48px 56px",
-        boxSizing: "border-box",
-        color: "#1a1a1a",
-      }}
-    >
-      {/* タイトル */}
-      <div style={{ textAlign: "center", marginBottom: "32px" }}>
-        <div style={{ fontSize: "28px", fontWeight: "700", letterSpacing: "0.12em", borderTop: "2px solid #1a1a1a", borderBottom: "2px solid #1a1a1a", padding: "8px 0" }}>
-          領　収　書
-        </div>
-      </div>
-
-      {/* 宛名 */}
-      <div style={{ marginBottom: "24px" }}>
-        <span style={{ fontSize: "18px", fontWeight: "700", borderBottom: "1px solid #1a1a1a", paddingBottom: "4px" }}>
-          {recipientName || "　"}
-        </span>
-        <span style={{ fontSize: "14px", marginLeft: "4px" }}>御中</span>
-      </div>
-
-      {/* 金額 */}
-      <div style={{ marginBottom: "8px", display: "flex", alignItems: "baseline", gap: "4px" }}>
-        <span style={{ fontSize: "14px" }}>金額</span>
-        <span style={{ fontSize: "32px", fontWeight: "700", letterSpacing: "0.04em" }}>
-          ¥{total.toLocaleString()}
-        </span>
-        <span style={{ fontSize: "13px", color: "#555" }}>（税込）</span>
-      </div>
-
-      {/* 但し書き */}
-      <div style={{ fontSize: "13px", color: "#444", marginBottom: "24px" }}>
-        但し、{description || "お品代として"}
-      </div>
-
-      <div style={{ borderTop: "1px solid #ccc", marginBottom: "20px" }} />
-
-      {/* 内訳 */}
-      <div style={{ marginBottom: "8px", fontSize: "13px", color: "#555" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-          <span>10% 対象</span>
-          <span>¥{pretax.toLocaleString()}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-          <span>消費税（10%）</span>
-          <span>¥{tax.toLocaleString()}</span>
-        </div>
-        {hasDiscount && (
-          <div style={{ display: "flex", justifyContent: "space-between", color: "#2a7a2a" }}>
-            <span>ポイント割引</span>
-            <span>−¥{Number(order.discount_amount).toLocaleString()}</span>
-          </div>
-        )}
-      </div>
-
-      <div style={{ borderTop: "1px solid #ccc", marginBottom: "24px" }} />
-
-      {/* 発行日 */}
-      <div style={{ display: "flex", justifyContent: "flex-end", fontSize: "13px", color: "#444", marginBottom: "28px" }}>
-        発行日：{formatDate(new Date())}
-      </div>
-
-      {/* 発行者情報 */}
-      <div style={{ borderTop: "1px dashed #ccc", paddingTop: "20px", fontSize: "13px", color: "#444", lineHeight: "2" }}>
-        <div style={{ fontWeight: "700", fontSize: "15px", marginBottom: "4px" }}>{store?.name ?? ""}</div>
-        {store?.address && <div>{store.address}</div>}
-        {store?.phone && <div>TEL：{store.phone}</div>}
-        {store?.invoice_number && (
-          <div style={{ marginTop: "4px", fontSize: "12px", color: "#666" }}>
-            登録番号：{store.invoice_number}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function CustomerOrderDetailPage() {
   const params = useParams();
   const orderId = params?.orderId as string;
@@ -171,10 +77,6 @@ export default function CustomerOrderDetailPage() {
   const [showReceiptForm, setShowReceiptForm] = useState(false);
   const [recipientName, setRecipientName] = useState("");
   const [description, setDescription] = useState("お品代として");
-  const [downloading, setDownloading] = useState(false);
-  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
-
-  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!orderId) return;
@@ -195,27 +97,9 @@ export default function CustomerOrderDetailPage() {
     })();
   }, [orderId]);
 
-  const handleDownloadReceipt = async () => {
-    if (!receiptRef.current || !order) return;
-    setDownloading(true);
-    try {
-      const { toPng } = await import("html-to-image");
-
-      const el = receiptRef.current;
-      const dataUrl = await toPng(el, {
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-        width: el.offsetWidth,
-        height: el.scrollHeight,
-      });
-
-      setReceiptImageUrl(dataUrl);
-    } catch (e) {
-      console.error("領収書生成エラー:", e);
-      alert("領収書の生成に失敗しました。もう一度お試しください。");
-    } finally {
-      setDownloading(false);
-    }
+  const handleOpenReceipt = () => {
+    const url = `/api/receipt/${orderId}?recipient=${encodeURIComponent(recipientName)}&description=${encodeURIComponent(description)}`;
+    window.location.href = url;
   };
 
   if (loading) {
@@ -240,13 +124,6 @@ export default function CustomerOrderDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 領収書生成用の非表示要素 */}
-      <div style={{ position: "absolute", top: "-9999px", left: 0, pointerEvents: "none" }}>
-        <div ref={receiptRef}>
-          <ReceiptView order={order} recipientName={recipientName} description={description} />
-        </div>
-      </div>
-
       {/* ヘッダー */}
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <h1 className="text-lg font-bold text-gray-900 text-center">注文詳細</h1>
@@ -454,32 +331,10 @@ export default function CustomerOrderDetailPage() {
               </div>
 
               <button
-                onClick={() => { setShowReceiptForm(false); handleDownloadReceipt(); }}
-                disabled={downloading}
+                onClick={() => { setShowReceiptForm(false); handleOpenReceipt(); }}
                 style={{ width: "100%", padding: "14px", backgroundColor: "#f472b6", color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}
               >
-                {downloading ? "生成中..." : "領収書を出力"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 領収書画像モーダル */}
-        {receiptImageUrl && (
-          <div
-            style={{ position: "fixed", inset: 0, zIndex: 50, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", overflowY: "auto", padding: "16px" }}
-            onClick={() => setReceiptImageUrl(null)}
-          >
-            <div style={{ width: "100%", maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
-              <p style={{ color: "#fff", fontSize: "12px", textAlign: "center", marginBottom: "8px", opacity: 0.8 }}>
-                画像を長押しして保存できます
-              </p>
-              <img src={receiptImageUrl} style={{ width: "100%", height: "auto", borderRadius: "8px", display: "block" }} />
-              <button
-                onClick={() => setReceiptImageUrl(null)}
-                style={{ marginTop: "16px", width: "100%", padding: "12px", backgroundColor: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", cursor: "pointer" }}
-              >
-                閉じる
+                領収書を出力
               </button>
             </div>
           </div>

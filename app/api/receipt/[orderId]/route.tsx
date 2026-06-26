@@ -105,6 +105,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginTop: 4,
   },
+  issuerBlock: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  issuerLeft: {
+    flex: 1,
+  },
   storeName: {
     fontSize: 12,
     marginBottom: 4,
@@ -112,13 +120,26 @@ const styles = StyleSheet.create({
   issuerDetail: {
     fontSize: 9,
     color: "#444444",
+    lineHeight: 1.6,
+  },
+  invoiceBox: {
+    borderWidth: 1,
+    borderColor: "#cccccc",
+    borderRadius: 3,
+    padding: 8,
+    marginLeft: 16,
+    maxWidth: 160,
+    alignSelf: "flex-start",
+  },
+  invoiceLabel: {
+    fontSize: 7,
+    color: "#888888",
     marginBottom: 3,
-    lineHeight: 1.5,
   },
   invoiceNumber: {
-    fontSize: 8,
-    color: "#666666",
-    marginTop: 6,
+    fontSize: 9,
+    color: "#1a1a1a",
+    letterSpacing: 0.5,
   },
 });
 
@@ -128,7 +149,7 @@ type OrderData = {
   total_amount: number;
   subtotal: number;
   discount_amount: number | null;
-  stores: { name: string; address: string; phone: string | null; invoice_number: string | null } | null;
+  stores: { name: string; address: string; invoice_number: string | null } | null;
 };
 
 function ReceiptDocument({ order, recipientName, description }: {
@@ -190,12 +211,16 @@ function ReceiptDocument({ order, recipientName, description }: {
 
         <View style={styles.dashedDivider} />
 
-        <View>
-          {store?.name ? <Text style={styles.storeName}>{store.name}</Text> : null}
-          {store?.address ? <Text style={styles.issuerDetail}>{store.address}</Text> : null}
-          {store?.phone ? <Text style={styles.issuerDetail}>TEL：{store.phone}</Text> : null}
+        <View style={styles.issuerBlock}>
+          <View style={styles.issuerLeft}>
+            {store?.name ? <Text style={styles.storeName}>{store.name}</Text> : null}
+            {store?.address ? <Text style={styles.issuerDetail}>{store.address}</Text> : null}
+          </View>
           {store?.invoice_number ? (
-            <Text style={styles.invoiceNumber}>登録番号：{store.invoice_number}</Text>
+            <View style={styles.invoiceBox}>
+              <Text style={styles.invoiceLabel}>適格請求書発行事業者登録番号</Text>
+              <Text style={styles.invoiceNumber}>{store.invoice_number}</Text>
+            </View>
           ) : null}
         </View>
       </Page>
@@ -227,7 +252,7 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from("orders")
-    .select("id, order_no, total_amount, subtotal, discount_amount, stores(name, address, phone, invoice_number)")
+    .select("id, order_no, total_amount, subtotal, discount_amount, stores(name, address, invoice_number)")
     .eq("id", orderId)
     .maybeSingle();
 

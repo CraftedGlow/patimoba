@@ -227,6 +227,7 @@ export default function CustomerOrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [receiptImageUrl, setReceiptImageUrl] = useState<string | null>(null);
 
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -252,10 +253,6 @@ export default function CustomerOrderDetailPage() {
   const handleDownloadReceipt = async () => {
     if (!receiptRef.current || !order) return;
     setDownloading(true);
-
-    // window.open はユーザー操作の同期コンテキストで呼ばないとブロックされるため先に開く
-    const newTab = window.open("about:blank", "_blank");
-
     try {
       const { toPng } = await import("html-to-image");
 
@@ -267,20 +264,9 @@ export default function CustomerOrderDetailPage() {
         height: el.scrollHeight,
       });
 
-      if (newTab) {
-        newTab.document.write(
-          `<html><head><title>領収書_${order.order_no ?? order.id}</title></head>` +
-          `<body style="margin:0;background:#f5f5f5;display:flex;justify-content:center;padding:16px;">` +
-          `<img src="${dataUrl}" style="max-width:100%;height:auto;box-shadow:0 2px 12px rgba(0,0,0,0.15);" />` +
-          `</body></html>`
-        );
-        newTab.document.close();
-      } else {
-        alert("ポップアップがブロックされました。ブラウザの設定をご確認ください。");
-      }
+      setReceiptImageUrl(dataUrl);
     } catch (e) {
       console.error("領収書生成エラー:", e);
-      if (newTab) newTab.close();
       alert("領収書の生成に失敗しました。もう一度お試しください。");
     } finally {
       setDownloading(false);
@@ -482,6 +468,27 @@ export default function CustomerOrderDetailPage() {
               : "発送完了後、改めてご案内いたします。商品到着まで今しばらくお待ちください。"}
           </p>
         </div>
+
+        {/* 領収書モーダル */}
+        {receiptImageUrl && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 50, backgroundColor: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", overflowY: "auto", padding: "16px" }}
+            onClick={() => setReceiptImageUrl(null)}
+          >
+            <div style={{ width: "100%", maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
+              <p style={{ color: "#fff", fontSize: "12px", textAlign: "center", marginBottom: "8px", opacity: 0.8 }}>
+                画像を長押しして保存できます
+              </p>
+              <img src={receiptImageUrl} style={{ width: "100%", height: "auto", borderRadius: "8px", display: "block" }} />
+              <button
+                onClick={() => setReceiptImageUrl(null)}
+                style={{ marginTop: "16px", width: "100%", padding: "12px", backgroundColor: "rgba(255,255,255,0.15)", color: "#fff", border: "none", borderRadius: "8px", fontSize: "14px", cursor: "pointer" }}
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 領収書ダウンロード */}
         <button

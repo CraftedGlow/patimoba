@@ -57,6 +57,7 @@ export default function AdminStoreNewPage() {
   const [openTime, setOpenTime] = useState("10:00");
   const [closeTime, setCloseTime] = useState("19:00");
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
+  const [acceptsWalkin, setAcceptsWalkin] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -118,6 +119,7 @@ export default function AdminStoreNewPage() {
         logo_url: logoUrl,
         plan: selectedPlan,
         plan_options: selectedAddons.length > 0 ? selectedAddons : null,
+        accepts_walkin: acceptsWalkin,
       });
 
       if (imageFile) {
@@ -333,6 +335,33 @@ export default function AdminStoreNewPage() {
               >
                 {hours.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
+            </div>
+          </Field>
+
+          <Field label="受付タイプ">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setAcceptsWalkin(true)}
+                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  acceptsWalkin
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : "border-gray-200 text-gray-500 hover:border-gray-300"
+                }`}
+              >
+                当日受付あり
+              </button>
+              <button
+                type="button"
+                onClick={() => setAcceptsWalkin(false)}
+                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  !acceptsWalkin
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : "border-gray-200 text-gray-500 hover:border-gray-300"
+                }`}
+              >
+                予約のみ
+              </button>
             </div>
           </Field>
 

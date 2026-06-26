@@ -122,6 +122,7 @@ export interface Store {
   logoUrl: string | null
   lineOfficialAccountId: string | null
   plan: StorePlan
+  acceptsWalkin: boolean
 }
 
 export interface WholeCakeSize {
@@ -269,6 +270,7 @@ export function toUIStore(row: StoreRow): Store {
     logoUrl: row.logo_url,
     lineOfficialAccountId: row.line_official_account_id,
     plan: normalizeStorePlan(row.plan),
+    acceptsWalkin: row.accepts_walkin ?? true,
   }
 }
 

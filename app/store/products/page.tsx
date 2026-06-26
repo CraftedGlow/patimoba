@@ -35,10 +35,19 @@ export default function StoreProductsPage() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const [acceptsWalkin, setAcceptsWalkin] = useState(true);
 
   useEffect(() => {
     if (!storeId) return;
     let cancelled = false;
+    supabase
+      .from("stores")
+      .select("accepts_walkin")
+      .eq("id", storeId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setAcceptsWalkin(data?.accepts_walkin ?? true);
+      });
     // Note: max_per_day/max_per_order have been removed from schema; kept as UI state only.
     void cancelled;
     return () => {
@@ -323,14 +332,16 @@ export default function StoreProductsPage() {
 
                         {!isEc && (
                           <>
-                            {/* 当日状況トグル */}
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <ToggleSwitch
-                                enabled={product.same_day_order_allowed}
-                                onToggle={() => handleToggleSameDay(product)}
-                                colorOn="bg-red-500"
-                              />
-                            </div>
+                            {/* 当日状況トグル（当日受付あり店舗のみ表示） */}
+                            {acceptsWalkin && (
+                              <div onClick={(e) => e.stopPropagation()}>
+                                <ToggleSwitch
+                                  enabled={product.same_day_order_allowed}
+                                  onToggle={() => handleToggleSameDay(product)}
+                                  colorOn="bg-red-500"
+                                />
+                              </div>
+                            )}
 
                             {/* 最大個数・準備日数 */}
                             <span className="text-xs text-gray-500">
@@ -364,13 +375,13 @@ export default function StoreProductsPage() {
                     <span className="text-center">受付状況</span>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
+                  <div className={`${acceptsWalkin ? "grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem]" : "grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_8.75rem_4.5rem]"} grid bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700`}>
                     <span>商品名</span>
                     <span>商品画像</span>
                     <span>商品の説明</span>
                     <span>金額</span>
                     <span className="text-center">受付状況</span>
-                    <span className="text-center">当日状況</span>
+                    {acceptsWalkin && <span className="text-center">当日状況</span>}
                     <span className="text-center whitespace-nowrap px-0.5">最大個数（/日）</span>
                     <span className="text-center">準備日数</span>
                   </div>
@@ -442,7 +453,7 @@ export default function StoreProductsPage() {
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.02 }}
                       onClick={() => setSelectedProduct(product)}
-                      className={`grid grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem] px-4 py-2.5 items-center border-t border-gray-100 cursor-pointer transition-colors ${
+                      className={`${acceptsWalkin ? "grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_80px_8.75rem_4.5rem]" : "grid-cols-[1.2fr_70px_1.8fr_0.6fr_80px_8.75rem_4.5rem]"} grid px-4 py-2.5 items-center border-t border-gray-100 cursor-pointer transition-colors ${
                         isSelected
                           ? "bg-amber-50"
                           : isInactive
@@ -484,16 +495,18 @@ export default function StoreProductsPage() {
                           colorOn="bg-green-500"
                         />
                       </div>
-                      <div
-                        className="flex justify-center"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ToggleSwitch
-                          enabled={product.same_day_order_allowed}
-                          onToggle={() => handleToggleSameDay(product)}
-                          colorOn="bg-red-500"
-                        />
-                      </div>
+                      {acceptsWalkin && (
+                        <div
+                          className="flex justify-center"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ToggleSwitch
+                            enabled={product.same_day_order_allowed}
+                            onToggle={() => handleToggleSameDay(product)}
+                            colorOn="bg-red-500"
+                          />
+                        </div>
+                      )}
                       <span className="text-sm text-center">
                         {product.daily_max_quantity != null ? product.daily_max_quantity : "-"}
                       </span>

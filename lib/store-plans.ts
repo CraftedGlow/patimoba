@@ -7,6 +7,8 @@ export const PLAN_OPTIONS: {
   slug: StorePlanSlug;
   label: string;
   priceYen: number;
+  orderFeePercent: number;
+  paymentFeePercent: number;
   accentClass: string;
   badge?: string;
   features: string[];
@@ -15,6 +17,8 @@ export const PLAN_OPTIONS: {
     slug: "light",
     label: "ライト",
     priceYen: 0,
+    orderFeePercent: 7,
+    paymentFeePercent: 3.3,
     accentClass: "text-gray-800",
     features: [
       "予約・注文の基本管理",
@@ -26,23 +30,27 @@ export const PLAN_OPTIONS: {
     slug: "standard",
     label: "スタンダード",
     priceYen: 9800,
+    orderFeePercent: 3,
+    paymentFeePercent: 3.3,
     accentClass: "text-yellow-800",
     features: [
-      "ライトの全機能",
+      "全機能が使える（レポート除く）",
       "顧客管理・LINE連携",
-      "売上レポート（標準）",
+      "予約・注文・EC・配達・のし管理",
     ],
   },
   {
     slug: "premium",
     label: "プレミアム",
-    priceYen: 15000,
+    priceYen: 19800,
+    orderFeePercent: 1,
+    paymentFeePercent: 2.78,
     badge: "おすすめ",
     accentClass: "text-amber-800",
     features: [
       "スタンダードの全機能",
-      "記念日通知・詳細レポート",
-      "カスタムケーキ・焼き菓子EC・配達",
+      "詳細レポート・売上分析",
+      "決済手数料が最安",
       "優先サポート",
     ],
   },
@@ -74,7 +82,7 @@ export function normalizeStorePlan(raw: string | null | undefined): StorePlanSlu
 /** 管理画面のMRR試算（円・月）。表示用の目安。 */
 export function mrrYenForStorePlan(plan: string | null | undefined): number {
   const n = normalizeStorePlan(plan);
-  if (n === "premium") return 150_000;
+  if (n === "premium") return 198_000;
   if (n === "standard") return 98_000;
   return 0;
 }

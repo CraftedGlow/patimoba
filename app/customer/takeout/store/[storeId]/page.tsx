@@ -447,50 +447,52 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           ご注文方法を選択してください
         </h2>
 
-        {/* 当日受取注文 */}
-        <button
-          onClick={sameDayOk ? handleSameDay : undefined}
-          disabled={!sameDayOk}
-          className={`w-full border rounded-xl p-4 mb-3 text-left transition-shadow ${
-            sameDayOk
-              ? "border-gray-200 hover:shadow-md bg-white active:bg-gray-50"
-              : "border-gray-200 bg-white cursor-default"
-          }`}
-        >
-          <div className="flex items-center gap-3 mb-1.5">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sameDayOk ? "bg-amber-100" : "bg-gray-100"}`}>
-              <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-600"}`} />
+        {/* 当日受取注文（当日受付なしの店舗は非表示） */}
+        {store?.acceptsWalkin !== false && (
+          <button
+            onClick={sameDayOk ? handleSameDay : undefined}
+            disabled={!sameDayOk}
+            className={`w-full border rounded-xl p-4 mb-3 text-left transition-shadow ${
+              sameDayOk
+                ? "border-gray-200 hover:shadow-md bg-white active:bg-gray-50"
+                : "border-gray-200 bg-white cursor-default"
+            }`}
+          >
+            <div className="flex items-center gap-3 mb-1.5">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sameDayOk ? "bg-amber-100" : "bg-gray-100"}`}>
+                <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-600"}`} />
+              </div>
+              <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-600"}`}>
+                当日受取注文
+              </span>
             </div>
-            <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-600"}`}>
-              当日受取注文
-            </span>
-          </div>
-          <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-600"}`}>
-            本日お店に並んでいる商品からご注文いただけます。
-          </p>
-          {sameDayOk && sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
-            <p className="text-xs mt-1.5 font-bold text-amber-500">
-              {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}の間で受付しています。
+            <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-600"}`}>
+              本日お店に並んでいる商品からご注文いただけます。
             </p>
-          )}
-          {!sameDayOk && (
-            <div className="mt-2 bg-amber-50 rounded-lg px-3 py-2">
-              {sameDayStatus.reason === "closed_today" ? (
-                <p className="text-xs text-gray-700">本日は定休日のため受け付けていません。</p>
-              ) : (
-                <p className="text-xs text-gray-700">ただいま当日注文は受け付けていません。</p>
-              )}
-              {sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
-                <p className="text-xs text-gray-700 mt-0.5">
-                  <span className="font-bold text-amber-500">
-                    {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}
-                  </span>
-                  の間で受付しています。
-                </p>
-              )}
-            </div>
-          )}
-        </button>
+            {sameDayOk && sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
+              <p className="text-xs mt-1.5 font-bold text-amber-500">
+                {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}の間で受付しています。
+              </p>
+            )}
+            {!sameDayOk && (
+              <div className="mt-2 bg-amber-50 rounded-lg px-3 py-2">
+                {sameDayStatus.reason === "closed_today" ? (
+                  <p className="text-xs text-gray-700">本日は定休日のため受け付けていません。</p>
+                ) : (
+                  <p className="text-xs text-gray-700">ただいま当日注文は受け付けていません。</p>
+                )}
+                {sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
+                  <p className="text-xs text-gray-700 mt-0.5">
+                    <span className="font-bold text-amber-500">
+                      {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}
+                    </span>
+                    の間で受付しています。
+                  </p>
+                )}
+              </div>
+            )}
+          </button>
+        )}
 
         {/* 予約注文 */}
         <button

@@ -1181,6 +1181,7 @@ export type Database = {
       }
       stores: {
         Row: {
+          accepts_walkin: boolean
           address: string | null
           area: string | null
           blackout_periods: Json | null
@@ -1213,6 +1214,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepts_walkin?: boolean
           address?: string | null
           area?: string | null
           blackout_periods?: Json | null
@@ -1245,6 +1247,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepts_walkin?: boolean
           address?: string | null
           area?: string | null
           blackout_periods?: Json | null

@@ -54,10 +54,17 @@ export function StorePlanPicker({
                 </span>
               )}
               <p className={`font-bold text-base mb-1 ${opt.accentClass}`}>{opt.label}</p>
-              <p className="text-xl font-bold mb-3">
-                月額 {opt.priceYen.toLocaleString("ja-JP")}
-                <span className="text-base">円</span>
+              <p className="text-xl font-bold">
+                {opt.priceYen === 0 ? "月額無料" : `月額 ${opt.priceYen.toLocaleString("ja-JP")}円`}
               </p>
+              <div className="flex flex-col gap-0.5 mt-1 mb-3">
+                <p className="text-xs text-gray-500">
+                  注文手数料 <span className="font-bold text-gray-700">{opt.orderFeePercent}%</span>
+                </p>
+                <p className="text-xs text-gray-500">
+                  決済手数料 <span className="font-bold text-gray-700">{opt.paymentFeePercent}%</span>
+                </p>
+              </div>
               <ul className="space-y-1.5">
                 {opt.features.map((f) => (
                   <li key={f} className="text-xs text-gray-600">

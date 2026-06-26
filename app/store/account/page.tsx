@@ -36,7 +36,7 @@ const WEEKDAYS = [
   { label: "土", value: 6 },
 ];
 
-type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "holidays" | "blackout_add" | "saved" | null;
+type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "holidays" | "blackout_add" | "walkin_confirm" | "saved" | null;
 
 interface BlackoutPeriod {
   id: string;
@@ -110,6 +110,8 @@ export default function StoreAccountPage() {
   const [prepTimeHours, setPrepTimeHours] = useState("1.5");
   const [minFutureDays, setMinFutureDays] = useState("2");
   const [sameDayOrderAllowed, setSameDayOrderAllowed] = useState(true);
+  const [acceptsWalkin, setAcceptsWalkin] = useState(true);
+  const [pendingWalkin, setPendingWalkin] = useState(true);
 
   const [modalOpenTime, setModalOpenTime] = useState(openTime);
   const [modalCloseTime, setModalCloseTime] = useState(closeTime);
@@ -167,6 +169,8 @@ export default function StoreAccountPage() {
         if (orderRules?.min_future_days != null) {
           setMinFutureDays(String(orderRules.min_future_days));
         }
+
+        setAcceptsWalkin(store.accepts_walkin ?? true);
 
         // store_business_hours から通常営業時間を取得（最初の営業日を基準に）
         const { data: bhRows } = await supabase
@@ -315,6 +319,24 @@ export default function StoreAccountPage() {
     await supabase.from("stores").update({ blackout_periods: updated as any }).eq("id", storeId);
     setBlackoutPeriods(updated);
   }, [storeId, blackoutPeriods]);
+
+  const openWalkinConfirm = useCallback((newValue: boolean) => {
+    setPendingWalkin(newValue);
+    setModal("walkin_confirm");
+  }, []);
+
+  const saveAcceptsWalkin = useCallback(async () => {
+    if (!storeId) return;
+    setSaving(true);
+    try {
+      await supabase.from("stores").update({ accepts_walkin: pendingWalkin }).eq("id", storeId);
+      setAcceptsWalkin(pendingWalkin);
+      setModal("saved");
+      setTimeout(() => setModal(null), 1500);
+    } finally {
+      setSaving(false);
+    }
+  }, [storeId, pendingWalkin]);
 
   const toggleSameDayOrder = useCallback(async (value: boolean) => {
     if (!storeId) return;
@@ -684,6 +706,28 @@ export default function StoreAccountPage() {
               >
                 変更
               </motion.button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500 mb-2">当日受付</p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => openWalkinConfirm(!acceptsWalkin)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  acceptsWalkin ? "bg-amber-400" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    acceptsWalkin ? "translate-x-6" : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <span className="text-sm text-gray-700">
+                {acceptsWalkin ? "ON（当日受付あり）" : "OFF（予約のみ）"}
+              </span>
             </div>
           </div>
 
@@ -1117,6 +1161,39 @@ export default function StoreAccountPage() {
               >
                 {saving && <LineSpinner size={16} />}
                 以上の内容に変更
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modal === "walkin_confirm" && (
+          <Modal key="walkin_confirm" onClose={() => setModal(null)}>
+            <h2 className="text-lg font-bold text-center mb-4">当日受付設定の変更</h2>
+            <p className="text-sm text-gray-600 text-center mb-6">
+              {pendingWalkin
+                ? "当日受付を「あり」に変更しますか？\n顧客の注文画面に当日受取注文が表示されます。"
+                : "当日受付を「予約のみ」に変更しますか？\n顧客の注文画面から当日受取注文が非表示になります。"}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setModal(null)}
+                className="px-6 py-2 rounded-md border border-gray-300 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
+              >
+                キャンセル
+              </motion.button>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={saveAcceptsWalkin}
+                disabled={saving}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <LineSpinner size={16} />}
+                はい
               </motion.button>
             </div>
           </Modal>

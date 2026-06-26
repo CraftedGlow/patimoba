@@ -6,6 +6,20 @@ import { supabase } from "@/lib/supabase"
 export function useNewOrderAlert(storeId: string | undefined, onNewOrder?: () => void) {
   const [showAlert, setShowAlert] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const acceptsWalkinRef = useRef(true)
+
+  // 店舗の当日受付設定を取得
+  useEffect(() => {
+    if (!storeId) return
+    supabase
+      .from("stores")
+      .select("accepts_walkin")
+      .eq("id", storeId)
+      .maybeSingle()
+      .then(({ data }) => {
+        acceptsWalkinRef.current = data?.accepts_walkin ?? true
+      })
+  }, [storeId])
 
   const dismiss = useCallback(() => {
     if (audioRef.current) {
@@ -44,12 +58,10 @@ export function useNewOrderAlert(storeId: string | undefined, onNewOrder?: () =>
           filter: `store_id=eq.${storeId}`,
         },
         (payload) => {
-          const pickupDate: string | null = payload.new?.pickup_date ?? null
-          if (!pickupDate) return
-
-          // 受取日が今日の注文のみ対象
-          const today = new Date().toISOString().slice(0, 10)
-          if (pickupDate !== today) return
+          // 当日注文かつ当日受付ありの店舗のみ通知
+          const orderType: string | null = payload.new?.order_type ?? null
+          if (orderType !== "sameday") return
+          if (!acceptsWalkinRef.current) return
 
           if (!audioRef.current) {
             audioRef.current = new Audio("/sounds/order-notification.mp3")

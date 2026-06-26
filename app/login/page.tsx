@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,17 +8,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Store,
   ShieldCheck,
-  Users,
   ChevronRight,
   ArrowLeft,
-  MessageCircle,
   X,
 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, type UserType } from "@/lib/auth-context";
-import { completeLiffLogin } from "@/lib/liff-login";
 import { PasswordInput } from "@/components/ui/password-input";
-import { getLiffId } from "@/lib/get-liff-id";
 import { supabase } from "@/lib/supabase";
 
 type Role = "store" | "admin" | "customer" | null;
@@ -46,17 +42,6 @@ const roles = [
     iconColor: "text-sky-600",
     redirect: "/admin",
   },
-  {
-    id: "customer" as const,
-    label: "顧客ログイン",
-    description: "テイクアウト・EC注文",
-    icon: Users,
-    color:
-      "bg-emerald-50 border-emerald-200 hover:border-emerald-400 hover:bg-emerald-100/60",
-    iconBg: "bg-emerald-100",
-    iconColor: "text-emerald-600",
-    redirect: "/customer/takeout",
-  },
 ];
 
 export default function LoginPage() {
@@ -71,85 +56,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [liffLoading, setLiffLoading] = useState(false);
-  const [isLiffCallback, setIsLiffCallback] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
 
   const currentRole = roles.find((r) => r.id === selectedRole);
-
-  const loginWithLiff = useCallback(async (liff: any) => {
-    const { authUser, returnPath } = await completeLiffLogin(liff)
-    setUser(authUser)
-    router.replace(returnPath || "/customer/takeout")
-  }, [router, setUser])
-
-  // LINEからのリダイレクト戻りを処理
-  useEffect(() => {
-    const search = window.location.search
-    const isPending = !!sessionStorage.getItem("liff_login_pending")
-    // liff.state / liff.hback (LIFF SDK) または code + liffClientId (ミドルウェア経由) を検知
-    const hasLiffParams = search.includes("liff.") || search.includes("code=")
-    if (!isPending && !hasLiffParams) return
-
-    setIsLiffCallback(true)
-    setLiffLoading(true)
-    ;(async () => {
-      try {
-        const storeIdFromUrl = new URLSearchParams(window.location.search).get("storeId")
-        const liffId = await getLiffId(storeIdFromUrl)
-        if (!liffId) {
-          sessionStorage.removeItem("liff_login_pending")
-          setIsLiffCallback(false)
-          setLiffLoading(false)
-          return
-        }
-        const liff = (await import("@line/liff")).default
-        await liff.init({ liffId })
-        if (liff.isLoggedIn()) {
-          await loginWithLiff(liff)
-        } else {
-          sessionStorage.removeItem("liff_login_pending")
-          setIsLiffCallback(false)
-          setLiffLoading(false)
-        }
-      } catch (err: any) {
-        sessionStorage.removeItem("liff_login_pending")
-        setError(err.message || "LINEログインに失敗しました")
-        setIsLiffCallback(false)
-        setLiffLoading(false)
-      }
-    })()
-  }, [loginWithLiff])
-
-  const handleCustomerLogin = async () => {
-    setLiffLoading(true)
-    setError("")
-
-    try {
-      const storeIdFromUrl = new URLSearchParams(window.location.search).get("storeId")
-      const liffId = await getLiffId(storeIdFromUrl)
-      if (!liffId) {
-        setError("LIFFが設定されていません")
-        setLiffLoading(false)
-        return
-      }
-      const liff = (await import("@line/liff")).default
-      await liff.init({ liffId })
-
-      if (!liff.isLoggedIn()) {
-        sessionStorage.setItem("liff_login_pending", "1")
-        liff.login({ redirectUri: window.location.href })
-        return
-      }
-
-      await loginWithLiff(liff)
-    } catch (err: any) {
-      setError(err.message || "LINEログインに失敗しました")
-      setLiffLoading(false)
-    }
-  }
 
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -173,14 +84,6 @@ export default function LoginPage() {
     setPassword("");
     setError("");
   };
-
-  if (isLiffCallback) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <LineSpinner size={30} />
-      </div>
-    )
-  }
 
   return (
     <>
@@ -243,15 +146,10 @@ export default function LoginPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: i * 0.08 }}
                     onClick={() => {
-                      if (role.id === "customer") {
-                        handleCustomerLogin()
-                        return
-                      }
                       setSelectedRole(role.id)
                       setError("")
                     }}
-                    disabled={liffLoading}
-                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 ${role.color} disabled:opacity-60 disabled:cursor-not-allowed`}
+                    className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 ${role.color}`}
                   >
                     <div
                       className={`w-11 h-11 rounded-lg flex items-center justify-center ${role.iconBg}`}
@@ -266,18 +164,7 @@ export default function LoginPage() {
                         {role.description}
                       </div>
                     </div>
-                    {role.id === "customer" ? (
-                      liffLoading ? (
-                        <LineSpinner size={16} />
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs text-[#06C755] font-medium">
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          LINE
-                        </span>
-                      )
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-gray-600" />
-                    )}
+                    <ChevronRight className="w-4 h-4 text-gray-600" />
                   </motion.button>
                 ))}
               </div>

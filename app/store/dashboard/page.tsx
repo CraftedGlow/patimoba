@@ -6,7 +6,6 @@ import {
   DollarSign,
   Users,
   Building2,
-  Bell,
 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
@@ -28,24 +27,6 @@ type ConfirmAction = {
   isEc: boolean;
 };
 
-function playNotificationSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-    oscillator.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
-    oscillator.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-    oscillator.start(ctx.currentTime);
-    oscillator.stop(ctx.currentTime + 0.5);
-  } catch {
-    // ブラウザが未対応の場合は無視
-  }
-}
 
 export default function StoreDashboardPage() {
   const { storeId } = useStoreContext();
@@ -73,8 +54,6 @@ export default function StoreDashboardPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [newOrderAlert, setNewOrderAlert] = useState(false);
-  const audioLoopRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dateRef = useRef<HTMLDivElement>(null);
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -102,11 +81,11 @@ export default function StoreDashboardPage() {
     };
   }, [resetInactivityTimer]);
 
-  // Supabaseリアルタイム：新規注文通知
+  // Supabaseリアルタイム：データ再取得（通知はlayoutのNewOrderAlertが担当）
   useEffect(() => {
     if (!storeId) return;
     const channel = supabase
-      .channel(`new-orders-${storeId}`)
+      .channel(`dashboard-orders-${storeId}`)
       .on(
         "postgres_changes",
         {
@@ -116,36 +95,16 @@ export default function StoreDashboardPage() {
           filter: `store_id=eq.${storeId}`,
         },
         () => {
-          setNewOrderAlert(true);
           refetchOrders();
           refetchStats();
-          // 音声ループ開始
-          playNotificationSound();
-          if (!audioLoopRef.current) {
-            audioLoopRef.current = setInterval(() => {
-              playNotificationSound();
-            }, 2000);
-          }
         }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-      if (audioLoopRef.current) {
-        clearInterval(audioLoopRef.current);
-        audioLoopRef.current = null;
-      }
     };
   }, [storeId]);
-
-  const dismissNewOrderAlert = () => {
-    setNewOrderAlert(false);
-    if (audioLoopRef.current) {
-      clearInterval(audioLoopRef.current);
-      audioLoopRef.current = null;
-    }
-  };
 
   const handleConfirm = async () => {
     if (!confirmAction || confirmLoading) return;
@@ -462,42 +421,6 @@ export default function StoreDashboardPage() {
             order={wholeCakeDetailOrder}
             onClose={() => setWholeCakeDetailOrder(null)}
           />
-        )}
-      </AnimatePresence>
-
-      {/* 新規注文通知ポップアップ */}
-      <AnimatePresence>
-        {newOrderAlert && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black z-50"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-[60] p-8 w-[90%] max-w-sm text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
-                <Bell className="w-8 h-8 text-amber-500" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">新規注文が入りました</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                新しい注文を確認してください
-              </p>
-              <button
-                type="button"
-                onClick={dismissNewOrderAlert}
-                className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base transition-colors"
-              >
-                確認する
-              </button>
-            </motion.div>
-          </>
         )}
       </AnimatePresence>
 

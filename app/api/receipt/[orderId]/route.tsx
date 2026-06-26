@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, Font, renderToBuffer } from "@react-pdf/renderer";
-import path from "path";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-Font.register({
-  family: "NotoSansJP",
-  src: path.join(process.cwd(), "public", "fonts", "NotoSansJP-Regular.otf"),
-});
 
 const styles = StyleSheet.create({
   page: {
@@ -209,17 +203,26 @@ function ReceiptDocument({ order, recipientName, description }: {
   );
 }
 
+let fontRegistered = false;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { orderId: string } }
 ) {
   const { orderId } = params;
-  const url = new URL(req.url);
-  const recipientName = url.searchParams.get("recipient") ?? "";
-  const description = url.searchParams.get("description") ?? "お品代として";
+  const reqUrl = new URL(req.url);
+  const recipientName = reqUrl.searchParams.get("recipient") ?? "";
+  const description = reqUrl.searchParams.get("description") ?? "お品代として";
 
   if (!orderId) {
     return NextResponse.json({ error: "orderId required" }, { status: 400 });
+  }
+
+  // フォントを CDN URL で登録（serverless 環境ではファイルシステム不可）
+  if (!fontRegistered) {
+    const fontUrl = `${reqUrl.origin}/fonts/NotoSansJP-Regular.otf`;
+    Font.register({ family: "NotoSansJP", src: fontUrl });
+    fontRegistered = true;
   }
 
   const { data, error } = await supabaseAdmin
@@ -229,6 +232,7 @@ export async function GET(
     .maybeSingle();
 
   if (error || !data) {
+    console.error("Order fetch error:", error);
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
@@ -250,6 +254,7 @@ export async function GET(
     });
   } catch (e) {
     console.error("PDF generation error:", e);
-    return NextResponse.json({ error: "PDF generation failed" }, { status: 500 });
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: "PDF generation failed", detail: message }, { status: 500 });
   }
 }

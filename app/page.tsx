@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { completeLiffLogin } from "@/lib/liff-login";
@@ -12,7 +12,6 @@ const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp"
 export default function Home() {
   const router = useRouter();
   const { setUser } = useAuth();
-  const [isLiffCallback, setIsLiffCallback] = useState(false);
 
   const handleLiffCallback = useCallback(async (liffId: string, storeId?: string | null) => {
     if (!liffId) {
@@ -64,8 +63,11 @@ export default function Home() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    // LIFF 認証コールバック or liff.state によるパス転送
-    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state")) return;
+    // LIFF 認証コールバック or liff.state によるパス転送でなければ /login へ
+    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state")) {
+      router.replace("/login");
+      return;
+    }
 
     setIsLiffCallback(true);
     (async () => {
@@ -85,12 +87,6 @@ export default function Home() {
       handleLiffCallback(liffId, storeId);
     })();
   }, [handleLiffCallback, router]);
-
-  useEffect(() => {
-    if (!isLiffCallback) {
-      router.replace("/login");
-    }
-  }, [isLiffCallback, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">

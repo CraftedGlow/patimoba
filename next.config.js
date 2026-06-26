@@ -6,7 +6,7 @@ const nextConfig = {
   images: { unoptimized: true },
   transpilePackages: ["framer-motion"],
   experimental: {
-    serverComponentsExternalPackages: ["resend"],
+    serverComponentsExternalPackages: ["resend", "@react-pdf/renderer"],
   },
 };
 

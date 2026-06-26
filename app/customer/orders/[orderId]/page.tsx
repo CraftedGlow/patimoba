@@ -97,9 +97,20 @@ export default function CustomerOrderDetailPage() {
     })();
   }, [orderId]);
 
-  const handleOpenReceipt = () => {
-    const url = `/api/receipt/${orderId}?recipient=${encodeURIComponent(recipientName)}&description=${encodeURIComponent(description)}`;
-    window.location.href = url;
+  const handleOpenReceipt = async () => {
+    const path = `/api/receipt/${orderId}?recipient=${encodeURIComponent(recipientName)}&description=${encodeURIComponent(description)}`;
+    const absoluteUrl = `${window.location.origin}${path}`;
+    try {
+      const liff = (await import("@line/liff")).default;
+      if (liff.isInClient()) {
+        // LINEミニアプリ内では外部ブラウザで開く（保存ボタンが使える）
+        liff.openWindow({ url: absoluteUrl, external: true });
+        return;
+      }
+    } catch {
+      // LIFF未初期化やLIFF外の場合はフォールバック
+    }
+    window.location.href = absoluteUrl;
   };
 
   if (loading) {

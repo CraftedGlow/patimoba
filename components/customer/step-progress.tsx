@@ -16,7 +16,7 @@ export function StepProgress({
   maxWidthClassName = "",
 }: StepProgressProps) {
   return (
-    <div className={`flex items-center justify-between px-4 pt-[10px] pb-3 ${maxWidthClassName}`}>
+    <div className={`flex items-start px-4 pt-[10px] pb-3 ${maxWidthClassName}`}>
       {steps.map((label, i) => {
         const stepNum = i + 1;
         const isActive = stepNum <= currentStep;
@@ -29,7 +29,7 @@ export function StepProgress({
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && onStepClick(stepNum)}
-              className={`flex flex-col items-center min-w-[84px] ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+              className={`flex flex-col items-center flex-none ${isClickable ? "cursor-pointer" : "cursor-default"}`}
             >
               <motion.div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
@@ -53,7 +53,7 @@ export function StepProgress({
             </button>
             {i < steps.length - 1 && (
               <div
-                className={`flex-1 h-0.5 mx-[6px] mt-[-1rem] ${
+                className={`flex-1 h-0.5 mx-2 mt-[-0.875rem] ${
                   stepNum < currentStep ? "bg-amber-400" : "bg-gray-200"
                 }`}
               />

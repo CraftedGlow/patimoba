@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { motion } from "framer-motion";
 
 interface StepProgressProps {
@@ -16,7 +17,7 @@ export function StepProgress({
   maxWidthClassName = "",
 }: StepProgressProps) {
   return (
-    <div className={`flex items-start px-4 pt-[10px] pb-3 ${maxWidthClassName}`}>
+    <div className={`flex items-start justify-between px-4 pt-[10px] pb-3 ${maxWidthClassName}`}>
       {steps.map((label, i) => {
         const stepNum = i + 1;
         const isActive = stepNum <= currentStep;
@@ -24,12 +25,12 @@ export function StepProgress({
         const isClickable = onStepClick && stepNum < currentStep;
 
         return (
-          <div key={label} className="flex items-center flex-1 last:flex-none">
+          <Fragment key={label}>
             <button
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && onStepClick(stepNum)}
-              className={`flex flex-col items-center flex-none ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+              className={`flex flex-col items-center ${isClickable ? "cursor-pointer" : "cursor-default"}`}
             >
               <motion.div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
@@ -53,12 +54,12 @@ export function StepProgress({
             </button>
             {i < steps.length - 1 && (
               <div
-                className={`flex-1 h-0.5 mx-2 mt-[-0.875rem] ${
+                className={`flex-1 h-0.5 mx-2 mt-3.5 ${
                   stepNum < currentStep ? "bg-amber-400" : "bg-gray-200"
                 }`}
               />
             )}
-          </div>
+          </Fragment>
         );
       })}
     </div>

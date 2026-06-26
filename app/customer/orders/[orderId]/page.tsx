@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
-import { Calendar, ShoppingBag, CreditCard, Package } from "lucide-react";
+import { Calendar, ShoppingBag, CreditCard, Package, Download } from "lucide-react";
 
 type OrderItemOption = {
   option_group_name_snapshot: string | null;
@@ -52,6 +52,11 @@ function formatPickupDateTime(date: string | null, time: string | null): string 
   return time ? `${base} ${time.slice(0, 5)}` : base;
 }
 
+function formatDate(date: Date): string {
+  const wday = WEEKDAY[date.getDay()];
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日（${wday}）`;
+}
+
 function getOptionPrice(opt: OrderItemOption): number {
   const price = opt.price_delta ?? 0;
   const qty = opt.quantity ?? 1;
@@ -67,6 +72,153 @@ function getOptionLabel(opt: OrderItemOption): string {
   return name;
 }
 
+function ReceiptView({ order }: { order: OrderDetail }) {
+  const tax = Math.floor(Number(order.total_amount) * 10 / 110);
+  const hasDiscount = order.discount_amount != null && Number(order.discount_amount) > 0;
+
+  return (
+    <div
+      style={{
+        width: "560px",
+        backgroundColor: "#ffffff",
+        fontFamily: "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif",
+        padding: "48px 56px",
+        boxSizing: "border-box",
+        color: "#1a1a1a",
+      }}
+    >
+      {/* ヘッダー */}
+      <div style={{ textAlign: "center", marginBottom: "32px" }}>
+        <div style={{ fontSize: "22px", fontWeight: "700", letterSpacing: "0.04em", marginBottom: "4px" }}>
+          {order.stores?.name ?? ""}
+        </div>
+        <div style={{ fontSize: "13px", color: "#666", marginBottom: "20px" }}>
+          {order.stores?.address ?? ""}
+        </div>
+        <div
+          style={{
+            fontSize: "28px",
+            fontWeight: "700",
+            letterSpacing: "0.12em",
+            borderTop: "2px solid #1a1a1a",
+            borderBottom: "2px solid #1a1a1a",
+            padding: "8px 0",
+          }}
+        >
+          領　収　書
+        </div>
+      </div>
+
+      {/* メタ情報 */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "28px", fontSize: "13px", color: "#444" }}>
+        <div>発行日：{formatDate(new Date())}</div>
+        {order.order_no && <div>注文番号：{order.order_no}</div>}
+      </div>
+
+      {/* 商品明細 */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "24px", fontSize: "13px" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid #ccc" }}>
+            <th style={{ textAlign: "left", padding: "6px 4px", fontWeight: "600", color: "#555" }}>商品名</th>
+            <th style={{ textAlign: "center", padding: "6px 4px", fontWeight: "600", color: "#555", width: "48px" }}>数量</th>
+            <th style={{ textAlign: "right", padding: "6px 4px", fontWeight: "600", color: "#555", width: "96px" }}>金額</th>
+          </tr>
+        </thead>
+        <tbody>
+          {order.order_items.map((item, i) => {
+            const opts = (item.order_item_options ?? []).filter(
+              (o) => o.option_group_name_snapshot !== "アレルギー"
+            );
+            const plateOpt = opts.find(o => o.option_group_name_snapshot === "メッセージプレート");
+            const messageOpt = opts.find(o => o.option_group_name_snapshot === "メッセージ");
+            const filteredOpts = opts.filter(o =>
+              o.option_group_name_snapshot !== "メッセージプレート" &&
+              o.option_group_name_snapshot !== "メッセージ"
+            );
+            const combinedMessageLabel = (() => {
+              if (!plateOpt && !messageOpt) return null;
+              const plate = plateOpt?.option_item_name_snapshot ?? "";
+              const msg = messageOpt?.option_item_name_snapshot ?? "";
+              return `メッセージ：${plate}${msg ? `「${msg}」` : ""}`;
+            })();
+
+            return (
+              <>
+                <tr key={`item-${i}`} style={{ borderBottom: filteredOpts.length === 0 && !combinedMessageLabel ? "1px solid #eee" : undefined }}>
+                  <td style={{ padding: "8px 4px", fontWeight: "500" }}>{item.product_name_snapshot}</td>
+                  <td style={{ textAlign: "center", padding: "8px 4px" }}>×{item.quantity}</td>
+                  <td style={{ textAlign: "right", padding: "8px 4px" }}>¥{Number(item.subtotal).toLocaleString()}</td>
+                </tr>
+                {filteredOpts.map((opt, j) => (
+                  <tr key={`opt-${i}-${j}`}>
+                    <td colSpan={3} style={{ padding: "2px 4px 2px 16px", fontSize: "12px", color: "#777" }}>
+                      {getOptionLabel(opt)}
+                      {getOptionPrice(opt) > 0 && ` （+¥${getOptionPrice(opt).toLocaleString()}）`}
+                    </td>
+                  </tr>
+                ))}
+                {combinedMessageLabel && (
+                  <tr key={`msg-${i}`} style={{ borderBottom: "1px solid #eee" }}>
+                    <td colSpan={3} style={{ padding: "2px 4px 6px 16px", fontSize: "12px", color: "#777" }}>
+                      {combinedMessageLabel}
+                    </td>
+                  </tr>
+                )}
+              </>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* 金額合計 */}
+      <div style={{ borderTop: "1px solid #ccc", paddingTop: "16px", marginBottom: "28px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#555", marginBottom: "6px" }}>
+          <span>小計</span>
+          <span>¥{Number(order.subtotal).toLocaleString()}</span>
+        </div>
+        {hasDiscount && (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#2a7a2a", marginBottom: "6px" }}>
+            <span>ポイント割引</span>
+            <span>−¥{Number(order.discount_amount).toLocaleString()}</span>
+          </div>
+        )}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: "18px",
+            fontWeight: "700",
+            borderTop: "1px solid #1a1a1a",
+            paddingTop: "10px",
+            marginTop: "6px",
+          }}
+        >
+          <span>合計（税込）</span>
+          <span>¥{Number(order.total_amount).toLocaleString()}</span>
+        </div>
+        <div style={{ textAlign: "right", fontSize: "12px", color: "#777", marginTop: "4px" }}>
+          うち消費税（10%）：¥{tax.toLocaleString()}
+        </div>
+      </div>
+
+      {/* フッター */}
+      <div
+        style={{
+          textAlign: "center",
+          borderTop: "1px dashed #ccc",
+          paddingTop: "20px",
+          fontSize: "13px",
+          color: "#555",
+          lineHeight: "1.8",
+        }}
+      >
+        <div style={{ marginBottom: "4px" }}>上記金額正に領収いたしました</div>
+        {order.stores?.name && <div style={{ fontWeight: "600" }}>{order.stores.name}</div>}
+      </div>
+    </div>
+  );
+}
+
 export default function CustomerOrderDetailPage() {
   const params = useParams();
   const orderId = params?.orderId as string;
@@ -74,6 +226,9 @@ export default function CustomerOrderDetailPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!orderId) return;
@@ -93,6 +248,40 @@ export default function CustomerOrderDetailPage() {
       setLoading(false);
     })();
   }, [orderId]);
+
+  const handleDownloadReceipt = async () => {
+    if (!receiptRef.current || !order) return;
+    setDownloading(true);
+    try {
+      const { toPng } = await import("html-to-image");
+      const { jsPDF } = await import("jspdf");
+
+      const dataUrl = await toPng(receiptRef.current, {
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+      });
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((resolve) => { img.onload = () => resolve(); });
+
+      const pdfWidthMm = 148; // A5 幅
+      const pdfHeightMm = (img.naturalHeight / img.naturalWidth) * pdfWidthMm;
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: [pdfWidthMm, pdfHeightMm],
+      });
+
+      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidthMm, pdfHeightMm);
+      pdf.save(`領収書_${order.order_no ?? order.id}.pdf`);
+    } catch {
+      alert("PDFの生成に失敗しました。もう一度お試しください。");
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -116,6 +305,13 @@ export default function CustomerOrderDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 領収書 PDF 生成用の非表示要素 */}
+      <div style={{ position: "fixed", top: 0, left: "-9999px", zIndex: -1, pointerEvents: "none" }}>
+        <div ref={receiptRef}>
+          <ReceiptView order={order} />
+        </div>
+      </div>
+
       {/* ヘッダー */}
       <div className="bg-white border-b px-4 py-4 sticky top-0 z-10">
         <h1 className="text-lg font-bold text-gray-900 text-center">注文詳細</h1>
@@ -282,6 +478,27 @@ export default function CustomerOrderDetailPage() {
               : "発送完了後、改めてご案内いたします。商品到着まで今しばらくお待ちください。"}
           </p>
         </div>
+
+        {/* 領収書ダウンロード */}
+        <button
+          onClick={handleDownloadReceipt}
+          disabled={downloading}
+          className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-4 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {downloading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-pink-400 rounded-full animate-spin" />
+              <span>生成中...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4 text-pink-400" />
+              <span>領収書をダウンロード</span>
+            </>
+          )}
+        </button>
+
+        <div className="h-4" />
       </div>
     </div>
   );

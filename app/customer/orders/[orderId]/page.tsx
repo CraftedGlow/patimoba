@@ -254,30 +254,30 @@ export default function CustomerOrderDetailPage() {
     setDownloading(true);
     try {
       const { toPng } = await import("html-to-image");
-      const { jsPDF } = await import("jspdf");
 
-      const dataUrl = await toPng(receiptRef.current, {
+      const el = receiptRef.current;
+      const dataUrl = await toPng(el, {
         pixelRatio: 2,
         backgroundColor: "#ffffff",
+        width: el.offsetWidth,
+        height: el.scrollHeight,
       });
 
-      const img = new Image();
-      img.src = dataUrl;
-      await new Promise<void>((resolve) => { img.onload = () => resolve(); });
-
-      const pdfWidthMm = 148; // A5 幅
-      const pdfHeightMm = (img.naturalHeight / img.naturalWidth) * pdfWidthMm;
-
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: [pdfWidthMm, pdfHeightMm],
-      });
-
-      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidthMm, pdfHeightMm);
-      pdf.save(`領収書_${order.order_no ?? order.id}.pdf`);
-    } catch {
-      alert("PDFの生成に失敗しました。もう一度お試しください。");
+      const newTab = window.open("", "_blank");
+      if (newTab) {
+        newTab.document.write(
+          `<html><head><title>領収書_${order.order_no ?? order.id}</title></head>` +
+          `<body style="margin:0;background:#f5f5f5;display:flex;justify-content:center;padding:16px;">` +
+          `<img src="${dataUrl}" style="max-width:100%;height:auto;box-shadow:0 2px 12px rgba(0,0,0,0.15);" />` +
+          `</body></html>`
+        );
+        newTab.document.close();
+      } else {
+        alert("ポップアップがブロックされました。ブラウザの設定をご確認ください。");
+      }
+    } catch (e) {
+      console.error("領収書生成エラー:", e);
+      alert("領収書の生成に失敗しました。もう一度お試しください。");
     } finally {
       setDownloading(false);
     }
@@ -305,8 +305,8 @@ export default function CustomerOrderDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 領収書 PDF 生成用の非表示要素 */}
-      <div style={{ position: "fixed", top: 0, left: "-9999px", zIndex: -1, pointerEvents: "none" }}>
+      {/* 領収書生成用の非表示要素 */}
+      <div style={{ position: "absolute", top: "-9999px", left: 0, pointerEvents: "none" }}>
         <div ref={receiptRef}>
           <ReceiptView order={order} />
         </div>
@@ -493,7 +493,7 @@ export default function CustomerOrderDetailPage() {
           ) : (
             <>
               <Download className="w-4 h-4 text-pink-400" />
-              <span>領収書をダウンロード</span>
+              <span>領収書を表示・保存</span>
             </>
           )}
         </button>

@@ -252,6 +252,10 @@ export default function CustomerOrderDetailPage() {
   const handleDownloadReceipt = async () => {
     if (!receiptRef.current || !order) return;
     setDownloading(true);
+
+    // window.open はユーザー操作の同期コンテキストで呼ばないとブロックされるため先に開く
+    const newTab = window.open("about:blank", "_blank");
+
     try {
       const { toPng } = await import("html-to-image");
 
@@ -263,7 +267,6 @@ export default function CustomerOrderDetailPage() {
         height: el.scrollHeight,
       });
 
-      const newTab = window.open("", "_blank");
       if (newTab) {
         newTab.document.write(
           `<html><head><title>領収書_${order.order_no ?? order.id}</title></head>` +
@@ -277,6 +280,7 @@ export default function CustomerOrderDetailPage() {
       }
     } catch (e) {
       console.error("領収書生成エラー:", e);
+      if (newTab) newTab.close();
       alert("領収書の生成に失敗しました。もう一度お試しください。");
     } finally {
       setDownloading(false);

@@ -2,6 +2,7 @@
 
 import { weekdayLabels, formatDateKey, isClosedByRule, formatTimeHm, formatTimeRange } from "./types";
 import type { DaySchedule, ClosedDayRule } from "./types";
+import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
 const WEEK_GRID_COLS =
   "[grid-template-columns:3rem_minmax(0,0.88fr)_repeat(5,minmax(0,1fr))_minmax(0,0.88fr)]";
@@ -30,6 +31,8 @@ export function WeekView({ weekStart, schedules, onDayClick, defaultOpenTime = "
         <div />
         {days.map((d, i) => {
           const dow = d.getDay();
+          const holiday = isJapaneseHoliday(d.getFullYear(), d.getMonth(), d.getDate());
+          const isRed = dow === 0 || holiday;
           return (
             <div
               key={i}
@@ -38,12 +41,12 @@ export function WeekView({ weekStart, schedules, onDayClick, defaultOpenTime = "
             >
               <div
                 className={`text-xs font-semibold leading-tight ${
-                  dow === 0 ? "text-red-500" : dow === 6 ? "text-sky-600" : "text-gray-600"
+                  isRed ? "text-red-500" : dow === 6 ? "text-sky-600" : "text-gray-600"
                 }`}
               >
                 {weekdayLabels[dow]}
               </div>
-              <div className="text-sm text-gray-800 font-medium tabular-nums mt-0.5">
+              <div className={`text-sm font-medium tabular-nums mt-0.5 ${isRed ? "text-red-500" : "text-gray-800"}`}>
                 {d.getDate()}/{String(d.getMonth() + 1).padStart(2, "0")}
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import { formatDateKey, isClosedByRule } from "./types";
 import type { DaySchedule, ClosedDayRule } from "./types";
+import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
 const EN_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -75,6 +76,7 @@ export function MonthView({
           const isOpen = schedule ? schedule.isOpen : !closedByRule;
           const dayOfWeek = new Date(cell.y, cell.m, cell.d).getDay();
           const isSunday = dayOfWeek === 0;
+          const isHoliday = cell.isCurrentMonth && isJapaneseHoliday(cell.y, cell.m, cell.d);
 
           return (
             <div
@@ -89,7 +91,7 @@ export function MonthView({
                 /* 休業日: 丸枠日付 + 「休み」小さめ黒 */
                 <>
                   <div className="self-start">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-red-500 text-xs font-medium text-red-500 tabular-nums">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-red-500 text-xs font-medium text-gray-800 tabular-nums">
                       {cell.d}
                     </span>
                   </div>
@@ -100,7 +102,7 @@ export function MonthView({
               ) : (
                 /* 営業日: 日付 + カスタム営業時間があれば表示 */
                 <>
-                  <div className={`text-sm font-medium tabular-nums ${isSunday && cell.isCurrentMonth ? "text-orange-500" : "text-gray-700"}`}>
+                  <div className={`text-sm font-medium tabular-nums ${(isSunday || isHoliday) && cell.isCurrentMonth ? "text-red-500" : "text-gray-700"}`}>
                     {cell.d}
                   </div>
                   {cell.isCurrentMonth && schedule && isOpen && (

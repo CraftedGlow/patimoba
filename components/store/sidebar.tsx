@@ -90,9 +90,9 @@ export function StoreSidebar() {
           <Image
             src={storeLogo}
             alt={storeName || "店舗ロゴ"}
-            width={120}
-            height={60}
-            className="object-contain max-h-[60px]"
+            width={124}
+            height={64}
+            className="object-contain max-h-[64px]"
           />
         ) : (
           <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">

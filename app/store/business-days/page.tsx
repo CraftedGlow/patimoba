@@ -155,8 +155,9 @@ export default function BusinessDaysPage() {
     } catch (e) {
       console.error(e);
       setSaveError("画像の保存に失敗しました。もう一度お試しください。");
+    } finally {
+      setExporting(false);
     }
-    setExporting(false);
   };
 
   const [storeOpenTime, setStoreOpenTime] = useState("10:00");

@@ -594,14 +594,14 @@ export default function BusinessDaysPage() {
                   <img
                     src={storeLogo}
                     alt={storeName || ""}
-                    style={{ maxHeight: 50, maxWidth: 116, objectFit: "contain" }}
+                    style={{ maxHeight: 53, maxWidth: 123, objectFit: "contain" }}
                     crossOrigin="anonymous"
                   />
                 </div>
               ) : storeName ? (
                 <span className="text-sm font-bold text-gray-700" style={{ textAlign: "right", width: "100%" }}>{storeName}</span>
               ) : null}
-              <div style={{ textAlign: "right", width: "100%" }} className="text-xs text-gray-700 mt-1 tabular-nums whitespace-nowrap">
+              <div style={{ textAlign: "right", width: "100%" }} className="text-base text-gray-700 mt-1 tabular-nums whitespace-nowrap">
                 {storeOpenTime} - {storeCloseTime}
               </div>
             </div>

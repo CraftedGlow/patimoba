@@ -122,13 +122,42 @@ export async function fetchCustomers() {
 
 const LOGO_BUCKET = "store-logos";
 
+/** Canvasで画像をリサイズ・圧縮してBlobを返す */
+async function compressImage(
+  file: File,
+  maxWidth: number,
+  maxHeight: number,
+  quality = 0.85
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width, maxHeight / img.height);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("compression failed"))),
+        "image/jpeg",
+        quality
+      );
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 export async function uploadStoreLogo(file: File, storeId?: string): Promise<string> {
-  const ext = file.name.split(".").pop() ?? "png";
-  const path = `${storeId ?? "new"}-${Date.now()}.${ext}`;
+  const compressed = await compressImage(file, 600, 600, 0.88);
+  const path = `${storeId ?? "new"}-${Date.now()}.jpg`;
 
   const { error } = await supabase.storage
     .from(LOGO_BUCKET)
-    .upload(path, file, { cacheControl: "3600", upsert: true });
+    .upload(path, compressed, { cacheControl: "3600", upsert: true, contentType: "image/jpeg" });
   if (error) throw error;
 
   const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
@@ -136,12 +165,12 @@ export async function uploadStoreLogo(file: File, storeId?: string): Promise<str
 }
 
 export async function uploadStoreImage(file: File, storeId: string): Promise<string> {
-  const ext = file.name.split(".").pop() ?? "jpg";
-  const path = `${storeId}/exterior-${Date.now()}.${ext}`;
+  const compressed = await compressImage(file, 1600, 1200, 0.85);
+  const path = `${storeId}/exterior-${Date.now()}.jpg`;
 
   const { error } = await supabase.storage
     .from(LOGO_BUCKET)
-    .upload(path, file, { cacheControl: "3600", upsert: false });
+    .upload(path, compressed, { cacheControl: "3600", upsert: false, contentType: "image/jpeg" });
   if (error) throw error;
 
   const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);

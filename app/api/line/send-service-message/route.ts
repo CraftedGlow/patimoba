@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveStoreLineConfig } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
       .select(`
         id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
         service_notification_token,
-        stores(name, address, liff_id, line_channel_access_token, line_channel_secret),
+        stores(name, address),
         users!orders_customer_id_fkey(name),
         order_items(product_name_snapshot, quantity, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity))
       `)
@@ -52,15 +53,16 @@ export async function POST(req: NextRequest) {
     const customerName: string = order.customer_name_snapshot || order.users?.name || "お客様";
     const isEc = order.order_type === "ec";
 
-    const liffId: string = store?.liff_id ?? "";
-    const channelSecret: string = store?.line_channel_secret ?? "";
+    const lineConfig = await resolveStoreLineConfig(order.store_id, supabaseAdmin);
+    const liffId: string = lineConfig.liffId ?? "";
+    const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;
 
     if (liffId && channelSecret) {
       const channelId = liffId.split("-")[0];
       channelAccessToken = await getStatelessToken(channelId, channelSecret);
     } else {
-      channelAccessToken = store?.line_channel_access_token ?? "";
+      channelAccessToken = lineConfig.channelAccessToken ?? "";
     }
 
     if (!channelAccessToken) {

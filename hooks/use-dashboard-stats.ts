@@ -25,7 +25,9 @@ function getJSTBoundaries() {
   return { todayStart, todayEnd, monthStart, monthEnd }
 }
 
-export function useDashboardStats(storeId?: string) {
+export function useDashboardStats(storeId?: string | string[]) {
+  const storeKey = Array.isArray(storeId) ? storeId.join(",") : storeId
+
   const [stats, setStats] = useState<DashboardStats>({
     todaySales: 0,
     todayOrders: 0,
@@ -35,7 +37,7 @@ export function useDashboardStats(storeId?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchStats = async () => {
-    if (storeId === "") {
+    if (storeId === "" || (Array.isArray(storeId) && storeId.length === 0)) {
       setLoading(false)
       return
     }
@@ -43,6 +45,7 @@ export function useDashboardStats(storeId?: string) {
     setLoading(true)
     setError(null)
 
+    const ids = Array.isArray(storeId) ? storeId : storeId ? [storeId] : []
     const { todayStart, todayEnd, monthStart, monthEnd } = getJSTBoundaries()
 
     try {
@@ -51,14 +54,16 @@ export function useDashboardStats(storeId?: string) {
         .select("total_amount")
         .gte("created_at", todayStart)
         .lt("created_at", todayEnd)
-      if (storeId) todayQuery = todayQuery.eq("store_id", storeId)
+      if (ids.length === 1) todayQuery = todayQuery.eq("store_id", ids[0])
+      else if (ids.length > 1) todayQuery = todayQuery.in("store_id", ids)
 
       let monthQuery = supabase
         .from("orders")
         .select("total_amount")
         .gte("created_at", monthStart)
         .lt("created_at", monthEnd)
-      if (storeId) monthQuery = monthQuery.eq("store_id", storeId)
+      if (ids.length === 1) monthQuery = monthQuery.eq("store_id", ids[0])
+      else if (ids.length > 1) monthQuery = monthQuery.in("store_id", ids)
 
       const [todayResult, monthResult] = await Promise.all([todayQuery, monthQuery])
 
@@ -78,7 +83,7 @@ export function useDashboardStats(storeId?: string) {
 
   useEffect(() => {
     fetchStats()
-  }, [storeId])
+  }, [storeKey])
 
   return { stats, loading, error, refetch: fetchStats }
 }

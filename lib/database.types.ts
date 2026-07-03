@@ -1196,6 +1196,7 @@ export type Database = {
           invoice_number: string | null
           is_active: boolean
           is_corporate_ready: boolean
+          is_master: boolean
           is_published: boolean
           liff_id: string | null
           line_channel_access_token: string | null
@@ -1203,6 +1204,7 @@ export type Database = {
           line_official_account_id: string | null
           logo_url: string | null
           name: string
+          parent_store_id: string | null
           phone: string | null
           plan: string
           plan_options: Json | null
@@ -1229,6 +1231,7 @@ export type Database = {
           invoice_number?: string | null
           is_active?: boolean
           is_corporate_ready?: boolean
+          is_master?: boolean
           is_published?: boolean
           liff_id?: string | null
           line_channel_access_token?: string | null
@@ -1236,6 +1239,7 @@ export type Database = {
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string
+          parent_store_id?: string | null
           phone?: string | null
           plan?: string
           plan_options?: Json | null
@@ -1262,6 +1266,7 @@ export type Database = {
           invoice_number?: string | null
           is_active?: boolean
           is_corporate_ready?: boolean
+          is_master?: boolean
           is_published?: boolean
           liff_id?: string | null
           line_channel_access_token?: string | null
@@ -1269,6 +1274,7 @@ export type Database = {
           line_official_account_id?: string | null
           logo_url?: string | null
           name?: string
+          parent_store_id?: string | null
           phone?: string | null
           plan?: string
           plan_options?: Json | null

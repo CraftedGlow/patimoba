@@ -1,5 +1,54 @@
 import { createClient } from "@supabase/supabase-js";
 
+export interface StoreLineConfig {
+  liffId: string | null;
+  channelAccessToken: string | null;
+  channelSecret: string | null;
+}
+
+export async function resolveStoreLineConfig(
+  storeId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabaseAdmin: any
+): Promise<StoreLineConfig> {
+  const { data } = await supabaseAdmin
+    .from("stores")
+    .select("liff_id, line_channel_access_token, line_channel_secret, parent_store_id")
+    .eq("id", storeId)
+    .single();
+
+  const d = data as any;
+  if (!d) return { liffId: null, channelAccessToken: null, channelSecret: null };
+
+  if (d.liff_id || d.line_channel_access_token) {
+    return {
+      liffId: d.liff_id ?? null,
+      channelAccessToken: d.line_channel_access_token ?? null,
+      channelSecret: d.line_channel_secret ?? null,
+    };
+  }
+
+  if (d.parent_store_id) {
+    const { data: parent } = await supabaseAdmin
+      .from("stores")
+      .select("liff_id, line_channel_access_token, line_channel_secret")
+      .eq("id", d.parent_store_id)
+      .single();
+    const p = parent as any;
+    return {
+      liffId: p?.liff_id ?? null,
+      channelAccessToken: p?.line_channel_access_token ?? null,
+      channelSecret: p?.line_channel_secret ?? null,
+    };
+  }
+
+  return {
+    liffId: d.liff_id ?? null,
+    channelAccessToken: d.line_channel_access_token ?? null,
+    channelSecret: d.line_channel_secret ?? null,
+  };
+}
+
 export async function sendOrderLineMessage(orderId: string): Promise<void> {
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,7 +59,7 @@ export async function sendOrderLineMessage(orderId: string): Promise<void> {
     .from("orders")
     .select(`
       *,
-      stores(name, phone, address, line_channel_access_token),
+      stores(name, phone, address),
       users!orders_customer_id_fkey(name, line_user_id, email),
       order_items(product_name_snapshot, quantity, unit_price)
     `)
@@ -28,7 +77,7 @@ export async function sendOrderLineMessage(orderId: string): Promise<void> {
 
   const storeName = order.stores?.name ?? "";
   const storePhone = order.stores?.phone ?? "";
-  const channelAccessToken = order.stores?.line_channel_access_token ?? null;
+  const { channelAccessToken } = await resolveStoreLineConfig(order.store_id, supabaseAdmin);
   const lineUserId = order.users?.line_user_id ?? null;
   const email = order.users?.email ?? null;
   const customerName = order.users?.name ?? "";

@@ -8,6 +8,7 @@ export type OrderChannel = "takeout" | "ec"
 
 interface UseOrdersOptions {
   storeId?: string
+  storeIds?: string[]
   customerId?: string
   status?: OrderStatus | OrderStatus[]
   excludeStatus?: OrderStatus[]
@@ -32,8 +33,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const [error, setError] = useState<string | null>(null)
 
   const fetchOrders = async () => {
-    // storeIdが渡されているのに空文字の場合はまだ未読み込みなのでスキップ
-    if (options.storeId === "") {
+    if (options.storeId === "" || (options.storeIds !== undefined && options.storeIds.length === 0)) {
       setOrders([])
       setLoading(false)
       return
@@ -54,7 +54,9 @@ export function useOrders(options: UseOrdersOptions = {}) {
       `)
       .order(sortColumn, { ascending: sortAscending })
 
-    if (options.storeId) {
+    if (options.storeIds && options.storeIds.length > 0) {
+      query = query.in("store_id", options.storeIds)
+    } else if (options.storeId) {
       query = query.eq("store_id", options.storeId)
     }
     if (options.customerId) {
@@ -114,6 +116,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
     fetchOrders()
   }, [
     options.storeId,
+    options.storeIds?.join(","),
     options.customerId,
     options.date,
     options.pickupDate,

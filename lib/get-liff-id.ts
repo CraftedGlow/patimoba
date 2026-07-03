@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 
 const SESSION_KEY = "patimoba_liff_id";
+const SESSION_STORE_ID_KEY = "patimoba_liff_store_id";
 
 /** liff.state クエリパラメータから storeId を取り出す */
 export function parseLiffStateStoreId(): string | null {
@@ -42,11 +43,12 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
     try {
       const { data } = await supabase
         .from("stores")
-        .select("liff_id")
+        .select("liff_id, is_master")
         .eq("id", storeId)
         .single();
       if (data?.liff_id) {
         saveLiffId(data.liff_id);
+        saveLiffStoreId(storeId, data.is_master ?? false);
         return data.liff_id;
       }
     } catch {}
@@ -57,4 +59,19 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
 
 export function saveLiffId(liffId: string): void {
   try { sessionStorage.setItem(SESSION_KEY, liffId); } catch {}
+}
+
+export function saveLiffStoreId(storeId: string, isMaster: boolean): void {
+  try {
+    sessionStorage.setItem(SESSION_STORE_ID_KEY, JSON.stringify({ storeId, isMaster }));
+  } catch {}
+}
+
+export function getLiffStoreInfo(): { storeId: string; isMaster: boolean } | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORE_ID_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }

@@ -49,6 +49,7 @@ export interface ProductRegistration {
   limited_until: string | null
   created_at: string | null
   updated_at: string | null
+  isMasterProduct?: boolean
 }
 
 interface UseProductRegistrationsOptions {
@@ -135,10 +136,22 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     setLoading(true)
     setError(null)
 
+    const storeIds = [options.storeId]
+    let parentStoreId: string | null = null
+    const { data: storeData } = await supabase
+      .from("stores")
+      .select("parent_store_id")
+      .eq("id", options.storeId)
+      .single()
+    if (storeData?.parent_store_id) {
+      parentStoreId = storeData.parent_store_id
+      storeIds.push(parentStoreId)
+    }
+
     let query = supabase
       .from("products")
       .select("*, product_variants(id, price, is_active)")
-      .eq("store_id", options.storeId)
+      .in("store_id", storeIds)
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true })
 
@@ -153,6 +166,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
       const categorySet = new Set<string>()
       const mapped = (data ?? []).map((row: any) => {
         const p = mapRow(row)
+        p.isMasterProduct = parentStoreId !== null && row.store_id === parentStoreId
         if (p.category_name) categorySet.add(p.category_name)
         return p
       })

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveStoreLineConfig } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,16 +12,16 @@ export async function POST(req: NextRequest) {
     const { userId, storeId } = await req.json();
     if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
-    const [{ data: user }, { data: store }] = await Promise.all([
+    const [{ data: user }, lineConfig] = await Promise.all([
       supabaseAdmin.from("users").select("name, line_user_id").eq("id", userId).maybeSingle(),
       storeId
-        ? supabaseAdmin.from("stores").select("line_channel_access_token").eq("id", storeId).maybeSingle()
-        : Promise.resolve({ data: null }),
+        ? resolveStoreLineConfig(storeId, supabaseAdmin)
+        : Promise.resolve({ liffId: null, channelAccessToken: null, channelSecret: null }),
     ]);
 
     if (!user?.line_user_id) return NextResponse.json({ success: true, sent: false });
 
-    const channelAccessToken = (store as any)?.line_channel_access_token ?? null;
+    const channelAccessToken = lineConfig.channelAccessToken;
 
     if (!channelAccessToken) {
       console.error("[send-anniversary-registered] storeId missing or store has no line_channel_access_token. userId:", userId, "storeId:", storeId ?? "null");

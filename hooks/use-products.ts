@@ -27,7 +27,14 @@ export function useProducts(options: UseProductsOptions = {}) {
       .select("*, product_variants(id, price, is_active)")
 
     if (options.storeId) {
-      query = query.eq("store_id", options.storeId)
+      const storeIds = [options.storeId]
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("parent_store_id")
+        .eq("id", options.storeId)
+        .single()
+      if (storeData?.parent_store_id) storeIds.push(storeData.parent_store_id)
+      query = query.in("store_id", storeIds)
     }
     if (options.publishedOnly) {
       query = query.eq("is_active", true)

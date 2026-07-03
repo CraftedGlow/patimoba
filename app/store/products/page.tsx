@@ -270,6 +270,7 @@ export default function StoreProductsPage() {
               {filtered.map((product, i) => {
                 const isSelected = selectedProduct?.id === product.id;
                 const isInactive = !product.is_active;
+                const isMaster = product.isMasterProduct ?? false;
                 const price = product.is_preorder_required && product.minVariantPrice != null
                   ? `¥${product.minVariantPrice.toLocaleString()}~`
                   : product.base_price > 0
@@ -282,13 +283,15 @@ export default function StoreProductsPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.02 }}
-                    onClick={() => setSelectedProduct(product)}
-                    className={`border border-gray-200 rounded-lg p-3 mb-2 flex gap-3 items-start cursor-pointer hover:bg-gray-50 transition-colors ${
-                      isSelected
-                        ? "bg-amber-50"
+                    onClick={() => !isMaster && setSelectedProduct(product)}
+                    className={`border border-gray-200 rounded-lg p-3 mb-2 flex gap-3 items-start transition-colors ${
+                      isMaster
+                        ? "bg-blue-50/40 cursor-default"
+                        : isSelected
+                        ? "bg-amber-50 cursor-pointer hover:bg-gray-50"
                         : isInactive
-                        ? "bg-pink-50/40"
-                        : ""
+                        ? "bg-pink-50/40 cursor-pointer hover:bg-gray-50"
+                        : "cursor-pointer hover:bg-gray-50"
                     }`}
                   >
                     {/* 商品画像 */}
@@ -308,7 +311,12 @@ export default function StoreProductsPage() {
                     <div className="flex-1 min-w-0">
                       {/* 商品名 + 価格 */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold truncate">{product.name}</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm font-bold truncate">{product.name}</span>
+                          {isMaster && (
+                            <span className="shrink-0 text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">共有</span>
+                          )}
+                        </div>
                         {price && <span className="text-sm shrink-0">{price}</span>}
                       </div>
 
@@ -325,8 +333,8 @@ export default function StoreProductsPage() {
                         <div onClick={(e) => e.stopPropagation()}>
                           <ToggleSwitch
                             enabled={product.is_active}
-                            onToggle={() => handleToggleAccept(product)}
-                            colorOn="bg-green-500"
+                            onToggle={() => !isMaster && handleToggleAccept(product)}
+                            colorOn={isMaster ? "bg-gray-300" : "bg-green-500"}
                           />
                         </div>
 

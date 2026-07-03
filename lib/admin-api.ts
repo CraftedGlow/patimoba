@@ -285,6 +285,44 @@ export async function fetchBusinessHours(storeId: string) {
   return data;
 }
 
+export async function fetchMasterStores() {
+  const { data, error } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("is_master", true)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data as Store[];
+}
+
+export async function fetchChildStores(masterStoreId: string) {
+  const { data, error } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("parent_store_id", masterStoreId)
+    .order("name", { ascending: true });
+  if (error) throw error;
+  return data as Store[];
+}
+
+export async function fetchMasterStore(childStoreId: string) {
+  const { data: child, error: childErr } = await supabase
+    .from("stores")
+    .select("parent_store_id")
+    .eq("id", childStoreId)
+    .single();
+  if (childErr) throw childErr;
+  if (!child.parent_store_id) return null;
+
+  const { data, error } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("id", child.parent_store_id)
+    .single();
+  if (error) throw error;
+  return data as Store;
+}
+
 export async function fetchSpecialDates(storeId: string) {
   const { data, error } = await supabase
     .from("store_special_dates")

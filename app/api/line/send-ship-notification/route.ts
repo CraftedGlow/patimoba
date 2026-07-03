@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveStoreLineConfig } from "@/lib/line";
 import { Resend } from "resend";
 
 const supabaseAdmin = createClient(
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
       .from("orders")
       .select(`
         *,
-        stores(name, phone, line_channel_access_token),
+        stores(name, phone),
         users!orders_customer_id_fkey(name, line_user_id, email),
         order_items(product_name_snapshot, quantity)
       `)
@@ -45,7 +46,8 @@ export async function POST(req: NextRequest) {
 
     const storeName = order.stores?.name ?? "";
     const storePhone = order.stores?.phone ?? "";
-    const channelAccessToken: string = order.stores?.line_channel_access_token ?? "";
+    const { channelAccessToken: resolvedToken } = await resolveStoreLineConfig(order.store_id, supabaseAdmin);
+    const channelAccessToken: string = resolvedToken ?? "";
     const rawName = order.customer_name_snapshot || order.users?.name || bodyCustomerName || "";
     const customerName = rawName || "お客様";
     const lineUserId = order.users?.line_user_id ?? null;

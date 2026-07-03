@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Upload } from "lucide-react";
@@ -11,7 +11,9 @@ import {
   uploadStoreLogo,
   uploadStoreImage,
   saveClosedDayRules,
+  fetchMasterStores,
   type ClosedDayRule,
+  type Store,
 } from "@/lib/admin-api";
 import { supabase } from "@/lib/supabase";
 import type { StorePlanSlug } from "@/lib/store-plans";
@@ -46,6 +48,9 @@ const hours = Array.from({ length: 24 }, (_, i) => {
 
 export default function AdminStoreNewPage() {
   const router = useRouter();
+  const [accountType, setAccountType] = useState<"regular" | "master">("regular");
+  const [masterStores, setMasterStores] = useState<Store[]>([]);
+  const [parentStoreId, setParentStoreId] = useState<string>("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -67,6 +72,12 @@ export default function AdminStoreNewPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const isMaster = accountType === "master";
+
+  useEffect(() => {
+    fetchMasterStores().then(setMasterStores).catch(console.error);
+  }, []);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -114,12 +125,14 @@ export default function AdminStoreNewPage() {
         name: storeName,
         email: email,
         phone: phone || "",
-        postal_code: postalCode || "",
-        address: `${prefecture || ""}${city || ""}${address || ""}`,
+        postal_code: isMaster ? "" : postalCode || "",
+        address: isMaster ? "" : `${prefecture || ""}${city || ""}${address || ""}`,
         logo_url: logoUrl,
         plan: selectedPlan,
         plan_options: selectedAddons.length > 0 ? selectedAddons : null,
         accepts_walkin: acceptsWalkin,
+        is_master: isMaster,
+        parent_store_id: !isMaster && parentStoreId ? parentStoreId : null,
       });
 
       if (imageFile) {
@@ -194,6 +207,64 @@ export default function AdminStoreNewPage() {
       </header>
 
       <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+        >
+          <div className="bg-[#FFF9C4] px-5 py-3 border-b border-yellow-200">
+            <h2 className="font-bold text-sm text-gray-900">アカウント種別</h2>
+          </div>
+          <div className="p-4 sm:p-5">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setAccountType("regular")}
+                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  !isMaster
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : "border-gray-200 text-gray-500 hover:border-gray-300"
+                }`}
+              >
+                通常店舗
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccountType("master")}
+                className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                  isMaster
+                    ? "border-amber-400 bg-amber-50 text-amber-800"
+                    : "border-gray-200 text-gray-500 hover:border-gray-300"
+                }`}
+              >
+                マスタアカウント
+              </button>
+            </div>
+            {isMaster && (
+              <p className="text-xs text-gray-500 mt-2">
+                顧客からは表示されない管理用アカウントです。配下に子店舗を紐付けられます。
+              </p>
+            )}
+            {!isMaster && masterStores.length > 0 && (
+              <div className="mt-4">
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  親店舗（任意）
+                </label>
+                <select
+                  value={parentStoreId}
+                  onChange={(e) => setParentStoreId(e.target.value)}
+                  className="form-select w-full"
+                >
+                  <option value="">なし（独立店舗）</option>
+                  {masterStores.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
         <Section title="アカウント情報">
           <Field label="メールアドレス">
             <input
@@ -234,89 +305,96 @@ export default function AdminStoreNewPage() {
               className="form-input"
             />
           </Field>
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="郵便番号">
-              <input
-                type="text"
-                value={postalCode}
-                onChange={(e) => setPostalCode(e.target.value)}
-                placeholder="150-0001"
-                className="form-input"
-              />
-            </Field>
-            <Field label="都道府県">
-              <input
-                type="text"
-                value={prefecture}
-                onChange={(e) => setPrefecture(e.target.value)}
-                placeholder="東京都"
-                className="form-input"
-              />
-            </Field>
-          </div>
-          <Field label="市区町村">
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="渋谷区神宮前"
-              className="form-input"
-            />
-          </Field>
-          <Field label="番地">
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="1-2-3 サクラビル1F"
-              className="form-input"
-            />
-          </Field>
-
-          <Field label="店舗ロゴ">
-            <label className="block">
-              <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
-              {logoPreview ? (
-                <div className="relative border-2 border-amber-400 rounded-xl p-4 text-center cursor-pointer hover:border-amber-500 transition-colors">
-                  <Image
-                    src={logoPreview}
-                    alt="プレビュー"
-                    width={120}
-                    height={120}
-                    className="mx-auto rounded-lg object-cover"
+          {!isMaster && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="郵便番号">
+                  <input
+                    type="text"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    placeholder="150-0001"
+                    className="form-input"
                   />
-                  <p className="text-xs text-amber-600 mt-2">クリックして変更</p>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
-                  <Upload className="w-7 h-7 text-gray-600 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">ロゴをアップロード</p>
-                  <p className="text-xs text-gray-600 mt-1">JPEG, PNG, WebP対応</p>
-                </div>
-              )}
-            </label>
-          </Field>
+                </Field>
+                <Field label="都道府県">
+                  <input
+                    type="text"
+                    value={prefecture}
+                    onChange={(e) => setPrefecture(e.target.value)}
+                    placeholder="東京都"
+                    className="form-input"
+                  />
+                </Field>
+              </div>
+              <Field label="市区町村">
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="渋谷区神宮前"
+                  className="form-input"
+                />
+              </Field>
+              <Field label="番地">
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="1-2-3 サクラビル1F"
+                  className="form-input"
+                />
+              </Field>
+            </>
+          )}
 
-          <Field label="店舗外観写真">
-            <p className="text-xs text-gray-600 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
-            <label className="block">
-              <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
-              {imagePreview ? (
-                <div className="relative border-2 border-amber-400 rounded-xl overflow-hidden cursor-pointer hover:border-amber-500 transition-colors">
-                  <img src={imagePreview} alt="外観プレビュー" className="w-full h-40 object-cover" />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <p className="text-white text-sm font-bold bg-black/50 px-3 py-1 rounded-full">クリックして変更</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
-                  <Upload className="w-7 h-7 text-gray-600 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">外観写真をアップロード</p>
-                  <p className="text-xs text-gray-600 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
-                </div>
-              )}
-            </label>
-          </Field>
+          {!isMaster && (
+            <>
+              <Field label="店舗ロゴ">
+                <label className="block">
+                  <input type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+                  {logoPreview ? (
+                    <div className="relative border-2 border-amber-400 rounded-xl p-4 text-center cursor-pointer hover:border-amber-500 transition-colors">
+                      <Image
+                        src={logoPreview}
+                        alt="プレビュー"
+                        width={120}
+                        height={120}
+                        className="mx-auto rounded-lg object-cover"
+                      />
+                      <p className="text-xs text-amber-600 mt-2">クリックして変更</p>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                      <Upload className="w-7 h-7 text-gray-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">ロゴをアップロード</p>
+                      <p className="text-xs text-gray-600 mt-1">JPEG, PNG, WebP対応</p>
+                    </div>
+                  )}
+                </label>
+              </Field>
+              <Field label="店舗外観写真">
+                <p className="text-xs text-gray-600 mb-2">顧客向けTOPページに表示される外観・店内写真</p>
+                <label className="block">
+                  <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  {imagePreview ? (
+                    <div className="relative border-2 border-amber-400 rounded-xl overflow-hidden cursor-pointer hover:border-amber-500 transition-colors">
+                      <img src={imagePreview} alt="外観プレビュー" className="w-full h-40 object-cover" />
+                      <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <p className="text-white text-sm font-bold bg-black/50 px-3 py-1 rounded-full">クリックして変更</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors">
+                      <Upload className="w-7 h-7 text-gray-600 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">外観写真をアップロード</p>
+                      <p className="text-xs text-gray-600 mt-1">横長の写真推奨（JPEG, PNG, WebP）</p>
+                    </div>
+                  )}
+                </label>
+              </Field>
+            </>
+          )}
 
           <Field label="営業時間">
             <div className="flex items-center gap-3 flex-wrap">

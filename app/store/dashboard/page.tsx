@@ -29,24 +29,37 @@ type ConfirmAction = {
 
 
 export default function StoreDashboardPage() {
-  const { storeId } = useStoreContext();
+  const { storeId, isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const defaultDate = useRef(new Date());
   const pickupDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+
+  // When master: storeIds drives queries; otherwise storeId as before
+  const activeStoreId = isMaster ? selectedChildId ?? undefined : storeId;
+  const activeStoreIds = isMaster && selectedChildId === null
+    ? childStores.map((s) => s.id)
+    : undefined;
+
   const { orders: takeoutOrders, loading: takeoutLoading, refetch: refetchTakeout } = useOrders({
-    storeId,
+    storeId: activeStoreId,
+    storeIds: activeStoreIds,
     pickupDate: pickupDateStr,
     channel: "takeout",
   });
   const { orders: ecOrders, loading: ecLoading, refetch: refetchEc } = useOrders({
-    storeId,
+    storeId: activeStoreId,
+    storeIds: activeStoreIds,
     channel: "ec",
     fulfillmentStatus: "pending",
   });
   const ordersLoading = takeoutLoading || ecLoading;
   const orders = [...takeoutOrders, ...ecOrders];
   const refetchOrders = async () => { await Promise.all([refetchTakeout(), refetchEc()]); };
-  const { stats, loading: statsLoading, refetch: refetchStats } = useDashboardStats(storeId);
+  const { stats, loading: statsLoading, refetch: refetchStats } = useDashboardStats(activeStoreIds ?? activeStoreId ?? storeId);
+
+  // Child store name lookup for badge display in all-stores view
+  const childStoreMap = Object.fromEntries(childStores.map((s) => [s.id, s.name]));
   const { updateOrderStatus, updateFulfillmentStatus } = useOrderMutations();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -84,27 +97,26 @@ export default function StoreDashboardPage() {
   // Supabaseリアルタイム：データ再取得（通知はlayoutのNewOrderAlertが担当）
   useEffect(() => {
     if (!storeId) return;
-    const channel = supabase
-      .channel(`dashboard-orders-${storeId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "orders",
-          filter: `store_id=eq.${storeId}`,
-        },
-        () => {
-          refetchOrders();
-          refetchStats();
-        }
-      )
-      .subscribe();
+    const watchIds = isMaster
+      ? (selectedChildId ? [selectedChildId] : childStores.map((s) => s.id))
+      : [storeId];
+    if (watchIds.length === 0) return;
+
+    const channels = watchIds.map((id) =>
+      supabase
+        .channel(`dashboard-orders-${id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "orders", filter: `store_id=eq.${id}` },
+          () => { refetchOrders(); refetchStats(); }
+        )
+        .subscribe()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach((ch) => supabase.removeChannel(ch));
     };
-  }, [storeId]);
+  }, [storeId, isMaster, selectedChildId, childStores.map((s) => s.id).join(",")]);
 
   const handleConfirm = async () => {
     if (!confirmAction || confirmLoading) return;
@@ -169,6 +181,34 @@ export default function StoreDashboardPage() {
 
   return (
     <div className="p-4 lg:p-6">
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          <button
+            onClick={() => setSelectedChildId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              selectedChildId === null
+                ? "bg-amber-400 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            全店舗
+          </button>
+          {childStores.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="flex justify-end mb-6" ref={dateRef}>
         <div className="relative">
           <button
@@ -254,6 +294,9 @@ export default function StoreDashboardPage() {
         ) : (
           sortedOrders.map((order, i) => {
             const isEc = order.orderType === "ec";
+            const orderStoreName = isMaster && selectedChildId === null
+              ? (childStoreMap[order.storeId] ?? "")
+              : null;
             const isPrepared = isEc
               ? order.fulfillmentStatus === "fulfilled"
               : order.orderStatus === "ready" || order.orderStatus === "completed" || order.fulfillmentStatus === "fulfilled";
@@ -295,9 +338,16 @@ export default function StoreDashboardPage() {
                   <div className="flex items-start justify-between gap-2">
                     {/* 左: 顧客名 + 来店時間/配送先 */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">
-                        {order.customerName || order.lineName || "-"}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-sm font-bold text-gray-900 truncate">
+                          {order.customerName || order.lineName || "-"}
+                        </p>
+                        {orderStoreName && (
+                          <span className="shrink-0 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                            {orderStoreName}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
                         {isEc
                           ? (order.notes?.split("　配送時間")[0] || "-")
@@ -355,6 +405,11 @@ export default function StoreDashboardPage() {
                 >
                   <div>
                     <span className="text-xs text-gray-900">{order.customerName || order.lineName || "-"}</span>
+                    {orderStoreName && (
+                      <div className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block">
+                        {orderStoreName}
+                      </div>
+                    )}
                   </div>
 
                   <div className="text-xs text-gray-600">

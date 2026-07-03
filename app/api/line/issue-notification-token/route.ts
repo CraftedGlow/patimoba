@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveStoreLineConfig } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,24 +31,24 @@ export async function POST(req: NextRequest) {
 
     const { data: order } = await supabaseAdmin
       .from("orders")
-      .select("store_id, stores!inner(liff_id, line_channel_access_token, line_channel_secret)")
+      .select("store_id")
       .eq("id", orderId)
       .maybeSingle() as any;
 
-    const store = order?.stores;
-    if (!store) {
+    if (!order?.store_id) {
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
 
-    const liffId: string = store.liff_id ?? "";
-    const channelSecret: string = store.line_channel_secret ?? "";
+    const lineConfig = await resolveStoreLineConfig(order.store_id, supabaseAdmin);
+    const liffId: string = lineConfig.liffId ?? "";
+    const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;
 
     if (liffId && channelSecret) {
       const channelId = liffId.split("-")[0];
       channelAccessToken = await getStatelessToken(channelId, channelSecret);
     } else {
-      channelAccessToken = store.line_channel_access_token ?? "";
+      channelAccessToken = lineConfig.channelAccessToken ?? "";
     }
 
     if (!channelAccessToken) {

@@ -34,7 +34,16 @@ export function useWholeCakes(storeId?: string) {
         .eq("is_preorder_required", true)
         .order("display_order", { ascending: true })
 
-      if (storeId) query = query.eq("store_id", storeId)
+      if (storeId) {
+        const storeIds = [storeId]
+        const { data: storeData } = await supabase
+          .from("stores")
+          .select("parent_store_id")
+          .eq("id", storeId)
+          .single()
+        if (storeData?.parent_store_id) storeIds.push(storeData.parent_store_id)
+        query = query.in("store_id", storeIds)
+      }
 
       const { data: products, error: prodErr } = await query
       if (prodErr) throw prodErr

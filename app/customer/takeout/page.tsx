@@ -11,7 +11,7 @@ import Image from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
 import { completeLiffLogin } from "@/lib/liff-login";
-import { getLiffId } from "@/lib/get-liff-id";
+import { getLiffId, getLiffStoreInfo } from "@/lib/get-liff-id";
 import { Store } from "@/lib/types";
 import { Search, Heart } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -132,6 +132,13 @@ export default function TakeoutStorePage() {
         const { authUser } = await completeLiffLogin(liff);
         setUser(authUser);
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+
+        const storeInfo = getLiffStoreInfo();
+        if (storeInfo?.isMaster) {
+          router.replace(`/customer/store-select?master=${storeInfo.storeId}`);
+          return;
+        }
+
         setLoginDone(true);
       } catch (err: any) {
         setLoginError(err?.message || "LIFF初期化エラー");

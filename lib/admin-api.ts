@@ -157,7 +157,7 @@ export async function uploadStoreLogo(file: File, storeId?: string): Promise<str
 
   const { error } = await supabase.storage
     .from(LOGO_BUCKET)
-    .upload(path, compressed, { cacheControl: "3600", upsert: true, contentType: "image/jpeg" });
+    .upload(path, compressed, { cacheControl: "3600", upsert: false, contentType: "image/jpeg" });
   if (error) throw error;
 
   const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);

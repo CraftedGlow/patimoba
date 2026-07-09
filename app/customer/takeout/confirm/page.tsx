@@ -60,6 +60,7 @@ export default function TakeoutConfirmPage() {
   const [showOrderComplete, setShowOrderComplete] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -213,11 +214,12 @@ export default function TakeoutConfirmPage() {
 
   const handleConfirmOrder = async () => {
     console.log("[takeout-confirm] 注文を確定するボタン clicked, paymentMethod:", paymentMethod, "total:", total);
-    if (submitting) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     const persistedStoreId = (() => { try { return localStorage.getItem("patimoba_selected_store_id") } catch { return null } })();
     const storeIdForOrder = selectedStoreId || cartStoreId || persistedStoreId;
-    if (!storeIdForOrder) { setSubmitError("店舗が選択されていません"); return; }
-    if (cartItems.length === 0) { setSubmitError("カートに商品がありません"); return; }
+    if (!storeIdForOrder) { submittingRef.current = false; setSubmitError("店舗が選択されていません"); return; }
+    if (cartItems.length === 0) { submittingRef.current = false; setSubmitError("カートに商品がありません"); return; }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -240,6 +242,7 @@ export default function TakeoutConfirmPage() {
       const chargeData = await chargeRes.json();
       console.log("[takeout-confirm] charge →", chargeRes.status, chargeData);
       if (!chargeRes.ok) {
+        submittingRef.current = false;
         setSubmitting(false);
         setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
         return;
@@ -261,6 +264,7 @@ export default function TakeoutConfirmPage() {
       printPhotoUrl,
     });
 
+    submittingRef.current = false;
     setSubmitting(false);
     console.log("[takeout-confirm] createOrder →", result);
 

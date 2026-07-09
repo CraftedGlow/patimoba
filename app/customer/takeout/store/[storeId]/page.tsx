@@ -8,7 +8,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import Image from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
-import { getLiffId } from "@/lib/get-liff-id";
+import { getLiffId, getLiffStoreInfo } from "@/lib/get-liff-id";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
 import { useCustomerContext } from "@/lib/customer-context";
@@ -308,6 +308,12 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         const { authUser } = await completeLiffLogin(liff);
         setUser(authUser);
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+
+        const storeInfo = getLiffStoreInfo();
+        if (storeInfo?.isMaster) {
+          router.replace(`/customer/store-select?master=${params.storeId}`);
+          return;
+        }
         setLoginDone(true);
       } catch (err: any) {
         console.error("[Store LIFF] auto-login error:", err);
@@ -329,6 +335,10 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           .order("day_of_week"),
       ]);
       if (storeRow) {
+        if (storeRow.is_master) {
+          router.replace(`/customer/store-select?master=${params.storeId}`);
+          return;
+        }
         const uiStore = toUIStore(storeRow);
         setStore(uiStore);
         setSelectedStoreId(uiStore.id);

@@ -33,7 +33,7 @@ type OrderDetail = {
   customer_name_snapshot: string | null;
   order_status: string;
   payment_status: string;
-  stores: { name: string; address: string; phone: string | null; invoice_number: string | null } | null;
+  stores: { name: string; address: string; phone: string | null; invoice_num: string | null } | null;
   order_items: OrderItem[];
 };
 

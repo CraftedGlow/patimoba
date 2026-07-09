@@ -149,7 +149,7 @@ type OrderData = {
   total_amount: number;
   subtotal: number;
   discount_amount: number | null;
-  stores: { name: string; address: string; invoice_number: string | null } | null;
+  stores: { name: string; address: string; invoice_num: string | null } | null;
 };
 
 function ReceiptDocument({ order, recipientName, description }: {
@@ -216,10 +216,10 @@ function ReceiptDocument({ order, recipientName, description }: {
             {store?.name ? <Text style={styles.storeName}>{store.name}</Text> : null}
             {store?.address ? <Text style={styles.issuerDetail}>{store.address}</Text> : null}
           </View>
-          {store?.invoice_number ? (
+          {store?.invoice_num ? (
             <View style={styles.invoiceBox}>
               <Text style={styles.invoiceLabel}>適格請求書発行事業者登録番号</Text>
-              <Text style={styles.invoiceNumber}>{store.invoice_number}</Text>
+              <Text style={styles.invoiceNumber}>{store.invoice_num}</Text>
             </View>
           ) : null}
         </View>
@@ -252,7 +252,7 @@ export async function GET(
 
   const { data, error } = await supabaseAdmin
     .from("orders")
-    .select("id, order_no, total_amount, subtotal, discount_amount, stores(name, address, invoice_number)")
+    .select("id, order_no, total_amount, subtotal, discount_amount, stores(name, address, invoice_num)")
     .eq("id", orderId)
     .maybeSingle();
 

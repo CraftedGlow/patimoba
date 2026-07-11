@@ -136,6 +136,14 @@ export function useOrderMutations() {
             option_item_name_snapshot: op.name,
             price_delta: op.price,
           })
+          if (op.message) {
+            options.push({
+              order_item_id: insertedId,
+              option_group_name_snapshot: "プレートメッセージ",
+              option_item_name_snapshot: `${op.name}「${op.message}」`,
+              price_delta: 0,
+            })
+          }
         }
         if (c.messagePlate) {
           options.push({

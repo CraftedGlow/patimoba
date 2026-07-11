@@ -103,9 +103,11 @@ export async function POST(req: NextRequest) {
       );
       const plateOpt = allOpts.find(o => o.option_group_name_snapshot === "メッセージプレート");
       const messageOpt = allOpts.find(o => o.option_group_name_snapshot === "メッセージ");
+      const plateMsgOpts = allOpts.filter(o => o.option_group_name_snapshot === "プレートメッセージ");
       const opts = allOpts.filter(o =>
         o.option_group_name_snapshot !== "メッセージプレート" &&
-        o.option_group_name_snapshot !== "メッセージ"
+        o.option_group_name_snapshot !== "メッセージ" &&
+        o.option_group_name_snapshot !== "プレートメッセージ"
       );
 
       const lines: string[] = [`${item.product_name_snapshot} ×${item.quantity}`];
@@ -128,6 +130,10 @@ export async function POST(req: NextRequest) {
         const plate = plateOpt?.option_item_name_snapshot ?? "";
         const msg = messageOpt?.option_item_name_snapshot ?? "";
         lines.push(`  メッセージ：${plate}${msg ? `「${msg}」` : ""}`);
+      }
+
+      for (const pm of plateMsgOpts) {
+        lines.push(`  ${pm.option_item_name_snapshot ?? ""}`);
       }
 
       return lines.join("\n");

@@ -228,11 +228,13 @@ export default function WholeCakePage() {
       return ids.flatMap((did) => {
         const dec = group.items.find((item) => item.id === did);
         if (!dec) return [];
+        const msg = dec.category === "plate" ? (plateMessages[did] || undefined) : undefined;
         return [{
           wholeCakeOptionId: did,
           name: dec.name,
           price: dec.price,
           groupName: group.name,
+          message: msg,
         }];
       });
     });
@@ -251,16 +253,6 @@ export default function WholeCakePage() {
       }
     }
 
-    // デコレーションプレートのメッセージを収集
-    const decoPlateMsg = decorationGroups
-      .flatMap((g) => {
-        const ids = selectedDecorations[g.id] ?? [];
-        return g.items.filter((item) => ids.includes(item.id) && item.category === "plate");
-      })
-      .map((item) => plateMessages[item.id] ?? "")
-      .filter(Boolean)
-      .join(" / ");
-
     return {
       productId: selectedCake.id,
       name: selectedCake.name,
@@ -276,7 +268,7 @@ export default function WholeCakePage() {
         sizePrice: Number(selectedSize.price) || 0,
         candles: validCandles,
         options: cakeOptions,
-        messagePlate: decoPlateMsg || messageText || undefined,
+        messagePlate: messageText || undefined,
         allergyNote: allergyNote || undefined,
         printPhotoUrl: printPhotoUrl || undefined,
         ...(noshiDesign ? {

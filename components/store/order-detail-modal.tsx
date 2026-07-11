@@ -249,13 +249,20 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                       );
                     })()}
 
-                    {/* その他オプション（ろうそく・メッセージ・プレート・アレルギー・サイズ・のし以外） */}
+                    {/* その他オプション（ろうそく・メッセージ・プレート・アレルギー・サイズ・のし・プレートメッセージ以外） */}
                     {item.options.filter(opt =>
-                      !["ろうそく", "メッセージプレート", "メッセージ", "アレルギー", "サイズ", "のし", "のし用途", "のし名前"].includes(opt.groupName)
+                      !["ろうそく", "メッセージプレート", "メッセージ", "アレルギー", "サイズ", "のし", "のし用途", "のし名前", "プレートメッセージ"].includes(opt.groupName)
                     ).map((opt, j) => (
                       <div key={`other-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
                         {opt.groupName}：{opt.itemName}
                         {opt.priceDelta > 0 && <span className="text-gray-600 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
+                      </div>
+                    ))}
+
+                    {/* デコレーションプレートのメッセージ（プレート名「メッセージ」形式） */}
+                    {item.options.filter(opt => opt.groupName === "プレートメッセージ").map((opt, j) => (
+                      <div key={`plate-msg-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
+                        メッセージ：{opt.itemName}
                       </div>
                     ))}
                   </div>

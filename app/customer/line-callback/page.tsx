@@ -27,5 +27,20 @@ export default async function LineCallbackPage() {
     redirect("/customer/login?error=user_not_found")
   }
 
-  return <LineCallbackClient user={user} />
+  // Supabaseセッション確立用のOTPを生成
+  let otp: { email: string; token: string } | null = null
+  if (user.auth_user_id) {
+    const { data: authUserData } = await supabase.auth.admin.getUserById(user.auth_user_id)
+    if (authUserData?.user?.email) {
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: authUserData.user.email,
+      })
+      if (linkData?.properties?.email_otp) {
+        otp = { email: authUserData.user.email, token: linkData.properties.email_otp }
+      }
+    }
+  }
+
+  return <LineCallbackClient user={user} otp={otp} />
 }

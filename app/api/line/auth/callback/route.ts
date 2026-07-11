@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
   const fakeEmail = `line_${lineUserId}@patimoba.internal`
 
   if (!user) {
-    // auth.users 作成
+    // auth.users 作成 or 既存取得
     let authUserId: string
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: fakeEmail,
@@ -125,25 +125,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
     }
 
-    // public.users 作成
-    const { data: newUser, error: insertError } = await supabase
+    // auth_user_id で既存の public.users を検索（line_user_id 未設定のケース）
+    const { data: existingByAuth } = await supabase
       .from("users")
-      .insert({
-        line_user_id: lineUserId,
-        line_name: displayName,
-        avatar_url: pictureUrl ?? null,
-        user_type: "customer",
-        auth_user_id: authUserId,
-      })
-      .select()
-      .single()
+      .select("*")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle()
 
-    if (insertError || !newUser) {
-      console.error("[LINE Auth] users 挿入失敗:", insertError)
-      return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
+    if (existingByAuth) {
+      // 既存レコードに line_user_id を紐づけ
+      await supabase
+        .from("users")
+        .update({ line_user_id: lineUserId, line_name: displayName, avatar_url: pictureUrl ?? existingByAuth.avatar_url })
+        .eq("id", existingByAuth.id)
+      user = { ...existingByAuth, line_user_id: lineUserId }
+    } else {
+      // 新規作成
+      const { data: newUser, error: insertError } = await supabase
+        .from("users")
+        .insert({
+          line_user_id: lineUserId,
+          line_name: displayName,
+          avatar_url: pictureUrl ?? null,
+          user_type: "customer",
+          auth_user_id: authUserId,
+        })
+        .select()
+        .single()
+
+      if (insertError || !newUser) {
+        console.error("[LINE Auth] users 挿入失敗:", insertError)
+        return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
+      }
+
+      user = newUser
     }
-
-    user = newUser
   } else if (!user.auth_user_id) {
     // public.users は存在するが auth_user_id 未設定 → auth.users を作成してリンク
     let authUserId: string

@@ -23,6 +23,7 @@ interface ConfirmStepProps {
   messagePlateSizes?: MessagePlateSize[];
   decorationGroups: DecorationGroupWithItems[];
   selectedDecorations: Record<string, string[]>;
+  plateMessages?: Record<string, string>;
   allergyNote: string;
   onAllergyChange: (note: string) => void;
   total: number;
@@ -45,6 +46,7 @@ export function WholeCakeConfirmStep({
   messagePlateSizes,
   decorationGroups,
   selectedDecorations,
+  plateMessages,
   allergyNote,
   onAllergyChange,
   total,
@@ -141,11 +143,16 @@ export function WholeCakeConfirmStep({
             <div key={group.id}>
               <span className="text-sm font-bold">{group.name}：</span>
               {items.map((item) => (
-                <div key={item.id} className="flex justify-between items-center">
-                  <span className="text-sm">{item.name}</span>
-                  <span className="text-sm">
-                    {item.price === 0 ? "無料" : `+¥${item.price.toLocaleString()}`}
-                  </span>
+                <div key={item.id}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">{item.name}</span>
+                    <span className="text-sm">
+                      {item.price === 0 ? "無料" : `+¥${item.price.toLocaleString()}`}
+                    </span>
+                  </div>
+                  {item.category === "plate" && plateMessages?.[item.id] && (
+                    <p className="text-xs text-gray-500 ml-2">「{plateMessages[item.id]}」</p>
+                  )}
                 </div>
               ))}
             </div>

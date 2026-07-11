@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(`
-        id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
+        id, store_id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
         service_notification_token,
         stores(name, address),
         users!orders_customer_id_fkey(name),

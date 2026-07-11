@@ -124,6 +124,7 @@ export default function WholeCakePage() {
   const [messageText, setMessageText] = useState("");
   const [selectedMessagePlateIdx, setSelectedMessagePlateIdx] = useState("");
   const [selectedDecorations, setSelectedDecorations] = useState<Record<string, string[]>>({});
+  const [plateMessages, setPlateMessages] = useState<Record<string, string>>({});
   const [allergyNote, setAllergyNote] = useState("");
   const [printPhotoUrl, setPrintPhotoUrl] = useState<string | null>(null);
   const [uploadingPrintPhoto, setUploadingPrintPhoto] = useState(false);
@@ -134,6 +135,7 @@ export default function WholeCakePage() {
     setCandles([]);
     setMessageText("");
     setSelectedMessagePlateIdx("");
+    setPlateMessages({});
   }, [selectedCakeIdForPrint]);
 
   const { groups: linkedDecorationGroups, loading: groupsLoading } = useProductDecorationGroups(
@@ -249,6 +251,16 @@ export default function WholeCakePage() {
       }
     }
 
+    // デコレーションプレートのメッセージを収集
+    const decoPlateMsg = decorationGroups
+      .flatMap((g) => {
+        const ids = selectedDecorations[g.id] ?? [];
+        return g.items.filter((item) => ids.includes(item.id) && item.category === "plate");
+      })
+      .map((item) => plateMessages[item.id] ?? "")
+      .filter(Boolean)
+      .join(" / ");
+
     return {
       productId: selectedCake.id,
       name: selectedCake.name,
@@ -264,7 +276,7 @@ export default function WholeCakePage() {
         sizePrice: Number(selectedSize.price) || 0,
         candles: validCandles,
         options: cakeOptions,
-        messagePlate: messageText || undefined,
+        messagePlate: decoPlateMsg || messageText || undefined,
         allergyNote: allergyNote || undefined,
         printPhotoUrl: printPhotoUrl || undefined,
         ...(noshiDesign ? {
@@ -418,6 +430,8 @@ export default function WholeCakePage() {
           groupsLoading={groupsLoading}
           selectedDecorations={selectedDecorations}
           onDecorationsChange={setSelectedDecorations}
+          plateMessages={plateMessages}
+          onPlateMessagesChange={setPlateMessages}
           total={total}
           hasRequiredUnfilled={hasRequiredUnfilled}
           excludeGroupIds={undefined}
@@ -436,6 +450,7 @@ export default function WholeCakePage() {
           messagePlateSizes={messagePlateSizes}
           decorationGroups={decorationGroups}
           selectedDecorations={selectedDecorations}
+          plateMessages={plateMessages}
           allergyNote={allergyNote}
           onAllergyChange={setAllergyNote}
           total={total}

@@ -57,7 +57,7 @@ const elementStyle = {
 
 export default function CardAddPage() {
   const router = useRouter();
-  const { profile, points, userId } = useCustomerContext();
+  const { profile, points, userId, selectedStoreId } = useCustomerContext();
 
   const [name, setName] = useState("");
   const [userPhone, setUserPhone] = useState<string | null>(null);
@@ -211,11 +211,11 @@ export default function CardAddPage() {
     try {
       const liff = (await import("@line/liff")).default;
       const liffAccessToken = liff.getAccessToken();
-      if (liffAccessToken) {
+      if (liffAccessToken && selectedStoreId) {
         const tokenRes = await fetch("/api/line/issue-notification-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ liffAccessToken }),
+          body: JSON.stringify({ storeId: selectedStoreId, liffAccessToken }),
         });
         if (tokenRes.ok) {
           const { notificationToken } = await tokenRes.json();

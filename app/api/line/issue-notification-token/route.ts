@@ -24,22 +24,30 @@ async function getStatelessToken(channelId: string, channelSecret: string): Prom
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, liffAccessToken } = await req.json();
+    const { orderId, storeId: bodyStoreId, liffAccessToken } = await req.json();
     if (!liffAccessToken) {
       return NextResponse.json({ error: "liffAccessToken required" }, { status: 400 });
     }
 
-    const { data: order } = await supabaseAdmin
-      .from("orders")
-      .select("store_id")
-      .eq("id", orderId)
-      .maybeSingle() as any;
+    let resolvedStoreId: string;
 
-    if (!order?.store_id) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    if (orderId) {
+      const { data: order } = await supabaseAdmin
+        .from("orders")
+        .select("store_id")
+        .eq("id", orderId)
+        .maybeSingle() as any;
+      if (!order?.store_id) {
+        return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      }
+      resolvedStoreId = order.store_id;
+    } else if (bodyStoreId) {
+      resolvedStoreId = bodyStoreId;
+    } else {
+      return NextResponse.json({ error: "orderId or storeId required" }, { status: 400 });
     }
 
-    const lineConfig = await resolveStoreLineConfig(order.store_id, supabaseAdmin);
+    const lineConfig = await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);
     const liffId: string = lineConfig.liffId ?? "";
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;

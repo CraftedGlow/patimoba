@@ -277,25 +277,42 @@ export default function TakeoutConfirmPage() {
     if (result.orderId) {
       setCompletedOrderId(result.orderId);
       let serviceMessageSent = false;
-      try {
-        const liff = (await import("@line/liff")).default;
-        const liffAccessToken = liff.getAccessToken();
-        if (liffAccessToken) {
-          const tokenRes = await fetch("/api/line/issue-notification-token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
-          });
-          if (tokenRes.ok) {
-            fetch("/api/line/send-service-message", {
+
+      // 3DS リダイレクト前に保存した notification token があれば優先して使う
+      const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
+      if (preIssuedToken) {
+        try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
+        await supabase.from("orders").update({ service_notification_token: preIssuedToken }).eq("id", result.orderId);
+        fetch("/api/line/send-service-message", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: result.orderId }),
+        }).catch(() => {});
+        serviceMessageSent = true;
+      }
+
+      if (!serviceMessageSent) {
+        try {
+          const liff = (await import("@line/liff")).default;
+          const liffAccessToken = liff.getAccessToken();
+          if (liffAccessToken) {
+            const tokenRes = await fetch("/api/line/issue-notification-token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orderId: result.orderId }),
-            }).catch(() => {});
-            serviceMessageSent = true;
+              body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
+            });
+            if (tokenRes.ok) {
+              fetch("/api/line/send-service-message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: result.orderId }),
+              }).catch(() => {});
+              serviceMessageSent = true;
+            }
           }
-        }
-      } catch { /* LIFF未初期化時はスキップ */ }
+        } catch { /* LIFF未初期化時はスキップ */ }
+      }
+
       if (!serviceMessageSent) {
         fetch("/api/line/send-order-message", {
           method: "POST",

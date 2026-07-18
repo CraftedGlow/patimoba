@@ -25,8 +25,8 @@ async function getStatelessToken(channelId: string, channelSecret: string): Prom
 export async function POST(req: NextRequest) {
   try {
     const { orderId, liffAccessToken } = await req.json();
-    if (!orderId || !liffAccessToken) {
-      return NextResponse.json({ error: "orderId and liffAccessToken required" }, { status: 400 });
+    if (!liffAccessToken) {
+      return NextResponse.json({ error: "liffAccessToken required" }, { status: 400 });
     }
 
     const { data: order } = await supabaseAdmin
@@ -73,13 +73,17 @@ export async function POST(req: NextRequest) {
 
     const { notificationToken } = await tokenRes.json();
 
-    await supabaseAdmin
-      .from("orders")
-      .update({ service_notification_token: notificationToken })
-      .eq("id", orderId);
+    if (orderId) {
+      await supabaseAdmin
+        .from("orders")
+        .update({ service_notification_token: notificationToken })
+        .eq("id", orderId);
+      console.log(`[issue-notification-token] issued: orderId=${orderId}`);
+    } else {
+      console.log("[issue-notification-token] issued (pre-3DS, no orderId)");
+    }
 
-    console.log(`[issue-notification-token] issued: orderId=${orderId}`);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, notificationToken });
   } catch (e) {
     console.error("[issue-notification-token] error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

@@ -206,6 +206,28 @@ export default function CardAddPage() {
       /* ignore */
     }
 
+    // 3DS リダイレクト後は LIFF コンテキストが失われるため、
+    // LIFF が有効な今のうちに notification token を先取りして保存する
+    try {
+      const liff = (await import("@line/liff")).default;
+      const liffAccessToken = liff.getAccessToken();
+      if (liffAccessToken) {
+        const tokenRes = await fetch("/api/line/issue-notification-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ liffAccessToken }),
+        });
+        if (tokenRes.ok) {
+          const { notificationToken } = await tokenRes.json();
+          if (notificationToken) {
+            sessionStorage.setItem("patimoba_notification_token", notificationToken);
+          }
+        }
+      }
+    } catch {
+      /* LIFF 未初期化の場合はスキップ */
+    }
+
     window.location.href = data.redirectUrl;
   };
 

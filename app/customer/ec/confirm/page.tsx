@@ -310,24 +310,40 @@ export default function ECConfirmPage() {
       })
       .catch((e) => console.error("[メール送信エラー]", e));
 
-    try {
-      const liff = (await import("@line/liff")).default;
-      const liffAccessToken = liff.getAccessToken();
-      if (liffAccessToken) {
-        const tokenRes = await fetch("/api/line/issue-notification-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
-        });
-        if (tokenRes.ok) {
-          fetch("/api/line/send-service-message", {
+    // 3DS リダイレクト前に保存した notification token があれば優先して使う
+    let serviceMessageSent = false;
+    const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
+    if (preIssuedToken) {
+      try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
+      await supabase.from("orders").update({ service_notification_token: preIssuedToken }).eq("id", result.orderId);
+      fetch("/api/line/send-service-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: result.orderId }),
+      }).catch(() => {});
+      serviceMessageSent = true;
+    }
+
+    if (!serviceMessageSent) {
+      try {
+        const liff = (await import("@line/liff")).default;
+        const liffAccessToken = liff.getAccessToken();
+        if (liffAccessToken) {
+          const tokenRes = await fetch("/api/line/issue-notification-token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: result.orderId }),
-          }).catch(() => {});
+            body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
+          });
+          if (tokenRes.ok) {
+            fetch("/api/line/send-service-message", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: result.orderId }),
+            }).catch(() => {});
+          }
         }
-      }
-    } catch { /* LIFF未初期化時はスキップ */ }
+      } catch { /* LIFF未初期化時はスキップ */ }
+    }
 
     setShowOrderComplete(true);
     setCountdown(5);

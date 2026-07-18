@@ -65,6 +65,9 @@ export async function POST(req: NextRequest) {
 
     const totalAmount = subtotal - (discountAmount ?? 0);
 
+    // EC は配送日フィールドがないため作成から24時間をキャンセル期限とする
+    const cancelDeadlineAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("orders")
       .insert({
@@ -81,6 +84,7 @@ export async function POST(req: NextRequest) {
         notes: notes ?? "",
         guest_email: guestEmail ?? null,
         customer_name_snapshot: customerName ?? null,
+        cancel_deadline_at: cancelDeadlineAt,
       })
       .select("id")
       .single();

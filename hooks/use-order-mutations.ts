@@ -44,6 +44,18 @@ export function useOrderMutations() {
       return { orderId: "", error: derived.error }
     }
 
+    const cancelDeadlineAt = (() => {
+      if (input.pickupDate) {
+        // pickup_date の前日 23:59:59 JST (= 14:59:59 UTC)
+        const [y, m, d] = input.pickupDate.split("-").map(Number)
+        return new Date(Date.UTC(y, m - 1, d - 1, 14, 59, 59)).toISOString()
+      }
+      // 受取日未定の場合は7日後
+      const d = new Date()
+      d.setDate(d.getDate() + 7)
+      return d.toISOString()
+    })()
+
     const { data: order, error: orderErr } = await supabase
       .from("orders")
       .insert({
@@ -61,6 +73,7 @@ export function useOrderMutations() {
         notes: input.notes ?? "",
         print_photo_url: input.printPhotoUrl ?? null,
         guest_email: input.guestEmail ?? null,
+        cancel_deadline_at: cancelDeadlineAt,
       })
       .select("id")
       .single()

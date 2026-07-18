@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { payjpPost } from "@/lib/payjp";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,7 +19,7 @@ export async function POST(
 
   const { data: order, error: fetchErr } = await supabaseAdmin
     .from("orders")
-    .select("id, order_status, payment_status, cancel_deadline_at, payjp_charge_id, customer_id, discount_amount")
+    .select("id, order_status, payment_status, cancel_deadline_at, customer_id, discount_amount")
     .eq("id", orderId)
     .maybeSingle()
 
@@ -36,15 +35,8 @@ export async function POST(
     return NextResponse.json({ error: "キャンセル期限を過ぎています" }, { status: 400 })
   }
 
-  // クレジットカード決済済みの場合は PAY.JP で返金
-  if (order.payment_status === "paid" && order.payjp_charge_id) {
-    const refundRes = await payjpPost(`/charges/${order.payjp_charge_id}/refund`, {})
-    const refundData = await refundRes.json()
-    if (!refundRes.ok) {
-      console.error("[cancel] PAY.JP 返金エラー:", refundData)
-      return NextResponse.json({ error: "返金処理に失敗しました。お手数ですが店舗までご連絡ください。" }, { status: 500 })
-    }
-  }
+  // payjp_charge_id が orders テーブルに未追加のため返金は現時点でスキップ
+  // TODO: orders に payjp_charge_id カラム追加後に実装
 
   // 使用ポイントを返還
   const discountAmount = Number(order.discount_amount ?? 0)

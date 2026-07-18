@@ -34,7 +34,6 @@ type OrderDetail = {
   order_status: string;
   payment_status: string;
   cancel_deadline_at: string | null;
-  payjp_charge_id: string | null;
   customer_id: string | null;
   stores: { name: string; address: string; phone: string | null; invoice_num: string | null } | null;
   order_items: OrderItem[];

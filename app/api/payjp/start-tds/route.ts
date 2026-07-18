@@ -30,12 +30,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "DB 保存エラー: " + dbError.message }, { status: 500 });
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.URL ?? "http://localhost:3000";
+    const host = req.headers.get("host") ?? "localhost:3000";
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `${proto}://${host}`;
     const rp = return_path ?? "/customer/ec/confirm";
     const callbackUrl =
       `${siteUrl}/api/payjp/tds-callback` +
       `?uid=${encodeURIComponent(user_id)}` +
       `&rp=${encodeURIComponent(rp)}`;
+
+    console.log("[start-tds] callbackUrl:", callbackUrl);
 
     const secretKey = process.env.PAYJP_SECRET_KEY!;
     const jws = jwt.sign({ url: callbackUrl }, secretKey, { algorithm: "HS256" });

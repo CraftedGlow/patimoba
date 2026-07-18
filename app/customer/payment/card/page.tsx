@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
+import { supabase } from "@/lib/supabase";
 
 interface PayjpCardElement {
   mount(selector: string): void;
@@ -17,7 +18,7 @@ interface PayjpCardElement {
 }
 interface PayjpElements {
   create(
-    type: "card",
+    type: "card" | "cardNumber" | "cardExpiry" | "cardCvc",
     options?: { style?: Record<string, unknown> }
   ): PayjpCardElement;
 }
@@ -27,7 +28,7 @@ interface PayjpInstance {
     element: PayjpCardElement,
     data?: {
       three_d_secure?: boolean;
-      card?: { name?: string; phone?: string };
+      card?: { name?: string; phone?: string; email?: string };
     }
   ): Promise<{ id?: string; error?: { message: string } }>;
 }
@@ -49,20 +50,44 @@ function toE164(phone: string): string {
 
 const steps = ["店舗選択", "商品選択", "受取日時", "決済情報"];
 
+const elementStyle = {
+  base: { color: "#111827", fontSize: "16px", "::placeholder": { color: "#d1d5db" } },
+  invalid: { color: "#dc2626" },
+};
+
 export default function CardAddPage() {
   const router = useRouter();
   const { profile, points, userId } = useCustomerContext();
 
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [cardComplete, setCardComplete] = useState(false);
-  const [cardError, setCardError] = useState<string | null>(null);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
+
+  const [numberComplete, setNumberComplete] = useState(false);
+  const [expiryComplete, setExpiryComplete] = useState(false);
+  const [cvcComplete, setCvcComplete] = useState(false);
+  const [numberError, setNumberError] = useState<string | null>(null);
+  const [expiryError, setExpiryError] = useState<string | null>(null);
+  const [cvcError, setCvcError] = useState<string | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const cardElementRef = useRef<PayjpCardElement | null>(null);
+  const cardNumberRef = useRef<PayjpCardElement | null>(null);
   const payjpRef = useRef<PayjpInstance | null>(null);
   const mountedRef = useRef(false);
+
+  // ユーザーの電話番号を DB から取得（3DS 用）
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from("users")
+      .select("phone")
+      .eq("id", userId)
+      .maybeSingle()
+      .then(({ data }: { data: { phone: string | null } | null }) => {
+        if (data?.phone) setUserPhone(data.phone);
+      });
+  }, [userId]);
 
   // tds_error パラメータを URL から読み取る
   useEffect(() => {
@@ -88,38 +113,43 @@ export default function CardAddPage() {
       payjpRef.current = payjp;
 
       const elements = payjp.elements();
-      const cardElement = elements.create("card", {
-        style: {
-          base: { color: "#111827", fontSize: "16px" },
-          invalid: { color: "#dc2626" },
-        },
-      });
-      cardElement.mount("#payjp-card-element");
-      cardElementRef.current = cardElement;
 
-      cardElement.on("change", (e) => {
-        setCardComplete(!!e.complete);
-        setCardError(e.error?.message ?? null);
+      const cardNumber = elements.create("cardNumber", { style: elementStyle });
+      cardNumber.mount("#payjp-card-number");
+      cardNumberRef.current = cardNumber;
+      cardNumber.on("change", (e) => {
+        setNumberComplete(!!e.complete);
+        setNumberError(e.error?.message ?? null);
+      });
+
+      const cardExpiry = elements.create("cardExpiry", { style: elementStyle });
+      cardExpiry.mount("#payjp-card-expiry");
+      cardExpiry.on("change", (e) => {
+        setExpiryComplete(!!e.complete);
+        setExpiryError(e.error?.message ?? null);
+      });
+
+      const cardCvc = elements.create("cardCvc", { style: elementStyle });
+      cardCvc.mount("#payjp-card-cvc");
+      cardCvc.on("change", (e) => {
+        setCvcComplete(!!e.complete);
+        setCvcError(e.error?.message ?? null);
       });
     };
     document.body.appendChild(script);
 
     return () => {
       mountedRef.current = false;
-      cardElementRef.current = null;
+      cardNumberRef.current = null;
       payjpRef.current = null;
       if (document.body.contains(script)) document.body.removeChild(script);
     };
   }, []);
 
   const handleSubmit = async () => {
-    if (!cardElementRef.current || !payjpRef.current) return;
+    if (!cardNumberRef.current || !payjpRef.current) return;
     if (!name.trim()) {
-      setError("カード名義人を入力してください");
-      return;
-    }
-    if (!phone.trim()) {
-      setError("電話番号を入力してください");
+      setError("名義人を入力してください");
       return;
     }
     if (!userId) {
@@ -130,9 +160,12 @@ export default function CardAddPage() {
     setSubmitting(true);
     setError(null);
 
-    const result = await payjpRef.current.createToken(cardElementRef.current, {
+    const cardData: { name: string; phone?: string } = { name: name.trim() };
+    if (userPhone) cardData.phone = toE164(userPhone);
+
+    const result = await payjpRef.current.createToken(cardNumberRef.current, {
       three_d_secure: true,
-      card: { name: name.trim(), phone: toE164(phone) },
+      card: cardData,
     });
 
     if (result.error || !result.id) {
@@ -176,6 +209,8 @@ export default function CardAddPage() {
     window.location.href = data.redirectUrl;
   };
 
+  const allComplete = numberComplete && expiryComplete && cvcComplete && name.trim().length > 0;
+
   return (
     <div className="min-h-screen bg-white">
       <CustomerHeader
@@ -197,66 +232,66 @@ export default function CardAddPage() {
         maxWidthClassName="max-w-[1000px] mx-auto"
       />
       <div className="px-4 pb-10 max-w-[1000px] mx-auto">
-        <div className="text-center mb-8">
-          <h2 className="text-lg font-bold">クレジットカードの追加</h2>
-          <p className="text-xs text-gray-600 mt-0.5">
-            カード情報を入力してください
-          </p>
-        </div>
-
-        <div className="bg-gray-100 rounded-md px-4 py-3 mb-6 flex items-center justify-between">
-          <span className="text-sm text-gray-700">ご利用可能なカード</span>
-          <div className="flex items-center gap-2">
-            <span className="inline-block bg-white border border-gray-200 rounded px-2 py-0.5 text-[11px] font-bold text-blue-700">
-              VISA
-            </span>
-            <span className="inline-block bg-white border border-gray-200 rounded px-2 py-0.5 text-[11px] font-bold">
-              <span className="text-red-500">●</span>
-              <span className="text-orange-400">●</span>
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-4">
+        <div className="space-y-5 mt-4">
+          {/* カード番号 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              カード名義人（ローマ字）
-            </label>
+            <div className="flex items-center gap-1 mb-1.5">
+              <span className="text-sm font-medium text-gray-800">カード番号</span>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
+            <div
+              id="payjp-card-number"
+              className="border border-gray-300 rounded-lg px-3 py-3 bg-white min-h-[48px]"
+            />
+            {numberError && (
+              <p className="text-xs text-red-500 mt-1">{numberError}</p>
+            )}
+          </div>
+
+          {/* 有効期限 */}
+          <div>
+            <div className="flex items-center gap-1 mb-1.5">
+              <span className="text-sm font-medium text-gray-800">有効期限</span>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
+            <div
+              id="payjp-card-expiry"
+              className="border border-gray-300 rounded-lg px-3 py-3 bg-white min-h-[48px] w-48"
+            />
+            {expiryError && (
+              <p className="text-xs text-red-500 mt-1">{expiryError}</p>
+            )}
+          </div>
+
+          {/* セキュリティーコード */}
+          <div>
+            <div className="flex items-center gap-1 mb-1.5">
+              <span className="text-sm font-medium text-gray-800">セキュリティーコード</span>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
+            <div
+              id="payjp-card-cvc"
+              className="border border-gray-300 rounded-lg px-3 py-3 bg-white min-h-[48px] w-36"
+            />
+            {cvcError && (
+              <p className="text-xs text-red-500 mt-1">{cvcError}</p>
+            )}
+          </div>
+
+          {/* 名義人 */}
+          <div>
+            <div className="flex items-center gap-1 mb-1.5">
+              <span className="text-sm font-medium text-gray-800">名義人</span>
+              <span className="text-xs text-red-500 font-bold">必須</span>
+            </div>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="TARO YAMADA"
               autoComplete="cc-name"
-              className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              電話番号
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="090-1234-5678"
-              autoComplete="tel"
-              className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              カード情報
-            </label>
-            <div
-              id="payjp-card-element"
-              className="border border-gray-300 rounded-md px-3 py-3 bg-white min-h-[48px]"
-            />
-            {cardError && (
-              <p className="text-xs text-red-500 mt-1">{cardError}</p>
-            )}
           </div>
         </div>
 
@@ -266,14 +301,15 @@ export default function CardAddPage() {
 
         <button
           onClick={handleSubmit}
-          disabled={submitting || !cardComplete}
-          className="w-full mt-6 bg-amber-400 hover:bg-amber-500 disabled:bg-gray-300 text-white font-bold py-3 rounded-md text-sm transition-colors"
+          disabled={submitting || !allComplete}
+          className="w-full mt-8 bg-amber-400 hover:bg-amber-500 disabled:bg-amber-200 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-lg text-sm transition-colors"
         >
-          {submitting ? "処理中..." : "カードを登録する"}
+          {submitting ? "処理中..." : "決定する"}
         </button>
 
-        <p className="text-xs text-gray-600 text-center mt-4">
-          ※カード情報は安全に処理されます。当サイトにカード番号は保存されません。
+        <p className="text-xs text-gray-500 text-center mt-4 flex items-center justify-center gap-1">
+          <Lock className="w-3.5 h-3.5" />
+          お客様の情報は暗号化で保護されています
         </p>
       </div>
     </div>

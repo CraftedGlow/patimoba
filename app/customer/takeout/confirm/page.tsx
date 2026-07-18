@@ -226,6 +226,8 @@ export default function TakeoutConfirmPage() {
 
     const printPhotoUrl = cartItems.find((i) => i.customization?.printPhotoUrl)?.customization?.printPhotoUrl ?? null;
 
+    let payjpChargeId: string | null = null;
+
     // クレジットカード払いの場合は先に PAY.JP で課金する
     if (paymentMethod === "credit") {
       console.log("[takeout-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", total);
@@ -247,6 +249,7 @@ export default function TakeoutConfirmPage() {
         setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
         return;
       }
+      payjpChargeId = chargeData.chargeId ?? null;
     }
 
     console.log("[takeout-confirm] createOrder 開始");
@@ -262,6 +265,7 @@ export default function TakeoutConfirmPage() {
       pickupDate: pickupDate || null,
       pickupTime: pickupTime || null,
       printPhotoUrl,
+      payjpChargeId,
     });
 
     submittingRef.current = false;

@@ -19,7 +19,7 @@ export async function GET(
       id, order_no, order_type, pickup_date, pickup_time,
       total_amount, subtotal, discount_amount,
       customer_name_snapshot, order_status, payment_status,
-      cancel_deadline_at, customer_id,
+      cancel_deadline_at, payjp_charge_id, customer_id,
       stores(name, address, phone, invoice_num),
       order_items(id, product_name_snapshot, quantity, unit_price, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity))
     `)

@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       notes,
       guestEmail,
       customerName,
+      payjpChargeId,
     }: {
       storeId: string;
       customerId: string | null;
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       notes?: string;
       guestEmail?: string | null;
       customerName?: string | null;
+      payjpChargeId?: string | null;
     } = await req.json();
 
     if (!storeId || !items?.length) {
@@ -85,6 +87,7 @@ export async function POST(req: NextRequest) {
         guest_email: guestEmail ?? null,
         customer_name_snapshot: customerName ?? null,
         cancel_deadline_at: cancelDeadlineAt,
+        payjp_charge_id: payjpChargeId ?? null,
       })
       .select("id")
       .single();

@@ -17,6 +17,7 @@ interface CreateOrderInput {
   orderType?: string
   printPhotoUrl?: string | null
   guestEmail?: string | null
+  payjpChargeId?: string | null
 }
 
 function deriveOrderType(items: UICartItem[], fallback?: string): { type: string; error: string | null } {
@@ -74,6 +75,7 @@ export function useOrderMutations() {
         print_photo_url: input.printPhotoUrl ?? null,
         guest_email: input.guestEmail ?? null,
         cancel_deadline_at: cancelDeadlineAt,
+        payjp_charge_id: input.payjpChargeId ?? null,
       })
       .select("id")
       .single()

@@ -254,6 +254,7 @@ export default function ECConfirmPage() {
         notes: notesStr,
         guestEmail: guestEmailVal,
         customerName: `${lastName} ${firstName}`.trim() || null,
+        payjpChargeId: chargeData.chargeId ?? null,
       }),
     });
     const json = await res.json();

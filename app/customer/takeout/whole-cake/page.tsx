@@ -239,6 +239,17 @@ export default function WholeCakePage() {
       });
     });
 
+    // プリントモードでは、プリントデコレーションを明示的にオプションに追加
+    // （受取日時ページでの preparation_days 計算に必要）
+    if (isPrintMode && printDeco) {
+      cakeOptions.push({
+        wholeCakeOptionId: printDeco.id,
+        name: printDeco.name,
+        price: printDeco.price,
+        groupName: "プリントデコレーション",
+      });
+    }
+
     // 選択されたメッセージプレート種類をオプションに追加
     if (hasMessagePlate && messagePlateSizes.length > 0 && selectedMessagePlateIdx !== "") {
       const idx = parseInt(selectedMessagePlateIdx, 10);

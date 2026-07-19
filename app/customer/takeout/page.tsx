@@ -118,7 +118,11 @@ export default function TakeoutStorePage() {
 
         const { authUser } = await completeLiffLogin(liff);
         setUser(authUser);
-        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+        const now = Date.now().toString();
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, now);
+        // 店舗詳細ページの LIFF 再初期化を抑制し、一覧 LIFF コンテキストを維持する
+        sessionStorage.setItem("liff_login_timestamp", now);
+        sessionStorage.setItem("patimoba_order_liff_id", liffId);
         setLoginDone(true);
       } catch (err: any) {
         console.error("[List LIFF] login error:", err);
@@ -140,6 +144,8 @@ export default function TakeoutStorePage() {
     .filter((s): s is Store => !!s);
 
   const handleStoreClick = (store: Store) => {
+    // 遷移直前にタイムスタンプを更新して店舗詳細ページの LIFF 再初期化を確実に抑制する
+    try { sessionStorage.setItem("liff_login_timestamp", Date.now().toString()); } catch {}
     router.push(`/customer/takeout/store/${store.id}`);
   };
 

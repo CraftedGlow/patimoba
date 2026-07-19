@@ -6,6 +6,33 @@ export interface StoreLineConfig {
   channelSecret: string | null;
 }
 
+/**
+ * LIFF ID でチャネル設定を逆引きする（一覧LIFFフローで使用）
+ * 見つからない場合は null を返す
+ */
+export async function resolveChannelByLiffId(
+  liffId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabaseAdmin: any
+): Promise<StoreLineConfig | null> {
+  try {
+    const { data } = await supabaseAdmin
+      .from("stores")
+      .select("liff_id, line_channel_access_token, line_channel_secret")
+      .eq("liff_id", liffId)
+      .maybeSingle();
+    const d = data as any;
+    if (!d) return null;
+    return {
+      liffId: d.liff_id ?? null,
+      channelAccessToken: d.line_channel_access_token ?? null,
+      channelSecret: d.line_channel_secret ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveStoreLineConfig(
   storeId: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

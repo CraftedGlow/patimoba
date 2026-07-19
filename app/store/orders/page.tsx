@@ -558,6 +558,7 @@ export default function StoreOrdersPage() {
             {manageOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
+              const isCancelled = order.orderStatus === "cancelled";
               const prevOrder = i > 0 ? manageOrders[i - 1] : null;
               const isDateChanged = prevOrder !== null && prevOrder.pickupDate !== order.pickupDate;
 
@@ -571,7 +572,9 @@ export default function StoreOrdersPage() {
                   className={`border-l-4 cursor-pointer transition-colors ${
                     isDateChanged ? "border-t-2 border-t-gray-300" : "border-t border-gray-100"
                   } ${
-                    isFulfilled
+                    isCancelled
+                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
+                      : isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
@@ -672,6 +675,7 @@ export default function StoreOrdersPage() {
             {manageOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
+              const isCancelled = order.orderStatus === "cancelled";
               const fulfilledLabel = isEc ? "出荷済" : "受渡済";
               const prevOrder = i > 0 ? manageOrders[i - 1] : null;
               const isDateChanged = prevOrder !== null && prevOrder.pickupDate !== order.pickupDate;
@@ -686,7 +690,9 @@ export default function StoreOrdersPage() {
                   className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-l-4 cursor-pointer transition-colors ${
                     isDateChanged ? "border-t-2 border-t-gray-300" : "border-t border-gray-100"
                   } ${
-                    isFulfilled
+                    isCancelled
+                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
+                      : isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
@@ -827,6 +833,7 @@ export default function StoreOrdersPage() {
             {historyOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
+              const isCancelled = order.orderStatus === "cancelled";
               const fulfilledLabel = isEc ? "出荷済" : "受渡済";
 
               return (
@@ -837,7 +844,9 @@ export default function StoreOrdersPage() {
                   transition={{ delay: i * 0.02 }}
                   onClick={() => setSelectedOrder(order)}
                   className={`border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
-                    isFulfilled
+                    isCancelled
+                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
+                      : isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
@@ -922,6 +931,7 @@ export default function StoreOrdersPage() {
             {historyOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
+              const isCancelled = order.orderStatus === "cancelled";
               const fulfilledLabel = isEc ? "出荷済" : "受渡済";
 
               return (
@@ -931,7 +941,9 @@ export default function StoreOrdersPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.02 }}
                   className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
-                    isFulfilled
+                    isCancelled
+                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
+                      : isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"

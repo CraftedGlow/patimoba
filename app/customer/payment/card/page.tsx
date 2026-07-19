@@ -212,10 +212,11 @@ export default function CardAddPage() {
       const liff = (await import("@line/liff")).default;
       const liffAccessToken = liff.getAccessToken();
       if (liffAccessToken && selectedStoreId) {
+        const orderLiffId = (() => { try { return sessionStorage.getItem("patimoba_order_liff_id"); } catch { return null; } })();
         const tokenRes = await fetch("/api/line/issue-notification-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ storeId: selectedStoreId, liffAccessToken }),
+          body: JSON.stringify({ storeId: selectedStoreId, liffAccessToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
         });
         if (tokenRes.ok) {
           const { notificationToken } = await tokenRes.json();

@@ -279,6 +279,9 @@ export default function TakeoutConfirmPage() {
       setCompletedOrderId(result.orderId);
       let serviceMessageSent = false;
 
+      // 注文フローを開始した LIFF（一覧 LIFF または店舗固有 LIFF）を取得
+      const orderLiffId = (() => { try { return sessionStorage.getItem("patimoba_order_liff_id"); } catch { return null; } })();
+
       // 3DS リダイレクト前に保存した notification token があれば優先して使う
       const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
       if (preIssuedToken) {
@@ -286,14 +289,15 @@ export default function TakeoutConfirmPage() {
         fetch("/api/line/send-service-message", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken }),
+          body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
         }).catch(() => {});
         serviceMessageSent = true;
       }
 
       if (!serviceMessageSent) {
         try {
-          const liffId = await getLiffId(storeIdForOrder);
+          // orderLiffId（一覧 LIFF）がある場合はそれで init し、なければ店舗の LIFF にフォールバック
+          const liffId = orderLiffId || (await getLiffId(storeIdForOrder));
           const liff = (await import("@line/liff")).default;
           if (liffId) await liff.init({ liffId });
           const liffAccessToken = liff.getAccessToken();
@@ -301,14 +305,14 @@ export default function TakeoutConfirmPage() {
             const tokenRes = await fetch("/api/line/issue-notification-token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
+              body: JSON.stringify({ orderId: result.orderId, liffAccessToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
             });
             if (tokenRes.ok) {
               const { notificationToken } = await tokenRes.json();
               fetch("/api/line/send-service-message", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: result.orderId, notificationToken }),
+                body: JSON.stringify({ orderId: result.orderId, notificationToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
               }).catch(() => {});
               serviceMessageSent = true;
             }

@@ -183,11 +183,18 @@ export default function CustomerOrderDetailPage() {
         )}
       </div>
 
+      {/* キャンセル済みバナー */}
+      {isCancelled && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-3 flex items-center justify-center gap-2">
+          <span className="text-sm font-bold text-red-500">この注文はキャンセル済みです</span>
+        </div>
+      )}
+
       <div className="px-4 py-4 space-y-3 max-w-lg mx-auto">
         {/* 来店日時 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Calendar className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <Calendar className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">来店日時</span>
           </div>
           <p className="text-base font-bold text-gray-900 pl-6">{datetimeStr}</p>
@@ -196,7 +203,7 @@ export default function CustomerOrderDetailPage() {
         {/* 注文内容 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <ShoppingBag className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <ShoppingBag className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">注文内容</span>
           </div>
           <div className="pl-6 space-y-3">
@@ -302,7 +309,7 @@ export default function CustomerOrderDetailPage() {
         {/* 合計金額 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <CreditCard className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <CreditCard className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">合計金額</span>
           </div>
           <div className="pl-6 space-y-1.5">
@@ -326,7 +333,7 @@ export default function CustomerOrderDetailPage() {
         {/* 受け取り方法 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Package className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <Package className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">受け取り方法</span>
           </div>
           <p className="text-sm text-gray-800 pl-6">{pickupLabel}</p>
@@ -394,16 +401,12 @@ export default function CustomerOrderDetailPage() {
           onClick={() => setShowReceiptForm(true)}
           className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-4 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
         >
-          <Download className="w-4 h-4 text-pink-400" />
+          <Download className="w-4 h-4 text-[#FEBC2F]" />
           <span>領収書を発行</span>
         </button>
 
-        {/* キャンセルボタン */}
-        {isCancelled ? (
-          <div className="w-full text-center py-3 rounded-xl bg-gray-100 text-sm text-gray-400 font-medium">
-            この注文はキャンセル済みです
-          </div>
-        ) : canCancel ? (
+        {/* キャンセルボタン（キャンセル済みの場合は非表示） */}
+        {!isCancelled && canCancel ? (
           <div>
             {deadlineLabel && (
               <p className="text-xs text-gray-400 text-center mb-2">

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { resolveStoreLineConfig } from "@/lib/line";
+import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,7 +24,7 @@ async function getStatelessToken(channelId: string, channelSecret: string): Prom
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, storeId: bodyStoreId, liffAccessToken } = await req.json();
+    const { orderId, storeId: bodyStoreId, liffAccessToken, sourceLiffId } = await req.json();
     if (!liffAccessToken) {
       return NextResponse.json({ error: "liffAccessToken required" }, { status: 400 });
     }
@@ -47,7 +47,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "orderId or storeId required" }, { status: 400 });
     }
 
-    const lineConfig = await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);
+    // sourceLiffId（一覧LIFF）が指定された場合はそのチャネル設定を優先する
+    let lineConfig = sourceLiffId
+      ? (await resolveChannelByLiffId(sourceLiffId, supabaseAdmin)) ?? await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin)
+      : await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);
     const liffId: string = lineConfig.liffId ?? "";
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;

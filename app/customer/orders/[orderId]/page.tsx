@@ -399,9 +399,9 @@ export default function CustomerOrderDetailPage() {
         {/* 領収書ボタン */}
         <button
           onClick={() => setShowReceiptForm(true)}
-          className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-4 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          className="w-full flex items-center justify-center gap-2 bg-[#FEBC2F] hover:bg-[#f0b020] active:bg-[#e0a010] rounded-xl px-4 py-4 shadow-sm text-sm font-bold text-white transition-colors"
         >
-          <Download className="w-4 h-4 text-[#FEBC2F]" />
+          <Download className="w-4 h-4 text-white" />
           <span>領収書を発行</span>
         </button>
 

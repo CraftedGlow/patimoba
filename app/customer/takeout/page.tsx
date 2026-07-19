@@ -7,12 +7,14 @@ import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useStores } from "@/hooks/use-stores";
-import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
+import { completeLiffLogin } from "@/lib/liff-login";
 import { Store } from "@/lib/types";
 import { Search, Heart } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
+
+const LIFF_LOGIN_TIMESTAMP_KEY = "patimoba_liff_login_ts";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const tabs = ["店舗一覧", "お気に入り", "履歴"] as const;
@@ -68,7 +70,7 @@ function StoreCard({
 
 export default function TakeoutStorePage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, setUser } = useAuth();
   const {
     profile,
     points,
@@ -81,18 +83,49 @@ export default function TakeoutStorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [favSearchQuery, setFavSearchQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
-
   const [loginDone, setLoginDone] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
-    if (user) {
+
+    const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
+    if (ts && Date.now() - Number(ts) < 15000 && user) {
       setLoginDone(true);
       return;
     }
-    // 未認証 → LINE OAuthフローへ
-    window.location.href = "/api/line/auth";
-  }, [authLoading, user]);
+
+    (async () => {
+      try {
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+        if (!liffId) {
+          setLoginDone(true);
+          return;
+        }
+
+        const liff = (await import("@line/liff")).default;
+        await liff.init({ liffId });
+
+        if (!liff.isInClient()) {
+          setLoginDone(true);
+          return;
+        }
+
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        const { authUser } = await completeLiffLogin(liff);
+        setUser(authUser);
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+        setLoginDone(true);
+      } catch (err: any) {
+        console.error("[List LIFF] login error:", err);
+        setLoginError(err?.message || "LIFF初期化エラー");
+      }
+    })();
+  }, [authLoading]);
 
   const filteredStores = stores.filter((s) =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -110,36 +143,20 @@ export default function TakeoutStorePage() {
     router.push(`/customer/takeout/store/${store.id}`);
   };
 
+  if (loginError) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-8">
+        <p className="text-red-500 text-sm text-center">{loginError}</p>
+      </div>
+    );
+  }
+
   if (!loginDone) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <div className="flex-1 relative flex items-center justify-center px-8">
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="absolute top-10 left-0 right-0 flex justify-center"
-          >
-            <Image
-              src="/パティモバ　ロゴ.png"
-              alt="パティモバ"
-              width={200}
-              height={57}
-              className="w-[200px] h-auto"
-              priority
-            />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="text-center"
-          >
-            <div className="flex flex-col items-center gap-4">
-              <LineSpinner size={30} />
-              <p className="text-2xl font-bold text-gray-900">LINEログイン中...</p>
-            </div>
-          </motion.div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <LineSpinner size={30} />
+          <p className="text-lg font-bold text-gray-900">ログイン中...</p>
         </div>
       </div>
     );

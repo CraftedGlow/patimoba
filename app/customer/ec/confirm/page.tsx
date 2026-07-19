@@ -10,6 +10,7 @@ import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
+import { getLiffId } from "@/lib/get-liff-id";
 import { PrintReceipt } from "@/components/customer/ec/print-receipt";
 import type { UICartItem } from "@/lib/types";
 
@@ -315,18 +316,19 @@ export default function ECConfirmPage() {
     const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
     if (preIssuedToken) {
       try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
-      await supabase.from("orders").update({ service_notification_token: preIssuedToken }).eq("id", result.orderId);
       fetch("/api/line/send-service-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: result.orderId }),
+        body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken }),
       }).catch(() => {});
       serviceMessageSent = true;
     }
 
     if (!serviceMessageSent) {
       try {
+        const liffId = await getLiffId(storeIdForOrder);
         const liff = (await import("@line/liff")).default;
+        if (liffId) await liff.init({ liffId });
         const liffAccessToken = liff.getAccessToken();
         if (liffAccessToken) {
           const tokenRes = await fetch("/api/line/issue-notification-token", {
@@ -335,11 +337,13 @@ export default function ECConfirmPage() {
             body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
           });
           if (tokenRes.ok) {
+            const { notificationToken } = await tokenRes.json();
             fetch("/api/line/send-service-message", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orderId: result.orderId }),
+              body: JSON.stringify({ orderId: result.orderId, notificationToken }),
             }).catch(() => {});
+            serviceMessageSent = true;
           }
         }
       } catch { /* LIFF未初期化時はスキップ */ }

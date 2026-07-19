@@ -24,7 +24,7 @@ async function getStatelessToken(channelId: string, channelSecret: string): Prom
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId } = await req.json();
+    const { orderId, notificationToken: bodyToken } = await req.json();
     if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
 
     const { data: order } = await supabaseAdmin
@@ -40,6 +40,15 @@ export async function POST(req: NextRequest) {
       .maybeSingle() as any;
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+
+    // リクエストボディで直接渡された場合は DB に保存してから使用（RLS 回避）
+    if (bodyToken) {
+      await supabaseAdmin
+        .from("orders")
+        .update({ service_notification_token: bodyToken })
+        .eq("id", orderId);
+      order.service_notification_token = bodyToken;
+    }
 
     const notificationToken: string | null = order.service_notification_token;
     if (!notificationToken) {

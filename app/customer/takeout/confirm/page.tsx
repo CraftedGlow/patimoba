@@ -12,6 +12,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { supabase } from "@/lib/supabase";
+import { getLiffId } from "@/lib/get-liff-id";
 
 const TERMS_SECTIONS = [
   { title: "第1条（適用）", body: "本規約は、ユーザーと運営者との間に成立する、当サービスの利用に関わる一切の関係に適用されます。" },
@@ -282,18 +283,19 @@ export default function TakeoutConfirmPage() {
       const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
       if (preIssuedToken) {
         try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
-        await supabase.from("orders").update({ service_notification_token: preIssuedToken }).eq("id", result.orderId);
         fetch("/api/line/send-service-message", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: result.orderId }),
+          body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken }),
         }).catch(() => {});
         serviceMessageSent = true;
       }
 
       if (!serviceMessageSent) {
         try {
+          const liffId = await getLiffId(storeIdForOrder);
           const liff = (await import("@line/liff")).default;
+          if (liffId) await liff.init({ liffId });
           const liffAccessToken = liff.getAccessToken();
           if (liffAccessToken) {
             const tokenRes = await fetch("/api/line/issue-notification-token", {
@@ -302,10 +304,11 @@ export default function TakeoutConfirmPage() {
               body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
             });
             if (tokenRes.ok) {
+              const { notificationToken } = await tokenRes.json();
               fetch("/api/line/send-service-message", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: result.orderId }),
+                body: JSON.stringify({ orderId: result.orderId, notificationToken }),
               }).catch(() => {});
               serviceMessageSent = true;
             }

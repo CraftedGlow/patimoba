@@ -109,6 +109,19 @@ export default function CustomerOrderDetailPage() {
     const res = await fetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
+      // 「この注文はキャンセルできません」は既にキャンセル済みの可能性があるので最新データを取得
+      if (data.error === "この注文はキャンセルできません") {
+        const freshRes = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        if (freshRes.ok) {
+          const freshOrder = await freshRes.json();
+          setOrder(freshOrder);
+          if (freshOrder.order_status === "cancelled") {
+            setShowCancelConfirm(false);
+            setCancelling(false);
+            return;
+          }
+        }
+      }
       setCancelError(data.error ?? "キャンセルに失敗しました");
       setCancelling(false);
       return;

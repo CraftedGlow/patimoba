@@ -189,7 +189,7 @@ async function sendCancelNotification(orderId: string, order: any) {
   const templateName = process.env.LINE_SERVICE_TEMPLATE_CANCEL ?? "user_cancle_d_ja"
 
   const msgParams: Record<string, string> = {
-    number: order.order_no ?? "",
+    number: order.order_no ?? orderId.slice(0, 8).toUpperCase(),
     date: dateStr,
     count: "1",
     detail: truncatedDetail,

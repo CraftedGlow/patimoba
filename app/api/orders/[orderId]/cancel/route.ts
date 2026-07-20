@@ -182,26 +182,19 @@ async function sendCancelNotification(orderId: string, order: any) {
   }).join("\n")
 
   const truncatedDetail = orderDetail.length > 45 ? orderDetail.slice(0, 45) + "..." : (orderDetail || "（明細なし）")
-  const productName: string = items[0]?.product_name_snapshot || "（商品）"
   const sumStr = `¥${Number(order.total_amount || 0).toLocaleString()}（税込）`
   const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com"
   const orderDetailUrl = `${liffBase}/customer/orders/${orderId}`
   const templateName = process.env.LINE_SERVICE_TEMPLATE_CANCEL ?? "user_cancle_d_ja"
 
   const msgParams: Record<string, string> = {
-    number: order.order_no ?? orderId.slice(0, 8).toUpperCase(),
     date: dateStr,
-    count: "1",
     detail: truncatedDetail,
-    product: productName,
     shop_name: order.stores?.name || "店舗名",
     address: order.stores?.address || "住所未設定",
     sum: sumStr,
     cancel_sum: "¥0",
     btn1_url: orderDetailUrl,
-    btn2_url: orderDetailUrl,
-    btn3_url: orderDetailUrl,
-    btn4_url: orderDetailUrl,
   }
 
   const msgRes = await fetch("https://api.line.me/message/v3/notifier/send?target=service", {

@@ -88,7 +88,7 @@ export default function CustomerOrderDetailPage() {
     if (!orderId) return;
     (async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}`);
+        const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
         if (res.status === 404) {
           setError("注文が見つかりませんでした");
         } else if (!res.ok) {

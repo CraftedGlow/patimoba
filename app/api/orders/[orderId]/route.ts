@@ -29,5 +29,7 @@ export async function GET(
   if (error) return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  return NextResponse.json(data);
+  return NextResponse.json(data, {
+    headers: { "Cache-Control": "no-store" },
+  });
 }

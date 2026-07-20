@@ -47,9 +47,9 @@ export function useOrderMutations() {
 
     const cancelDeadlineAt = (() => {
       if (input.pickupDate) {
-        // pickup_date の前日 23:59:59 JST (= 14:59:59 UTC)
+        // pickup_date の2日前 23:59:59 JST (= 14:59:59 UTC)
         const [y, m, d] = input.pickupDate.split("-").map(Number)
-        return new Date(Date.UTC(y, m - 1, d - 1, 14, 59, 59)).toISOString()
+        return new Date(Date.UTC(y, m - 1, d - 2, 14, 59, 59)).toISOString()
       }
       // 受取日未定の場合は7日後
       const d = new Date()

@@ -127,13 +127,16 @@ export default function CustomerOrderDetailPage() {
       return;
     }
     setShowCancelConfirm(false);
-    const freshRes = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
-    if (freshRes.ok) {
-      setOrder(await freshRes.json());
-    } else {
-      setOrder((prev) => prev ? { ...prev, order_status: "cancelled" } : prev);
-    }
+    // キャンセル成功が確定しているので即座に状態を更新（read-after-write の遅延を回避）
+    setOrder((prev) => prev ? { ...prev, order_status: "cancelled" } : prev);
     setCancelling(false);
+    // バックグラウンドで最新データを取得（他フィールドの更新を反映）
+    fetch(`/api/orders/${orderId}`, { cache: "no-store" }).then(async (freshRes) => {
+      if (freshRes.ok) {
+        const freshOrder = await freshRes.json();
+        setOrder(freshOrder.order_status === "cancelled" ? freshOrder : { ...freshOrder, order_status: "cancelled" });
+      }
+    }).catch(() => {});
   };
 
   const handleOpenReceipt = async () => {

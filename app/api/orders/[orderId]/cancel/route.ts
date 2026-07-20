@@ -108,7 +108,7 @@ export async function POST(
 async function sendCancelNotification(orderId: string, order: any) {
   const notificationToken: string | null = order.service_notification_token
   if (!notificationToken) {
-    console.warn(`[cancel] notification token なし: orderId=${orderId}`)
+    console.warn(`[cancel] notification token なし（通知スキップ）: orderId=${orderId}`)
     return
   }
 
@@ -181,8 +181,8 @@ async function sendCancelNotification(orderId: string, order: any) {
     return lines.join("\n")
   }).join("\n")
 
-  const truncatedDetail = orderDetail.length > 45 ? orderDetail.slice(0, 45) + "..." : orderDetail
-  const productName: string = items[0]?.product_name_snapshot ?? ""
+  const truncatedDetail = orderDetail.length > 45 ? orderDetail.slice(0, 45) + "..." : (orderDetail || "（明細なし）")
+  const productName: string = items[0]?.product_name_snapshot || "（商品）"
   const sumStr = `¥${Number(order.total_amount || 0).toLocaleString()}（税込）`
   const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com"
   const orderDetailUrl = `${liffBase}/customer/orders/${orderId}`
@@ -194,8 +194,8 @@ async function sendCancelNotification(orderId: string, order: any) {
     count: "1",
     detail: truncatedDetail,
     product: productName,
-    shop_name: order.stores?.name ?? "",
-    address: order.stores?.address ?? "",
+    shop_name: order.stores?.name || "店舗名",
+    address: order.stores?.address || "住所未設定",
     sum: sumStr,
     cancel_sum: "¥0",
     btn1_url: orderDetailUrl,

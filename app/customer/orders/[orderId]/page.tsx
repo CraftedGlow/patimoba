@@ -114,7 +114,12 @@ export default function CustomerOrderDetailPage() {
       return;
     }
     setShowCancelConfirm(false);
-    setOrder((prev) => prev ? { ...prev, order_status: "cancelled" } : prev);
+    const freshRes = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
+    if (freshRes.ok) {
+      setOrder(await freshRes.json());
+    } else {
+      setOrder((prev) => prev ? { ...prev, order_status: "cancelled" } : prev);
+    }
     setCancelling(false);
   };
 

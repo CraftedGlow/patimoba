@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     if (orderId) {
       await supabaseAdmin
         .from("orders")
-        .update({ service_notification_token: notificationToken })
+        .update({ service_notification_token: notificationToken, source_liff_id: liffId || null })
         .eq("id", orderId);
       console.log(`[issue-notification-token] issued: orderId=${orderId}`);
     } else {

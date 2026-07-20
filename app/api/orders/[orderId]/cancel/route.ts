@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { payjpPost } from "@/lib/payjp";
-import { resolveStoreLineConfig } from "@/lib/line";
+import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,7 +39,7 @@ export async function POST(
     .select(`
       id, order_no, order_status, payment_status, cancel_deadline_at, payjp_charge_id,
       customer_id, discount_amount, store_id, order_type, pickup_date, pickup_time,
-      total_amount, service_notification_token,
+      total_amount, service_notification_token, source_liff_id,
       stores(name, address),
       order_items(product_name_snapshot, quantity, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity))
     `)
@@ -90,7 +90,7 @@ export async function POST(
     .from("orders")
     .update({ order_status: "cancelled" })
     .eq("id", orderId)
-    .not("order_status", "in", `(${UNCANCELLABLE_STATUSES.map(s => `"${s}"`).join(",")})`)
+    .not("order_status", "in", `(${UNCANCELLABLE_STATUSES.join(",")})`)
 
   if (updateErr) {
     console.error("[cancel] DB 更新エラー:", updateErr)
@@ -112,7 +112,10 @@ async function sendCancelNotification(orderId: string, order: any) {
     return
   }
 
-  const lineConfig = await resolveStoreLineConfig(order.store_id, supabaseAdmin)
+  const sourceLiffId: string | null = order.source_liff_id ?? null
+  const lineConfig = sourceLiffId
+    ? (await resolveChannelByLiffId(sourceLiffId, supabaseAdmin)) ?? await resolveStoreLineConfig(order.store_id, supabaseAdmin)
+    : await resolveStoreLineConfig(order.store_id, supabaseAdmin)
   const liffId: string = lineConfig.liffId ?? ""
   const channelSecret: string = lineConfig.channelSecret ?? ""
   let channelAccessToken: string

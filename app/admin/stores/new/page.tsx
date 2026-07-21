@@ -65,6 +65,8 @@ export default function AdminStoreNewPage() {
   const [acceptsWalkin, setAcceptsWalkin] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [tokushoText, setTokushoText] = useState("");
+  const [privacyPolicyText, setPrivacyPolicyText] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -133,6 +135,8 @@ export default function AdminStoreNewPage() {
         accepts_walkin: acceptsWalkin,
         is_master: isMaster,
         parent_store_id: !isMaster && parentStoreId ? parentStoreId : null,
+        tokusho_text: tokushoText || null,
+        privacy_policy_text: privacyPolicyText || null,
       });
 
       if (imageFile) {
@@ -499,6 +503,40 @@ export default function AdminStoreNewPage() {
             onAddonsChange={setSelectedAddons}
           />
         </Section>
+
+        {!isMaster && (
+          <>
+            <Section title="プライバシーポリシー">
+              <Field label="内容">
+                <textarea
+                  value={privacyPolicyText}
+                  onChange={(e) => setPrivacyPolicyText(e.target.value)}
+                  placeholder="プライバシーポリシーの内容を入力してください"
+                  rows={10}
+                  className="form-input font-mono text-xs leading-relaxed resize-y"
+                />
+              </Field>
+              <p className="text-xs text-gray-600">
+                ここで入力した内容が店舗のプライバシーポリシーページに反映されます。後から随時更新可能です。
+              </p>
+            </Section>
+
+            <Section title="特定商取引法に基づく表記">
+              <Field label="表記内容">
+                <textarea
+                  value={tokushoText}
+                  onChange={(e) => setTokushoText(e.target.value)}
+                  placeholder={`販売事業者名: ○○パティスリー\n運営責任者: 山田 太郎\n所在地: 東京都渋谷区神宮前1-2-3\n電話番号: 03-1234-5678\nメール: info@example.jp\n販売価格: 各商品ページに表示\n送料: 別途記載\n支払方法: クレジットカード・銀行振込\n商品引渡し時期: ご注文から3〜5営業日\n返品・交換: 食品のため原則不可`}
+                  rows={10}
+                  className="form-input font-mono text-xs leading-relaxed resize-y"
+                />
+              </Field>
+              <p className="text-xs text-gray-600">
+                ここで入力した内容が店舗の特商法ページに反映されます。後から随時更新可能です。
+              </p>
+            </Section>
+          </>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 text-sm">

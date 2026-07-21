@@ -55,6 +55,7 @@
     "eslint": "8.49.0",
     "eslint-config-next": "13.5.1",
     "framer-motion": "^11.18.2",
+    "heic-to": "^1.5.2",
     "html-to-image": "^1.11.13",
     "iconv-lite": "^0.7.2",
     "input-otp": "^1.2.4",

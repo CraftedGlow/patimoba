@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { compressImage } from "./image-compress";
 import type { Database } from "./database.types";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
@@ -121,35 +122,6 @@ export async function fetchCustomers() {
 }
 
 const LOGO_BUCKET = "store-logos";
-
-/** Canvasで画像をリサイズ・圧縮してBlobを返す */
-async function compressImage(
-  file: File,
-  maxWidth: number,
-  maxHeight: number,
-  quality = 0.85
-): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxWidth / img.width, maxHeight / img.height);
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("compression failed"))),
-        "image/jpeg",
-        quality
-      );
-    };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
-  });
-}
 
 export async function uploadStoreLogo(file: File, storeId?: string): Promise<string> {
   const compressed = await compressImage(file, 600, 600, 0.88);

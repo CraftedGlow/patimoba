@@ -66,6 +66,7 @@ export default function AdminStoreEditPage() {
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [invoiceNum, setInvoiceNum] = useState("");
   const [tokushoText, setTokushoText] = useState("");
   const [privacyPolicyText, setPrivacyPolicyText] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -87,6 +88,7 @@ export default function AdminStoreEditPage() {
       const rawOptions = (store as any).plan_options;
       if (Array.isArray(rawOptions)) setSelectedAddons(rawOptions as string[]);
 
+      setInvoiceNum((store as any).invoice_num ?? "");
       setTokushoText((store as any).tokusho_text ?? "");
       setPrivacyPolicyText((store as any).privacy_policy_text ?? "");
 
@@ -171,6 +173,7 @@ export default function AdminStoreEditPage() {
         address: addressUrl || "",
         plan: selectedPlan,
         plan_options: selectedAddons.length > 0 ? selectedAddons : null,
+        invoice_num: invoiceNum || null,
         tokusho_text: tokushoText || null,
         privacy_policy_text: privacyPolicyText || null,
       };
@@ -240,6 +243,15 @@ export default function AdminStoreEditPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="03-1234-5678"
+              className="form-input"
+            />
+          </Field>
+          <Field label="インボイス番号">
+            <input
+              type="text"
+              value={invoiceNum}
+              onChange={(e) => setInvoiceNum(e.target.value)}
+              placeholder="T1234567890123"
               className="form-input"
             />
           </Field>

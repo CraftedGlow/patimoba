@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { resolveStoreLineConfig } from "@/lib/line";
+import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,13 +24,13 @@ async function getStatelessToken(channelId: string, channelSecret: string): Prom
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId } = await req.json();
+    const { orderId, notificationToken: bodyToken, sourceLiffId } = await req.json();
     if (!orderId) return NextResponse.json({ error: "orderId required" }, { status: 400 });
 
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(`
-        id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
+        id, store_id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
         service_notification_token,
         stores(name, address),
         users!orders_customer_id_fkey(name),
@@ -40,6 +40,15 @@ export async function POST(req: NextRequest) {
       .maybeSingle() as any;
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+
+    // リクエストボディで直接渡された場合は DB に保存してから使用（RLS 回避）
+    if (bodyToken) {
+      await supabaseAdmin
+        .from("orders")
+        .update({ service_notification_token: bodyToken })
+        .eq("id", orderId);
+      order.service_notification_token = bodyToken;
+    }
 
     const notificationToken: string | null = order.service_notification_token;
     if (!notificationToken) {
@@ -53,7 +62,10 @@ export async function POST(req: NextRequest) {
     const customerName: string = order.customer_name_snapshot || order.users?.name || "お客様";
     const isEc = order.order_type === "ec";
 
-    const lineConfig = await resolveStoreLineConfig(order.store_id, supabaseAdmin);
+    // sourceLiffId（一覧LIFF）が指定された場合はそのチャネル設定を優先する
+    const lineConfig = sourceLiffId
+      ? (await resolveChannelByLiffId(sourceLiffId, supabaseAdmin)) ?? await resolveStoreLineConfig(order.store_id, supabaseAdmin)
+      : await resolveStoreLineConfig(order.store_id, supabaseAdmin);
     const liffId: string = lineConfig.liffId ?? "";
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;
@@ -103,9 +115,11 @@ export async function POST(req: NextRequest) {
       );
       const plateOpt = allOpts.find(o => o.option_group_name_snapshot === "メッセージプレート");
       const messageOpt = allOpts.find(o => o.option_group_name_snapshot === "メッセージ");
+      const plateMsgOpts = allOpts.filter(o => o.option_group_name_snapshot === "プレートメッセージ");
       const opts = allOpts.filter(o =>
         o.option_group_name_snapshot !== "メッセージプレート" &&
-        o.option_group_name_snapshot !== "メッセージ"
+        o.option_group_name_snapshot !== "メッセージ" &&
+        o.option_group_name_snapshot !== "プレートメッセージ"
       );
 
       const lines: string[] = [`${item.product_name_snapshot} ×${item.quantity}`];
@@ -128,6 +142,10 @@ export async function POST(req: NextRequest) {
         const plate = plateOpt?.option_item_name_snapshot ?? "";
         const msg = messageOpt?.option_item_name_snapshot ?? "";
         lines.push(`  メッセージ：${plate}${msg ? `「${msg}」` : ""}`);
+      }
+
+      for (const pm of plateMsgOpts) {
+        lines.push(`  ${pm.option_item_name_snapshot ?? ""}`);
       }
 
       return lines.join("\n");

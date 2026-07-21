@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { resolveStoreLineConfig } from "@/lib/line";
+import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,22 +24,33 @@ async function getStatelessToken(channelId: string, channelSecret: string): Prom
 
 export async function POST(req: NextRequest) {
   try {
-    const { orderId, liffAccessToken } = await req.json();
-    if (!orderId || !liffAccessToken) {
-      return NextResponse.json({ error: "orderId and liffAccessToken required" }, { status: 400 });
+    const { orderId, storeId: bodyStoreId, liffAccessToken, sourceLiffId } = await req.json();
+    if (!liffAccessToken) {
+      return NextResponse.json({ error: "liffAccessToken required" }, { status: 400 });
     }
 
-    const { data: order } = await supabaseAdmin
-      .from("orders")
-      .select("store_id")
-      .eq("id", orderId)
-      .maybeSingle() as any;
+    let resolvedStoreId: string;
 
-    if (!order?.store_id) {
-      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    if (orderId) {
+      const { data: order } = await supabaseAdmin
+        .from("orders")
+        .select("store_id")
+        .eq("id", orderId)
+        .maybeSingle() as any;
+      if (!order?.store_id) {
+        return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      }
+      resolvedStoreId = order.store_id;
+    } else if (bodyStoreId) {
+      resolvedStoreId = bodyStoreId;
+    } else {
+      return NextResponse.json({ error: "orderId or storeId required" }, { status: 400 });
     }
 
-    const lineConfig = await resolveStoreLineConfig(order.store_id, supabaseAdmin);
+    // sourceLiffId（一覧LIFF）が指定された場合はそのチャネル設定を優先する
+    let lineConfig = sourceLiffId
+      ? (await resolveChannelByLiffId(sourceLiffId, supabaseAdmin)) ?? await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin)
+      : await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);
     const liffId: string = lineConfig.liffId ?? "";
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;
@@ -73,13 +84,17 @@ export async function POST(req: NextRequest) {
 
     const { notificationToken } = await tokenRes.json();
 
-    await supabaseAdmin
-      .from("orders")
-      .update({ service_notification_token: notificationToken })
-      .eq("id", orderId);
+    if (orderId) {
+      await supabaseAdmin
+        .from("orders")
+        .update({ service_notification_token: notificationToken, source_liff_id: liffId || null })
+        .eq("id", orderId);
+      console.log(`[issue-notification-token] issued: orderId=${orderId}`);
+    } else {
+      console.log("[issue-notification-token] issued (pre-3DS, no orderId)");
+    }
 
-    console.log(`[issue-notification-token] issued: orderId=${orderId}`);
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, notificationToken });
   } catch (e) {
     console.error("[issue-notification-token] error:", e);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

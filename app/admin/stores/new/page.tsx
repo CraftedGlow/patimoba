@@ -71,6 +71,7 @@ export default function AdminStoreNewPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [invoiceNum, setInvoiceNum] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -132,6 +133,7 @@ export default function AdminStoreNewPage() {
         logo_url: logoUrl,
         plan: selectedPlan,
         plan_options: selectedAddons.length > 0 ? selectedAddons : null,
+        invoice_num: invoiceNum || null,
         accepts_walkin: acceptsWalkin,
         is_master: isMaster,
         parent_store_id: !isMaster && parentStoreId ? parentStoreId : null,
@@ -306,6 +308,15 @@ export default function AdminStoreNewPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="03-1234-5678"
+              className="form-input"
+            />
+          </Field>
+          <Field label="インボイス番号">
+            <input
+              type="text"
+              value={invoiceNum}
+              onChange={(e) => setInvoiceNum(e.target.value)}
+              placeholder="T1234567890123"
               className="form-input"
             />
           </Field>

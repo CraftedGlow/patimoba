@@ -8,31 +8,45 @@ import type { Database } from "@/lib/database.types"
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"]
 
-// auth-context.tsx と同じキー
 const STORAGE_KEY = "patimoba_auth_user"
 
-export function LineCallbackClient({ user }: { user: UserRow }) {
+export function LineCallbackClient({
+  user,
+  otp,
+}: {
+  user: UserRow
+  otp: { email: string; token: string } | null
+}) {
   const router = useRouter()
 
   useEffect(() => {
-    const nameParts = (user.name || user.line_name || "").split(" ")
-    const authUser = {
-      id: user.id,
-      email: user.email ?? "",
-      userType: "customer" as const,
-      firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
-      lastName: nameParts[0] ?? "",
-      storeId: null,
-      raw: user,
-    }
+    ;(async () => {
+      if (otp) {
+        const { supabase } = await import("@/lib/supabase")
+        await supabase.auth.verifyOtp({
+          email: otp.email,
+          token: otp.token,
+          type: "magiclink",
+        })
+      }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+      const nameParts = (user.name || user.line_name || "").split(" ")
+      const authUser = {
+        id: user.id,
+        email: user.email ?? "",
+        userType: "customer" as const,
+        firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : "",
+        lastName: nameParts[0] ?? "",
+        storeId: null,
+        raw: user,
+      }
 
-    // セッションクッキーをクリア
-    document.cookie = "line_session_uid=; path=/; max-age=0"
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
+      document.cookie = "line_session_uid=; path=/; max-age=0"
 
-    router.push("/customer/takeout")
-  }, [user, router])
+      router.push("/customer/takeout")
+    })()
+  }, [user, otp, router])
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-8">

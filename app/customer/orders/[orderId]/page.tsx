@@ -33,7 +33,10 @@ type OrderDetail = {
   customer_name_snapshot: string | null;
   order_status: string;
   payment_status: string;
-  stores: { name: string; address: string; phone: string | null; invoice_number: string | null } | null;
+  cancel_deadline_at: string | null;
+  payjp_charge_id: string | null;
+  customer_id: string | null;
+  stores: { name: string; address: string; phone: string | null; invoice_num: string | null } | null;
   order_items: OrderItem[];
 };
 
@@ -77,12 +80,15 @@ export default function CustomerOrderDetailPage() {
   const [showReceiptForm, setShowReceiptForm] = useState(false);
   const [recipientName, setRecipientName] = useState("");
   const [description, setDescription] = useState("お品代として");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!orderId) return;
     (async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}`);
+        const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
         if (res.status === 404) {
           setError("注文が見つかりませんでした");
         } else if (!res.ok) {
@@ -96,6 +102,42 @@ export default function CustomerOrderDetailPage() {
       setLoading(false);
     })();
   }, [orderId]);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    setCancelError(null);
+    const res = await fetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) {
+      // 「この注文はキャンセルできません」は既にキャンセル済みの可能性があるので最新データを取得
+      if (data.error === "この注文はキャンセルできません") {
+        const freshRes = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        if (freshRes.ok) {
+          const freshOrder = await freshRes.json();
+          setOrder(freshOrder);
+          if (freshOrder.order_status === "cancelled") {
+            setShowCancelConfirm(false);
+            setCancelling(false);
+            return;
+          }
+        }
+      }
+      setCancelError(data.error ?? "キャンセルに失敗しました");
+      setCancelling(false);
+      return;
+    }
+    setShowCancelConfirm(false);
+    // キャンセル成功が確定しているので即座に状態を更新（read-after-write の遅延を回避）
+    setOrder((prev) => prev ? { ...prev, order_status: "cancelled" } : prev);
+    setCancelling(false);
+    // バックグラウンドで最新データを取得（他フィールドの更新を反映）
+    fetch(`/api/orders/${orderId}`, { cache: "no-store" }).then(async (freshRes) => {
+      if (freshRes.ok) {
+        const freshOrder = await freshRes.json();
+        setOrder(freshOrder.order_status === "cancelled" ? freshOrder : { ...freshOrder, order_status: "cancelled" });
+      }
+    }).catch(() => {});
+  };
 
   const handleOpenReceipt = async () => {
     const path = `/api/receipt/${orderId}?recipient=${encodeURIComponent(recipientName)}&description=${encodeURIComponent(description)}`;
@@ -133,6 +175,23 @@ export default function CustomerOrderDetailPage() {
   const datetimeStr = formatPickupDateTime(order.pickup_date, order.pickup_time);
   const hasDiscount = order.discount_amount != null && Number(order.discount_amount) > 0;
 
+  const isCancelled = order.order_status === "cancelled";
+  const isCompleted = order.order_status === "completed";
+  const deadlinePassed = order.cancel_deadline_at
+    ? new Date(order.cancel_deadline_at) < new Date()
+    : false;
+  const canCancel = !isCancelled && !isCompleted && !deadlinePassed;
+  const deadlineLabel = order.cancel_deadline_at
+    ? new Date(order.cancel_deadline_at).toLocaleString("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ヘッダー */}
@@ -145,11 +204,18 @@ export default function CustomerOrderDetailPage() {
         )}
       </div>
 
+      {/* キャンセル済みバナー */}
+      {isCancelled && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-3 flex items-center justify-center gap-2">
+          <span className="text-sm font-bold text-red-500">この注文はキャンセル済みです</span>
+        </div>
+      )}
+
       <div className="px-4 py-4 space-y-3 max-w-lg mx-auto">
         {/* 来店日時 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Calendar className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <Calendar className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">来店日時</span>
           </div>
           <p className="text-base font-bold text-gray-900 pl-6">{datetimeStr}</p>
@@ -158,7 +224,7 @@ export default function CustomerOrderDetailPage() {
         {/* 注文内容 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <ShoppingBag className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <ShoppingBag className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">注文内容</span>
           </div>
           <div className="pl-6 space-y-3">
@@ -264,7 +330,7 @@ export default function CustomerOrderDetailPage() {
         {/* 合計金額 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
-            <CreditCard className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <CreditCard className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">合計金額</span>
           </div>
           <div className="pl-6 space-y-1.5">
@@ -288,7 +354,7 @@ export default function CustomerOrderDetailPage() {
         {/* 受け取り方法 */}
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
-            <Package className="w-4 h-4 text-pink-400 flex-shrink-0" />
+            <Package className="w-4 h-4 text-[#FEBC2F] flex-shrink-0" />
             <span className="text-sm font-semibold text-gray-700">受け取り方法</span>
           </div>
           <p className="text-sm text-gray-800 pl-6">{pickupLabel}</p>
@@ -354,11 +420,69 @@ export default function CustomerOrderDetailPage() {
         {/* 領収書ボタン */}
         <button
           onClick={() => setShowReceiptForm(true)}
-          className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 rounded-xl px-4 py-4 shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          className="w-full flex items-center justify-center gap-2 bg-[#FEBC2F] hover:bg-[#f0b020] active:bg-[#e0a010] rounded-xl px-4 py-4 shadow-sm text-sm font-bold text-white transition-colors"
         >
-          <Download className="w-4 h-4 text-pink-400" />
+          <Download className="w-4 h-4 text-white" />
           <span>領収書を発行</span>
         </button>
+
+        {/* キャンセルボタン（キャンセル済みの場合は非表示） */}
+        {!isCancelled && canCancel ? (
+          <div>
+            {deadlineLabel && (
+              <p className="text-xs text-gray-400 text-center mb-2">
+                キャンセル期限：{deadlineLabel}まで
+              </p>
+            )}
+            <button
+              onClick={() => { setCancelError(null); setShowCancelConfirm(true); }}
+              className="w-full flex items-center justify-center gap-2 bg-white border border-red-200 rounded-xl px-4 py-4 shadow-sm text-sm font-medium text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+            >
+              注文をキャンセルする
+            </button>
+          </div>
+        ) : null}
+
+        {/* キャンセル確認モーダル */}
+        {showCancelConfirm && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 50, backgroundColor: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+            onClick={() => !cancelling && setShowCancelConfirm(false)}
+          >
+            <div
+              style={{ width: "100%", maxWidth: "480px", backgroundColor: "#fff", borderRadius: "16px 16px 0 0", padding: "24px 20px 32px" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ width: "40px", height: "4px", backgroundColor: "#e0e0e0", borderRadius: "2px", margin: "0 auto 20px" }} />
+              <h2 style={{ fontSize: "16px", fontWeight: "700", marginBottom: "12px", textAlign: "center" }}>注文をキャンセルしますか？</h2>
+              <p style={{ fontSize: "13px", color: "#666", textAlign: "center", marginBottom: "8px", lineHeight: "1.6" }}>
+                この操作は取り消せません。
+                {order.payment_status === "paid" && (
+                  <> クレジットカードへの返金は数営業日以内に行われます。</>
+                )}
+              </p>
+              {cancelError && (
+                <p style={{ fontSize: "12px", color: "#dc2626", textAlign: "center", marginBottom: "8px" }}>{cancelError}</p>
+              )}
+              <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  disabled={cancelling}
+                  style={{ flex: 1, padding: "13px", backgroundColor: "#f3f4f6", color: "#374151", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "600", cursor: "pointer" }}
+                >
+                  戻る
+                </button>
+                <button
+                  onClick={handleCancel}
+                  disabled={cancelling}
+                  style={{ flex: 1, padding: "13px", backgroundColor: cancelling ? "#fca5a5" : "#ef4444", color: "#fff", border: "none", borderRadius: "10px", fontSize: "14px", fontWeight: "700", cursor: cancelling ? "not-allowed" : "pointer" }}
+                >
+                  {cancelling ? "処理中..." : "キャンセルする"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="h-4" />
       </div>

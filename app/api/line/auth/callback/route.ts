@@ -96,35 +96,107 @@ export async function GET(request: NextRequest) {
     .eq("line_user_id", lineUserId)
     .maybeSingle()
 
-  // auth_user_id が紐づいていない場合は登録画面へ
-  if (!existingUser || !existingUser.auth_user_id) {
-    const pendingData = JSON.stringify({
-      lineUserId,
-      lineName: displayName,
-      avatarUrl: pictureUrl ?? null,
+  // ユーザーが存在しない、またはauth_user_idが未設定の場合は自動作成・リンク
+  let user = existingUser
+  const fakeEmail = `line_${lineUserId}@patimoba.internal`
+
+  if (!user) {
+    // auth.users 作成 or 既存取得
+    let authUserId: string
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: fakeEmail,
+      email_confirm: true,
+      user_metadata: { line_user_id: lineUserId },
     })
 
-    const registerResponse = NextResponse.redirect(
-      new URL("/customer/line-register", request.url)
-    )
-    registerResponse.cookies.delete("line_oauth_state")
-    registerResponse.cookies.set("line_pending_user", pendingData, {
-      httpOnly: true,
-      maxAge: 300,
-      path: "/",
-      sameSite: "lax",
+    if (authData?.user) {
+      authUserId = authData.user.id
+    } else if (authError) {
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: fakeEmail,
+      })
+      if (!linkData?.user?.id) {
+        console.error("[LINE Auth] auth user 作成失敗:", authError)
+        return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
+      }
+      authUserId = linkData.user.id
+    } else {
+      return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
+    }
+
+    // auth_user_id で既存の public.users を検索（line_user_id 未設定のケース）
+    const { data: existingByAuth } = await supabase
+      .from("users")
+      .select("*")
+      .eq("auth_user_id", authUserId)
+      .maybeSingle()
+
+    if (existingByAuth) {
+      // 既存レコードに line_user_id を紐づけ
+      await supabase
+        .from("users")
+        .update({ line_user_id: lineUserId, line_name: displayName, avatar_url: pictureUrl ?? existingByAuth.avatar_url })
+        .eq("id", existingByAuth.id)
+      user = { ...existingByAuth, line_user_id: lineUserId }
+    } else {
+      // 新規作成
+      const { data: newUser, error: insertError } = await supabase
+        .from("users")
+        .insert({
+          line_user_id: lineUserId,
+          line_name: displayName,
+          avatar_url: pictureUrl ?? null,
+          user_type: "customer",
+          auth_user_id: authUserId,
+        })
+        .select()
+        .single()
+
+      if (insertError || !newUser) {
+        console.error("[LINE Auth] users 挿入失敗:", insertError)
+        return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
+      }
+
+      user = newUser
+    }
+  } else if (!user.auth_user_id) {
+    // public.users は存在するが auth_user_id 未設定 → auth.users を作成してリンク
+    let authUserId: string
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: fakeEmail,
+      email_confirm: true,
+      user_metadata: { line_user_id: lineUserId },
     })
-    return registerResponse
+
+    if (authData?.user) {
+      authUserId = authData.user.id
+    } else if (authError) {
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email: fakeEmail,
+      })
+      if (!linkData?.user?.id) {
+        console.error("[LINE Auth] auth user リンク失敗:", authError)
+        return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
+      }
+      authUserId = linkData.user.id
+    } else {
+      return NextResponse.redirect(new URL("/customer/login?error=server_error", request.url))
+    }
+
+    await supabase.from("users").update({ auth_user_id: authUserId }).eq("id", user.id)
+    user = { ...user, auth_user_id: authUserId }
+  } else {
+    // 表示名・アイコンが変わっていれば更新
+    await supabase
+      .from("users")
+      .update({
+        line_name: displayName,
+        avatar_url: pictureUrl ?? user.avatar_url,
+      })
+      .eq("id", user.id)
   }
-
-  // 表示名・アイコンが変わっていれば更新
-  await supabase
-    .from("users")
-    .update({
-      line_name: displayName,
-      avatar_url: pictureUrl ?? existingUser.avatar_url,
-    })
-    .eq("id", existingUser.id)
 
   // Step 4: セッション引き渡し用クッキーをセット (1分間有効)
   const response = NextResponse.redirect(
@@ -133,7 +205,7 @@ export async function GET(request: NextRequest) {
 
   response.cookies.delete("line_oauth_state")
 
-  response.cookies.set("line_session_uid", existingUser.id, {
+  response.cookies.set("line_session_uid", user.id, {
     httpOnly: true,
     maxAge: 60,
     path: "/",

@@ -11,6 +11,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
+import { getLiffId } from "@/lib/get-liff-id";
 import { PrintReceipt } from "@/components/customer/ec/print-receipt";
 import type { UICartItem } from "@/lib/types";
 
@@ -55,6 +56,7 @@ export default function ECConfirmPage() {
   const [partialPoints, setPartialPoints] = useState("");
   const [showOrderComplete, setShowOrderComplete] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(5);
 
@@ -204,11 +206,12 @@ export default function ECConfirmPage() {
 
   const handleConfirmOrder = async () => {
     console.log("[ec-confirm] 注文を確定するボタン clicked, total:", total, "userId:", userId);
-    if (submitting) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     const persistedStoreId = (() => { try { return localStorage.getItem("patimoba_selected_store_id") } catch { return null } })();
     const storeIdForOrder = selectedStoreId || cartStoreId || persistedStoreId;
-    if (!storeIdForOrder) { setSubmitError("店舗が選択されていません"); return; }
-    if (cartItems.length === 0) { setSubmitError("カートに商品がありません"); return; }
+    if (!storeIdForOrder) { submittingRef.current = false; setSubmitError("店舗が選択されていません"); return; }
+    if (cartItems.length === 0) { submittingRef.current = false; setSubmitError("カートに商品がありません"); return; }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -233,6 +236,7 @@ export default function ECConfirmPage() {
     const chargeData = await chargeRes.json();
     console.log("[ec-confirm] charge →", chargeRes.status, chargeData);
     if (!chargeRes.ok) {
+      submittingRef.current = false;
       setSubmitting(false);
       setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
       return;
@@ -253,6 +257,7 @@ export default function ECConfirmPage() {
         notes: notesStr,
         guestEmail: guestEmailVal,
         customerName: `${lastName} ${firstName}`.trim() || null,
+        payjpChargeId: chargeData.chargeId ?? null,
       }),
     });
     const json = await res.json();
@@ -260,6 +265,7 @@ export default function ECConfirmPage() {
       ? { orderId: json.orderId, error: null }
       : { orderId: "", error: json.error || "注文の作成に失敗しました" };
 
+    submittingRef.current = false;
     setSubmitting(false);
     console.log("[ec-confirm] create-order →", result);
     if (result.error) { setSubmitError(result.error); return; }
@@ -307,24 +313,43 @@ export default function ECConfirmPage() {
       })
       .catch((e) => console.error("[メール送信エラー]", e));
 
-    try {
-      const liff = (await import("@line/liff")).default;
-      const liffAccessToken = liff.getAccessToken();
-      if (liffAccessToken) {
-        const tokenRes = await fetch("/api/line/issue-notification-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
-        });
-        if (tokenRes.ok) {
-          fetch("/api/line/send-service-message", {
+    // 3DS リダイレクト前に保存した notification token があれば優先して使う
+    let serviceMessageSent = false;
+    const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
+    if (preIssuedToken) {
+      try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
+      fetch("/api/line/send-service-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken }),
+      }).catch(() => {});
+      serviceMessageSent = true;
+    }
+
+    if (!serviceMessageSent) {
+      try {
+        const liffId = await getLiffId(storeIdForOrder);
+        const liff = (await import("@line/liff")).default;
+        if (liffId) await liff.init({ liffId });
+        const liffAccessToken = liff.getAccessToken();
+        if (liffAccessToken) {
+          const tokenRes = await fetch("/api/line/issue-notification-token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: result.orderId }),
-          }).catch(() => {});
+            body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
+          });
+          if (tokenRes.ok) {
+            const { notificationToken } = await tokenRes.json();
+            fetch("/api/line/send-service-message", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: result.orderId, notificationToken }),
+            }).catch(() => {});
+            serviceMessageSent = true;
+          }
         }
-      }
-    } catch { /* LIFF未初期化時はスキップ */ }
+      } catch { /* LIFF未初期化時はスキップ */ }
+    }
 
     setShowOrderComplete(true);
     setCountdown(5);

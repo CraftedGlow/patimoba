@@ -76,7 +76,7 @@ export default function Home() {
         const decoded = decodeURIComponent(liffState);
         const pathOnly = decoded.split("?")[0];
         if (pathOnly.startsWith("/customer/orders/")) {
-          router.replace(pathOnly);
+          window.location.replace(pathOnly);
           return;
         }
       }

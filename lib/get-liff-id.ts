@@ -34,11 +34,9 @@ export function parseLiffStateStoreId(): string | null {
  * 3. 環境変数にフォールバック
  */
 export async function getLiffId(storeId?: string | null): Promise<string> {
-  try {
-    const cached = sessionStorage.getItem(SESSION_KEY);
-    if (cached) return cached;
-  } catch {}
-
+  // storeIdがある場合は常にDBからis_masterを取得してsessionStorageを更新する。
+  // キャッシュ優先にすると、親店舗→子店舗遷移時にisMaster:trueが残留して
+  // 子店舗ページで再度store-selectへリダイレクトされるバグが発生するため。
   if (storeId) {
     try {
       const { data } = await supabase
@@ -46,13 +44,20 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
         .select("liff_id, is_master")
         .eq("id", storeId)
         .single();
-      if (data?.liff_id) {
-        saveLiffId(data.liff_id);
+      if (data) {
         saveLiffStoreId(storeId, data.is_master ?? false);
-        return data.liff_id;
+        if (data.liff_id) {
+          saveLiffId(data.liff_id);
+          return data.liff_id;
+        }
       }
     } catch {}
   }
+
+  try {
+    const cached = sessionStorage.getItem(SESSION_KEY);
+    if (cached) return cached;
+  } catch {}
 
   return "";
 }

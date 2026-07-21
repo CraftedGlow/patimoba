@@ -16,6 +16,7 @@ export function useStores() {
       .from("stores")
       .select("*")
       .eq("is_active", true)
+      .eq("is_master", false)
     if (err) {
       setError(err.message)
     } else {

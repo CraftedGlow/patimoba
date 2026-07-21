@@ -159,6 +159,7 @@ export interface CartCakeOptionEntry {
   name: string
   price: number
   groupName?: string
+  message?: string
 }
 
 // デコレーション関連UI型

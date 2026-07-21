@@ -1,22 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useStores } from "@/hooks/use-stores";
-import Image from "next/image";
-import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
 import { completeLiffLogin } from "@/lib/liff-login";
-import { getLiffId, getLiffStoreInfo } from "@/lib/get-liff-id";
 import { Store } from "@/lib/types";
 import { Search, Heart } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 
-const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
+const LIFF_LOGIN_TIMESTAMP_KEY = "patimoba_liff_login_ts";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const tabs = ["店舗一覧", "お気に入り", "履歴"] as const;
@@ -85,18 +83,12 @@ export default function TakeoutStorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [favSearchQuery, setFavSearchQuery] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
-
   const [loginDone, setLoginDone] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const liffStarted = useRef(false);
 
-  // 常にLINEクライアント内ではフレッシュログイン
   useEffect(() => {
     if (authLoading) return;
-    if (liffStarted.current) return;
-    liffStarted.current = true;
 
-    // 直前にroot pageや他のページでLIFFログイン済みなら再実行不要
     const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
     if (ts && Date.now() - Number(ts) < 15000 && user) {
       setLoginDone(true);
@@ -105,9 +97,9 @@ export default function TakeoutStorePage() {
 
     (async () => {
       try {
-        const liffId = await getLiffId();
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
         if (!liffId) {
-          if (user) setLoginDone(true);
+          setLoginDone(true);
           return;
         }
 
@@ -115,14 +107,9 @@ export default function TakeoutStorePage() {
         await liff.init({ liffId });
 
         if (!liff.isInClient()) {
-          if (user) { setLoginDone(true); return; }
-          setLoginError("このページはLINEアプリからアクセスしてください");
+          setLoginDone(true);
           return;
         }
-
-        // LINEクライアント内：常にフレッシュログイン
-        try { localStorage.removeItem(STORAGE_KEY); } catch {}
-        setUser(null);
 
         if (!liff.isLoggedIn()) {
           liff.login({ redirectUri: window.location.href });
@@ -131,16 +118,14 @@ export default function TakeoutStorePage() {
 
         const { authUser } = await completeLiffLogin(liff);
         setUser(authUser);
-        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
-
-        const storeInfo = getLiffStoreInfo();
-        if (storeInfo?.isMaster) {
-          router.replace(`/customer/store-select?master=${storeInfo.storeId}`);
-          return;
-        }
-
+        const now = Date.now().toString();
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, now);
+        // 店舗詳細ページの LIFF 再初期化を抑制し、一覧 LIFF コンテキストを維持する
+        sessionStorage.setItem("liff_login_timestamp", now);
+        sessionStorage.setItem("patimoba_order_liff_id", liffId);
         setLoginDone(true);
       } catch (err: any) {
+        console.error("[List LIFF] login error:", err);
         setLoginError(err?.message || "LIFF初期化エラー");
       }
     })();
@@ -159,46 +144,25 @@ export default function TakeoutStorePage() {
     .filter((s): s is Store => !!s);
 
   const handleStoreClick = (store: Store) => {
+    // 遷移直前にタイムスタンプを更新して店舗詳細ページの LIFF 再初期化を確実に抑制する
+    try { sessionStorage.setItem("liff_login_timestamp", Date.now().toString()); } catch {}
     router.push(`/customer/takeout/store/${store.id}`);
   };
 
+  if (loginError) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-8">
+        <p className="text-red-500 text-sm text-center">{loginError}</p>
+      </div>
+    );
+  }
+
   if (!loginDone) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
-        <div className="flex-1 relative flex items-center justify-center px-8">
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="absolute top-10 left-0 right-0 flex justify-center"
-          >
-            <Image
-              src="/パティモバ　ロゴ.png"
-              alt="パティモバ"
-              width={200}
-              height={57}
-              className="w-[200px] h-auto"
-              priority
-            />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="text-center"
-          >
-            {loginError ? (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-left">
-                <p className="text-sm font-bold text-red-700 mb-1">ログインエラー</p>
-                <p className="text-xs text-red-600 break-all">{loginError}</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-4">
-                <LineSpinner size={30} />
-                <p className="text-2xl font-bold text-gray-900">LINEログイン中...</p>
-              </div>
-            )}
-          </motion.div>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <LineSpinner size={30} />
+          <p className="text-lg font-bold text-gray-900">ログイン中...</p>
         </div>
       </div>
     );

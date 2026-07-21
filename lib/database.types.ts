@@ -1196,7 +1196,7 @@ export type Database = {
           id: string
           image: string | null
           images: string[] | null
-          invoice_number: string | null
+          invoice_num: string | null
           is_active: boolean
           is_corporate_ready: boolean
           is_master: boolean
@@ -1234,7 +1234,7 @@ export type Database = {
           id?: string
           image?: string | null
           images?: string[] | null
-          invoice_number?: string | null
+          invoice_num?: string | null
           is_active?: boolean
           is_corporate_ready?: boolean
           is_master?: boolean
@@ -1272,7 +1272,7 @@ export type Database = {
           id?: string
           image?: string | null
           images?: string[] | null
-          invoice_number?: string | null
+          invoice_num?: string | null
           is_active?: boolean
           is_corporate_ready?: boolean
           is_master?: boolean

@@ -124,6 +124,7 @@ export default function WholeCakePage() {
   const [messageText, setMessageText] = useState("");
   const [selectedMessagePlateIdx, setSelectedMessagePlateIdx] = useState("");
   const [selectedDecorations, setSelectedDecorations] = useState<Record<string, string[]>>({});
+  const [plateMessages, setPlateMessages] = useState<Record<string, string>>({});
   const [allergyNote, setAllergyNote] = useState("");
   const [printPhotoUrl, setPrintPhotoUrl] = useState<string | null>(null);
   const [uploadingPrintPhoto, setUploadingPrintPhoto] = useState(false);
@@ -134,6 +135,7 @@ export default function WholeCakePage() {
     setCandles([]);
     setMessageText("");
     setSelectedMessagePlateIdx("");
+    setPlateMessages({});
   }, [selectedCakeIdForPrint]);
 
   const { groups: linkedDecorationGroups, loading: groupsLoading } = useProductDecorationGroups(
@@ -226,14 +228,27 @@ export default function WholeCakePage() {
       return ids.flatMap((did) => {
         const dec = group.items.find((item) => item.id === did);
         if (!dec) return [];
+        const msg = dec.category === "plate" ? (plateMessages[did] || undefined) : undefined;
         return [{
           wholeCakeOptionId: did,
           name: dec.name,
           price: dec.price,
           groupName: group.name,
+          message: msg,
         }];
       });
     });
+
+    // プリントモードでは、プリントデコレーションを明示的にオプションに追加
+    // （受取日時ページでの preparation_days 計算に必要）
+    if (isPrintMode && printDeco) {
+      cakeOptions.push({
+        wholeCakeOptionId: printDeco.id,
+        name: printDeco.name,
+        price: printDeco.price,
+        groupName: "プリントデコレーション",
+      });
+    }
 
     // 選択されたメッセージプレート種類をオプションに追加
     if (hasMessagePlate && messagePlateSizes.length > 0 && selectedMessagePlateIdx !== "") {
@@ -418,6 +433,8 @@ export default function WholeCakePage() {
           groupsLoading={groupsLoading}
           selectedDecorations={selectedDecorations}
           onDecorationsChange={setSelectedDecorations}
+          plateMessages={plateMessages}
+          onPlateMessagesChange={setPlateMessages}
           total={total}
           hasRequiredUnfilled={hasRequiredUnfilled}
           excludeGroupIds={undefined}
@@ -436,6 +453,7 @@ export default function WholeCakePage() {
           messagePlateSizes={messagePlateSizes}
           decorationGroups={decorationGroups}
           selectedDecorations={selectedDecorations}
+          plateMessages={plateMessages}
           allergyNote={allergyNote}
           onAllergyChange={setAllergyNote}
           total={total}

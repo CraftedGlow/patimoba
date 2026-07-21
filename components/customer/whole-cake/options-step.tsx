@@ -19,6 +19,8 @@ interface OptionsStepProps {
   groupsLoading: boolean;
   selectedDecorations: Record<string, string[]>;
   onDecorationsChange: (d: Record<string, string[]>) => void;
+  plateMessages: Record<string, string>;
+  onPlateMessagesChange: (messages: Record<string, string>) => void;
   total: number;
   hasRequiredUnfilled: boolean;
   excludeGroupIds?: string[];
@@ -31,6 +33,8 @@ export function WholeCakeOptionsStep({
   groupsLoading,
   selectedDecorations,
   onDecorationsChange,
+  plateMessages,
+  onPlateMessagesChange,
   total,
   hasRequiredUnfilled,
   excludeGroupIds,
@@ -179,6 +183,26 @@ export function WholeCakeOptionsStep({
                       );
                     })}
                   </div>
+
+                  {/* プレート選択時のメッセージ入力 */}
+                  {group.items
+                    .filter((deco) => selected.includes(deco.id) && deco.category === "plate")
+                    .map((deco) => (
+                      <div key={`msg-${deco.id}`} className="mt-3">
+                        <label className="text-xs font-bold text-gray-600 mb-1 block">
+                          プレートに書くメッセージ
+                        </label>
+                        <input
+                          type="text"
+                          value={plateMessages[deco.id] ?? ""}
+                          onChange={(e) =>
+                            onPlateMessagesChange({ ...plateMessages, [deco.id]: e.target.value })
+                          }
+                          placeholder="例：Happy Birthday!"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent placeholder:text-gray-400"
+                        />
+                      </div>
+                    ))}
                 </div>
               );
             })}

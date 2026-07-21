@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       notes,
       guestEmail,
       customerName,
+      payjpChargeId,
     }: {
       storeId: string;
       customerId: string | null;
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       notes?: string;
       guestEmail?: string | null;
       customerName?: string | null;
+      payjpChargeId?: string | null;
     } = await req.json();
 
     if (!storeId || !items?.length) {
@@ -64,6 +66,9 @@ export async function POST(req: NextRequest) {
     }
 
     const totalAmount = subtotal - (discountAmount ?? 0);
+
+    // EC は配送日フィールドがないため作成から24時間をキャンセル期限とする
+    const cancelDeadlineAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("orders")
@@ -81,6 +86,8 @@ export async function POST(req: NextRequest) {
         notes: notes ?? "",
         guest_email: guestEmail ?? null,
         customer_name_snapshot: customerName ?? null,
+        cancel_deadline_at: cancelDeadlineAt,
+        payjp_charge_id: payjpChargeId ?? null,
       })
       .select("id")
       .single();

@@ -112,10 +112,10 @@ export function buildReceiptMarkup(data: ReceiptData): string {
       if (!opt.itemName || opt.groupName !== "メッセージ") continue
       push(`  「${opt.itemName}」`)
     }
-    // その他オプション（サイズ・メッセージ以外）
+    // その他オプション（サイズ・メッセージ・プレートメッセージ以外）
     for (const opt of item.options ?? []) {
       if (!opt.itemName) continue
-      if (opt.groupName === "サイズ" || opt.groupName === "メッセージ") continue
+      if (opt.groupName === "サイズ" || opt.groupName === "メッセージ" || opt.groupName === "プレートメッセージ") continue
 
       let label: string
       if (opt.groupName === "ろうそく") {
@@ -126,6 +126,11 @@ export function buildReceiptMarkup(data: ReceiptData): string {
       }
 
       push(`  ${label}`)
+    }
+    // デコレーションプレートのメッセージ
+    for (const opt of item.options ?? []) {
+      if (!opt.itemName || opt.groupName !== "プレートメッセージ") continue
+      push(`  「${opt.itemName}」`)
     }
   }
 

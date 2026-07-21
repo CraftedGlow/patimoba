@@ -11,6 +11,7 @@ import { CartDrawer } from "@/components/customer/cart-drawer";
 import { ProductCard } from "@/components/customer/product-card";
 import { useProducts } from "@/hooks/use-products";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
 
@@ -22,6 +23,7 @@ export default function ECProductsPage() {
   const storeFromUrl = searchParams.get("store");
   const { selectedStoreId, setSelectedStoreId, selectedStoreName, setSelectedStoreName, profile,
     points, } = useCustomerContext();
+  const { storeLogoUrl } = useEcContext();
 
   // URLパラメータのstoreIdを優先（直リンクで以前選択していた別店舗が残っていても上書きする）
   useEffect(() => {
@@ -55,17 +57,18 @@ export default function ECProductsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--ec-bg,#ffffff)] flex items-center justify-center">
         <LineSpinner size={24} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--ec-bg,#ffffff)]">
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
+        logoUrl={storeLogoUrl}
         points={points}
         onCartClick={() => setCartOpen(true)}
         showBack
@@ -76,7 +79,7 @@ export default function ECProductsPage() {
       <div className={`px-4 max-w-5xl mx-auto ${itemCount > 0 ? "pb-28" : "pb-8"}`}>
         <div className="mb-4">
           <h2 className="text-lg font-bold">EC商品一覧</h2>
-          <div className="h-1 w-20 bg-amber-400 rounded mt-1" />
+          <div className="h-1 w-20 bg-[var(--ec-400,#fbbf24)] rounded mt-1" />
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:justify-center">
@@ -100,7 +103,7 @@ export default function ECProductsPage() {
           <div className="max-w-5xl mx-auto flex gap-3">
             <button
               onClick={() => setCartOpen(true)}
-              className="relative flex-1 flex items-center justify-center gap-2 border-2 border-amber-400 text-amber-500 font-bold py-3 rounded-full text-sm hover:bg-amber-50 transition-colors"
+              className="relative flex-1 flex items-center justify-center gap-2 border-2 border-[var(--ec-400,#fbbf24)] text-[var(--ec-500,#f59e0b)] font-bold py-3 rounded-full text-sm hover:bg-[var(--ec-50,#fffbeb)] transition-colors"
             >
               <span className="absolute -top-2 left-2 bg-red-500 text-white text-[11px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1 leading-none">
                 {itemCount > 99 ? "99+" : itemCount}
@@ -110,7 +113,7 @@ export default function ECProductsPage() {
             </button>
             <button
               onClick={() => router.push("/customer/ec/shipping")}
-              className="flex-1 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm transition-colors"
+              className="flex-1 bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-full text-sm transition-colors"
             >
               住所入力に進む
             </button>

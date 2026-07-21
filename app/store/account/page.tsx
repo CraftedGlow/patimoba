@@ -96,6 +96,10 @@ export default function StoreAccountPage() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [storeImageUrl, setStoreImageUrl] = useState<string | null>(null);
 
+  const [headerColor, setHeaderColor] = useState<string>("#ffff9d");
+  const [buttonColor, setButtonColor] = useState<string>("#fbbf24");
+  const [backgroundColor, setBackgroundColor] = useState<string>("#ffffff");
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -146,6 +150,9 @@ export default function StoreAccountPage() {
         setEmail(store.email ?? "");
         setLogoUrl(store.logo_url ?? null);
         setStoreImageUrl((store as any).image ?? null);
+        setHeaderColor(store.ec_header_color ?? "#ffff9d");
+        setButtonColor(store.ec_button_color ?? "#fbbf24");
+        setBackgroundColor(store.ec_background_color ?? "#ffffff");
 
         // store_order_rules から当日受付設定を取得
         const { data: orderRules } = await supabase
@@ -395,6 +402,26 @@ export default function StoreAccountPage() {
     }
   };
 
+  const saveEcColor = useCallback(async (column: "ec_header_color" | "ec_button_color" | "ec_background_color", value: string) => {
+    if (!storeId) return;
+    await supabase.from("stores").update({ [column]: value }).eq("id", storeId);
+  }, [storeId]);
+
+  const handleHeaderColorChange = (value: string) => {
+    setHeaderColor(value);
+    saveEcColor("ec_header_color", value);
+  };
+
+  const handleButtonColorChange = (value: string) => {
+    setButtonColor(value);
+    saveEcColor("ec_button_color", value);
+  };
+
+  const handleBackgroundColorChange = (value: string) => {
+    setBackgroundColor(value);
+    saveEcColor("ec_background_color", value);
+  };
+
   const openHolidaysModal = useCallback(() => {
     setModalHolidays(holidays.map((h) => ({ dayOfWeek: h.dayOfWeek, rule: h.freq })));
     setModal("holidays");
@@ -631,6 +658,51 @@ export default function StoreAccountPage() {
                 </div>
               )}
             </motion.button>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500 mb-2">ECサイトの配色</p>
+            <p className="text-xs text-gray-600 mb-3">お客様向けECサイトのヘッダー・ボタン・背景色を店舗の会社カラーに合わせられます</p>
+            <div className="space-y-3 max-w-sm">
+              {[
+                { label: "ヘッダー色", value: headerColor, onChange: handleHeaderColorChange },
+                { label: "ボタン色", value: buttonColor, onChange: handleButtonColorChange },
+                { label: "背景色", value: backgroundColor, onChange: handleBackgroundColorChange },
+              ].map(({ label, value, onChange }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="text-xs text-gray-600 w-16 shrink-0">{label}</span>
+                  <input
+                    type="color"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="w-9 h-9 rounded-md border border-gray-200 cursor-pointer shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="flex-1 border border-gray-200 rounded-md px-2.5 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                  />
+                </div>
+              ))}
+            </div>
+            <div
+              className="mt-4 max-w-sm rounded-lg overflow-hidden border border-gray-200"
+              style={{ backgroundColor }}
+            >
+              <div className="px-3 py-2 text-xs font-bold" style={{ backgroundColor: headerColor }}>
+                プレビュー
+              </div>
+              <div className="p-3">
+                <button
+                  type="button"
+                  className="text-xs font-bold text-white px-4 py-2 rounded-full"
+                  style={{ backgroundColor: buttonColor }}
+                >
+                  カートに追加
+                </button>
+              </div>
+            </div>
           </div>
 
           <div>

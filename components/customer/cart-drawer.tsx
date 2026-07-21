@@ -78,7 +78,7 @@ export function CartDrawer({
               }`}
             >
               <div className="flex items-center gap-2">
-                <ShoppingBag className="w-5 h-5 text-amber-500" />
+                <ShoppingBag className="w-5 h-5 text-[var(--ec-500,#f59e0b)]" />
                 <h2 className="text-lg font-bold text-gray-900">
                   カート
                   {itemCount > 0 && (
@@ -274,7 +274,7 @@ export function CartDrawer({
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleProceed}
-                    className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors shadow-lg shadow-amber-200/50"
+                    className="w-full bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold py-3.5 rounded-full text-base transition-colors shadow-lg shadow-[var(--ec-200,#fde68a)]/50"
                   >
                     {proceedLabel}
                   </motion.button>

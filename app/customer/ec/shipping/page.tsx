@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useEcContext } from "@/lib/ec-context";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
@@ -20,6 +21,7 @@ const deliveryTimeSlots = [
 export default function ECShippingPage() {
   const router = useRouter();
   const { selectedStoreName } = useCustomerContext();
+  const { storeLogoUrl } = useEcContext();
   const [postalCode, setPostalCode] = useState("");
   const [prefecture, setPrefecture] = useState("");
   const [city, setCity] = useState("");
@@ -29,14 +31,14 @@ export default function ECShippingPage() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen bg-white">
-      <CustomerHeader showCart showBack backHref="/customer/ec/products" />
+    <div className="min-h-screen bg-[var(--ec-bg,#ffffff)]">
+      <CustomerHeader showCart showBack backHref="/customer/ec/products" logoUrl={storeLogoUrl} />
 
       <StepProgress currentStep={3} steps={ecSteps} maxWidthClassName="max-w-[800px] mx-auto" />
 
       <div className="px-4 pb-8 max-w-[800px] mx-auto">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-amber-500" />
+          <MapPin className="w-5 h-5 text-[var(--ec-500,#f59e0b)]" />
           配送先住所
         </h2>
 
@@ -51,7 +53,7 @@ export default function ECShippingPage() {
               value={postalCode}
               onChange={(e) => setPostalCode(e.target.value)}
               placeholder="000-0000"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent focus:outline-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] focus:border-transparent focus:outline-none"
             />
           </div>
           <div>
@@ -64,7 +66,7 @@ export default function ECShippingPage() {
               value={prefecture}
               onChange={(e) => setPrefecture(e.target.value)}
               placeholder="東京都"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent focus:outline-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] focus:border-transparent focus:outline-none"
             />
           </div>
           <div>
@@ -77,7 +79,7 @@ export default function ECShippingPage() {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               placeholder="渋谷区"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent focus:outline-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] focus:border-transparent focus:outline-none"
             />
           </div>
           <div>
@@ -90,7 +92,7 @@ export default function ECShippingPage() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               placeholder="神宮前3-1-1"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent focus:outline-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] focus:border-transparent focus:outline-none"
             />
           </div>
           <div>
@@ -102,13 +104,13 @@ export default function ECShippingPage() {
               value={building}
               onChange={(e) => setBuilding(e.target.value)}
               placeholder="パティモバビル 301"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent focus:outline-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] focus:border-transparent focus:outline-none"
             />
           </div>
         </div>
 
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-amber-500" />
+          <Clock className="w-5 h-5 text-[var(--ec-500,#f59e0b)]" />
           配送時間帯
         </h2>
 
@@ -120,8 +122,8 @@ export default function ECShippingPage() {
               onClick={() => setSelectedTimeSlot(slot)}
               className={`w-full text-left px-4 py-3 rounded-lg border-2 text-sm transition-colors ${
                 selectedTimeSlot === slot
-                  ? "border-amber-400 bg-amber-50 text-amber-700"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-amber-200"
+                  ? "border-[var(--ec-400,#fbbf24)] bg-[var(--ec-50,#fffbeb)] text-[var(--ec-700,#b45309)]"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-[var(--ec-200,#fde68a)]"
               }`}
             >
               {slot}
@@ -145,7 +147,7 @@ export default function ECShippingPage() {
             sessionStorage.setItem("ec_delivery_time", selectedTimeSlot);
             router.push("/customer/ec/confirm");
           }}
-          className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3.5 rounded-full text-base transition-colors"
+          className="w-full bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold py-3.5 rounded-full text-base transition-colors"
         >
           注文内容の確認へ
         </motion.button>

@@ -1189,6 +1189,9 @@ export type Database = {
           category: string | null
           created_at: string
           description: string | null
+          ec_background_color: string | null
+          ec_button_color: string | null
+          ec_header_color: string | null
           email: string | null
           id: string
           image: string | null
@@ -1224,6 +1227,9 @@ export type Database = {
           category?: string | null
           created_at?: string
           description?: string | null
+          ec_background_color?: string | null
+          ec_button_color?: string | null
+          ec_header_color?: string | null
           email?: string | null
           id?: string
           image?: string | null
@@ -1259,6 +1265,9 @@ export type Database = {
           category?: string | null
           created_at?: string
           description?: string | null
+          ec_background_color?: string | null
+          ec_button_color?: string | null
+          ec_header_color?: string | null
           email?: string | null
           id?: string
           image?: string | null

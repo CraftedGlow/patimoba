@@ -10,6 +10,7 @@ import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useProduct } from "@/hooks/use-products";
 import { useProductRegistration } from "@/hooks/use-product-registrations";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
@@ -69,6 +70,7 @@ export default function ECProductDetailPage() {
   const searchParams = useSearchParams();
   const { selectedStoreName, selectedStoreId, setSelectedStoreId, profile,
     points, } = useCustomerContext();
+  const { storeLogoUrl } = useEcContext();
   const storeFromUrl = searchParams.get("store");
   const effectiveStoreId = selectedStoreId || storeFromUrl || "";
   const { product, loading } = useProduct(params.id as string);
@@ -84,7 +86,7 @@ export default function ECProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--ec-bg,#ffffff)] flex items-center justify-center">
         <LineSpinner size={24} />
       </div>
     );
@@ -168,10 +170,11 @@ export default function ECProductDetailPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--ec-bg,#ffffff)]">
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
+        logoUrl={storeLogoUrl}
         points={points}
         onCartClick={() => setCartOpen(true)}
         showBack
@@ -245,9 +248,9 @@ export default function ECProductDetailPage() {
                         <button
                           key={num}
                           onClick={() => { setQuantity(num); setShowQuantityDropdown(false); }}
-                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors flex items-center gap-2"
+                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-[var(--ec-50,#fffbeb)] transition-colors flex items-center gap-2"
                         >
-                          {quantity === num && <span className="text-amber-600">✓</span>}
+                          {quantity === num && <span className="text-[var(--ec-600,#d97706)]">✓</span>}
                           <span>{num}</span>
                         </button>
                       ))}
@@ -263,7 +266,7 @@ export default function ECProductDetailPage() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleAddToCart}
-            className="w-full mt-4 mb-4 bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base transition-colors"
+            className="w-full mt-4 mb-4 bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-full text-base transition-colors"
           >
             カートに追加
           </motion.button>
@@ -295,7 +298,7 @@ export default function ECProductDetailPage() {
                       onChange={(e) => setOptionTexts((prev) => ({ ...prev, [i]: e.target.value }))}
                       rows={2}
                       placeholder="メッセージを入力"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:ring-2 focus:ring-[var(--ec-300,#fcd34d)] focus:border-[var(--ec-400,#fbbf24)]"
                     />
                   )}
 
@@ -307,10 +310,10 @@ export default function ECProductDetailPage() {
                           <button
                             key={v.label} type="button"
                             onClick={() => setOptionSelections((prev) => ({ ...prev, [i]: [v.label] }))}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-[var(--ec-400,#fbbf24)] bg-[var(--ec-50,#fffbeb)] text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-[var(--ec-300,#fcd34d)]"}`}
                           >
                             <span className="flex items-center gap-2">
-                              <span className={`w-4 h-4 rounded-full border-2 ${active ? "border-amber-500 bg-amber-500" : "border-gray-300"}`} />
+                              <span className={`w-4 h-4 rounded-full border-2 ${active ? "border-[var(--ec-500,#f59e0b)] bg-[var(--ec-500,#f59e0b)]" : "border-gray-300"}`} />
                               {v.label}
                             </span>
                             {v.additional_price > 0 && <span className="text-xs text-gray-600">+¥{v.additional_price.toLocaleString()}</span>}
@@ -331,10 +334,10 @@ export default function ECProductDetailPage() {
                               const cur = prev[i] || [];
                               return { ...prev, [i]: active ? cur.filter((x) => x !== v.label) : [...cur, v.label] };
                             })}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-[var(--ec-400,#fbbf24)] bg-[var(--ec-50,#fffbeb)] text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-[var(--ec-300,#fcd34d)]"}`}
                           >
                             <span className="flex items-center gap-2">
-                              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${active ? "border-amber-500 bg-amber-500 text-white" : "border-gray-300"}`}>
+                              <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${active ? "border-[var(--ec-500,#f59e0b)] bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)]" : "border-gray-300"}`}>
                                 {active && <span className="text-[10px] leading-none">✓</span>}
                               </span>
                               {v.label}

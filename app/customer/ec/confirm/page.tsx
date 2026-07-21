@@ -8,6 +8,7 @@ import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
 import { PrintReceipt } from "@/components/customer/ec/print-receipt";
@@ -35,6 +36,7 @@ interface ShippingAddress {
 export default function ECConfirmPage() {
   const router = useRouter();
   const { userId, selectedStoreId, selectedStoreName, profile, points: userPoints, refreshPoints } = useCustomerContext();
+  const { storeLogoUrl } = useEcContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -349,11 +351,12 @@ export default function ECConfirmPage() {
     `〒${a.postalCode} ${a.prefecture}${a.city}${a.address}${a.building ? " " + a.building : ""}`;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--ec-bg,#ffffff)]">
       <CustomerHeader
         shopName={selectedStoreName || "パティモバ"}
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
+        logoUrl={storeLogoUrl}
         points={userPoints}
         showCart
       />
@@ -381,10 +384,10 @@ export default function ECConfirmPage() {
           <div className="grid grid-cols-2 gap-3">
             <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)}
               placeholder="セイ"
-              className="border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
+              className="border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] placeholder:text-gray-300" />
             <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)}
               placeholder="メイ"
-              className="border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
+              className="border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] placeholder:text-gray-300" />
           </div>
         </div>
 
@@ -397,7 +400,7 @@ export default function ECConfirmPage() {
           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
             placeholder="09012345678"
             maxLength={11}
-            className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
+            className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] placeholder:text-gray-300" />
           <p className="text-xs text-gray-600 mt-1">※日中に連絡の取れる電話番号</p>
         </div>
 
@@ -410,7 +413,7 @@ export default function ECConfirmPage() {
             </div>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="example@email.com"
-              className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-gray-300" />
+              className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] placeholder:text-gray-300" />
             <p className="text-xs text-gray-600 mt-1">※注文確認・発送通知をお送りします</p>
           </div>
         )}
@@ -448,7 +451,7 @@ export default function ECConfirmPage() {
             sessionStorage.setItem("patimoba_tds_return_path", "/customer/ec/confirm");
             router.push("/customer/payment/card");
           }}
-            className={`w-full border-2 font-bold py-2.5 rounded-md text-sm flex items-center justify-center gap-1 transition-colors ${hasCardInfo ? "border-green-400 text-green-600 hover:bg-green-50" : "border-amber-400 text-amber-500 hover:bg-amber-50"}`}>
+            className={`w-full border-2 font-bold py-2.5 rounded-md text-sm flex items-center justify-center gap-1 transition-colors ${hasCardInfo ? "border-green-400 text-green-600 hover:bg-green-50" : "border-[var(--ec-400,#fbbf24)] text-[var(--ec-500,#f59e0b)] hover:bg-[var(--ec-50,#fffbeb)]"}`}>
             {hasCardInfo ? `✓ ${cardLabel || "カード情報登録済み"}（変更する）` : "＋ カード情報を登録する"}
           </button>
           {!hasCardInfo && (
@@ -460,7 +463,7 @@ export default function ECConfirmPage() {
         <div className="mb-4">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-bold">お届け先</span>
-            <Link href="/customer/ec/shipping" className="text-xs text-amber-600 underline">変更</Link>
+            <Link href="/customer/ec/shipping" className="text-xs text-[var(--ec-600,#d97706)] underline">変更</Link>
           </div>
           {shippingAddress ? (
             <p className="text-sm text-gray-700 leading-relaxed">{fmtAddress(shippingAddress)}</p>
@@ -479,8 +482,8 @@ export default function ECConfirmPage() {
               <button key={slot} type="button" onClick={() => setDeliveryTime(slot)}
                 className={`w-full text-left px-4 py-2.5 rounded-lg border-2 text-sm transition-colors ${
                   deliveryTime === slot
-                    ? "border-amber-400 bg-amber-50 text-amber-700 font-medium"
-                    : "border-gray-200 text-gray-600 hover:border-amber-200"
+                    ? "border-[var(--ec-400,#fbbf24)] bg-[var(--ec-50,#fffbeb)] text-[var(--ec-700,#b45309)] font-medium"
+                    : "border-gray-200 text-gray-600 hover:border-[var(--ec-200,#fde68a)]"
                 }`}>
                 {slot}
               </button>
@@ -555,7 +558,7 @@ export default function ECConfirmPage() {
         <div className="flex gap-3 mb-8">
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
             onClick={() => { console.log("[ec-confirm] 買い物を続けるボタン clicked"); router.back(); }}
-            className="flex-1 border-2 border-amber-400 text-amber-500 font-bold py-3 rounded-md text-sm hover:bg-amber-50 transition-colors">
+            className="flex-1 border-2 border-[var(--ec-400,#fbbf24)] text-[var(--ec-500,#f59e0b)] font-bold py-3 rounded-md text-sm hover:bg-[var(--ec-50,#fffbeb)] transition-colors">
             買い物を続ける
           </motion.button>
           <motion.button
@@ -563,7 +566,7 @@ export default function ECConfirmPage() {
             whileTap={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim()) ? undefined : { scale: 0.98 }}
             onClick={handleConfirmOrder}
             disabled={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim())}
-            className="flex-1 bg-amber-400 hover:bg-amber-500 disabled:bg-amber-200 disabled:cursor-not-allowed text-white font-bold py-3 rounded-md text-sm transition-colors">
+            className="flex-1 bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] disabled:bg-[var(--ec-200,#fde68a)] disabled:cursor-not-allowed text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-md text-sm transition-colors">
             {submitting ? "処理中..." : "注文を確定する"}
           </motion.button>
         </div>
@@ -588,29 +591,29 @@ export default function ECConfirmPage() {
               <div className="space-y-3 mb-6">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="radio" name="ec-pts" checked={tempPointOption === "partial"}
-                    onChange={() => setTempPointOption("partial")} className="w-5 h-5 accent-amber-500" />
+                    onChange={() => setTempPointOption("partial")} className="w-5 h-5 accent-[var(--ec-500,#f59e0b)]" />
                   <span className="text-sm">一部のポイントを使う</span>
                 </label>
                 {tempPointOption === "partial" && (
                   <input type="number" value={partialPoints} onChange={(e) => setPartialPoints(e.target.value)}
                     placeholder="利用するポイント数"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)]"
                     max={Math.min(availablePoints, subtotal)} />
                 )}
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="radio" name="ec-pts" checked={tempPointOption === "all"}
-                    onChange={() => setTempPointOption("all")} className="w-5 h-5 accent-amber-500" />
+                    onChange={() => setTempPointOption("all")} className="w-5 h-5 accent-[var(--ec-500,#f59e0b)]" />
                   <span className="text-sm">全部のポイントを使う</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="radio" name="ec-pts" checked={tempPointOption === "none"}
-                    onChange={() => setTempPointOption("none")} className="w-5 h-5 accent-amber-500" />
+                    onChange={() => setTempPointOption("none")} className="w-5 h-5 accent-[var(--ec-500,#f59e0b)]" />
                   <span className="text-sm">ポイントを利用しない</span>
                 </label>
               </div>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={handlePointChange}
-                className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-sm">
+                className="w-full bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-full text-sm">
                 変更する
               </motion.button>
             </motion.div>
@@ -642,8 +645,8 @@ export default function ECConfirmPage() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="fixed left-6 right-6 top-[25%] bg-white rounded-2xl shadow-2xl z-[70] p-8 text-center">
               <div className="flex justify-center mb-3">
-                <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
-                  <PartyPopper className="w-7 h-7 text-amber-500" />
+                <div className="w-14 h-14 rounded-full bg-[var(--ec-100,#fef3c7)] flex items-center justify-center">
+                  <PartyPopper className="w-7 h-7 text-[var(--ec-500,#f59e0b)]" />
                 </div>
               </div>
               <p className="text-base font-bold mb-2">ご注文ありがとうございます！</p>
@@ -657,7 +660,7 @@ export default function ECConfirmPage() {
                   if (countdownRef.current) clearInterval(countdownRef.current);
                   router.push(selectedStoreId ? `/customer/ec/products?store=${selectedStoreId}` : "/customer/ec");
                 }}
-                className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 rounded-full text-base">
+                className="w-full bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-full text-base">
                 商品一覧に戻る
               </motion.button>
             </motion.div>

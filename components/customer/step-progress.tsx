@@ -35,7 +35,7 @@ export function StepProgress({
               <motion.div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                   isActive
-                    ? "bg-amber-400 text-white"
+                    ? "bg-[var(--ec-400,#fbbf24)] text-[var(--ec-button-text,#ffffff)]"
                     : "bg-gray-200 text-gray-500"
                 }`}
                 initial={false}
@@ -55,7 +55,7 @@ export function StepProgress({
             {i < steps.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mx-2 mt-3.5 ${
-                  stepNum < currentStep ? "bg-amber-400" : "bg-gray-200"
+                  stepNum < currentStep ? "bg-[var(--ec-400,#fbbf24)]" : "bg-gray-200"
                 }`}
               />
             )}

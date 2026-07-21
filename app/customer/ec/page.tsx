@@ -7,6 +7,7 @@ import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useStores } from "@/hooks/use-stores";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { Store } from "@/lib/types";
 import { Search } from "lucide-react";
@@ -18,6 +19,7 @@ export default function ECStorePage() {
   const { stores, loading } = useStores();
   const { setSelectedStoreId, setSelectedStoreName, profile, userId,
     points, } = useCustomerContext();
+  const { storeLogoUrl } = useEcContext();
   const { clear: clearCart } = useCart();
 
   // ゲストがリンクから入り直したときはカートをリセット
@@ -46,10 +48,11 @@ export default function ECStorePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-[var(--ec-bg,#ffffff)] flex flex-col">
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
+        logoUrl={storeLogoUrl}
         points={points}
         showCart
       />
@@ -62,9 +65,9 @@ export default function ECStorePage() {
             placeholder="店舗名を検索"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] focus:border-transparent"
           />
-          <button className="bg-amber-400 hover:bg-amber-500 text-white font-bold px-5 rounded-lg text-sm transition-colors flex items-center gap-1">
+          <button className="bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold px-5 rounded-lg text-sm transition-colors flex items-center gap-1">
             <Search className="w-4 h-4" />
             検索
           </button>

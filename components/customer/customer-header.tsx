@@ -9,6 +9,7 @@ interface CustomerHeaderProps {
   shopName?: string;
   userName?: string;
   avatarUrl?: string;
+  logoUrl?: string | null;
   points?: number;
   showCart?: boolean;
   onCartClick?: () => void;
@@ -20,6 +21,7 @@ export function CustomerHeader({
   shopName,
   userName,
   avatarUrl,
+  logoUrl,
   points,
   showCart = true,
   onCartClick,
@@ -40,11 +42,17 @@ export function CustomerHeader({
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="bg-[#ffff9d] px-4 py-[11px] flex items-center justify-between sticky top-0 z-50"
+        className="bg-[var(--ec-header,#ffff9d)] px-4 py-[11px] flex items-center justify-between sticky top-0 z-50"
       >
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex-shrink-0">
-            {avatarUrl ? (
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={shopName || "店舗ロゴ"}
+                className="h-9 max-w-[120px] object-contain"
+              />
+            ) : avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt="avatar"
@@ -56,20 +64,22 @@ export function CustomerHeader({
               </div>
             )}
           </div>
-          <span className="font-bold text-gray-900 text-sm truncate">
-            {userName || shopName || "ゲスト"}
-          </span>
+          {!logoUrl && (
+            <span className="font-bold text-[var(--ec-header-text,#111827)] text-sm truncate">
+              {userName || shopName || "ゲスト"}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3 flex-shrink-0">
           {points !== undefined && (
-            <span className="font-bold text-gray-900 text-sm tracking-wide">
+            <span className="font-bold text-[var(--ec-header-text,#111827)] text-sm tracking-wide">
               {points.toLocaleString()}PT
             </span>
           )}
           {showCart && (
             <button onClick={onCartClick} className="relative">
-              <ShoppingCart className="w-6 h-6 text-gray-900" />
+              <ShoppingCart className="w-6 h-6 text-[var(--ec-header-text,#111827)]" />
               {itemCount > 0 && (
                 <motion.span
                   key={itemCount}

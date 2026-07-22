@@ -211,14 +211,22 @@ export default function TakeoutPickupPage() {
 
   // 当日注文の時間スロット
   const sameDayTimeSlots = (() => {
-    if (!isSameDay || businessHours.length === 0) return [];
-    const todayDow = new Date().getDay();
-    const todayHours = businessHours.find((b) => b.dayOfWeek === todayDow && !b.isClosed);
-    if (!todayHours?.openTime || !todayHours?.closeTime) return [];
+    if (!isSameDay) return [];
     const now = new Date();
+    const key = dateKey(now);
+    // 特定日で is_open = false の場合は空
+    if (key in businessDayOverrides && !businessDayOverrides[key]) return [];
+    const todayDow = now.getDay();
+    const bh = businessHours.find((b) => b.dayOfWeek === todayDow);
+    // 定休日として設定されていて、特定日のoverride(is_open=true)もない場合は空
+    if (bh?.isClosed && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
+    // 特定日の営業時間 → 曜日ルールの順で優先
+    const specialHour = specialDateHours[key];
+    const closeTime = specialHour?.closeTime ?? bh?.closeTime;
+    if (!closeTime) return [];
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const startMin = nowMin + prepMinutes;
-    const closeMin = toMin(todayHours.closeTime);
+    const closeMin = toMin(closeTime);
     const endMin = closeMin - cutoffMinutes;
     return generateTimeSlots(startMin, endMin);
   })();

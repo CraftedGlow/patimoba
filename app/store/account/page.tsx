@@ -113,7 +113,6 @@ export default function StoreAccountPage() {
   const [cutoffHours, setCutoffHours] = useState("3");
   const [prepTimeHours, setPrepTimeHours] = useState("1.5");
   const [minFutureDays, setMinFutureDays] = useState("2");
-  const [sameDayOrderAllowed, setSameDayOrderAllowed] = useState(true);
   const [acceptsWalkin, setAcceptsWalkin] = useState(true);
   const [pendingWalkin, setPendingWalkin] = useState(true);
 
@@ -157,7 +156,7 @@ export default function StoreAccountPage() {
         // store_order_rules から当日受付設定を取得
         const { data: orderRules } = await supabase
           .from("store_order_rules")
-          .select("default_cutoff_time, default_lead_time_minutes, same_day_order_allowed, min_future_days")
+          .select("default_cutoff_time, default_lead_time_minutes, min_future_days")
           .eq("store_id", store.id)
           .maybeSingle();
         if (orderRules?.default_lead_time_minutes != null) {
@@ -169,9 +168,6 @@ export default function StoreAccountPage() {
           if (!isNaN(prepMin) && prepMin > 0) {
             setPrepTimeHours(String(prepMin / 60));
           }
-        }
-        if (orderRules?.same_day_order_allowed != null) {
-          setSameDayOrderAllowed(orderRules.same_day_order_allowed);
         }
         if (orderRules?.min_future_days != null) {
           setMinFutureDays(String(orderRules.min_future_days));
@@ -344,24 +340,6 @@ export default function StoreAccountPage() {
       setSaving(false);
     }
   }, [storeId, pendingWalkin]);
-
-  const toggleSameDayOrder = useCallback(async (value: boolean) => {
-    if (!storeId) return;
-    setSameDayOrderAllowed(value);
-    const { data: existing } = await supabase
-      .from("store_order_rules")
-      .select("id")
-      .eq("store_id", storeId)
-      .maybeSingle();
-    if (existing) {
-      await supabase.from("store_order_rules")
-        .update({ same_day_order_allowed: value })
-        .eq("id", existing.id);
-    } else {
-      await supabase.from("store_order_rules")
-        .insert({ store_id: storeId, same_day_order_allowed: value });
-    }
-  }, [storeId]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -799,28 +777,6 @@ export default function StoreAccountPage() {
               </button>
               <span className="text-sm text-gray-700">
                 {acceptsWalkin ? "ON（当日受付あり）" : "OFF（予約のみ）"}
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-500 mb-2">当日注文機能</p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => toggleSameDayOrder(!sameDayOrderAllowed)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  sameDayOrderAllowed ? "bg-amber-400" : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    sameDayOrderAllowed ? "translate-x-6" : "translate-x-0"
-                  }`}
-                />
-              </button>
-              <span className="text-sm text-gray-700">
-                {sameDayOrderAllowed ? "ON（受け付ける）" : "OFF（受け付けない）"}
               </span>
             </div>
           </div>

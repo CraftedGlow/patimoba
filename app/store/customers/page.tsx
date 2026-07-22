@@ -18,19 +18,10 @@ interface CustomerDetail {
   phone: string;
   email: string;
   points: number;
-  anniversaries: { type: string; date: string }[];
+  anniversaries: { label: string; date: string }[];
   orders: { id: string; createdAt: string; totalAmount: number; items: string[] }[];
   lastVisitAt: string | null;
   lastPurchaseAt: string | null;
-}
-
-function AnniversaryLabel(type: string): string {
-  const map: Record<string, string> = {
-    birthday: "誕生日",
-    wedding: "結婚記念日",
-    other: "その他",
-  };
-  return map[type] ?? type;
 }
 
 export default function StoreCustomersPage() {
@@ -304,7 +295,7 @@ export default function StoreCustomersPage() {
                             className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2"
                           >
                             <span className="text-sm text-amber-700 font-medium">
-                              {AnniversaryLabel(a.type)}
+                              {a.label}
                             </span>
                             <span className="text-sm text-gray-600">{a.date}</span>
                           </div>

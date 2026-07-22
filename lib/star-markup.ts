@@ -121,6 +121,8 @@ export function buildReceiptMarkup(data: ReceiptData): string {
       if (opt.groupName === "ろうそく") {
         const qty = (opt.quantity ?? 1) > 1 ? ` ×${opt.quantity}` : ""
         label = `${opt.itemName}${qty}`
+      } else if (opt.groupName === "プリントデコレーション") {
+        label = "プリントデコレーション"
       } else {
         label = opt.itemName
       }

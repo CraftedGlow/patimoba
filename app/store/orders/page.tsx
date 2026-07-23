@@ -596,7 +596,7 @@ export default function StoreOrdersPage() {
                   }`}
                 >
                   {isCancelled && (
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-px bg-red-500 pointer-events-none" />
                   )}
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
@@ -715,7 +715,7 @@ export default function StoreOrdersPage() {
                   }`}
                 >
                   {isCancelled && (
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-px bg-red-500 pointer-events-none" />
                   )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
@@ -870,7 +870,7 @@ export default function StoreOrdersPage() {
                   }`}
                 >
                   {isCancelled && (
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-px bg-red-500 pointer-events-none" />
                   )}
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
@@ -969,7 +969,7 @@ export default function StoreOrdersPage() {
                   onClick={() => setSelectedOrder(order)}
                 >
                   {isCancelled && (
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-px bg-red-500 pointer-events-none" />
                   )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>

@@ -271,8 +271,8 @@ export default function TakeoutPickupPage() {
 
   const handleProceed = () => {
     const dateStr = isSameDay
-      ? today.toISOString().split("T")[0]
-      : selectedDate?.toISOString().split("T")[0] ?? "";
+      ? dateKey(today)
+      : selectedDate ? dateKey(selectedDate) : "";
     sessionStorage.setItem("patimoba_pickup_date", dateStr);
     sessionStorage.setItem("patimoba_pickup_time", selectedTime);
     sessionStorage.setItem("patimoba_order_type", orderType);

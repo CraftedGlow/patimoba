@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { Product, ManagedProduct, toUIProduct, toUIManagedProduct } from "@/lib/types"
+import { toLocalDateString } from "@/lib/date-utils"
 
 interface UseProductsOptions {
   storeId?: string
@@ -38,7 +39,7 @@ export function useProducts(options: UseProductsOptions = {}) {
     }
     if (options.publishedOnly) {
       query = query.eq("is_active", true)
-      const todayStr = new Date().toISOString().split("T")[0]
+      const todayStr = toLocalDateString(new Date())
       query = query.or(`limited_until.is.null,limited_until.gte.${todayStr}`)
     }
     if (options.ecOnly) {

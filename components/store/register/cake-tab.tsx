@@ -12,6 +12,7 @@ import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
 import { useNoshi } from "@/hooks/use-noshi";
 import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
+import { toLocalDateString } from "@/lib/date-utils";
 import Link from "next/link";
 
 interface ProductRow {
@@ -863,7 +864,7 @@ export function CakeTab() {
                     type="date"
                     value={limitedFrom}
                     onChange={(e) => setLimitedFrom(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={toLocalDateString(new Date())}
                     className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
                   />
                 </div>
@@ -873,7 +874,7 @@ export function CakeTab() {
                     type="date"
                     value={limitedUntil}
                     onChange={(e) => setLimitedUntil(e.target.value)}
-                    min={limitedFrom || new Date().toISOString().split("T")[0]}
+                    min={limitedFrom || toLocalDateString(new Date())}
                     className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
                   />
                 </div>

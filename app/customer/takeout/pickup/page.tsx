@@ -60,7 +60,6 @@ export default function TakeoutPickupPage() {
   const [loading, setLoading] = useState(true);
 
   const [prepMinutes, setPrepMinutes] = useState(90);
-  const [cutoffMinutes, setCutoffMinutes] = useState(180);
   const [minFutureDays, setMinFutureDays] = useState(2);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   // 特定日の営業状況 override: key = "YYYY-MM-DD"
@@ -85,14 +84,12 @@ export default function TakeoutPickupPage() {
         // 店舗設定
         const { data: rules } = await supabase
           .from("store_order_rules")
-          .select("default_cutoff_time, default_lead_time_minutes, min_future_days")
+          .select("default_cutoff_time, min_future_days")
           .eq("store_id", storeId)
           .maybeSingle();
         const prepMin = rules?.default_cutoff_time ? Number(rules.default_cutoff_time) : 90;
-        const cutoffMin = rules?.default_lead_time_minutes ?? 180;
         const minFuture = rules?.min_future_days ?? 2;
         setPrepMinutes(isNaN(prepMin) ? 90 : prepMin);
-        setCutoffMinutes(cutoffMin);
         setMinFutureDays(minFuture);
 
         // 曜日別営業時間
@@ -227,8 +224,7 @@ export default function TakeoutPickupPage() {
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const startMin = nowMin + prepMinutes;
     const closeMin = toMin(closeTime);
-    const endMin = closeMin - cutoffMinutes;
-    return generateTimeSlots(startMin, endMin);
+    return generateTimeSlots(startMin, closeMin);
   })();
 
   // 予約注文の時間スロット

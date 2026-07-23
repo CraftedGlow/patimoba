@@ -126,14 +126,14 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (silent = false) => {
     if (!options.storeId) {
       setProducts([])
       setCategories(["すべて"])
       setLoading(false)
       return
     }
-    setLoading(true)
+    if (!silent) setLoading(true)
     setError(null)
 
     const storeIds = [options.storeId]
@@ -221,7 +221,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
       .update(payload)
       .eq("id", id)
 
-    if (!error) await fetchProducts()
+    if (!error) await fetchProducts(true)
     return { error: error?.message || null }
   }
 

@@ -585,18 +585,19 @@ export default function StoreOrdersPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
                   onClick={() => setSelectedOrder(order)}
-                  className={`border-l-4 cursor-pointer transition-colors ${
+                  className={`relative border-l-4 cursor-pointer transition-colors ${
                     isDateChanged ? "border-t-2 border-t-gray-300" : "border-t border-gray-100"
                   } ${
-                    isCancelled
-                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
-                      : isFulfilled
+                    isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
                       : "bg-white border-l-gray-200 hover:bg-gray-50"
                   }`}
                 >
+                  {isCancelled && (
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                  )}
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -703,18 +704,19 @@ export default function StoreOrdersPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.03 }}
                   onClick={() => setSelectedOrder(order)}
-                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-l-4 cursor-pointer transition-colors ${
+                  className={`relative grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-l-4 cursor-pointer transition-colors ${
                     isDateChanged ? "border-t-2 border-t-gray-300" : "border-t border-gray-100"
                   } ${
-                    isCancelled
-                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
-                      : isFulfilled
+                    isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
                       : "bg-white border-l-gray-200 hover:bg-gray-50"
                   }`}
                 >
+                  {isCancelled && (
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                  )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
                   </div>
@@ -859,16 +861,17 @@ export default function StoreOrdersPage() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.02 }}
                   onClick={() => setSelectedOrder(order)}
-                  className={`border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
-                    isCancelled
-                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
-                      : isFulfilled
+                  className={`relative border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
+                    isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
                       : "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
                   }`}
                 >
+                  {isCancelled && (
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                  )}
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -956,10 +959,8 @@ export default function StoreOrdersPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.02 }}
-                  className={`grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
-                    isCancelled
-                      ? "bg-red-50 border-l-red-300 hover:bg-red-100"
-                      : isFulfilled
+                  className={`relative grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
+                    isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
                       : isEc
                       ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
@@ -967,6 +968,9 @@ export default function StoreOrdersPage() {
                   }`}
                   onClick={() => setSelectedOrder(order)}
                 >
+                  {isCancelled && (
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gray-500 pointer-events-none" />
+                  )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
                   </div>

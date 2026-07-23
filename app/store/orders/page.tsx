@@ -293,6 +293,22 @@ export default function StoreOrdersPage() {
   const manageLoading = manageTakeoutLoading || manageEcLoading;
   const refetchManage = async () => { await Promise.all([refetchManageTakeout(), refetchManageEc()]); };
 
+  // Supabaseリアルタイム：新規注文が入ったら予約管理一覧を静かに再取得（ローディング表示は出さない）
+  useEffect(() => {
+    if (!storeId) return;
+    const channel = supabase
+      .channel(`manage-orders-${storeId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders", filter: `store_id=eq.${storeId}` },
+        () => { refetchManageTakeout(true); refetchManageEc(true); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [storeId]);
 
   const manageOrders = (() => {
     if (manageChannel === "takeout") return manageTakeoutOrders;

@@ -32,14 +32,14 @@ export function useOrders(options: UseOrdersOptions = {}) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (silent = false) => {
     if (options.storeId === "" || (options.storeIds !== undefined && options.storeIds.length === 0)) {
       setOrders([])
       setLoading(false)
       return
     }
 
-    setLoading(true)
+    if (!silent) setLoading(true)
     setError(null)
 
     const sortColumn = options.sortBy ?? "created_at"

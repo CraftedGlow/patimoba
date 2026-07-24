@@ -46,12 +46,14 @@ export default function StoreDashboardPage() {
     storeIds: activeStoreIds,
     pickupDate: pickupDateStr,
     channel: "takeout",
+    excludeStatus: ["cancelled"],
   });
   const { orders: ecOrders, loading: ecLoading, refetch: refetchEc } = useOrders({
     storeId: activeStoreId,
     storeIds: activeStoreIds,
     channel: "ec",
     fulfillmentStatus: "pending",
+    excludeStatus: ["cancelled"],
   });
   const ordersLoading = takeoutLoading || ecLoading;
   const orders = [...takeoutOrders, ...ecOrders];
@@ -297,7 +299,6 @@ export default function StoreDashboardPage() {
             const orderStoreName = isMaster && selectedChildId === null
               ? (childStoreMap[order.storeId] ?? "")
               : null;
-            const isCancelled = order.orderStatus === "cancelled";
             const isPrepared = isEc
               ? order.fulfillmentStatus === "fulfilled"
               : order.orderStatus === "ready" || order.orderStatus === "completed" || order.fulfillmentStatus === "fulfilled";
@@ -333,9 +334,7 @@ export default function StoreDashboardPage() {
                 {/* モバイル用カード */}
                 <div
                   className={`lg:hidden rounded-lg border p-3 mb-2 mx-2 mt-2 ${
-                    isCancelled
-                      ? "bg-red-50 border-red-200"
-                      : isEc
+                    isEc
                       ? "bg-amber-50 border-gray-100"
                       : "bg-white border-gray-100"
                   }`}
@@ -405,9 +404,7 @@ export default function StoreDashboardPage() {
                 {/* デスクトップ用グリッド行 */}
                 <div
                   className={`hidden lg:grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
-                    isCancelled
-                      ? "bg-red-50 hover:bg-red-100"
-                      : isEc
+                    isEc
                       ? "bg-amber-50 hover:bg-amber-100"
                       : "bg-white hover:bg-gray-50"
                   }`}

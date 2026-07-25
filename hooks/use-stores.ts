@@ -17,7 +17,6 @@ export function useStores() {
       .select("*")
       .eq("is_active", true)
       .eq("is_master", false)
-      .eq("is_published", true)
     if (err) {
       setError(err.message)
     } else {

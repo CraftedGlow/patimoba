@@ -231,7 +231,7 @@ export default function AdminStoreEditPage() {
               <span className={`text-sm font-bold w-14 text-right transition-colors ${!isPublished ? "text-gray-700" : "text-gray-300"}`}>停止中</span>
               <div className={`relative h-7 w-14 rounded-full transition-colors duration-200 ${isPublished ? "bg-amber-500" : "bg-gray-300"}`}>
                 <span
-                  style={{ transform: isPublished ? "translateX(30px)" : "translateX(2px)" }}
+                  style={{ transform: isPublished ? "translateX(34px)" : "translateX(2px)" }}
                   className="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
                 />
               </div>

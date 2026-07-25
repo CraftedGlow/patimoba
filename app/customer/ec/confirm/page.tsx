@@ -103,7 +103,9 @@ export default function ECConfirmPage() {
       if (document.hidden || hasCardInfo) return;
       const pendingRaw = (() => { try { return sessionStorage.getItem("patimoba_pending_3ds"); } catch { return null; } })();
       if (!pendingRaw) return;
-      const { data } = await supabase.from("users").select("customer_id").eq("id", userId).maybeSingle();
+      const res = await fetch(`/api/customer/profile?userId=${userId}`);
+      if (!res.ok) return;
+      const { profile: data } = await res.json();
       if (data?.customer_id) {
         const { cardLabel: pendingLabel } = JSON.parse(pendingRaw);
         sessionStorage.setItem("patimoba_has_card", "1");
@@ -116,16 +118,16 @@ export default function ECConfirmPage() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [userId, hasCardInfo]);
 
-  // ログイン済みならユーザー情報を事前入力 + 登録済みカードを取得
+  // ログイン済み・ゲスト決済ユーザーの情報を事前入力 + 登録済みカードを取得
+  // ゲストユーザーは auth_user_id を持たず users テーブルの RLS(auth_user_id = auth.uid())
+  // に阻まれるため、直接クライアントから select せず service role 経由のAPIを使う
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("users")
-        .select("name, name_kana, phone, email, customer_id")
-        .eq("id", userId)
-        .maybeSingle();
+      const res = await fetch(`/api/customer/profile?userId=${userId}`);
+      if (!res.ok || cancelled) return;
+      const { profile: data } = await res.json();
       if (cancelled || !data) return;
       const source = data.name_kana || data.name || "";
       if (source) {

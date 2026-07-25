@@ -409,7 +409,7 @@ export default function CustomerOrderDetailPage() {
 
               <button
                 onClick={() => { setShowReceiptForm(false); handleOpenReceipt(); }}
-                style={{ width: "100%", padding: "14px", backgroundColor: "#f472b6", color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}
+                style={{ width: "100%", padding: "14px", backgroundColor: "#FEBC2F", color: "#fff", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: "700", cursor: "pointer" }}
               >
                 領収書を出力
               </button>

@@ -457,72 +457,95 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           ご注文方法を選択してください
         </h2>
 
-        {/* 当日受取注文（当日受付なしの店舗は非表示） */}
-        {store?.acceptsWalkin !== false && (
-          <button
-            onClick={sameDayOk ? handleSameDay : undefined}
-            disabled={!sameDayOk}
-            className={`w-full border rounded-xl p-4 mb-3 text-left transition-shadow ${
-              sameDayOk
-                ? "border-gray-200 hover:shadow-md bg-white active:bg-gray-50"
-                : "border-gray-200 bg-white cursor-default"
-            }`}
-          >
-            <div className="flex items-center gap-3 mb-1.5">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${sameDayOk ? "bg-amber-100" : "bg-gray-100"}`}>
-                <Clock className={`w-4 h-4 ${sameDayOk ? "text-amber-500" : "text-gray-600"}`} />
-              </div>
-              <span className={`text-sm font-bold ${sameDayOk ? "text-gray-900" : "text-gray-600"}`}>
-                当日受取注文
-              </span>
-            </div>
-            <p className={`text-xs leading-relaxed ${sameDayOk ? "text-gray-500" : "text-gray-600"}`}>
-              本日お店に並んでいる商品からご注文いただけます。
-            </p>
-            {sameDayOk && sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
-              <p className="text-xs mt-1.5 font-bold text-amber-500">
-                {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}の間で受付しています。
-              </p>
-            )}
-            {!sameDayOk && (
-              <div className="mt-2 bg-amber-50 rounded-lg px-3 py-2">
-                {sameDayStatus.reason === "closed_today" ? (
-                  <p className="text-xs text-gray-700">本日は定休日のため受け付けていません。</p>
-                ) : (
-                  <p className="text-xs text-gray-700">ただいま当日注文は受け付けていません。</p>
-                )}
-                {sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
-                  <p className="text-xs text-gray-700 mt-0.5">
-                    <span className="font-bold text-amber-500">
-                      {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}
-                    </span>
-                    の間で受付しています。
-                  </p>
-                )}
-              </div>
-            )}
-          </button>
+        {/* 注文受付停止バナー */}
+        {store && !store.isPublished && (
+          <div className="mb-4 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center">
+            <p className="text-sm font-bold text-gray-500">現在、注文受付を停止しています</p>
+          </div>
         )}
 
+        {/* 当日受取注文（当日受付なしの店舗は非表示） */}
+        {store?.acceptsWalkin !== false && (() => {
+          const active = sameDayOk && (store?.isPublished !== false);
+          const stopped = store?.isPublished === false;
+          return (
+            <button
+              onClick={active ? handleSameDay : undefined}
+              disabled={!active}
+              className={`w-full border rounded-xl p-4 mb-3 text-left transition-shadow ${
+                active
+                  ? "border-gray-200 hover:shadow-md bg-white active:bg-gray-50"
+                  : "border-gray-200 bg-white cursor-default"
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-1.5">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${active ? "bg-amber-100" : "bg-gray-100"}`}>
+                  <Clock className={`w-4 h-4 ${active ? "text-amber-500" : "text-gray-400"}`} />
+                </div>
+                <span className={`text-sm font-bold ${active ? "text-gray-900" : "text-gray-400"}`}>
+                  当日受取注文
+                </span>
+              </div>
+              <p className={`text-xs leading-relaxed ${active ? "text-gray-500" : "text-gray-400"}`}>
+                本日お店に並んでいる商品からご注文いただけます。
+              </p>
+              {active && sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
+                <p className="text-xs mt-1.5 font-bold text-amber-500">
+                  {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}の間で受付しています。
+                </p>
+              )}
+              {!stopped && !sameDayOk && (
+                <div className="mt-2 bg-amber-50 rounded-lg px-3 py-2">
+                  {sameDayStatus.reason === "closed_today" ? (
+                    <p className="text-xs text-gray-700">本日は定休日のため受け付けていません。</p>
+                  ) : (
+                    <p className="text-xs text-gray-700">ただいま当日注文は受け付けていません。</p>
+                  )}
+                  {sameDayStatus.acceptStart && sameDayStatus.acceptEnd && (
+                    <p className="text-xs text-gray-700 mt-0.5">
+                      <span className="font-bold text-amber-500">
+                        {sameDayStatus.acceptStart}〜{sameDayStatus.acceptEnd}
+                      </span>
+                      の間で受付しています。
+                    </p>
+                  )}
+                </div>
+              )}
+            </button>
+          );
+        })()}
+
         {/* 予約注文 */}
-        <button
-          onClick={handleReservation}
-          className="w-full border border-gray-200 rounded-xl p-4 text-left hover:shadow-md transition-shadow bg-white active:bg-gray-50"
-        >
-          <div className="flex items-center gap-3 mb-1.5">
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-              <CalendarDays className="w-4 h-4 text-red-400" />
-            </div>
-            <span className="text-sm font-bold text-gray-900">予約注文</span>
-          </div>
-          <p className="text-xs text-gray-500 leading-relaxed">24時間ご予約を受付しています。</p>
-          <p className="text-xs text-gray-500 leading-relaxed">
-            本日から2営業日後以降からご予約いただけます。
-          </p>
-          <div className="mt-2 bg-red-50 rounded-lg px-3 py-2">
-            <p className="text-xs text-red-400 font-bold">ホールケーキなどのご注文はこちら</p>
-          </div>
-        </button>
+        {(() => {
+          const stopped = store?.isPublished === false;
+          return (
+            <button
+              onClick={stopped ? undefined : handleReservation}
+              disabled={stopped}
+              className={`w-full border rounded-xl p-4 text-left transition-shadow ${
+                stopped
+                  ? "border-gray-200 bg-white cursor-default"
+                  : "border-gray-200 hover:shadow-md bg-white active:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-1.5">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${stopped ? "bg-gray-100" : "bg-red-100"}`}>
+                  <CalendarDays className={`w-4 h-4 ${stopped ? "text-gray-400" : "text-red-400"}`} />
+                </div>
+                <span className={`text-sm font-bold ${stopped ? "text-gray-400" : "text-gray-900"}`}>予約注文</span>
+              </div>
+              <p className={`text-xs leading-relaxed ${stopped ? "text-gray-400" : "text-gray-500"}`}>24時間ご予約を受付しています。</p>
+              <p className={`text-xs leading-relaxed ${stopped ? "text-gray-400" : "text-gray-500"}`}>
+                本日から2営業日後以降からご予約いただけます。
+              </p>
+              {!stopped && (
+                <div className="mt-2 bg-red-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-red-400 font-bold">ホールケーキなどのご注文はこちら</p>
+                </div>
+              )}
+            </button>
+          );
+        })()}
 
         {/* 利用規約・特商法リンク */}
         <div className="text-center space-y-2 pt-6 pb-2">

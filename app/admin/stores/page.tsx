@@ -17,7 +17,7 @@ import {
   Check,
 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
-import { fetchStores, deleteStore, type Store } from "@/lib/admin-api";
+import { fetchStores, deleteStore, updateStore, type Store } from "@/lib/admin-api";
 import { mrrYenForStorePlan, normalizeStorePlan } from "@/lib/store-plans";
 
 const PLAN_LABELS: Record<string, string> = {
@@ -93,6 +93,18 @@ export default function AdminStoresPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [load]);
+
+  const handleTogglePublished = async (store: Store) => {
+    const next = !store.is_published;
+    setStores((prev) => prev.map((s) => s.id === store.id ? { ...s, is_published: next } : s));
+    try {
+      await updateStore(store.id, { is_published: next });
+      showToast(next ? "出店中に設定しました" : "出店を停止しました");
+    } catch {
+      setStores((prev) => prev.map((s) => s.id === store.id ? { ...s, is_published: !next } : s));
+      showToast("更新に失敗しました");
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -352,6 +364,22 @@ export default function AdminStoresPage() {
                     </div>
 
                     <div className="flex items-center gap-1 ml-4">
+                      <button
+                        onClick={() => handleTogglePublished(store)}
+                        className={`flex items-center gap-1.5 h-7 w-[76px] rounded-full px-1.5 transition-colors duration-200 flex-shrink-0 ${store.is_published ? "bg-amber-500" : "bg-gray-200"}`}
+                      >
+                        {store.is_published ? (
+                          <>
+                            <span className="text-[10px] font-bold text-white flex-1 text-left">出店中</span>
+                            <span className="h-5 w-5 rounded-full bg-white shadow-sm flex-shrink-0" />
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-5 w-5 rounded-full bg-white shadow-sm flex-shrink-0" />
+                            <span className="text-[10px] font-bold text-gray-500 flex-1 text-right">停止中</span>
+                          </>
+                        )}
+                      </button>
                       <button
                         onClick={() => handleMailClick(store)}
                         title={store.email ? `${store.email} にメール` : "メール未登録"}

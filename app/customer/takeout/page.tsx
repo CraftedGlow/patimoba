@@ -30,10 +30,14 @@ function StoreCard({
   onToggleFavorite: () => void;
   onSelect: () => void;
 }) {
+  const stopped = !store.isPublished;
   return (
-    <div className="border border-gray-200 rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-200 active:scale-[0.98]">
-      <button onClick={onSelect} className="flex items-center gap-4 flex-1 min-w-0 text-left">
-        <div className="w-14 h-14 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+    <div className={`border rounded-xl p-4 flex items-center gap-4 transition-all duration-200 ${stopped ? "border-gray-100 bg-gray-50" : "border-gray-200 hover:shadow-md active:scale-[0.98]"}`}>
+      <div
+        onClick={!stopped ? onSelect : undefined}
+        className={`flex items-center gap-4 flex-1 min-w-0 text-left ${!stopped ? "cursor-pointer" : "cursor-default"}`}
+      >
+        <div className={`w-14 h-14 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${stopped ? "opacity-40" : ""}`}>
           {store.logoUrl || store.image ? (
             <img
               src={store.logoUrl || store.image}
@@ -46,10 +50,15 @@ function StoreCard({
             </span>
           )}
         </div>
-        <span className="flex-1 font-bold text-base text-gray-900 truncate">
-          {store.name}
-        </span>
-      </button>
+        <div className="flex-1 min-w-0">
+          <span className={`block font-bold text-base truncate ${stopped ? "text-gray-400" : "text-gray-900"}`}>
+            {store.name}
+          </span>
+          {stopped && (
+            <span className="text-xs text-gray-400 mt-0.5 block">注文受付を停止しています</span>
+          )}
+        </div>
+      </div>
       <motion.button
         onClick={(e) => {
           e.stopPropagation();

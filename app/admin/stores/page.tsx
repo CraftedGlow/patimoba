@@ -364,15 +364,16 @@ export default function AdminStoresPage() {
                     <div className="flex items-center gap-1 ml-4">
                       <button
                         onClick={() => handleTogglePublished(store)}
-                        title={store.is_published ? "出店中（クリックで停止）" : "停止中（クリックで出店）"}
-                        className="flex flex-col items-center gap-0.5 px-1"
+                        className="flex items-center gap-1.5 mr-1"
                       >
-                        <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${store.is_published ? "bg-amber-500" : "bg-gray-300"}`}>
-                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${store.is_published ? "translate-x-4.5" : "translate-x-0.5"}`} />
+                        <span className={`text-[10px] font-bold ${!store.is_published ? "text-gray-600" : "text-gray-300"}`}>停止</span>
+                        <div className={`relative h-5 w-9 rounded-full transition-colors duration-200 ${store.is_published ? "bg-amber-500" : "bg-gray-300"}`}>
+                          <span
+                            style={{ transform: store.is_published ? "translateX(18px)" : "translateX(2px)" }}
+                            className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200"
+                          />
                         </div>
-                        <span className={`text-[10px] font-bold ${store.is_published ? "text-amber-600" : "text-gray-400"}`}>
-                          {store.is_published ? "出店中" : "停止中"}
-                        </span>
+                        <span className={`text-[10px] font-bold ${store.is_published ? "text-amber-500" : "text-gray-300"}`}>出店</span>
                       </button>
                       <button
                         onClick={() => handleMailClick(store)}

@@ -226,14 +226,16 @@ export default function AdminStoreEditPage() {
             <button
               type="button"
               onClick={() => setIsPublished((v) => !v)}
-              className="flex items-center gap-3"
+              className="flex items-center gap-2"
             >
-              <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublished ? "bg-amber-500" : "bg-gray-300"}`}>
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublished ? "translate-x-6" : "translate-x-1"}`} />
+              <span className={`text-sm font-medium ${!isPublished ? "text-gray-700" : "text-gray-300"}`}>停止中</span>
+              <div className={`relative h-6 w-12 rounded-full transition-colors duration-200 ${isPublished ? "bg-amber-500" : "bg-gray-300"}`}>
+                <span
+                  style={{ transform: isPublished ? "translateX(24px)" : "translateX(2px)" }}
+                  className="absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                />
               </div>
-              <span className={`text-sm font-bold ${isPublished ? "text-amber-600" : "text-gray-500"}`}>
-                {isPublished ? "出店中（顧客一覧に表示）" : "停止中（顧客一覧に非表示）"}
-              </span>
+              <span className={`text-sm font-medium ${isPublished ? "text-amber-600" : "text-gray-300"}`}>出店中</span>
             </button>
           </Field>
           <Field label="店舗名">

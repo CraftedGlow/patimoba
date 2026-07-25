@@ -6,6 +6,7 @@ import { MapPin, Clock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
+import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 
@@ -29,10 +30,17 @@ export default function ECShippingPage() {
   const [building, setBuilding] = useState("");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[var(--ec-bg,#ffffff)]">
-      <CustomerHeader showCart showBack backHref="/customer/ec/products" logoUrl={storeLogoUrl} />
+      <CustomerHeader
+        showCart
+        showBack
+        backHref="/customer/ec/products"
+        logoUrl={storeLogoUrl}
+        onCartClick={() => setCartOpen(true)}
+      />
 
       <StepProgress currentStep={3} steps={ecSteps} maxWidthClassName="max-w-[800px] mx-auto" />
 
@@ -152,6 +160,13 @@ export default function ECShippingPage() {
           注文内容の確認へ
         </motion.button>
       </div>
+
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        readOnly
+        hideProceed
+      />
     </div>
   );
 }

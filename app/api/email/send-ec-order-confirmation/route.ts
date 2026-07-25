@@ -57,6 +57,7 @@ export async function POST(req: NextRequest) {
     const storeName: string = order.stores?.name ?? "";
     const storePhone: string = order.stores?.phone ?? "";
     const orderDate = new Date(order.created_at).toLocaleString("ja-JP", {
+      timeZone: "Asia/Tokyo",
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
     const orderDetailUrl = `${siteUrl}/customer/orders/${orderId}`;
     const cancelDeadlineStr = order.cancel_deadline_at
       ? new Date(order.cancel_deadline_at).toLocaleString("ja-JP", {
-          year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+          timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
         })
       : null;
 

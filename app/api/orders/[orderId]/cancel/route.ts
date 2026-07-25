@@ -141,7 +141,7 @@ async function sendCancelEmail(order: any): Promise<void> {
 
   const totalAmount = Number(order.total_amount ?? 0).toLocaleString()
   const orderDate = new Date(order.created_at).toLocaleString("ja-JP", {
-    year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+    timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
   })
 
   const refundNote =

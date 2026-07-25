@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const deliveryAddress = notesStr.split("　配送時間:")[0] || "未入力";
     const deliveryTime = notesStr.split("　配送時間:")[1] || "未指定";
     const orderDate = new Date(order.created_at).toLocaleString("ja-JP", {
-      year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+      timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
     });
 
     const nameLabel = rawName ? `${rawName} 様` : "お客様";

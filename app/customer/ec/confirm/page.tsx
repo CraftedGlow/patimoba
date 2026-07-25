@@ -11,7 +11,6 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
-import { getLiffId } from "@/lib/get-liff-id";
 import { PrintReceipt } from "@/components/customer/ec/print-receipt";
 import type { UICartItem } from "@/lib/types";
 
@@ -124,7 +123,7 @@ export default function ECConfirmPage() {
     (async () => {
       const { data } = await supabase
         .from("users")
-        .select("name, name_kana, phone, customer_id")
+        .select("name, name_kana, phone, email, customer_id")
         .eq("id", userId)
         .maybeSingle();
       if (cancelled || !data) return;
@@ -135,6 +134,7 @@ export default function ECConfirmPage() {
         setFirstName(parts.slice(1).join(" ") ?? "");
       }
       if (data.phone) setPhone(data.phone);
+      if (data.email) setEmail((prev) => prev || data.email!);
 
       // 既存カードをセッションに未格納の場合は PAY.JP から取得して表示
       if (data.customer_id && !sessionStorage.getItem("patimoba_has_card")) {
@@ -219,7 +219,7 @@ export default function ECConfirmPage() {
     const notesStr = shippingAddress
   ? `〒${shippingAddress.postalCode} ${shippingAddress.prefecture}${shippingAddress.city}${shippingAddress.address}${shippingAddress.building ? " " + shippingAddress.building : ""}　配送時間:${deliveryTime}`
       : undefined;
-    const guestEmailVal = !profile && email.trim() ? email.trim() : null;
+    const guestEmailVal = email.trim() || null;
 
     // EC はクレジットカード払いのみ → 先に PAY.JP で課金する
     console.log("[ec-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", total);
@@ -313,43 +313,8 @@ export default function ECConfirmPage() {
       })
       .catch((e) => console.error("[メール送信エラー]", e));
 
-    // 3DS リダイレクト前に保存した notification token があれば優先して使う
-    let serviceMessageSent = false;
-    const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
-    if (preIssuedToken) {
-      try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
-      fetch("/api/line/send-service-message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken }),
-      }).catch(() => {});
-      serviceMessageSent = true;
-    }
-
-    if (!serviceMessageSent) {
-      try {
-        const liffId = await getLiffId(storeIdForOrder);
-        const liff = (await import("@line/liff")).default;
-        if (liffId) await liff.init({ liffId });
-        const liffAccessToken = liff.getAccessToken();
-        if (liffAccessToken) {
-          const tokenRes = await fetch("/api/line/issue-notification-token", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: result.orderId, liffAccessToken }),
-          });
-          if (tokenRes.ok) {
-            const { notificationToken } = await tokenRes.json();
-            fetch("/api/line/send-service-message", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orderId: result.orderId, notificationToken }),
-            }).catch(() => {});
-            serviceMessageSent = true;
-          }
-        }
-      } catch { /* LIFF未初期化時はスキップ */ }
-    }
+    // EC注文の通知はメールのみで行う（LINE通知は送信しない）
+    try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
 
     setShowOrderComplete(true);
     setCountdown(5);
@@ -429,19 +394,17 @@ export default function ECConfirmPage() {
           <p className="text-xs text-gray-600 mt-1">※日中に連絡の取れる電話番号</p>
         </div>
 
-        {/* メールアドレス（ゲスト注文時のみ：名前→電話番号→メールの順） */}
-        {!profile && (
-          <div className="mb-4">
-            <div className="flex items-center gap-1 mb-2">
-              <span className="text-sm font-bold">メールアドレス</span>
-              <span className="text-xs text-red-500 font-bold">必須</span>
-            </div>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="example@email.com"
-              className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] placeholder:text-gray-300" />
-            <p className="text-xs text-gray-600 mt-1">※注文確認・発送通知をお送りします</p>
+        {/* メールアドレス（注文確認メールをお送りするため、ログイン有無に関わらず必須） */}
+        <div className="mb-4">
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-sm font-bold">メールアドレス</span>
+            <span className="text-xs text-red-500 font-bold">必須</span>
           </div>
-        )}
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            placeholder="example@email.com"
+            className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ec-400,#fbbf24)] placeholder:text-gray-300" />
+          <p className="text-xs text-gray-600 mt-1">※注文確認・発送通知をお送りします</p>
+        </div>
 
         {/* ポイント利用 */}
         <div className="mb-4">
@@ -587,10 +550,10 @@ export default function ECConfirmPage() {
             買い物を続ける
           </motion.button>
           <motion.button
-            whileHover={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim()) ? undefined : { scale: 1.02 }}
-            whileTap={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim()) ? undefined : { scale: 0.98 }}
+            whileHover={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim() ? undefined : { scale: 1.02 }}
+            whileTap={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim() ? undefined : { scale: 0.98 }}
             onClick={handleConfirmOrder}
-            disabled={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || (!profile && !email.trim())}
+            disabled={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim()}
             className="flex-1 bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] disabled:bg-[var(--ec-200,#fde68a)] disabled:cursor-not-allowed text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-md text-sm transition-colors">
             {submitting ? "処理中..." : "注文を確定する"}
           </motion.button>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendOrderLineMessage } from "@/lib/line";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -171,10 +170,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 注文完了後にLINE push通知を送信（失敗してもorder作成は成功扱い）
-    sendOrderLineMessage(order.id).catch((lineErr) =>
-      console.error("LINE send error (non-fatal):", lineErr)
-    );
+    // EC注文の通知はメール（send-ec-order-confirmation）のみで行う。LINE通知は送らない。
 
     return NextResponse.json({ orderId: order.id });
   } catch (e: any) {

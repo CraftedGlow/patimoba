@@ -35,7 +35,7 @@ interface ShippingAddress {
 
 export default function ECConfirmPage() {
   const router = useRouter();
-  const { userId, selectedStoreId, selectedStoreName, profile, points: userPoints, refreshPoints } = useCustomerContext();
+  const { userId, selectedStoreId, selectedStoreName, profile, points: userPoints, refreshPoints, setGuestUserId } = useCustomerContext();
   const { storeLogoUrl } = useEcContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -294,6 +294,12 @@ export default function ECConfirmPage() {
     sessionStorage.removeItem("ec_customer_first_name");
     sessionStorage.removeItem("ec_customer_phone");
     sessionStorage.removeItem("ec_customer_email");
+    // 決済専用に作成したゲストユーザーは注文完了後に破棄し、次回訪問時は新規ゲスト扱いに戻す
+    try {
+      if (sessionStorage.getItem("patimoba_guest_user_id") === userId) {
+        setGuestUserId(null);
+      }
+    } catch { /* ignore */ }
 
     fetch("/api/email/send-ec-order-confirmation", {
       method: "POST",
@@ -638,8 +644,11 @@ export default function ECConfirmPage() {
                 </div>
               </div>
               <p className="text-base font-bold mb-2">ご注文ありがとうございます！</p>
-              <p className="text-sm text-gray-500 mb-5">
-                ご注文を受け付けました。準備が整い次第発送いたします。
+              <p className="text-sm text-gray-500 leading-relaxed mb-1">
+                注文情報がご入力いただいたメールアドレスに届いています。
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                準備が整い次第発送いたします。
               </p>
               <p className="text-xs text-gray-600 mb-4">{countdown}秒後に自動で商品一覧に戻ります</p>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}

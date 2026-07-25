@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 import { payjpPost } from "@/lib/payjp";
 import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 
@@ -7,6 +8,9 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "noreply@example.com";
 
 const UNCANCELLABLE_STATUSES = ["cancelled", "completed"]
 
@@ -40,7 +44,9 @@ export async function POST(
       id, order_no, order_status, payment_status, cancel_deadline_at, payjp_charge_id,
       customer_id, discount_amount, store_id, order_type, pickup_date, pickup_time,
       total_amount, service_notification_token, source_liff_id,
-      stores(name, address),
+      created_at, guest_email, customer_name_snapshot,
+      stores(name, address, phone),
+      users!orders_customer_id_fkey(name, email),
       order_items(product_name_snapshot, quantity, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity))
     `)
     .eq("id", orderId)
@@ -59,6 +65,7 @@ export async function POST(
   }
 
   // クレジットカード決済済みの場合は PAY.JP で返金
+  let refunded = false
   if (order.payment_status === "paid" && order.payjp_charge_id) {
     const refundRes = await payjpPost(`/charges/${order.payjp_charge_id}/refund`, {})
     const refundData = await refundRes.json()
@@ -66,6 +73,7 @@ export async function POST(
       console.error("[cancel] PAY.JP 返金エラー:", refundData)
       return NextResponse.json({ error: "返金処理に失敗しました。お手数ですが店舗までご連絡ください。" }, { status: 500 })
     }
+    refunded = true
   }
 
   // 使用ポイントを返還
@@ -86,9 +94,10 @@ export async function POST(
   }
 
   // order_status を cancelled に更新（ステータス確認済みのため単純 UPDATE）
+  // 返金済みの場合は payment_status も反映し、店舗側の一覧・レシートで「決済済み」のまま残らないようにする
   const { error: updateErr } = await supabaseAdmin
     .from("orders")
-    .update({ order_status: "cancelled" })
+    .update({ order_status: "cancelled", ...(refunded ? { payment_status: "refunded" } : {}) })
     .eq("id", orderId)
 
   if (updateErr) {
@@ -97,20 +106,85 @@ export async function POST(
   }
 
   // キャンセル通知メッセージ送信（レスポンス前に完了させる）
+  // LINEサービスメッセージを優先し、送れなかった場合（ECゲスト等）はメールで通知する
+  let lineSent = false
   try {
-    await sendCancelNotification(orderId, order)
+    lineSent = await sendCancelNotification(orderId, order)
   } catch (e) {
     console.error("[cancel] サービスメッセージ送信エラー:", e)
+  }
+  if (!lineSent) {
+    try {
+      await sendCancelEmail(order)
+    } catch (e) {
+      console.error("[cancel] キャンセルメール送信エラー:", e)
+    }
   }
 
   return NextResponse.json({ success: true })
 }
 
-async function sendCancelNotification(orderId: string, order: any) {
+async function sendCancelEmail(order: any): Promise<void> {
+  const email: string | null = order.users?.email ?? order.guest_email ?? null
+  if (!email) {
+    console.warn(`[cancel] メール送信先なし（通知スキップ）: orderId=${order.id}`)
+    return
+  }
+
+  const storeName: string = order.stores?.name ?? ""
+  const storePhone: string = order.stores?.phone ?? ""
+  const rawName: string = order.customer_name_snapshot || order.users?.name || ""
+  const nameLabel = rawName ? `${rawName} 様` : "お客様"
+
+  const items: Array<{ product_name_snapshot: string; quantity: number }> = order.order_items || []
+  const itemsText = items.map((i) => `・${i.product_name_snapshot} ×${i.quantity}`).join("\n")
+
+  const totalAmount = Number(order.total_amount ?? 0).toLocaleString()
+  const orderDate = new Date(order.created_at).toLocaleString("ja-JP", {
+    year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+  })
+
+  const refundNote =
+    order.payment_status === "paid" && order.payjp_charge_id
+      ? "\nクレジットカードでお支払いいただいた分は返金処理を行いました。3〜10営業日程度でカード会社を通じて返金されます。\n"
+      : ""
+
+  const body = `${nameLabel}
+
+以下のご注文をキャンセルいたしました。
+
+-------------------------------
+注文店舗：${storeName}
+店舗の電話番号：${storePhone}
+注文日時：${orderDate}
+-------------------------------
+【ご注文商品】
+${itemsText}
+-------------------------------
+合計金額（税込）：${totalAmount}円
+${refundNote}-------------------------------
+
+ご不明な点がございましたら、下記までご連絡ください。
+${storeName}
+TEL：${storePhone}`
+
+  const { error } = await resend.emails.send({
+    from: `${storeName || "パティモバ"} <${FROM_EMAIL}>`,
+    to: email,
+    subject: `【${storeName}】ご注文キャンセルのお知らせ`,
+    text: body,
+  })
+
+  if (error) {
+    console.error("[cancel] Resend send error:", error)
+  }
+}
+
+async function sendCancelNotification(orderId: string, order: any): Promise<boolean> {
   const notificationToken: string | null = order.service_notification_token
   if (!notificationToken) {
     console.warn(`[cancel] notification token なし（通知スキップ）: orderId=${orderId}`)
-    return
+    return false
   }
 
   const sourceLiffId: string | null = order.source_liff_id ?? null
@@ -129,7 +203,7 @@ async function sendCancelNotification(orderId: string, order: any) {
 
   if (!channelAccessToken) {
     console.warn(`[cancel] channel access token なし: orderId=${orderId}`)
-    return
+    return false
   }
 
   // 受取日時
@@ -221,4 +295,5 @@ async function sendCancelNotification(orderId: string, order: any) {
   }
 
   console.log(`[cancel] service message sent: orderId=${orderId}`)
+  return true
 }

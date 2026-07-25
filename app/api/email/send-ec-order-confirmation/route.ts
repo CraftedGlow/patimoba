@@ -74,6 +74,16 @@ export async function POST(req: NextRequest) {
 
     const totalAmount = Number(order.total_amount).toLocaleString();
 
+    const host = req.headers.get("host") ?? "order.patisseriemobile.com";
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `${proto}://${host}`;
+    const orderDetailUrl = `${siteUrl}/customer/orders/${orderId}`;
+    const cancelDeadlineStr = order.cancel_deadline_at
+      ? new Date(order.cancel_deadline_at).toLocaleString("ja-JP", {
+          year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
+        })
+      : null;
+
     const body = `この度はご注文いただきありがとうございます。
 以下の内容でご注文を承りました。
 
@@ -97,6 +107,10 @@ ${itemsText}
 
 配送時間帯：${deliveryTime || "未指定"}
 お支払い方法：クレジットカード
+-------------------------------
+【ご注文内容の確認・キャンセル】
+下記URLからご注文内容の確認${cancelDeadlineStr ? `、および ${cancelDeadlineStr} までのキャンセル` : ""}が可能です。
+${orderDetailUrl}
 -------------------------------
 
 ご不明な点がございましたら、下記までご連絡ください。

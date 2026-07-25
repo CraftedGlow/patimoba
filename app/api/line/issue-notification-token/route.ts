@@ -48,9 +48,16 @@ export async function POST(req: NextRequest) {
     }
 
     // sourceLiffId（一覧LIFF）が指定された場合はそのチャネル設定を優先する
-    let lineConfig = sourceLiffId
-      ? (await resolveChannelByLiffId(sourceLiffId, supabaseAdmin)) ?? await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin)
-      : await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);
+    let resolvedByLiff = sourceLiffId ? await resolveChannelByLiffId(sourceLiffId, supabaseAdmin) : null;
+    // DBに登録されていない patimoba 公開LIFFの場合は env var から取得
+    if (!resolvedByLiff && sourceLiffId && sourceLiffId === process.env.NEXT_PUBLIC_LIFF_ID) {
+      resolvedByLiff = {
+        liffId: sourceLiffId,
+        channelAccessToken: null,
+        channelSecret: process.env.LINE_LOGIN_CHANNEL_SECRET ?? null,
+      };
+    }
+    const lineConfig = resolvedByLiff ?? await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);
     const liffId: string = lineConfig.liffId ?? "";
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;

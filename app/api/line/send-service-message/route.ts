@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
       // Messaging APIチャネルのアクセストークンを直接使用する。
       resolvedByLiff = {
         liffId: sourceLiffId,
-        channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? null,
-        channelSecret: null,
+        channelAccessToken: null,
+        channelSecret: process.env.LINE_CHANNEL_SECRET ?? null,
       };
     }
     const lineConfig = resolvedByLiff ?? await resolveStoreLineConfig(order.store_id, supabaseAdmin);

@@ -364,16 +364,19 @@ export default function AdminStoresPage() {
                     <div className="flex items-center gap-1 ml-4">
                       <button
                         onClick={() => handleTogglePublished(store)}
-                        className="flex items-center gap-1.5 mr-1"
+                        className={`flex items-center gap-1.5 h-7 w-[76px] rounded-full px-1.5 transition-colors duration-200 flex-shrink-0 ${store.is_published ? "bg-amber-500" : "bg-gray-200"}`}
                       >
-                        <span className={`text-[10px] font-bold ${!store.is_published ? "text-gray-600" : "text-gray-300"}`}>停止</span>
-                        <div className={`relative h-5 w-9 rounded-full transition-colors duration-200 ${store.is_published ? "bg-amber-500" : "bg-gray-300"}`}>
-                          <span
-                            style={{ transform: store.is_published ? "translateX(18px)" : "translateX(2px)" }}
-                            className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200"
-                          />
-                        </div>
-                        <span className={`text-[10px] font-bold ${store.is_published ? "text-amber-500" : "text-gray-300"}`}>出店</span>
+                        {store.is_published ? (
+                          <>
+                            <span className="text-[10px] font-bold text-white flex-1 text-left">出店中</span>
+                            <span className="h-5 w-5 rounded-full bg-white shadow-sm flex-shrink-0" />
+                          </>
+                        ) : (
+                          <>
+                            <span className="h-5 w-5 rounded-full bg-white shadow-sm flex-shrink-0" />
+                            <span className="text-[10px] font-bold text-gray-500 flex-1 text-right">停止中</span>
+                          </>
+                        )}
                       </button>
                       <button
                         onClick={() => handleMailClick(store)}

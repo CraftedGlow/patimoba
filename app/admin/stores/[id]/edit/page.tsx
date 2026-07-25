@@ -226,16 +226,16 @@ export default function AdminStoreEditPage() {
             <button
               type="button"
               onClick={() => setIsPublished((v) => !v)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
             >
-              <span className={`text-sm font-medium ${!isPublished ? "text-gray-700" : "text-gray-300"}`}>停止中</span>
-              <div className={`relative h-6 w-12 rounded-full transition-colors duration-200 ${isPublished ? "bg-amber-500" : "bg-gray-300"}`}>
+              <span className={`text-sm font-bold w-14 text-right transition-colors ${!isPublished ? "text-gray-700" : "text-gray-300"}`}>停止中</span>
+              <div className={`relative h-7 w-14 rounded-full transition-colors duration-200 ${isPublished ? "bg-amber-500" : "bg-gray-300"}`}>
                 <span
-                  style={{ transform: isPublished ? "translateX(24px)" : "translateX(2px)" }}
-                  className="absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                  style={{ transform: isPublished ? "translateX(30px)" : "translateX(2px)" }}
+                  className="absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
                 />
               </div>
-              <span className={`text-sm font-medium ${isPublished ? "text-amber-600" : "text-gray-300"}`}>出店中</span>
+              <span className={`text-sm font-bold w-14 transition-colors ${isPublished ? "text-amber-500" : "text-gray-300"}`}>出店中</span>
             </button>
           </Field>
           <Field label="店舗名">

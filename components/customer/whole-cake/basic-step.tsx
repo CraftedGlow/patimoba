@@ -295,7 +295,7 @@ export function WholeCakeBasicStep({
                       className="w-full border border-gray-300 rounded-lg px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                     />
                     <p className="text-xs text-gray-400 mt-1.5">
-                      メッセージが必要ない方は空欄のままで構いません
+                      メッセージは必要ない方は「なし」とご記入ください
                     </p>
                   </>
                 )}

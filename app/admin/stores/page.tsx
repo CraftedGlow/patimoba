@@ -17,7 +17,7 @@ import {
   Check,
 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
-import { fetchStores, deleteStore, type Store } from "@/lib/admin-api";
+import { fetchStores, deleteStore, updateStore, type Store } from "@/lib/admin-api";
 import { mrrYenForStorePlan, normalizeStorePlan } from "@/lib/store-plans";
 
 const PLAN_LABELS: Record<string, string> = {
@@ -93,6 +93,16 @@ export default function AdminStoresPage() {
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
   }, [load]);
+
+  const handleTogglePublished = async (store: Store) => {
+    try {
+      await updateStore(store.id, { is_published: !store.is_published });
+      showToast(store.is_published ? "出店を停止しました" : "出店中に設定しました");
+      load();
+    } catch {
+      showToast("更新に失敗しました");
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -352,6 +362,18 @@ export default function AdminStoresPage() {
                     </div>
 
                     <div className="flex items-center gap-1 ml-4">
+                      <button
+                        onClick={() => handleTogglePublished(store)}
+                        title={store.is_published ? "出店中（クリックで停止）" : "停止中（クリックで出店）"}
+                        className="flex flex-col items-center gap-0.5 px-1"
+                      >
+                        <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${store.is_published ? "bg-amber-500" : "bg-gray-300"}`}>
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${store.is_published ? "translate-x-4.5" : "translate-x-0.5"}`} />
+                        </div>
+                        <span className={`text-[10px] font-bold ${store.is_published ? "text-amber-600" : "text-gray-400"}`}>
+                          {store.is_published ? "出店中" : "停止中"}
+                        </span>
+                      </button>
                       <button
                         onClick={() => handleMailClick(store)}
                         title={store.email ? `${store.email} にメール` : "メール未登録"}

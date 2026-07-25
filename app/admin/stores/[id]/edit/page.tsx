@@ -67,6 +67,7 @@ export default function AdminStoreEditPage() {
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [invoiceNum, setInvoiceNum] = useState("");
+  const [isPublished, setIsPublished] = useState(false);
   const [tokushoText, setTokushoText] = useState("");
   const [privacyPolicyText, setPrivacyPolicyText] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -88,6 +89,7 @@ export default function AdminStoreEditPage() {
       const rawOptions = (store as any).plan_options;
       if (Array.isArray(rawOptions)) setSelectedAddons(rawOptions as string[]);
 
+      setIsPublished((store as any).is_published ?? false);
       setInvoiceNum((store as any).invoice_num ?? "");
       setTokushoText((store as any).tokusho_text ?? "");
       setPrivacyPolicyText((store as any).privacy_policy_text ?? "");
@@ -176,6 +178,7 @@ export default function AdminStoreEditPage() {
         invoice_num: invoiceNum || null,
         tokusho_text: tokushoText || null,
         privacy_policy_text: privacyPolicyText || null,
+        is_published: isPublished,
       };
       if (logoUrl !== undefined) updates.logo_url = logoUrl;
       if (storeImageUrl !== undefined) updates.image = storeImageUrl;
@@ -219,6 +222,20 @@ export default function AdminStoreEditPage() {
 
       <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6">
         <Section title="店舗基本情報">
+          <Field label="パティモバへの出店">
+            <button
+              type="button"
+              onClick={() => setIsPublished((v) => !v)}
+              className="flex items-center gap-3"
+            >
+              <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPublished ? "bg-amber-500" : "bg-gray-300"}`}>
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPublished ? "translate-x-6" : "translate-x-1"}`} />
+              </div>
+              <span className={`text-sm font-bold ${isPublished ? "text-amber-600" : "text-gray-500"}`}>
+                {isPublished ? "出店中（顧客一覧に表示）" : "停止中（顧客一覧に非表示）"}
+              </span>
+            </button>
+          </Field>
           <Field label="店舗名">
             <input
               type="text"

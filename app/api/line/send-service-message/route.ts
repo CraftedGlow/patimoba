@@ -166,7 +166,10 @@ export async function POST(req: NextRequest) {
 
     const sumStr = `¥${Number(order.total_amount || 0).toLocaleString()}（税込）`;
 
-    const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
+    // patimoba公開LIFFはエンドポイントが/customer/takeoutのため、LIFF URLにパスを付与すると
+    // /customer/takeout/customer/orders/...となり404になる。直接URLを使う。
+    const isPublicLiff = liffId === process.env.NEXT_PUBLIC_LIFF_ID;
+    const liffBase = (liffId && !isPublicLiff) ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com";
     const orderDetailUrl = `${liffBase}/customer/orders/${orderId}`;
     const howToReceive = isEc
       ? "発送完了後、改めてご案内いたします。商品到着まで今しばらくお待ちください。"

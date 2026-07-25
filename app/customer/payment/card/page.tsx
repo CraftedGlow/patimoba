@@ -57,7 +57,7 @@ const elementStyle = {
 
 export default function CardAddPage() {
   const router = useRouter();
-  const { profile, points, userId, selectedStoreId } = useCustomerContext();
+  const { profile, points, userId, selectedStoreId, setGuestUserId } = useCustomerContext();
 
   const [name, setName] = useState("");
   const [userPhone, setUserPhone] = useState<string | null>(null);
@@ -152,16 +152,37 @@ export default function CardAddPage() {
       setError("名義人を入力してください");
       return;
     }
-    if (!userId) {
-      setError("ログイン情報が見つかりません。再ログインしてください。");
-      return;
-    }
 
     setSubmitting(true);
     setError(null);
 
+    // LINE未ログインのままEC決済まで進んだゲスト: カード登録・3DS・課金は
+    // users.id に紐づく設計のため、決済専用のゲストユーザーを先に作成する
+    let effectiveUserId = userId;
+    let guestPhone: string | null = null;
+    if (!effectiveUserId) {
+      const readSession = (key: string) => { try { return sessionStorage.getItem(key) || ""; } catch { return ""; } };
+      const guestName = `${readSession("ec_customer_last_name")} ${readSession("ec_customer_first_name")}`.trim() || name.trim();
+      guestPhone = readSession("ec_customer_phone") || null;
+      const guestEmail = readSession("ec_customer_email") || null;
+
+      const guestRes = await fetch("/api/customer/guest-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: guestName, phone: guestPhone, email: guestEmail }),
+      });
+      const guestData = await guestRes.json();
+      if (!guestRes.ok || !guestData.userId) {
+        setError(guestData.error ?? "お客様情報の登録に失敗しました");
+        setSubmitting(false);
+        return;
+      }
+      effectiveUserId = guestData.userId;
+      setGuestUserId(effectiveUserId);
+    }
+
     const cardData: { name: string; phone?: string } = { name: name.trim() };
-    if (userPhone) cardData.phone = toE164(userPhone);
+    if (userPhone || guestPhone) cardData.phone = toE164((userPhone || guestPhone)!);
 
     const result = await payjpRef.current.createToken(cardNumberRef.current, {
       three_d_secure: true,
@@ -188,7 +209,7 @@ export default function CardAddPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         token_id: result.id,
-        user_id: userId,
+        user_id: effectiveUserId,
         return_path: returnPath,
       }),
     });

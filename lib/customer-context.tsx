@@ -12,6 +12,7 @@ interface CustomerProfile {
 interface CustomerContextType {
   userId: string | null
   setUserId: (id: string | null) => void
+  setGuestUserId: (id: string | null) => void
   profile: CustomerProfile | null
   points: number
   refreshPoints: () => Promise<void>
@@ -29,6 +30,7 @@ const FAVORITES_KEY = "patimoba_favorites"
 const VIEWED_KEY = "patimoba_viewed_stores"
 const SELECTED_STORE_ID_KEY = "patimoba_selected_store_id"
 const SELECTED_STORE_NAME_KEY = "patimoba_selected_store_name"
+const GUEST_USER_ID_KEY = "patimoba_guest_user_id"
 
 function loadSet(key: string): Set<string> {
   try {
@@ -83,10 +85,23 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     setViewedStoreIds(loadArray(VIEWED_KEY))
   }, [])
 
+  // LINE未ログインのままEC決済まで進んだゲスト用に作成したユーザーIDを復元する
+  const setGuestUserId = (id: string | null) => {
+    setUserId(id)
+    try {
+      if (id) sessionStorage.setItem(GUEST_USER_ID_KEY, id)
+      else sessionStorage.removeItem(GUEST_USER_ID_KEY)
+    } catch { /* ignore */ }
+  }
+
   useEffect(() => {
     if (!user || user.userType !== "customer") {
       setProfile(null)
-      setUserId(null)
+      try {
+        setUserId(sessionStorage.getItem(GUEST_USER_ID_KEY) || null)
+      } catch {
+        setUserId(null)
+      }
       setPoints(0)
       return
     }
@@ -147,6 +162,7 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       value={{
         userId,
         setUserId,
+        setGuestUserId,
         profile,
         points,
         refreshPoints,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, User, X } from "lucide-react";
+import { Users, User, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 
 import { useCustomers } from "@/hooks/use-customers";
@@ -104,10 +104,10 @@ export default function StoreCustomersPage() {
     <div className="p-4 lg:p-6">
       <div className="flex items-center gap-3 mb-6 bg-[#FFF9C4] rounded-xl p-4">
         <div className="w-12 h-12 bg-amber-400 rounded-full flex items-center justify-center">
-          <Heart className="w-6 h-6 text-white" />
+          <Users className="w-6 h-6 text-white" />
         </div>
         <div>
-          <p className="text-sm text-gray-500">お気に入り合計数</p>
+          <p className="text-sm text-gray-500">顧客数</p>
           <p className="text-2xl font-bold">{customers.length}人</p>
         </div>
       </div>

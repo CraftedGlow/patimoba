@@ -51,10 +51,12 @@ export async function POST(req: NextRequest) {
     let resolvedByLiff = sourceLiffId ? await resolveChannelByLiffId(sourceLiffId, supabaseAdmin) : null;
     // DBに登録されていない patimoba 公開LIFFの場合は env var から取得
     if (!resolvedByLiff && sourceLiffId && sourceLiffId === process.env.NEXT_PUBLIC_LIFF_ID) {
+      // patimoba 公開LIFFはLINE Loginチャネル配下のためstatelessトークン不可。
+      // Messaging APIチャネルのアクセストークンを直接使用する。
       resolvedByLiff = {
         liffId: sourceLiffId,
-        channelAccessToken: null,
-        channelSecret: process.env.LINE_LOGIN_CHANNEL_SECRET ?? null,
+        channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? null,
+        channelSecret: null,
       };
     }
     const lineConfig = resolvedByLiff ?? await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);

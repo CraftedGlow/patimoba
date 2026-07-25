@@ -85,22 +85,23 @@ export async function POST(
     }
   }
 
-  // order_status を cancelled に更新（二重キャンセル防止のため条件付き UPDATE）
+  // order_status を cancelled に更新（ステータス確認済みのため単純 UPDATE）
   const { error: updateErr } = await supabaseAdmin
     .from("orders")
     .update({ order_status: "cancelled" })
     .eq("id", orderId)
-    .not("order_status", "in", `(${UNCANCELLABLE_STATUSES.join(",")})`)
 
   if (updateErr) {
     console.error("[cancel] DB 更新エラー:", updateErr)
     return NextResponse.json({ error: "キャンセル処理に失敗しました" }, { status: 500 })
   }
 
-  // キャンセル通知メッセージ送信（失敗してもキャンセル処理には影響しない）
-  sendCancelNotification(orderId, order).catch((e) => {
+  // キャンセル通知メッセージ送信（レスポンス前に完了させる）
+  try {
+    await sendCancelNotification(orderId, order)
+  } catch (e) {
     console.error("[cancel] サービスメッセージ送信エラー:", e)
-  })
+  }
 
   return NextResponse.json({ success: true })
 }

@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { toLocalDateString } from "@/lib/date-utils"
+
+const TAKEOUT_ORDER_TYPES = ["takeout", "pickup", "delivery"]
 
 export function useNewOrderAlert(storeId: string | undefined, onNewOrder?: () => void) {
   const [showAlert, setShowAlert] = useState(false)
@@ -58,9 +61,11 @@ export function useNewOrderAlert(storeId: string | undefined, onNewOrder?: () =>
           filter: `store_id=eq.${storeId}`,
         },
         (payload) => {
-          // 当日注文かつ当日受付ありの店舗のみ通知
+          // 当日注文（受け取り日が今日のテイクアウト注文）かつ当日受付ありの店舗のみ通知
           const orderType: string | null = payload.new?.order_type ?? null
-          if (orderType !== "sameday") return
+          const pickupDate: string | null = payload.new?.pickup_date ?? null
+          if (!orderType || !TAKEOUT_ORDER_TYPES.includes(orderType)) return
+          if (pickupDate !== toLocalDateString(new Date())) return
           if (!acceptsWalkinRef.current) return
 
           if (!audioRef.current) {

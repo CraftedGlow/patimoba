@@ -95,11 +95,13 @@ export default function AdminStoresPage() {
   }, [load]);
 
   const handleTogglePublished = async (store: Store) => {
+    const next = !store.is_published;
+    setStores((prev) => prev.map((s) => s.id === store.id ? { ...s, is_published: next } : s));
     try {
-      await updateStore(store.id, { is_published: !store.is_published });
-      showToast(store.is_published ? "出店を停止しました" : "出店中に設定しました");
-      load();
+      await updateStore(store.id, { is_published: next });
+      showToast(next ? "出店中に設定しました" : "出店を停止しました");
     } catch {
+      setStores((prev) => prev.map((s) => s.id === store.id ? { ...s, is_published: !next } : s));
       showToast("更新に失敗しました");
     }
   };

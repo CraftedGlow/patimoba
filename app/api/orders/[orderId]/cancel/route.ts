@@ -188,9 +188,15 @@ async function sendCancelNotification(orderId: string, order: any): Promise<bool
   }
 
   const sourceLiffId: string | null = order.source_liff_id ?? null
-  const lineConfig = sourceLiffId
-    ? (await resolveChannelByLiffId(sourceLiffId, supabaseAdmin)) ?? await resolveStoreLineConfig(order.store_id, supabaseAdmin)
-    : await resolveStoreLineConfig(order.store_id, supabaseAdmin)
+  let resolvedByLiff = sourceLiffId ? await resolveChannelByLiffId(sourceLiffId, supabaseAdmin) : null
+  if (!resolvedByLiff && sourceLiffId && sourceLiffId === process.env.NEXT_PUBLIC_LIFF_ID) {
+    resolvedByLiff = {
+      liffId: sourceLiffId,
+      channelAccessToken: null,
+      channelSecret: process.env.LINE_CHANNEL_SECRET ?? null,
+    }
+  }
+  const lineConfig = resolvedByLiff ?? await resolveStoreLineConfig(order.store_id, supabaseAdmin)
   const liffId: string = lineConfig.liffId ?? ""
   const channelSecret: string = lineConfig.channelSecret ?? ""
   let channelAccessToken: string
@@ -258,7 +264,8 @@ async function sendCancelNotification(orderId: string, order: any): Promise<bool
 
   const truncatedDetail = orderDetail.length > 45 ? orderDetail.slice(0, 45) + "..." : (orderDetail || "（明細なし）")
   const sumStr = `¥${Number(order.total_amount || 0).toLocaleString()}（税込）`
-  const liffBase = liffId ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com"
+  const isPublicLiff = liffId === process.env.NEXT_PUBLIC_LIFF_ID
+  const liffBase = (liffId && !isPublicLiff) ? `https://liff.line.me/${liffId}` : "https://order.patisseriemobile.com"
   const orderDetailUrl = `${liffBase}/customer/orders/${orderId}`
   const templateName = process.env.LINE_SERVICE_TEMPLATE_CANCEL ?? "user_cancle_d_ja"
 

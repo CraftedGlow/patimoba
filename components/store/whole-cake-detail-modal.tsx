@@ -173,7 +173,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
 
           {order.printPhotoUrl && (
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-bold text-amber-700">プリント用写真</p>
                 <button
                   type="button"
@@ -194,7 +194,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
                       alert("ダウンロードに失敗しました");
                     }
                   }}
-                  className="text-amber-700 hover:text-amber-800"
+                  className="text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded p-1.5 -m-1.5 transition-colors"
                 >
                   <Download className="w-3.5 h-3.5" />
                 </button>

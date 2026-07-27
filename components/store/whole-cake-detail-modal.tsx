@@ -196,7 +196,7 @@ td{padding:9px 12px;border:1px solid #ddd;font-size:15px}
                   }}
                   className="text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded p-1.5 -m-1.5 transition-colors"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-[19px] h-[19px]" />
                 </button>
               </div>
               <div className="relative rounded-lg overflow-hidden border border-amber-200">

@@ -6,12 +6,19 @@ import { Save, CheckCircle2 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { motion } from "framer-motion";
 
-type Tab = "terms" | "privacy";
+type Tab = "terms" | "privacy" | "tokusho";
+
+const TAB_LABELS: Record<Tab, string> = {
+  terms: "利用規約",
+  privacy: "プライバシーポリシー",
+  tokusho: "特定商取引法に基づく表記",
+};
 
 export default function LegalPage() {
   const [activeTab, setActiveTab] = useState<Tab>("terms");
   const [termsText, setTermsText] = useState("");
   const [privacyText, setPrivacyText] = useState("");
+  const [tokushoText, setTokushoText] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -21,11 +28,12 @@ export default function LegalPage() {
       const { data } = await supabase
         .from("platform_settings")
         .select("key, value")
-        .in("key", ["terms", "privacy"]);
+        .in("key", ["terms", "privacy", "tokusho"]);
       if (data) {
         for (const row of data) {
           if (row.key === "terms") setTermsText(row.value);
           if (row.key === "privacy") setPrivacyText(row.value);
+          if (row.key === "tokusho") setTokushoText(row.value);
         }
       }
       setLoading(false);
@@ -35,7 +43,7 @@ export default function LegalPage() {
   const handleSave = async () => {
     setSaving(true);
     const key = activeTab;
-    const value = activeTab === "terms" ? termsText : privacyText;
+    const value = activeTab === "terms" ? termsText : activeTab === "privacy" ? privacyText : tokushoText;
     await supabase
       .from("platform_settings")
       .upsert({ key, value, updated_at: new Date().toISOString() });
@@ -44,9 +52,9 @@ export default function LegalPage() {
     setTimeout(() => setSaved(false), 2500);
   };
 
-  const tabLabel = activeTab === "terms" ? "利用規約" : "プライバシーポリシー";
-  const text = activeTab === "terms" ? termsText : privacyText;
-  const setText = activeTab === "terms" ? setTermsText : setPrivacyText;
+  const tabLabel = TAB_LABELS[activeTab];
+  const text = activeTab === "terms" ? termsText : activeTab === "privacy" ? privacyText : tokushoText;
+  const setText = activeTab === "terms" ? setTermsText : activeTab === "privacy" ? setPrivacyText : setTokushoText;
 
   return (
     <>
@@ -76,7 +84,7 @@ export default function LegalPage() {
       <div className="p-4 sm:p-6">
         {/* タブ */}
         <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
-          {(["terms", "privacy"] as Tab[]).map((tab) => (
+          {(["terms", "privacy", "tokusho"] as Tab[]).map((tab) => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setSaved(false); }}
@@ -86,7 +94,7 @@ export default function LegalPage() {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {tab === "terms" ? "利用規約" : "プライバシーポリシー"}
+              {TAB_LABELS[tab]}
             </button>
           ))}
         </div>
@@ -100,7 +108,7 @@ export default function LegalPage() {
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
               <p className="text-sm font-bold text-gray-700">{tabLabel}</p>
               <p className="text-xs text-gray-600">
-                公開URL: /customer/{activeTab === "terms" ? "terms" : "privacy"}
+                公開URL: /legal/{activeTab}
               </p>
             </div>
             <textarea

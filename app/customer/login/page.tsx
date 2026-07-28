@@ -305,9 +305,9 @@ export default function CustomerLoginPage() {
               >
                 ログインすることで、
                 <br />
-                <Link href="/customer/terms" className="underline underline-offset-2">利用規約</Link>
+                <Link href="/legal/terms" className="underline underline-offset-2">利用規約</Link>
                 および
-                <Link href="/customer/privacy" className="underline underline-offset-2">プライバシーポリシー</Link>
+                <Link href="/legal/privacy" className="underline underline-offset-2">プライバシーポリシー</Link>
                 に同意したものとみなします
               </motion.p>
             </motion.div>

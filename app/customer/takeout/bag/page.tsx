@@ -9,7 +9,7 @@ import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
-import { useBags } from "@/hooks/use-bags";
+import { useBags, type BagItem } from "@/hooks/use-bags";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
@@ -31,13 +31,33 @@ export default function TakeoutBagPage() {
     return bags.filter((b) => b.isActive && b.productIds.some((id) => cartProductIds.has(id)));
   }, [bags, cartItems]);
 
-  const applicableQuantity = useMemo(() => {
-    if (applicableBags.length === 0) return 0;
-    const applicableProductIds = new Set(applicableBags.flatMap((b) => b.productIds));
+  // 何らかの袋が対応している商品の合計個数（カート全体ではなく「袋が必要そうな商品」だけを基準にする）
+  const totalBagRelevantQuantity = useMemo(() => {
+    const relevantProductIds = new Set(bags.filter((b) => b.isActive).flatMap((b) => b.productIds));
     return cartItems
-      .filter((i) => applicableProductIds.has(i.productId))
+      .filter((i) => relevantProductIds.has(i.productId))
       .reduce((sum, i) => sum + i.quantity, 0);
-  }, [applicableBags, cartItems]);
+  }, [bags, cartItems]);
+
+  // その袋の対応商品だけに絞ったカート内訳（袋ごとに対応商品が異なるため個別に計算する）
+  const getBagCoverage = (bag: BagItem) => {
+    const bagProductIds = new Set(bag.productIds);
+    const covered = cartItems.filter((i) => bagProductIds.has(i.productId));
+    const coveredQty = covered.reduce((sum, i) => sum + i.quantity, 0);
+    const label = covered.map((i) => `${i.name}×${i.quantity}`).join("、");
+    const fullyCovers = coveredQty > 0 && coveredQty === totalBagRelevantQuantity;
+    return { coveredQty, label, fullyCovers };
+  };
+
+  // カート全体をカバーできる袋を上に出す
+  const sortedBags = useMemo(() => {
+    return [...applicableBags].sort((a, b) => {
+      const aFull = getBagCoverage(a).fullyCovers ? 1 : 0;
+      const bFull = getBagCoverage(b).fullyCovers ? 1 : 0;
+      return bFull - aFull;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicableBags, totalBagRelevantQuantity]);
 
   // 対応する袋が無い場合は直接アクセスされても注文確認に進める
   useEffect(() => {
@@ -56,7 +76,7 @@ export default function TakeoutBagPage() {
     }
     const bag = applicableBags.find((b) => b.id === bagId);
     setSelectedBagId(bagId);
-    if (bag) setQuantity(Math.max(1, Math.ceil(applicableQuantity / bag.capacity)));
+    if (bag) setQuantity(Math.max(1, Math.ceil(getBagCoverage(bag).coveredQty / bag.capacity)));
   };
 
   const handleProceed = () => {
@@ -116,8 +136,9 @@ export default function TakeoutBagPage() {
             {selectedBagId === null && <Check className="w-5 h-5 text-amber-500 shrink-0" />}
           </motion.button>
 
-          {applicableBags.map((bag) => {
+          {sortedBags.map((bag) => {
             const selected = selectedBagId === bag.id;
+            const { label, fullyCovers } = getBagCoverage(bag);
             return (
               <motion.button
                 key={bag.id}
@@ -135,10 +156,20 @@ export default function TakeoutBagPage() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">{bag.name}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="text-sm font-bold text-gray-900 truncate">{bag.name}</p>
+                    {fullyCovers && (
+                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full shrink-0">
+                        ぴったり
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">
                     {bag.capacity}個まで　{bag.price === 0 ? "無料" : `+¥${bag.price.toLocaleString()}`}
                   </p>
+                  {!fullyCovers && label && (
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">対象: {label}</p>
+                  )}
                 </div>
                 {selected && <Check className="w-5 h-5 text-amber-500 shrink-0" />}
               </motion.button>
@@ -146,31 +177,38 @@ export default function TakeoutBagPage() {
           })}
         </div>
 
-        {selectedBag && (
-          <div className="mb-6 border border-amber-200 rounded-xl px-4 py-3 bg-amber-50/60">
-            <p className="text-xs font-bold text-amber-700 mb-2">個数</p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="w-9 h-9 rounded-full border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-100 transition-colors"
-              >
-                −
-              </button>
-              <span className="text-base font-bold w-8 text-center">{quantity}</span>
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => q + 1)}
-                className="w-9 h-9 rounded-full border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-100 transition-colors"
-              >
-                +
-              </button>
-              <span className="text-sm text-gray-600 ml-1">
-                小計 ¥{(selectedBag.price * quantity).toLocaleString()}
-              </span>
+        {selectedBag && (() => {
+          const minQuantity = Math.max(1, Math.ceil(getBagCoverage(selectedBag).coveredQty / selectedBag.capacity));
+          return (
+            <div className="mb-6 border border-amber-200 rounded-xl px-4 py-3 bg-amber-50/60">
+              <p className="text-xs font-bold text-amber-700 mb-2">個数</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(minQuantity, q - 1))}
+                  disabled={quantity <= minQuantity}
+                  className="w-9 h-9 rounded-full border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                >
+                  −
+                </button>
+                <span className="text-base font-bold w-8 text-center">{quantity}</span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="w-9 h-9 rounded-full border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-100 transition-colors"
+                >
+                  +
+                </button>
+                <span className="text-sm text-gray-600 ml-1">
+                  小計 ¥{(selectedBag.price * quantity).toLocaleString()}
+                </span>
+              </div>
+              {quantity <= minQuantity && (
+                <p className="text-xs text-amber-700 mt-1.5">最低{minQuantity}個必要です</p>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         <motion.button
           whileHover={{ scale: 1.02 }}

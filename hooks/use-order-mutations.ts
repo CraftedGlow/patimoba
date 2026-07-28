@@ -18,6 +18,7 @@ interface CreateOrderInput {
   printPhotoUrl?: string | null
   guestEmail?: string | null
   payjpChargeId?: string | null
+  bag?: { name: string; unitPrice: number; quantity: number } | null
 }
 
 function deriveOrderType(items: UICartItem[], fallback?: string): { type: string; error: string | null } {
@@ -101,7 +102,7 @@ export function useOrderMutations() {
         )
       }
 
-      const orderItems = input.items.map((item) => ({
+      const orderItems: any[] = input.items.map((item) => ({
         order_id: order.id,
         product_id: item.productId,
         product_name_snapshot: item.name,
@@ -110,6 +111,19 @@ export function useOrderMutations() {
         subtotal: calcItemSubtotal(item),
         variant_name_snapshot: item.customization?.sizeLabel ?? null,
       }))
+
+      // 袋は特定商品に紐づく行ではなく注文全体への追加なので、product_id なしの行として追加する
+      if (input.bag) {
+        orderItems.push({
+          order_id: order.id,
+          product_id: null,
+          product_name_snapshot: `袋: ${input.bag.name}`,
+          quantity: input.bag.quantity,
+          unit_price: input.bag.unitPrice,
+          subtotal: input.bag.unitPrice * input.bag.quantity,
+          variant_name_snapshot: null,
+        })
+      }
 
       const { data: insertedItems, error: itemsErr } = await supabase
         .from("order_items")

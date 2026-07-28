@@ -76,6 +76,7 @@ export default function TakeoutConfirmPage() {
   const [pickupTime, setPickupTime] = useState("");
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
+  const [selectedBag, setSelectedBag] = useState<{ id: string; name: string; price: number; quantity: number } | null>(null);
 
   useEffect(() => {
     if (!showTokushoModal) return;
@@ -95,6 +96,13 @@ export default function TakeoutConfirmPage() {
     setPickupTime(t);
     setHasCardInfo(!!sessionStorage.getItem("patimoba_has_card"));
     setCardLabel(sessionStorage.getItem("patimoba_card_label") || "");
+
+    try {
+      const bagRaw = sessionStorage.getItem("patimoba_selected_bag");
+      if (bagRaw) setSelectedBag(JSON.parse(bagRaw));
+    } catch {
+      /* ignore */
+    }
 
     // 3DS リダイレクト戻り時：カード表示を先行セット
     try {
@@ -200,7 +208,8 @@ export default function TakeoutConfirmPage() {
     })();
   }, [userId]);
 
-  const subtotal = cartTotal;
+  const bagTotal = selectedBag ? selectedBag.price * selectedBag.quantity : 0;
+  const subtotal = cartTotal + bagTotal;
   const availablePoints = userPoints;
 
   const usedPoints =
@@ -267,6 +276,7 @@ export default function TakeoutConfirmPage() {
       pickupTime: pickupTime || null,
       printPhotoUrl,
       payjpChargeId,
+      bag: selectedBag ? { name: selectedBag.name, unitPrice: selectedBag.price, quantity: selectedBag.quantity } : null,
     });
 
     submittingRef.current = false;
@@ -346,6 +356,7 @@ export default function TakeoutConfirmPage() {
     sessionStorage.removeItem("patimoba_pickup_date");
     sessionStorage.removeItem("patimoba_pickup_time");
     sessionStorage.removeItem("patimoba_order_type");
+    sessionStorage.removeItem("patimoba_selected_bag");
     setShowOrderComplete(true);
     setCountdown(5);
     countdownRef.current = setInterval(() => {
@@ -566,6 +577,20 @@ export default function TakeoutConfirmPage() {
                 </div>
               );
             })}
+            {selectedBag && (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <div className="w-11 h-11 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center">
+                  <ShoppingBag className="w-5 h-5 text-gray-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">袋: {selectedBag.name}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-gray-900">¥{bagTotal.toLocaleString()}</p>
+                  {selectedBag.quantity > 1 && <p className="text-xs text-gray-600">×{selectedBag.quantity}</p>}
+                </div>
+              </div>
+            )}
           </div>
           {/* 合計 */}
           <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 space-y-2">

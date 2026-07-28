@@ -8,6 +8,7 @@ import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
+import { useBags } from "@/hooks/use-bags";
 import { supabase } from "@/lib/supabase";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
@@ -53,6 +54,11 @@ export default function TakeoutPickupPage() {
   const { selectedStoreName, selectedStoreId, profile } = useCustomerContext();
   const { items: cartItems, storeId: cartStoreId } = useCart();
   const storeId = selectedStoreId || cartStoreId || storeParam || null;
+  const { bags, loading: bagsLoading } = useBags(storeId ?? undefined);
+  const hasApplicableBag = (() => {
+    const cartProductIds = new Set(cartItems.map((i) => i.productId));
+    return bags.some((b) => b.isActive && b.productIds.some((id) => cartProductIds.has(id)));
+  })();
 
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(isSameDay ? new Date() : null);
@@ -276,10 +282,10 @@ export default function TakeoutPickupPage() {
     sessionStorage.setItem("patimoba_pickup_date", dateStr);
     sessionStorage.setItem("patimoba_pickup_time", selectedTime);
     sessionStorage.setItem("patimoba_order_type", orderType);
-    router.push("/customer/takeout/confirm");
+    router.push(hasApplicableBag ? "/customer/takeout/bag" : "/customer/takeout/confirm");
   };
 
-  if (loading) {
+  if (loading || bagsLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />

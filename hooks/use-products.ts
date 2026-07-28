@@ -51,6 +51,8 @@ export function useProducts(options: UseProductsOptions = {}) {
 
     const { data, error: err } = await query
       .order("display_order", { ascending: true })
+      .order("category_name", { ascending: true })
+      .order("base_price", { ascending: true })
       .order("created_at", { ascending: true })
     if (err) {
       setError(err.message)

@@ -153,6 +153,8 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
       .select("*, product_variants(id, price, is_active)")
       .in("store_id", storeIds)
       .order("display_order", { ascending: true })
+      .order("category_name", { ascending: true })
+      .order("base_price", { ascending: true })
       .order("created_at", { ascending: true })
 
     if (options.publishedOnly) {

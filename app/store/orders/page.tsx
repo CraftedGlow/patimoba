@@ -623,17 +623,22 @@ export default function StoreOrdersPage() {
                     {/* 中段: 商品リスト */}
                     <div className="text-sm leading-relaxed mb-2">
                       {order.items.map((item, j) => (
-                        <div key={j} className="flex items-center gap-1.5">
-                          <span className="text-gray-700">{item.name}</span>
-                          {item.variantName ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
-                              className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
-                            >
-                              詳細
-                            </button>
-                          ) : (
-                            <span className="text-gray-600 text-xs shrink-0">×{item.quantity}</span>
+                        <div key={j}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-700">{item.name}</span>
+                            {item.variantName ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                                className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                              >
+                                詳細
+                              </button>
+                            ) : (
+                              <span className="text-gray-600 text-xs shrink-0">×{item.quantity}</span>
+                            )}
+                          </div>
+                          {item.hasPrintDecoration && (
+                            <p className="text-xs text-amber-600 font-bold">プリントデコレーション</p>
                           )}
                         </div>
                       ))}
@@ -734,17 +739,22 @@ export default function StoreOrdersPage() {
                   </div>
                   <div className="text-sm leading-relaxed">
                     {order.items.map((item, j) => (
-                      <div key={j} className="flex items-center gap-1.5">
-                        <span>{item.name}</span>
-                        {item.variantName ? (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
-                            className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
-                          >
-                            詳細
-                          </button>
-                        ) : (
-                          <span className="text-gray-600 text-xs shrink-0">×{item.quantity}</span>
+                      <div key={j}>
+                        <div className="flex items-center gap-1.5">
+                          <span>{item.name}</span>
+                          {item.variantName ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                              className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                            >
+                              詳細
+                            </button>
+                          ) : (
+                            <span className="text-gray-600 text-xs shrink-0">×{item.quantity}</span>
+                          )}
+                        </div>
+                        {item.hasPrintDecoration && (
+                          <p className="text-xs text-amber-600 font-bold">プリントデコレーション</p>
                         )}
                       </div>
                     ))}
@@ -891,17 +901,22 @@ export default function StoreOrdersPage() {
                     {/* 中段: 商品リスト */}
                     <div className="text-sm leading-relaxed mb-2">
                       {order.items.map((item, j) => (
-                        <div key={j} className="flex items-center gap-1.5">
-                          <span className="text-gray-700">{item.name}</span>
-                          {item.variantName ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
-                              className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
-                            >
-                              詳細
-                            </button>
-                          ) : (
-                            <span className="text-gray-500 text-xs shrink-0">×{item.quantity}</span>
+                        <div key={j}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-700">{item.name}</span>
+                            {item.variantName ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                                className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                              >
+                                詳細
+                              </button>
+                            ) : (
+                              <span className="text-gray-500 text-xs shrink-0">×{item.quantity}</span>
+                            )}
+                          </div>
+                          {item.hasPrintDecoration && (
+                            <p className="text-xs text-amber-600 font-bold">プリントデコレーション</p>
                           )}
                         </div>
                       ))}
@@ -980,17 +995,22 @@ export default function StoreOrdersPage() {
                   </div>
                   <div className="text-sm leading-relaxed">
                     {order.items.map((item, j) => (
-                      <div key={j} className="flex items-center gap-1.5">
-                        <span>{item.name}</span>
-                        {item.variantName ? (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
-                            className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
-                          >
-                            詳細
-                          </button>
-                        ) : (
-                          <span className="text-gray-500 text-xs shrink-0">×{item.quantity}</span>
+                      <div key={j}>
+                        <div className="flex items-center gap-1.5">
+                          <span>{item.name}</span>
+                          {item.variantName ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                              className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                            >
+                              詳細
+                            </button>
+                          ) : (
+                            <span className="text-gray-500 text-xs shrink-0">×{item.quantity}</span>
+                          )}
+                        </div>
+                        {item.hasPrintDecoration && (
+                          <p className="text-xs text-amber-600 font-bold">プリントデコレーション</p>
                         )}
                       </div>
                     ))}

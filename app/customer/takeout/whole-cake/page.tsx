@@ -233,7 +233,9 @@ export default function WholeCakePage() {
           wholeCakeOptionId: did,
           name: dec.name,
           price: dec.price,
-          groupName: group.name,
+          // カテゴリがprintのデコレーションは、グループ名に関わらず店舗側で
+          // 「プリントデコレーション」として検出できるよう固定名にする
+          groupName: dec.category === "print" ? "プリントデコレーション" : group.name,
           message: msg,
         }];
       });

@@ -77,7 +77,7 @@ export interface Order {
   orderDate: string
   pickupDate: string
   pickupTime: string
-  items: { name: string; quantity: number; totalAmount: number; variantName?: string | null }[]
+  items: { name: string; quantity: number; totalAmount: number; variantName?: string | null; hasPrintDecoration?: boolean }[]
   hasWholeCake: boolean
   subtotal: number
   discountAmount: number
@@ -348,11 +348,14 @@ export function toUIOrder(row: any): Order {
   const formatDate = (d: Date) =>
     `${d.getFullYear()}年 ${d.getMonth() + 1}月 ${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`
 
-  const items: { name: string; quantity: number; totalAmount: number; variantName?: string | null }[] = (row.order_items || []).map((it: any) => ({
+  const items: { name: string; quantity: number; totalAmount: number; variantName?: string | null; hasPrintDecoration?: boolean }[] = (row.order_items || []).map((it: any) => ({
     name: it.product_name_snapshot || "不明",
     quantity: Number(it.quantity) || 1,
     totalAmount: Number(it.subtotal) || 0,
     variantName: it.variant_name_snapshot ?? null,
+    hasPrintDecoration: (it.order_item_options ?? []).some(
+      (o: any) => o.option_group_name_snapshot === "プリントデコレーション"
+    ),
   }))
 
   const user = row.users || {}

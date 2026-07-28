@@ -50,7 +50,7 @@ export function useOrders(options: UseOrdersOptions = {}) {
       .select(`
         *,
         users:users!orders_customer_id_fkey(id, name, line_name, phone, email),
-        order_items(id, product_name_snapshot, quantity, unit_price, subtotal, product_id, variant_name_snapshot, order_item_options(id))
+        order_items(id, product_name_snapshot, quantity, unit_price, subtotal, product_id, variant_name_snapshot, order_item_options(id, option_group_name_snapshot))
       `)
       .order(sortColumn, { ascending: sortAscending })
 

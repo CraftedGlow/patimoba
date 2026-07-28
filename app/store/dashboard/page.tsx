@@ -360,17 +360,22 @@ export default function StoreDashboardPage() {
                       {/* 注文商品リスト */}
                       <div className="mt-1.5">
                         {order.items.map((item, j) => (
-                          <div key={j} className="flex items-center gap-1.5 text-sm">
-                            <span className="truncate">{item.name}</span>
-                            {item.variantName ? (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
-                                className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
-                              >
-                                詳細
-                              </button>
-                            ) : (
-                              <span className="shrink-0 text-gray-600 text-xs">×{item.quantity}</span>
+                          <div key={j}>
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <span className="truncate">{item.name}</span>
+                              {item.variantName ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                                  className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                                >
+                                  詳細
+                                </button>
+                              ) : (
+                                <span className="shrink-0 text-gray-600 text-xs">×{item.quantity}</span>
+                              )}
+                            </div>
+                            {item.hasPrintDecoration && (
+                              <p className="text-xs text-amber-600 font-bold">プリントデコレーション</p>
                             )}
                           </div>
                         ))}
@@ -426,17 +431,22 @@ export default function StoreDashboardPage() {
 
                   <div className="text-sm min-w-0 pl-3 pt-1">
                     {order.items.map((item, j) => (
-                      <div key={j} className="flex items-center gap-1.5 truncate">
-                        <span className="truncate">{item.name}</span>
-                        {item.variantName ? (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
-                            className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
-                          >
-                            詳細
-                          </button>
-                        ) : (
-                          <span className="shrink-0 text-gray-600 text-xs">×{item.quantity}</span>
+                      <div key={j}>
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="truncate">{item.name}</span>
+                          {item.variantName ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setWholeCakeDetailOrder(order); }}
+                              className="shrink-0 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors"
+                            >
+                              詳細
+                            </button>
+                          ) : (
+                            <span className="shrink-0 text-gray-600 text-xs">×{item.quantity}</span>
+                          )}
+                        </div>
+                        {item.hasPrintDecoration && (
+                          <p className="text-xs text-amber-600 font-bold">プリントデコレーション</p>
                         )}
                       </div>
                     ))}

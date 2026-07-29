@@ -146,7 +146,7 @@ export default function TakeoutProductsPage() {
   const { wholeCakes, loading: cakesLoading } = useWholeCakes(storeId);
   const { itemCount } = useCart();
 
-  const [printDecoData, setPrintDecoData] = useState<{ price: number; image: string } | null>(null);
+  const [printDecoData, setPrintDecoData] = useState<{ price: number; image: string; preparationDays: number } | null>(null);
 
   useEffect(() => {
     if (!storeId || cakesLoading) return;
@@ -159,13 +159,19 @@ export default function TakeoutProductsPage() {
     (async () => {
       const { data: deco } = await supabase
         .from("decorations")
-        .select("price")
+        .select("price, preparation_days")
         .eq("store_id", storeId)
         .eq("category", "print")
         .eq("is_active", true)
         .limit(1)
         .maybeSingle();
-      if (!cancelled) setPrintDecoData(deco ? { price: Number(deco.price) || 0, image: "" } : null);
+      if (!cancelled) {
+        setPrintDecoData(
+          deco
+            ? { price: Number(deco.price) || 0, image: "", preparationDays: Number(deco.preparation_days) || 0 }
+            : null
+        );
+      }
     })();
     return () => { cancelled = true; };
   }, [storeId, cakesLoading, wholeCakes]);
@@ -213,10 +219,16 @@ export default function TakeoutProductsPage() {
       : c.isActive !== false
   );
 
+  // プリントデコレーションは準備日数が必要なため、当日注文では準備日数0の場合のみ表示する
+  const visiblePrintDeco =
+    printDecoData && !(typeParam === "sameday" && printDecoData.preparationDays > 0)
+      ? printDecoData
+      : null;
+
   const allGridItems: GridItem[] = [
     ...limitedProducts.map((p) => ({ kind: "product" as const, data: p })),
     ...visibleWholeCakeList.map((c) => ({ kind: "wholecake" as const, data: c })),
-    ...(printDecoData ? [{ kind: "printdeco" as const, price: printDecoData.price }] : []),
+    ...(visiblePrintDeco ? [{ kind: "printdeco" as const, price: visiblePrintDeco.price }] : []),
     ...orderedCategories.flatMap((cat) =>
       nonLimitedProducts.filter((p) => p.category_name === cat).map((p) => ({ kind: "product" as const, data: p }))
     ),
@@ -360,9 +372,9 @@ export default function TakeoutProductsPage() {
                 <WholeCakeCard cake={cake} />
               </motion.div>
             ))}
-            {printDecoData && selectedCategory === "ホールケーキ" && (
+            {visiblePrintDeco && selectedCategory === "ホールケーキ" && (
               <motion.div key="print-deco" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: visibleWholeCakes.length * 0.04 }}>
-                <PrintDecorationCard price={printDecoData.price} />
+                <PrintDecorationCard price={visiblePrintDeco.price} />
               </motion.div>
             )}
             {filtered.map((product, i) => (

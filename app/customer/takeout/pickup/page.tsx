@@ -74,6 +74,8 @@ export default function TakeoutPickupPage() {
 
   // カート内商品の期間制約
   const [maxPreparationDays, setMaxPreparationDays] = useState(2);
+  // カート内商品・デコレーション自体が要求する準備日数（店舗の最低予約日数とは別に、当日注文の可否判定に使う）
+  const [itemPreparationDays, setItemPreparationDays] = useState(0);
   const [limitedFrom, setLimitedFrom] = useState<Date | null>(null);
   const [limitedUntil, setLimitedUntil] = useState<Date | null>(null);
 
@@ -158,6 +160,7 @@ export default function TakeoutPickupPage() {
             }
 
             setMaxPreparationDays(Math.max(maxDays, minFuture));
+            setItemPreparationDays(maxDays);
 
             const froms = productRows.filter((p: any) => p.limited_from).map((p: any) => new Date(p.limited_from));
             const untils = productRows.filter((p: any) => p.limited_until).map((p: any) => new Date(p.limited_until));
@@ -215,6 +218,8 @@ export default function TakeoutPickupPage() {
   // 当日注文の時間スロット
   const sameDayTimeSlots = (() => {
     if (!isSameDay) return [];
+    // 準備日数が必要な商品・デコレーション（プリントデコレーション等）が含まれる場合は当日注文不可
+    if (itemPreparationDays > 0) return [];
     const now = new Date();
     const key = dateKey(now);
     // 特定日で is_open = false の場合は空
@@ -387,7 +392,11 @@ export default function TakeoutPickupPage() {
           <label className="block text-sm font-bold mb-2">時刻を選択</label>
           {timeSlots.length === 0 ? (
             <p className="text-sm text-gray-600">
-              {isSameDay ? "現在、当日注文の受付時間外です" : selectedDate ? "この日は営業していません" : "日付を選択してください"}
+              {isSameDay
+                ? itemPreparationDays > 0
+                  ? "カート内の商品には準備日数が必要なため、当日受け取りはできません。予約注文をご利用ください。"
+                  : "現在、当日注文の受付時間外です"
+                : selectedDate ? "この日は営業していません" : "日付を選択してください"}
             </p>
           ) : (
             <select

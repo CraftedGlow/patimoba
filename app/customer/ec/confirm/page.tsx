@@ -272,13 +272,16 @@ export default function ECConfirmPage() {
     console.log("[ec-confirm] create-order →", result);
     if (result.error) { setSubmitError(result.error); return; }
 
-    // ポイント付与・消費をDBに反映
+    // ポイント付与・消費と電話番号をDBに反映
     if (userId) {
       const { data: userData } = await supabase
         .from("users").select("points").eq("id", userId).maybeSingle();
       const currentPts = Number(userData?.points) || 0;
       const newPts = Math.max(0, currentPts - usedPoints + earnedPoints);
-      await supabase.from("users").update({ points: newPts }).eq("id", userId);
+      await supabase
+        .from("users")
+        .update({ points: newPts, ...(phone.trim() ? { phone: phone.trim() } : {}) })
+        .eq("id", userId);
       await refreshPoints();
     }
 

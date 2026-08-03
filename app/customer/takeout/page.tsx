@@ -140,8 +140,8 @@ export default function TakeoutStorePage() {
     })();
   }, [authLoading]);
 
-  const filteredStores = stores.filter((s) =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredStores = stores.filter(
+    (s) => s.isPublished && s.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const favoriteStores = stores

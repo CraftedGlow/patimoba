@@ -10,6 +10,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { useBags } from "@/hooks/use-bags";
 import { supabase } from "@/lib/supabase";
+import { isClosedByRule } from "@/components/store/business-days/types";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
@@ -41,6 +42,17 @@ interface BusinessHour {
   isClosed: boolean;
   openTime: string | null;
   closeTime: string | null;
+  closedWeekRule: string | null;
+}
+
+function isBusinessHourClosedOn(bh: BusinessHour | undefined, date: Date): boolean {
+  if (!bh?.isClosed) return false;
+  return isClosedByRule(
+    [{ dayOfWeek: bh.dayOfWeek, day: "", rule: bh.closedWeekRule ?? "毎週" }],
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
 }
 
 export default function TakeoutPickupPage() {
@@ -66,6 +78,7 @@ export default function TakeoutPickupPage() {
   const [loading, setLoading] = useState(true);
 
   const [prepMinutes, setPrepMinutes] = useState(90);
+  const [leadTimeMinutes, setLeadTimeMinutes] = useState(60);
   const [minFutureDays, setMinFutureDays] = useState(2);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   // 特定日の営業状況 override: key = "YYYY-MM-DD"
@@ -92,24 +105,26 @@ export default function TakeoutPickupPage() {
         // 店舗設定
         const { data: rules } = await supabase
           .from("store_order_rules")
-          .select("default_cutoff_time, min_future_days")
+          .select("default_cutoff_time, default_lead_time_minutes, min_future_days")
           .eq("store_id", storeId)
           .maybeSingle();
         const prepMin = rules?.default_cutoff_time ? Number(rules.default_cutoff_time) : 90;
         const minFuture = rules?.min_future_days ?? 2;
         setPrepMinutes(isNaN(prepMin) ? 90 : prepMin);
+        setLeadTimeMinutes(rules?.default_lead_time_minutes ?? 60);
         setMinFutureDays(minFuture);
 
         // 曜日別営業時間
         const { data: bhRows } = await supabase
           .from("store_business_hours")
-          .select("day_of_week, is_closed, open_time, close_time")
+          .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
           .eq("store_id", storeId);
         setBusinessHours((bhRows || []).map((r: any) => ({
           dayOfWeek: r.day_of_week,
           isClosed: r.is_closed,
           openTime: r.open_time,
           closeTime: r.close_time,
+          closedWeekRule: r.closed_week_rule,
         })));
 
         // 特定日の営業状況 (今日から3ヶ月分)
@@ -185,7 +200,7 @@ export default function TakeoutPickupPage() {
     const dow = date.getDay();
     const bh = businessHours.find((b) => b.dayOfWeek === dow);
     if (!bh) return true; // ルール未設定 = 営業とみなす
-    return !bh.isClosed;
+    return !isBusinessHourClosedOn(bh, date);
   };
 
   const isDateSelectable = (day: number): boolean => {
@@ -226,15 +241,17 @@ export default function TakeoutPickupPage() {
     if (key in businessDayOverrides && !businessDayOverrides[key]) return [];
     const todayDow = now.getDay();
     const bh = businessHours.find((b) => b.dayOfWeek === todayDow);
-    // 定休日として設定されていて、特定日のoverride(is_open=true)もない場合は空
-    if (bh?.isClosed && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
+    // 定休日として設定されていて（隔週ルール含む）、特定日のoverride(is_open=true)もない場合は空
+    if (isBusinessHourClosedOn(bh, now) && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
     // 特定日の営業時間 → 曜日ルールの順で優先
     const specialHour = specialDateHours[key];
     const closeTime = specialHour?.closeTime ?? bh?.closeTime;
     if (!closeTime) return [];
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const startMin = nowMin + prepMinutes;
     const closeMin = toMin(closeTime);
+    // 当日注文受付終了（CLOSEのN分前）を過ぎていたら受付不可
+    if (nowMin > closeMin - leadTimeMinutes) return [];
+    const startMin = nowMin + prepMinutes;
     return generateTimeSlots(startMin, closeMin);
   })();
 
@@ -246,8 +263,8 @@ export default function TakeoutPickupPage() {
     // 特定日で is_open = false の場合は空
     if (key in businessDayOverrides && !businessDayOverrides[key]) return [];
     const bh = businessHours.find((b) => b.dayOfWeek === dow);
-    // 定休日として設定されていて、特定日のoverride(is_open=true)もない場合は空
-    if (bh?.isClosed && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
+    // 定休日として設定されていて（隔週ルール含む）、特定日のoverride(is_open=true)もない場合は空
+    if (isBusinessHourClosedOn(bh, selectedDate) && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
     // 特定日の営業時間 → 曜日ルール → デフォルトの順で優先
     const specialHour = specialDateHours[key];
     const openTime = specialHour?.openTime ?? bh?.openTime ?? "10:00";

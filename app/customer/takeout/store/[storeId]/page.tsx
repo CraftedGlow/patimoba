@@ -14,6 +14,7 @@ const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp";
 import { useCustomerContext } from "@/lib/customer-context";
 import { toUIStore } from "@/lib/types";
 import type { Store } from "@/lib/types";
+import { isClosedByRule } from "@/components/store/business-days/types";
 
 const TERMS_SECTIONS = [
   { title: "第1条（適用）", body: "本規約は、ユーザーと運営者との間に成立する、当サービスの利用に関わる一切の関係に適用されます。" },
@@ -118,11 +119,23 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
 
       const { data: hours } = await supabase
         .from("store_business_hours")
-        .select("day_of_week, is_closed, open_time, close_time")
+        .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
         .eq("store_id", store.id);
 
-      const hoursMap = new Map<number, { is_closed: boolean; open_time: string | null; close_time: string | null }>();
+      const hoursMap = new Map<number, { is_closed: boolean; open_time: string | null; close_time: string | null; closed_week_rule: string | null }>();
       (hours || []).forEach((h: any) => hoursMap.set(h.day_of_week, h));
+
+      // 「第2・4」等の隔週ルールを加味した、その日固有の定休日判定（店舗管理画面のカレンダーと同じロジック）
+      const isClosedOn = (d: Date) => {
+        const h = hoursMap.get(d.getDay());
+        if (!h?.is_closed) return false;
+        return isClosedByRule(
+          [{ dayOfWeek: d.getDay(), day: "", rule: h.closed_week_rule ?? "毎週" }],
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate()
+        );
+      };
 
       const { data: orderRules } = await supabase
         .from("store_order_rules")
@@ -151,7 +164,7 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
           }
         } else {
           const yHours = hoursMap.get(yesterdayDow);
-          if (!yHours?.is_closed) {
+          if (!isClosedOn(yesterday)) {
             checkTimeWindow(cutoffMinutes, yHours?.open_time ?? defaultOpen, yHours?.close_time ?? defaultClose, now, setStatus);
             return;
           }
@@ -174,7 +187,7 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
         return;
       }
 
-      if (todayHours?.is_closed) {
+      if (isClosedOn(now)) {
         setStatus({ available: false, reason: "closed_today", acceptStart: null, acceptEnd: null });
         return;
       }

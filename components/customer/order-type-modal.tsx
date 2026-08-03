@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarDays } from "lucide-react";
 import type { Store } from "@/lib/types";
+import { isClosedByRule } from "@/components/store/business-days/types";
 
 interface OrderTypeModalProps {
   open: boolean;
@@ -58,11 +59,23 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
       // store_business_hours から曜日別営業時間を取得
       const { data: hours } = await supabase
         .from("store_business_hours")
-        .select("day_of_week, is_closed, open_time, close_time")
+        .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
         .eq("store_id", store.id);
 
-      const hoursMap = new Map<number, { is_closed: boolean; open_time: string | null; close_time: string | null }>();
+      const hoursMap = new Map<number, { is_closed: boolean; open_time: string | null; close_time: string | null; closed_week_rule: string | null }>();
       (hours || []).forEach((h: any) => hoursMap.set(h.day_of_week, h));
+
+      // 「第2・4」等の隔週ルールを加味した、その日固有の定休日判定（店舗管理画面のカレンダーと同じロジック）
+      const isClosedOn = (d: Date) => {
+        const h = hoursMap.get(d.getDay());
+        if (!h?.is_closed) return false;
+        return isClosedByRule(
+          [{ dayOfWeek: d.getDay(), day: "", rule: h.closed_week_rule ?? "毎週" }],
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate()
+        );
+      };
 
       // store_order_rules からカットオフ時間を取得
       const { data: orderRules } = await supabase
@@ -100,7 +113,7 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
           }
         } else {
           const yHours = hoursMap.get(yesterdayDow);
-          if (!yHours?.is_closed) {
+          if (!isClosedOn(yesterday)) {
             const yOpen = yHours?.open_time ?? defaultOpen;
             const yClose = yHours?.close_time ?? defaultClose;
             checkTimeWindow(cutoffMinutes, yOpen, yClose, now, setStatus);
@@ -128,8 +141,8 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
         return;
       }
 
-      // 曜日別定休日チェック
-      if (todayHours?.is_closed) {
+      // 曜日別定休日チェック（隔週ルールを加味）
+      if (isClosedOn(now)) {
         setStatus({ available: false, reason: "closed_today", acceptStart: null, acceptEnd: null });
         return;
       }

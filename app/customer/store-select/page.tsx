@@ -10,9 +10,9 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 interface ChildStore {
   id: string;
   name: string;
-  logo_url: string | null;
   image: string | null;
   address: string | null;
+  postal_code: string | null;
   orderCount: number;
 }
 
@@ -35,7 +35,7 @@ export default function StoreSelectPage() {
       try {
         const { data: childStores, error } = await supabase
           .from("stores")
-          .select("id, name, logo_url, image, address")
+          .select("id, name, image, address, postal_code")
           .eq("parent_store_id", masterStoreId)
           .eq("is_active", true);
 
@@ -89,7 +89,7 @@ export default function StoreSelectPage() {
         <p className="text-sm text-gray-500 mb-6">お受け取りする店舗をお選びください</p>
       </div>
 
-      <div className="px-4 max-w-md mx-auto space-y-3 pb-10">
+      <div className="px-4 max-w-md mx-auto space-y-4 pb-10">
         {stores.map((store, i) => (
           <motion.button
             key={store.id}
@@ -97,33 +97,29 @@ export default function StoreSelectPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: i * 0.06 }}
             onClick={() => handleSelect(store.id)}
-            className="w-full flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-amber-300 hover:shadow-md transition-all duration-200 active:scale-[0.98] text-left"
+            className="w-full flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-amber-300 hover:shadow-md transition-all duration-200 active:scale-[0.98] text-left"
           >
-            <div className={`w-14 h-14 rounded-lg border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${store.logo_url || store.image ? "" : "bg-gray-50"}`}>
-              {store.logo_url || store.image ? (
+            <div className="w-full aspect-[4/3] bg-gray-100">
+              {store.image && (
                 <img
-                  src={store.logo_url || store.image || ""}
+                  src={store.image}
                   alt={store.name}
-                  className="w-full h-full object-contain p-1"
+                  className="w-full h-full object-cover"
                 />
-              ) : (
-                <span className="text-[10px] text-gray-600 font-medium text-center leading-tight px-1">
-                  {store.name.slice(0, 4)}
-                </span>
               )}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="p-4">
               <p className="font-bold text-base text-gray-900 leading-snug">{store.name}</p>
+              {store.postal_code && (
+                <p className="text-xs text-gray-500 mt-1">〒{store.postal_code}</p>
+              )}
               {store.address && (
-                <p className="text-xs text-gray-500 mt-0.5">{store.address}</p>
+                <p className="text-xs text-gray-500">{store.address}</p>
               )}
               {store.orderCount > 0 && (
-                <p className="text-xs text-amber-600 mt-0.5">注文回数 {store.orderCount}回</p>
+                <p className="text-xs text-amber-600 mt-1">注文回数 {store.orderCount}回</p>
               )}
             </div>
-            <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
           </motion.button>
         ))}
       </div>

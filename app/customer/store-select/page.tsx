@@ -99,7 +99,7 @@ export default function StoreSelectPage() {
             onClick={() => handleSelect(store.id)}
             className="w-full flex flex-col bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-amber-300 hover:shadow-md transition-all duration-200 active:scale-[0.98] text-left"
           >
-            <div className="w-full h-[200px] bg-gray-100">
+            <div className="w-full h-[150px] bg-gray-100">
               {store.image && (
                 <img
                   src={store.image}

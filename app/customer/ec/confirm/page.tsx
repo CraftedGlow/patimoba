@@ -46,6 +46,7 @@ export default function ECConfirmPage() {
   const [email, setEmail] = useState(() => { try { return sessionStorage.getItem("ec_customer_email") ?? "" } catch { return "" } });
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [deliveryTime, setDeliveryTime] = useState("");
+  const [shippingFee, setShippingFee] = useState(0);
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
 
@@ -63,6 +64,7 @@ export default function ECConfirmPage() {
   const [orderedItems, setOrderedItems] = useState<UICartItem[]>([]);
   const [orderDateTime, setOrderDateTime] = useState<Date>(new Date());
   const [orderedSubtotal, setOrderedSubtotal] = useState(0);
+  const [orderedShippingFee, setOrderedShippingFee] = useState(0);
   const [orderedUsedPoints, setOrderedUsedPoints] = useState(0);
   const [orderedTotal, setOrderedTotal] = useState(0);
 
@@ -73,6 +75,8 @@ export default function ECConfirmPage() {
       if (raw) setShippingAddress(JSON.parse(raw));
       const time = sessionStorage.getItem("ec_delivery_time");
       if (time) setDeliveryTime(time);
+      const fee = sessionStorage.getItem("ec_shipping_fee");
+      if (fee) setShippingFee(Number(fee) || 0);
       setHasCardInfo(!!sessionStorage.getItem("patimoba_has_card"));
       setCardLabel(sessionStorage.getItem("patimoba_card_label") || "");
 
@@ -203,8 +207,8 @@ export default function ECConfirmPage() {
         ? Math.min(Number(partialPoints) || 0, availablePoints, subtotal)
         : 0;
 
-  const total = subtotal - usedPoints;
-  const earnedPoints = Math.floor(total / 200); // 100円 = 0.5pt
+  const total = subtotal + shippingFee - usedPoints;
+  const earnedPoints = Math.floor((subtotal - usedPoints) / 200); // 100円 = 0.5pt。送料分にはポイントを付与しない
 
   const handleConfirmOrder = async () => {
     console.log("[ec-confirm] 注文を確定するボタン clicked, total:", total, "userId:", userId);
@@ -257,6 +261,8 @@ export default function ECConfirmPage() {
         subtotal,
         discountAmount: usedPoints,
         notes: notesStr,
+        shippingAddress,
+        deliveryTimeSlot: deliveryTime,
         guestEmail: guestEmailVal,
         customerName: `${lastName} ${firstName}`.trim() || null,
         payjpChargeId: chargeData.chargeId ?? null,
@@ -289,6 +295,7 @@ export default function ECConfirmPage() {
     setOrderedItems([...cartItems]);
     setOrderDateTime(new Date());
     setOrderedSubtotal(subtotal);
+    setOrderedShippingFee(shippingFee);
     setOrderedUsedPoints(usedPoints);
     setOrderedTotal(total);
 
@@ -531,6 +538,10 @@ export default function ECConfirmPage() {
               <span className="text-sm">{subtotal.toLocaleString()}円</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-sm text-gray-600">配送料</span>
+              <span className="text-sm">{shippingFee === 0 ? "無料" : `${shippingFee.toLocaleString()}円`}</span>
+            </div>
+            <div className="flex justify-between">
               <span className="text-sm text-gray-600">ポイント利用</span>
               <span className="text-sm text-gray-500">{pointLabel}</span>
             </div>
@@ -629,6 +640,7 @@ export default function ECConfirmPage() {
         deliveryTime={deliveryTime}
         items={orderedItems}
         subtotal={orderedSubtotal}
+        shippingFee={orderedShippingFee}
         usedPoints={orderedUsedPoints}
         total={orderedTotal}
         storeName={selectedStoreName || "パティモバ"}

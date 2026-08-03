@@ -10,6 +10,7 @@ interface PrintReceiptProps {
   deliveryTime: string
   items: UICartItem[]
   subtotal: number
+  shippingFee?: number
   usedPoints: number
   total: number
   storeName: string
@@ -23,6 +24,7 @@ export function PrintReceipt({
   deliveryTime,
   items,
   subtotal,
+  shippingFee = 0,
   usedPoints,
   total,
   storeName,
@@ -144,6 +146,10 @@ export function PrintReceipt({
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 24, marginBottom: 4 }}>
             <span style={{ color: "#555" }}>小計</span>
             <span style={{ minWidth: 80, textAlign: "right" }}>{fmt(subtotal)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 24, marginBottom: 4 }}>
+            <span style={{ color: "#555" }}>配送料</span>
+            <span style={{ minWidth: 80, textAlign: "right" }}>{shippingFee === 0 ? "無料" : fmt(shippingFee)}</span>
           </div>
           {usedPoints > 0 && (
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 24, marginBottom: 4 }}>

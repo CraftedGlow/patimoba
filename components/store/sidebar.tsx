@@ -25,6 +25,7 @@ const menuItems: MenuItem[] = [
   { label: "商品登録", href: "/store/register" },
   { label: "デコレーション", href: "/store/decorations" },
   { label: "袋", href: "/store/bags" },
+  { label: "配送設定", href: "/store/shipping" },
   { label: "営業日設定", href: "/store/business-days" },
   { label: "レポート", href: "/store/report" },
 ];

@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       .join("\n");
 
     const totalAmount = Number(order.total_amount).toLocaleString();
+    const shippingFeeStr = Number(order.shipping_fee) === 0 ? "無料" : `${Number(order.shipping_fee).toLocaleString()}円`;
 
     const host = req.headers.get("host") ?? "order.patisseriemobile.com";
     const proto = host.startsWith("localhost") ? "http" : "https";
@@ -104,6 +105,7 @@ ${addrStr}
 【ご注文商品】
 ${itemsText}
 -------------------------------
+配送料：${shippingFeeStr}
 合計金額（税込）：${totalAmount}円
 
 配送時間帯：${deliveryTime || "未指定"}

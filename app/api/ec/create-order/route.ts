@@ -1,10 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTINGS, type RegionRate } from "@/lib/shipping-fee";
+import { regionForPrefecture } from "@/lib/constants/regions";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+interface ShippingAddress {
+  postalCode: string;
+  prefecture: string;
+  city: string;
+  address: string;
+  building: string;
+}
+
+async function resolveShippingFee(storeId: string, prefecture: string | undefined, subtotal: number): Promise<number> {
+  if (!prefecture) return 0;
+
+  const { data: settingsRow } = await supabaseAdmin
+    .from("store_shipping_settings")
+    .select("mode, flat_fee, origin_region, free_shipping_enabled, free_shipping_threshold, free_shipping_excludes_special_regions, remote_surcharge")
+    .eq("store_id", storeId)
+    .maybeSingle();
+
+  const settings = settingsRow ? shippingSettingsFromRow(settingsRow) : DEFAULT_SHIPPING_SETTINGS;
+
+  let rates: RegionRate[] = [];
+  if (settings.mode === "region") {
+    const destinationRegion = regionForPrefecture(prefecture);
+    if (destinationRegion) {
+      const { data: overrideRow } = await supabaseAdmin
+        .from("store_shipping_rate_overrides")
+        .select("fee")
+        .eq("store_id", storeId)
+        .eq("destination_region", destinationRegion)
+        .maybeSingle();
+      if (overrideRow) {
+        rates = [{ destinationRegion, fee: overrideRow.fee }];
+      } else if (settings.originRegion) {
+        const { data: masterRow } = await supabaseAdmin
+          .from("shipping_rate_regions")
+          .select("fee")
+          .eq("origin_region", settings.originRegion)
+          .eq("destination_region", destinationRegion)
+          .maybeSingle();
+        if (masterRow) rates = [{ destinationRegion, fee: masterRow.fee }];
+      }
+    }
+  }
+
+  return calculateShippingFee({ settings, rates, destinationPrefecture: prefecture, subtotal });
+}
 
 interface CartItem {
   productId: string;
@@ -44,6 +92,8 @@ export async function POST(req: NextRequest) {
       subtotal,
       discountAmount,
       notes,
+      shippingAddress,
+      deliveryTimeSlot,
       guestEmail,
       customerName,
       payjpChargeId,
@@ -55,6 +105,8 @@ export async function POST(req: NextRequest) {
       subtotal: number;
       discountAmount: number;
       notes?: string;
+      shippingAddress?: ShippingAddress | null;
+      deliveryTimeSlot?: string | null;
       guestEmail?: string | null;
       customerName?: string | null;
       payjpChargeId?: string | null;
@@ -64,7 +116,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "storeId and items are required" }, { status: 400 });
     }
 
-    const totalAmount = subtotal - (discountAmount ?? 0);
+    // 送料はクライアントの申告値を信用せず、店舗設定に基づきサーバー側で再計算する
+    const shippingFee = await resolveShippingFee(storeId, shippingAddress?.prefecture, subtotal);
+    const totalAmount = subtotal - (discountAmount ?? 0) + shippingFee;
 
     // EC は配送日フィールドがないため作成から24時間をキャンセル期限とする
     const cancelDeadlineAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
@@ -80,6 +134,13 @@ export async function POST(req: NextRequest) {
         subtotal,
         discount_amount: discountAmount ?? 0,
         total_amount: totalAmount,
+        shipping_fee: shippingFee,
+        shipping_postal_code: shippingAddress?.postalCode ?? null,
+        shipping_prefecture: shippingAddress?.prefecture ?? null,
+        shipping_city: shippingAddress?.city ?? null,
+        shipping_address: shippingAddress?.address ?? null,
+        shipping_building: shippingAddress?.building ?? null,
+        delivery_time_slot: deliveryTimeSlot ?? null,
         pickup_date: null,
         pickup_time: null,
         notes: notes ?? "",

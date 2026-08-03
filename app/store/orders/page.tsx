@@ -650,6 +650,9 @@ export default function StoreOrdersPage() {
                         <span className={`ml-1.5 text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
                           {order.paymentStatus}
                         </span>
+                        {isEc && !!order.shippingFee && (
+                          <span className="block text-[10px] text-gray-500">内送料¥{order.shippingFee.toLocaleString()}</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         {order.fulfilledAt && (
@@ -764,6 +767,9 @@ export default function StoreOrdersPage() {
                     <div className={`text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
                       {order.paymentStatus}
                     </div>
+                    {isEc && !!order.shippingFee && (
+                      <div className="text-[10px] text-gray-500">内送料¥{order.shippingFee.toLocaleString()}</div>
+                    )}
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <motion.button
@@ -928,6 +934,9 @@ export default function StoreOrdersPage() {
                         <span className={`ml-1.5 text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
                           {order.paymentStatus}
                         </span>
+                        {isEc && !!order.shippingFee && (
+                          <span className="block text-[10px] text-gray-500">内送料¥{order.shippingFee.toLocaleString()}</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         {isFulfilled && order.fulfilledAt && (
@@ -1020,6 +1029,9 @@ export default function StoreOrdersPage() {
                     <div className={`text-xs ${order.paymentStatus === "決済済み" ? "text-green-600" : order.paymentStatus === "店頭支払い" || order.paymentStatus === "銀行振込" ? "text-blue-600" : "text-gray-500"}`}>
                       {order.paymentStatus}
                     </div>
+                    {isEc && !!order.shippingFee && (
+                      <div className="text-[10px] text-gray-500">内送料¥{order.shippingFee.toLocaleString()}</div>
+                    )}
                   </div>
                   <div className="flex flex-col items-center gap-1">
                     <span className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ${isFulfilled ? "bg-amber-400 text-white" : "bg-gray-200 text-gray-700"}`}>

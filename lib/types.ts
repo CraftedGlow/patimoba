@@ -90,6 +90,7 @@ export interface Order {
   fulfilledAt: string | null
   fulfilledBy: string | null
   notes?: string
+  shippingFee?: number
   printPhotoUrl?: string | null
   createdAt: string
 }
@@ -386,6 +387,7 @@ export function toUIOrder(row: any): Order {
     fulfilledAt: row.fulfilled_at || null,
     fulfilledBy: row.fulfilled_by || null,
     notes: row.notes || undefined,
+    shippingFee: Number(row.shipping_fee) || 0,
     printPhotoUrl: row.print_photo_url || null,
     createdAt: row.created_at || new Date().toISOString(),
   }

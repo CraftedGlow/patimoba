@@ -452,7 +452,7 @@ export default function TakeoutProductDetailPage() {
                   {/* Step 2: デザイン選択 */}
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-gray-600">デザインを選択</p>
-                    <p className="text-[11px] text-gray-400">※写真はイメージです</p>
+                    <p className="text-[11px] text-gray-400">用途と名前・会社名を選択できます</p>
                     <div className="grid grid-cols-2 gap-2">
                       {noshiItems.map((n) => {
                         const active = selectedNoshiId === n.id;

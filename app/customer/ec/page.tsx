@@ -95,7 +95,7 @@ export default function ECStorePage() {
                   onClick={() => handleStoreClick(store)}
                 >
                   <div className="border border-gray-200 rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-200 active:scale-[0.98]">
-                    <div className="w-14 h-14 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    <div className={`w-14 h-14 rounded-lg border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${store.logoUrl || store.image ? "" : "bg-gray-50"}`}>
                       {store.logoUrl || store.image ? (
                         <img
                           src={store.logoUrl || store.image}

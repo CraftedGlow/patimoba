@@ -37,7 +37,7 @@ function StoreCard({
         onClick={!stopped ? onSelect : undefined}
         className={`flex items-center gap-4 flex-1 min-w-0 text-left ${!stopped ? "cursor-pointer" : "cursor-default"}`}
       >
-        <div className={`w-14 h-14 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${stopped ? "opacity-40" : ""}`}>
+        <div className={`w-14 h-14 rounded-lg border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${store.logoUrl || store.image ? "" : "bg-gray-50"} ${stopped ? "opacity-40" : ""}`}>
           {store.logoUrl || store.image ? (
             <img
               src={store.logoUrl || store.image}

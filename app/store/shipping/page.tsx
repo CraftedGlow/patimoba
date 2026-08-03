@@ -7,6 +7,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { REGION_BLOCKS, regionForPrefecture } from "@/lib/constants/regions";
+import { FALLBACK_FLAT_FEE } from "@/lib/shipping-fee";
 
 interface ShippingSettingsRow {
   mode: "flat" | "region";
@@ -20,7 +21,7 @@ interface ShippingSettingsRow {
 
 const DEFAULTS: ShippingSettingsRow = {
   mode: "flat",
-  flat_fee: 0,
+  flat_fee: FALLBACK_FLAT_FEE,
   origin_region: null,
   free_shipping_enabled: false,
   free_shipping_threshold: null,
@@ -47,12 +48,11 @@ export default function StoreShippingPage() {
   const load = useCallback(async () => {
     if (!storeId) { setLoading(false); return; }
 
-    const { data: settingsRow } = await supabase
+    let { data: settingsRow } = await supabase
       .from("store_shipping_settings")
       .select("mode, flat_fee, origin_region, free_shipping_enabled, free_shipping_threshold, free_shipping_excludes_special_regions, remote_surcharge")
       .eq("store_id", storeId)
       .maybeSingle();
-    if (settingsRow) setSettings(settingsRow as ShippingSettingsRow);
 
     // 発送元を店舗の郵便番号から自動判定
     let resolvedOrigin: string | null = settingsRow?.origin_region ?? null;
@@ -77,6 +77,27 @@ export default function StoreShippingPage() {
       }
     }
     setOriginRegion(resolvedOrigin);
+
+    // 未設定の店舗は、何もしなくても妥当な既定値がすぐ保存された状態になるようにする
+    if (!settingsRow) {
+      const defaultPayload = {
+        store_id: storeId,
+        mode: (resolvedOrigin ? "region" : "flat") as "flat" | "region",
+        flat_fee: FALLBACK_FLAT_FEE,
+        origin_region: resolvedOrigin,
+        free_shipping_enabled: false,
+        free_shipping_threshold: null,
+        free_shipping_excludes_special_regions: true,
+        remote_surcharge: 0,
+      };
+      const { data: inserted } = await supabase
+        .from("store_shipping_settings")
+        .insert(defaultPayload)
+        .select("mode, flat_fee, origin_region, free_shipping_enabled, free_shipping_threshold, free_shipping_excludes_special_regions, remote_surcharge")
+        .maybeSingle();
+      settingsRow = inserted ?? defaultPayload;
+    }
+    setSettings(settingsRow as ShippingSettingsRow);
 
     if (resolvedOrigin) {
       const { data: masterRows } = await supabase

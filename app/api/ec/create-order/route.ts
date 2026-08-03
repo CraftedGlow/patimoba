@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTINGS, type RegionRate } from "@/lib/shipping-fee";
+import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTINGS, FALLBACK_FLAT_FEE, type RegionRate } from "@/lib/shipping-fee";
 import { regionForPrefecture } from "@/lib/constants/regions";
 
 const supabaseAdmin = createClient(
@@ -16,14 +16,62 @@ interface ShippingAddress {
   building: string;
 }
 
+const SHIPPING_SETTINGS_COLUMNS = "mode, flat_fee, origin_region, free_shipping_enabled, free_shipping_threshold, free_shipping_excludes_special_regions, remote_surcharge";
+
+async function resolveOriginRegionForStore(storeId: string): Promise<string | null> {
+  const { data: store } = await supabaseAdmin.from("stores").select("postal_code").eq("id", storeId).maybeSingle();
+  const digits = (store?.postal_code ?? "").replace(/[^0-9]/g, "");
+  if (digits.length !== 7) return null;
+  try {
+    const res = await fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${digits}`, { cache: "no-store" });
+    const data = await res.json();
+    const prefecture = data?.results?.[0]?.address1 as string | undefined;
+    return prefecture ? regionForPrefecture(prefecture) : null;
+  } catch {
+    return null;
+  }
+}
+
+// 配送設定が未保存の店舗が無言で送料0円にならないよう、初回利用時に妥当な既定値(地域別料金＋自動判定した発地、
+// 判定不能なら一律料金のフォールバック額)を実際に保存しておく。以後は店舗が /store/shipping からいつでも変更できる。
+async function ensureShippingSettings(storeId: string) {
+  const originRegion = await resolveOriginRegionForStore(storeId);
+  const payload = {
+    store_id: storeId,
+    mode: originRegion ? "region" : "flat",
+    flat_fee: FALLBACK_FLAT_FEE,
+    origin_region: originRegion,
+    free_shipping_enabled: false,
+    free_shipping_threshold: null,
+    free_shipping_excludes_special_regions: true,
+    remote_surcharge: 0,
+  };
+  const { data } = await supabaseAdmin
+    .from("store_shipping_settings")
+    .insert(payload)
+    .select(SHIPPING_SETTINGS_COLUMNS)
+    .maybeSingle();
+  if (data) return data;
+
+  // 競合(同時に別の注文が先に既定値を保存した)の場合はその行を読み直す
+  const { data: existing } = await supabaseAdmin
+    .from("store_shipping_settings")
+    .select(SHIPPING_SETTINGS_COLUMNS)
+    .eq("store_id", storeId)
+    .maybeSingle();
+  return existing;
+}
+
 async function resolveShippingFee(storeId: string, prefecture: string | undefined, subtotal: number): Promise<number> {
   if (!prefecture) return 0;
 
-  const { data: settingsRow } = await supabaseAdmin
+  let settingsRow = (await supabaseAdmin
     .from("store_shipping_settings")
-    .select("mode, flat_fee, origin_region, free_shipping_enabled, free_shipping_threshold, free_shipping_excludes_special_regions, remote_surcharge")
+    .select(SHIPPING_SETTINGS_COLUMNS)
     .eq("store_id", storeId)
-    .maybeSingle();
+    .maybeSingle()).data;
+
+  if (!settingsRow) settingsRow = await ensureShippingSettings(storeId);
 
   const settings = settingsRow ? shippingSettingsFromRow(settingsRow) : DEFAULT_SHIPPING_SETTINGS;
 
@@ -71,6 +119,7 @@ interface CartItem {
     messagePlate?: string;
     allergyNote?: string;
     customOptions?: { name: string; values: string[]; additionalPrice: number }[];
+    noshi?: { id: string; name: string; purpose?: string; displayName?: string; price: number };
   };
 }
 
@@ -79,7 +128,8 @@ function calcItemSubtotal(item: CartItem): number {
   if (!c) return item.price * item.quantity;
   const candleSum = (c.candles || []).reduce((s, cd) => s + cd.price * cd.quantity, 0);
   const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0);
-  return (item.price * item.quantity) + ((c.sizePrice ?? 0) + candleSum + optionSum) * item.quantity;
+  const noshiPrice = c.noshi?.price ?? 0;
+  return (item.price * item.quantity) + ((c.sizePrice ?? 0) + candleSum + optionSum + noshiPrice) * item.quantity;
 }
 
 export async function POST(req: NextRequest) {
@@ -179,53 +229,83 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const insertedId = insertedItems?.[i]?.id;
-      if (!item.isCustomCake || !item.customization || !insertedId) continue;
+      if (!item.customization || !insertedId) continue;
       const c = item.customization;
 
       const options: any[] = [];
-      if (c.sizeId) {
+
+      if (item.isCustomCake) {
+        if (c.sizeId) {
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "サイズ",
+            option_item_name_snapshot: c.sizeLabel ?? "",
+            price_delta: c.sizePrice ?? 0,
+          });
+        }
+        for (const cd of c.candles || []) {
+          if (!cd.candleOptionId || cd.quantity <= 0) continue;
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "ろうそく",
+            option_item_name_snapshot: cd.name,
+            price_delta: cd.price,
+            quantity: cd.quantity,
+          });
+        }
+        for (const op of c.options || []) {
+          if (!op.wholeCakeOptionId) continue;
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: op.groupName ?? "デコレーション",
+            option_item_name_snapshot: op.name,
+            price_delta: op.price,
+          });
+        }
+        if (c.messagePlate) {
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "メッセージ",
+            option_item_name_snapshot: c.messagePlate,
+            price_delta: 0,
+          });
+        }
+        if (c.allergyNote) {
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "アレルギー",
+            option_item_name_snapshot: c.allergyNote,
+            price_delta: 0,
+          });
+        }
+      }
+
+      // のしは商品種別を問わず対象（customer/orders 詳細ページが同じ option_group_name_snapshot を参照する）
+      if (c.noshi) {
         options.push({
           order_item_id: insertedId,
-          option_group_name_snapshot: "サイズ",
-          option_item_name_snapshot: c.sizeLabel ?? "",
-          price_delta: c.sizePrice ?? 0,
+          option_group_name_snapshot: "のし",
+          option_item_name_snapshot: c.noshi.name,
+          price_delta: c.noshi.price || 0,
         });
+        if (c.noshi.purpose) {
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "のし用途",
+            option_item_name_snapshot: c.noshi.purpose,
+            price_delta: 0,
+          });
+        }
+        if (c.noshi.displayName) {
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "のし名前",
+            option_item_name_snapshot: c.noshi.displayName,
+            price_delta: 0,
+          });
+        }
       }
-      for (const cd of c.candles || []) {
-        if (!cd.candleOptionId || cd.quantity <= 0) continue;
-        options.push({
-          order_item_id: insertedId,
-          option_group_name_snapshot: "ろうそく",
-          option_item_name_snapshot: cd.name,
-          price_delta: cd.price,
-          quantity: cd.quantity,
-        });
-      }
-      for (const op of c.options || []) {
-        if (!op.wholeCakeOptionId) continue;
-        options.push({
-          order_item_id: insertedId,
-          option_group_name_snapshot: op.groupName ?? "デコレーション",
-          option_item_name_snapshot: op.name,
-          price_delta: op.price,
-        });
-      }
-      if (c.messagePlate) {
-        options.push({
-          order_item_id: insertedId,
-          option_group_name_snapshot: "メッセージ",
-          option_item_name_snapshot: c.messagePlate,
-          price_delta: 0,
-        });
-      }
-      if (c.allergyNote) {
-        options.push({
-          order_item_id: insertedId,
-          option_group_name_snapshot: "アレルギー",
-          option_item_name_snapshot: c.allergyNote,
-          price_delta: 0,
-        });
-      }
+
       if (options.length > 0) {
         await supabaseAdmin.from("order_item_options").insert(options);
       }

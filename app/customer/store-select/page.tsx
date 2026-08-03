@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -13,6 +12,7 @@ interface ChildStore {
   name: string;
   logo_url: string | null;
   image: string | null;
+  address: string | null;
   orderCount: number;
 }
 
@@ -35,7 +35,7 @@ export default function StoreSelectPage() {
       try {
         const { data: childStores, error } = await supabase
           .from("stores")
-          .select("id, name, logo_url, image")
+          .select("id, name, logo_url, image, address")
           .eq("parent_store_id", masterStoreId)
           .eq("is_active", true);
 
@@ -83,18 +83,10 @@ export default function StoreSelectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/40 to-white">
+    <div className="min-h-screen bg-white">
       <div className="flex flex-col items-center pt-10 pb-6 px-4">
-        <Image
-          src="/パティモバ　ロゴ.png"
-          alt="パティモバ"
-          width={160}
-          height={46}
-          className="w-[160px] h-auto mb-8"
-          priority
-        />
         <h1 className="text-lg font-bold text-gray-900 mb-1">店舗を選択してください</h1>
-        <p className="text-sm text-gray-500 mb-6">ご注文される店舗をお選びください</p>
+        <p className="text-sm text-gray-500 mb-6">お受け取りする店舗をお選びください</p>
       </div>
 
       <div className="px-4 max-w-md mx-auto space-y-3 pb-10">
@@ -107,7 +99,7 @@ export default function StoreSelectPage() {
             onClick={() => handleSelect(store.id)}
             className="w-full flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-amber-300 hover:shadow-md transition-all duration-200 active:scale-[0.98] text-left"
           >
-            <div className="w-14 h-14 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+            <div className={`w-14 h-14 rounded-lg border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${store.logo_url || store.image ? "" : "bg-gray-50"}`}>
               {store.logo_url || store.image ? (
                 <img
                   src={store.logo_url || store.image || ""}
@@ -121,7 +113,10 @@ export default function StoreSelectPage() {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-base text-gray-900 truncate">{store.name}</p>
+              <p className="font-bold text-base text-gray-900 leading-snug">{store.name}</p>
+              {store.address && (
+                <p className="text-xs text-gray-500 mt-0.5">{store.address}</p>
+              )}
               {store.orderCount > 0 && (
                 <p className="text-xs text-amber-600 mt-0.5">注文回数 {store.orderCount}回</p>
               )}

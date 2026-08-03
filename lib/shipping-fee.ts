@@ -15,9 +15,12 @@ export interface RegionRate {
   fee: number
 }
 
+/** 配送設定が未保存の店舗に使う最後の安全網（無言で送料0円にしないための金額） */
+export const FALLBACK_FLAT_FEE = 800
+
 export const DEFAULT_SHIPPING_SETTINGS: ShippingSettings = {
   mode: "flat",
-  flatFee: 0,
+  flatFee: FALLBACK_FLAT_FEE,
   originRegion: null,
   freeShippingEnabled: false,
   freeShippingThreshold: null,

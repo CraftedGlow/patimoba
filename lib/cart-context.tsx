@@ -190,7 +190,8 @@ export function CartProvider({ children, storageKey = DEFAULT_STORAGE_KEY }: { c
         (s, o) => s + (o.additionalPrice || 0),
         0
       )
-      itemTotal += (candleTotal + optionTotal + customOptTotal) * item.quantity
+      const noshiTotal = c.noshi?.price ?? 0
+      itemTotal += (candleTotal + optionTotal + customOptTotal + noshiTotal) * item.quantity
     }
     return sum + itemTotal
   }, 0)

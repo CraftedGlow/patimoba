@@ -238,7 +238,7 @@ export function OrderTypeModal({
               </p>
 
               <div className="flex items-center justify-center gap-2 mt-4 mb-5">
-                <div className="w-8 h-8 rounded-md bg-gray-50 border border-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0">
+                <div className={`w-8 h-8 rounded-md border border-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0 ${store.logoUrl || store.image ? "" : "bg-gray-50"}`}>
                   {store.logoUrl || store.image ? (
                     <img
                       src={store.logoUrl || store.image}

@@ -511,6 +511,7 @@ export default function ECConfirmPage() {
                 ...(c?.candles ?? []).map((cd) => cd.price * cd.quantity),
                 ...(c?.options ?? []).map((op) => op.price),
                 ...(c?.customOptions ?? []).map((o) => o.additionalPrice || 0),
+                c?.noshi?.price ?? 0,
               ].reduce((s, v) => s + v, 0);
               const lineTotal = (item.price + optSum) * item.quantity;
               return (
@@ -523,6 +524,11 @@ export default function ECConfirmPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
                     {c?.sizeLabel && <p className="text-xs text-gray-500">{c.sizeLabel}</p>}
+                    {c?.noshi && (
+                      <p className="text-xs text-gray-500">
+                        のし：{c.noshi.name}{c.noshi.purpose && `（${c.noshi.purpose}）`}{c.noshi.displayName && `「${c.noshi.displayName}」`}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold">¥{lineTotal.toLocaleString()}</p>

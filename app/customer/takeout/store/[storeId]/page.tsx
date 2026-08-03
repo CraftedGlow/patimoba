@@ -371,14 +371,22 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             transition={{ duration: 0.45 }}
             className="absolute top-10 left-0 right-0 flex justify-center"
           >
-            <Image
-              src="/パティモバ　ロゴ.png"
-              alt="パティモバ"
-              width={200}
-              height={57}
-              className="w-[200px] h-auto"
-              priority
-            />
+            {store?.logoUrl ? (
+              <img
+                src={store.logoUrl}
+                alt={store.name}
+                className="w-[200px] h-auto max-h-24 object-contain"
+              />
+            ) : (
+              <Image
+                src="/パティモバ　ロゴ.png"
+                alt="パティモバ"
+                width={200}
+                height={57}
+                className="w-[200px] h-auto"
+                priority
+              />
+            )}
           </motion.div>
           <motion.div
             initial={{ opacity: 0 }}

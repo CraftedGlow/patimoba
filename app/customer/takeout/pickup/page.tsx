@@ -80,6 +80,7 @@ export default function TakeoutPickupPage() {
   const [prepMinutes, setPrepMinutes] = useState(90);
   const [leadTimeMinutes, setLeadTimeMinutes] = useState(60);
   const [minFutureDays, setMinFutureDays] = useState(2);
+  const [maxFutureDays, setMaxFutureDays] = useState(30);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   // 特定日の営業状況 override: key = "YYYY-MM-DD"
   const [businessDayOverrides, setBusinessDayOverrides] = useState<Record<string, boolean>>({});
@@ -105,7 +106,7 @@ export default function TakeoutPickupPage() {
         // 店舗設定
         const { data: rules } = await supabase
           .from("store_order_rules")
-          .select("default_cutoff_time, default_lead_time_minutes, min_future_days")
+          .select("default_cutoff_time, default_lead_time_minutes, min_future_days, max_future_days")
           .eq("store_id", storeId)
           .maybeSingle();
         const prepMin = rules?.default_cutoff_time ? Number(rules.default_cutoff_time) : 90;
@@ -113,6 +114,7 @@ export default function TakeoutPickupPage() {
         setPrepMinutes(isNaN(prepMin) ? 90 : prepMin);
         setLeadTimeMinutes(rules?.default_lead_time_minutes ?? 60);
         setMinFutureDays(minFuture);
+        setMaxFutureDays(rules?.max_future_days ?? 30);
 
         // 曜日別営業時間
         const { data: bhRows } = await supabase
@@ -203,14 +205,28 @@ export default function TakeoutPickupPage() {
     return !isBusinessHourClosedOn(bh, date);
   };
 
+  // 最低事前日数（休業日は日数にカウントせず、営業日ベースで数える）
+  const minDate = (() => {
+    const d = new Date(today);
+    let counted = 0;
+    while (counted < maxPreparationDays) {
+      d.setDate(d.getDate() + 1);
+      if (isDateOpen(d)) counted++;
+    }
+    return d;
+  })();
+
   const isDateSelectable = (day: number): boolean => {
     const date = new Date(currentYear, currentMonth, day);
     date.setHours(0, 0, 0, 0);
 
     // 最低事前日数チェック
-    const minDate = new Date(today);
-    minDate.setDate(today.getDate() + maxPreparationDays);
     if (date < minDate) return false;
+
+    // 予約受付上限日数チェック
+    const maxDate = new Date(today);
+    maxDate.setDate(today.getDate() + maxFutureDays);
+    if (date > maxDate) return false;
 
     // 期間限定: 開始日チェック
     if (limitedFrom) {

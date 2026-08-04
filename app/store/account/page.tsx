@@ -26,6 +26,8 @@ const PREP_TIME_OPTIONS = ["0.5", "1", "1.5", "2", "2.5", "3"];
 
 const MIN_FUTURE_DAYS_OPTIONS = Array.from({ length: 14 }, (_, i) => String(i + 1));
 
+const MAX_FUTURE_DAYS_OPTIONS = ["7", "14", "21", "30", "45", "60", "90"];
+
 const WEEKDAYS = [
   { label: "日", value: 0 },
   { label: "月", value: 1 },
@@ -36,7 +38,7 @@ const WEEKDAYS = [
   { label: "土", value: 6 },
 ];
 
-type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "holidays" | "blackout_add" | "walkin_confirm" | "saved" | null;
+type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "max_future_days" | "holidays" | "blackout_add" | "walkin_confirm" | "saved" | null;
 
 interface BlackoutPeriod {
   id: string;
@@ -113,6 +115,7 @@ export default function StoreAccountPage() {
   const [cutoffHours, setCutoffHours] = useState("3");
   const [prepTimeHours, setPrepTimeHours] = useState("1.5");
   const [minFutureDays, setMinFutureDays] = useState("2");
+  const [maxFutureDays, setMaxFutureDays] = useState("30");
   const [acceptsWalkin, setAcceptsWalkin] = useState(true);
   const [pendingWalkin, setPendingWalkin] = useState(true);
 
@@ -121,6 +124,7 @@ export default function StoreAccountPage() {
   const [modalCutoff, setModalCutoff] = useState(cutoffHours);
   const [modalPrepTime, setModalPrepTime] = useState(prepTimeHours);
   const [modalMinFutureDays, setModalMinFutureDays] = useState(minFutureDays);
+  const [modalMaxFutureDays, setModalMaxFutureDays] = useState(maxFutureDays);
 
   const [modal, setModal] = useState<ModalKind>(null);
   const [holidays, setHolidays] = useState<{ day: string; freq: string; dayOfWeek: number }[]>([]);
@@ -156,7 +160,7 @@ export default function StoreAccountPage() {
         // store_order_rules から当日受付設定を取得
         const { data: orderRules } = await supabase
           .from("store_order_rules")
-          .select("default_cutoff_time, default_lead_time_minutes, min_future_days")
+          .select("default_cutoff_time, default_lead_time_minutes, min_future_days, max_future_days")
           .eq("store_id", store.id)
           .maybeSingle();
         if (orderRules?.default_lead_time_minutes != null) {
@@ -171,6 +175,9 @@ export default function StoreAccountPage() {
         }
         if (orderRules?.min_future_days != null) {
           setMinFutureDays(String(orderRules.min_future_days));
+        }
+        if (orderRules?.max_future_days != null) {
+          setMaxFutureDays(String(orderRules.max_future_days));
         }
 
         setAcceptsWalkin(store.accepts_walkin ?? true);
@@ -232,6 +239,11 @@ export default function StoreAccountPage() {
     setModal("min_future_days");
   }, [minFutureDays]);
 
+  const openMaxFutureDaysModal = useCallback(() => {
+    setModalMaxFutureDays(maxFutureDays);
+    setModal("max_future_days");
+  }, [maxFutureDays]);
+
   const saveHours = useCallback(async () => {
     setSaving(true);
     try {
@@ -291,6 +303,11 @@ export default function StoreAccountPage() {
     await upsertOrderRules({ min_future_days: Number(modalMinFutureDays) });
     setMinFutureDays(modalMinFutureDays);
   }, [modalMinFutureDays, upsertOrderRules]);
+
+  const saveMaxFutureDays = useCallback(async () => {
+    await upsertOrderRules({ max_future_days: Number(modalMaxFutureDays) });
+    setMaxFutureDays(modalMaxFutureDays);
+  }, [modalMaxFutureDays, upsertOrderRules]);
 
   const addBlackoutPeriod = useCallback(async () => {
     if (!storeId || !newBlackoutFrom || !newBlackoutTo) return;
@@ -760,6 +777,26 @@ export default function StoreAccountPage() {
           </div>
 
           <div>
+            <p className="text-sm text-gray-500 mb-2">予約受付の上限日数</p>
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-semibold">
+                {maxFutureDays}{" "}
+                <span className="text-sm font-normal text-gray-500">日先まで</span>
+              </span>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={openMaxFutureDaysModal}
+                className="px-4 py-1.5 rounded-md bg-amber-400 text-white text-sm font-bold hover:bg-amber-500 transition-colors"
+              >
+                変更
+              </motion.button>
+            </div>
+            <p className="text-xs text-gray-600 mt-1">今日から何日先までの予約を受け付けるか</p>
+          </div>
+
+          <div>
             <p className="text-sm text-gray-500 mb-2">当日受付</p>
             <div className="flex items-center gap-3">
               <button
@@ -1067,6 +1104,41 @@ export default function StoreAccountPage() {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={saveMinFutureDays}
+                disabled={saving}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <LineSpinner size={16} />}
+                保存
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modal === "max_future_days" && (
+          <Modal key="max_future_days" onClose={() => setModal(null)}>
+            <h2 className="text-lg font-bold text-center mb-6">
+              予約受付上限日数の変更
+            </h2>
+            <p className="text-sm text-gray-500 text-center mb-4">今日から何日先までの予約を受け付けるか</p>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <select
+                value={modalMaxFutureDays}
+                onChange={(e) => setModalMaxFutureDays(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+              >
+                {MAX_FUTURE_DAYS_OPTIONS.map((v) => (
+                  <option key={v} value={v}>
+                    {v}日先まで
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-center">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={saveMaxFutureDays}
                 disabled={saving}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >

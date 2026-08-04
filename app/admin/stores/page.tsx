@@ -333,7 +333,13 @@ export default function AdminStoresPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-bold text-base">{store.name ?? "未設定"}</h3>
-                        <StatusBadge active={isActive} />
+                        {store.is_dev_only ? (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                            開発用
+                          </span>
+                        ) : (
+                          <StatusBadge active={isActive} />
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-2 sm:gap-4 items-start mt-1">

@@ -1392,6 +1392,7 @@ export type Database = {
           invoice_number: string | null
           is_active: boolean
           is_corporate_ready: boolean
+          is_dev_only: boolean
           is_master: boolean
           is_published: boolean
           liff_id: string | null
@@ -1431,6 +1432,7 @@ export type Database = {
           invoice_number?: string | null
           is_active?: boolean
           is_corporate_ready?: boolean
+          is_dev_only?: boolean
           is_master?: boolean
           is_published?: boolean
           liff_id?: string | null
@@ -1470,6 +1472,7 @@ export type Database = {
           invoice_number?: string | null
           is_active?: boolean
           is_corporate_ready?: boolean
+          is_dev_only?: boolean
           is_master?: boolean
           is_published?: boolean
           liff_id?: string | null

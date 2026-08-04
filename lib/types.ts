@@ -125,6 +125,7 @@ export interface Store {
   plan: StorePlan
   acceptsWalkin: boolean
   isPublished: boolean
+  isDevOnly: boolean
 }
 
 export interface WholeCakeSize {
@@ -275,6 +276,7 @@ export function toUIStore(row: StoreRow): Store {
     plan: normalizeStorePlan(row.plan),
     acceptsWalkin: row.accepts_walkin ?? true,
     isPublished: row.is_published ?? false,
+    isDevOnly: row.is_dev_only ?? false,
   }
 }
 

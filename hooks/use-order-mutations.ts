@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase"
 import type { OrderStatus, UICartItem } from "@/lib/types"
+import { isDevOnlyStoreVisible } from "@/lib/store-visibility"
 
 interface CreateOrderInput {
   storeId: string
@@ -44,6 +45,16 @@ export function useOrderMutations() {
     const derived = deriveOrderType(input.items, input.orderType)
     if (derived.error) {
       return { orderId: "", error: derived.error }
+    }
+
+    // 開発用の架空店舗は本番環境では注文を作成できない
+    const { data: storeRow } = await supabase
+      .from("stores")
+      .select("is_dev_only")
+      .eq("id", input.storeId)
+      .maybeSingle()
+    if (!isDevOnlyStoreVisible(storeRow?.is_dev_only)) {
+      return { orderId: "", error: "この店舗では注文できません" }
     }
 
     const cancelDeadlineAt = (() => {

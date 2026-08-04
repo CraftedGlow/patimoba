@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { LineSpinner } from "@/components/ui/line-spinner";
+import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
 
 interface ChildStore {
   id: string;
@@ -13,6 +14,7 @@ interface ChildStore {
   image: string | null;
   address: string | null;
   postal_code: string | null;
+  is_dev_only: boolean;
   orderCount: number;
 }
 
@@ -33,14 +35,15 @@ export default function StoreSelectPage() {
 
     (async () => {
       try {
-        const { data: childStores, error } = await supabase
+        const { data: rows, error } = await supabase
           .from("stores")
-          .select("id, name, image, address, postal_code")
+          .select("id, name, image, address, postal_code, is_dev_only")
           .eq("parent_store_id", masterStoreId)
           .eq("is_active", true);
 
         if (error) throw error;
-        if (!childStores || childStores.length === 0) {
+        const childStores = (rows || []).filter((s) => isDevOnlyStoreVisible(s.is_dev_only));
+        if (childStores.length === 0) {
           router.replace("/customer/takeout");
           return;
         }

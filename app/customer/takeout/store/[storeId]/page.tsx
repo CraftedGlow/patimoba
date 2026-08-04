@@ -15,6 +15,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { toUIStore } from "@/lib/types";
 import type { Store } from "@/lib/types";
 import { isClosedByRule } from "@/components/store/business-days/types";
+import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
 
 const TERMS_SECTIONS = [
   { title: "第1条（適用）", body: "本規約は、ユーザーと運営者との間に成立する、当サービスの利用に関わる一切の関係に適用されます。" },
@@ -350,6 +351,10 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       if (storeRow) {
         if (storeRow.is_master) {
           router.replace(`/customer/store-select?master=${params.storeId}`);
+          return;
+        }
+        if (!isDevOnlyStoreVisible(storeRow.is_dev_only)) {
+          router.replace("/customer/takeout");
           return;
         }
         const uiStore = toUIStore(storeRow);

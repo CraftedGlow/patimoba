@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTINGS, FALLBACK_FLAT_FEE, type RegionRate } from "@/lib/shipping-fee";
 import { regionForPrefecture } from "@/lib/constants/regions";
+import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -164,6 +165,16 @@ export async function POST(req: NextRequest) {
 
     if (!storeId || !items?.length) {
       return NextResponse.json({ error: "storeId and items are required" }, { status: 400 });
+    }
+
+    // 開発用の架空店舗は本番環境では注文を作成できない
+    const { data: storeRow } = await supabaseAdmin
+      .from("stores")
+      .select("is_dev_only")
+      .eq("id", storeId)
+      .maybeSingle();
+    if (!isDevOnlyStoreVisible(storeRow?.is_dev_only)) {
+      return NextResponse.json({ error: "この店舗では注文できません" }, { status: 400 });
     }
 
     // 送料はクライアントの申告値を信用せず、店舗設定に基づきサーバー側で再計算する

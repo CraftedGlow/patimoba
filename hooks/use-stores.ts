@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { Store, toUIStore } from "@/lib/types"
+import { isDevOnlyStoreVisible } from "@/lib/store-visibility"
 
 export function useStores() {
   const [stores, setStores] = useState<Store[]>([])
@@ -20,7 +21,7 @@ export function useStores() {
     if (err) {
       setError(err.message)
     } else {
-      setStores((data || []).map(toUIStore))
+      setStores((data || []).map(toUIStore).filter((s) => isDevOnlyStoreVisible(s.isDevOnly)))
     }
     setLoading(false)
   }

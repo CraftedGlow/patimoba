@@ -68,6 +68,7 @@ export default function AdminStoreEditPage() {
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [invoiceNum, setInvoiceNum] = useState("");
   const [isPublished, setIsPublished] = useState(false);
+  const [isDevOnly, setIsDevOnly] = useState(false);
   const [tokushoText, setTokushoText] = useState("");
   const [privacyPolicyText, setPrivacyPolicyText] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -90,6 +91,7 @@ export default function AdminStoreEditPage() {
       if (Array.isArray(rawOptions)) setSelectedAddons(rawOptions as string[]);
 
       setIsPublished((store as any).is_published ?? false);
+      setIsDevOnly(store.is_dev_only ?? false);
       setInvoiceNum((store as any).invoice_num ?? "");
       setTokushoText((store as any).tokusho_text ?? "");
       setPrivacyPolicyText((store as any).privacy_policy_text ?? "");
@@ -179,6 +181,7 @@ export default function AdminStoreEditPage() {
         tokusho_text: tokushoText || null,
         privacy_policy_text: privacyPolicyText || null,
         is_published: isPublished,
+        is_dev_only: isDevOnly,
       };
       if (logoUrl !== undefined) updates.logo_url = logoUrl;
       if (storeImageUrl !== undefined) updates.image = storeImageUrl;
@@ -236,6 +239,21 @@ export default function AdminStoreEditPage() {
                 />
               </div>
               <span className={`text-sm font-bold w-14 transition-colors ${isPublished ? "text-amber-500" : "text-gray-300"}`}>出店中</span>
+            </button>
+          </Field>
+          <Field label="開発用（本番では非表示・注文不可）">
+            <button
+              type="button"
+              onClick={() => setIsDevOnly((v) => !v)}
+              className="flex items-center gap-3"
+            >
+              <div className={`relative h-7 w-14 rounded-full transition-colors duration-200 ${isDevOnly ? "bg-red-500" : "bg-gray-300"}`}>
+                <span
+                  style={{ left: isDevOnly ? "calc(100% - 22px)" : "2px", transition: "left 0.2s" }}
+                  className="absolute top-1 h-5 w-5 rounded-full bg-white shadow"
+                />
+              </div>
+              <span className={`text-sm font-bold transition-colors ${isDevOnly ? "text-red-500" : "text-gray-300"}`}>開発用にする</span>
             </button>
           </Field>
           <Field label="店舗名">

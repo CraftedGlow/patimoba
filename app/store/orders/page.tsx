@@ -235,9 +235,20 @@ type ConfirmAction = {
 };
 
 export default function StoreOrdersPage() {
-  const { storeId, storeName } = useStoreContext();
+  const { storeId, storeName, isMaster, childStores } = useStoreContext();
   const { user } = useAuth();
   const [tab, setTab] = useState<"manage" | "history">("manage");
+
+  // ── マスター店舗: 全店舗／子店舗ごとの切り替え ──
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const activeStoreId = isMaster ? selectedChildId ?? undefined : storeId;
+  const activeStoreIds = isMaster && selectedChildId === null
+    ? childStores.map((s) => s.id)
+    : undefined;
+  const childStoreMap = Object.fromEntries(childStores.map((s) => [s.id, s.name]));
+  const exportStoreName = isMaster
+    ? (selectedChildId ? (childStoreMap[selectedChildId] ?? storeName) : storeName)
+    : storeName;
 
   // ── 当日管理タブ state ──
   const [manageChannel, setManageChannel] = useState<"" | OrderChannel>("");
@@ -272,7 +283,8 @@ export default function StoreOrdersPage() {
 
   // テイクアウト注文（日付フィルターあり）
   const { orders: manageTakeoutOrders, loading: manageTakeoutLoading, refetch: refetchManageTakeout } = useOrders({
-    storeId,
+    storeId: activeStoreId,
+    storeIds: activeStoreIds,
     channel: "takeout",
     fulfillmentStatus: manageFulfillment || undefined,
     pickupDateFrom: managePickupDateFromStr ?? todayStr,
@@ -283,7 +295,8 @@ export default function StoreOrdersPage() {
 
   // EC注文（pickup_dateがないため日付フィルターなし、デフォルトpending）
   const { orders: manageEcOrders, loading: manageEcLoading, refetch: refetchManageEc } = useOrders({
-    storeId,
+    storeId: activeStoreId,
+    storeIds: activeStoreIds,
     channel: "ec",
     fulfillmentStatus: manageFulfillment || "pending",
     sortBy: "created_at",
@@ -296,19 +309,26 @@ export default function StoreOrdersPage() {
   // Supabaseリアルタイム：新規注文が入ったら予約管理一覧を静かに再取得（ローディング表示は出さない）
   useEffect(() => {
     if (!storeId) return;
-    const channel = supabase
-      .channel(`manage-orders-${storeId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders", filter: `store_id=eq.${storeId}` },
-        () => { refetchManageTakeout(true); refetchManageEc(true); }
-      )
-      .subscribe();
+    const watchIds = isMaster
+      ? (selectedChildId ? [selectedChildId] : childStores.map((s) => s.id))
+      : [storeId];
+    if (watchIds.length === 0) return;
+
+    const channels = watchIds.map((id) =>
+      supabase
+        .channel(`manage-orders-${id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "orders", filter: `store_id=eq.${id}` },
+          () => { refetchManageTakeout(true); refetchManageEc(true); }
+        )
+        .subscribe()
+    );
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach((ch) => supabase.removeChannel(ch));
     };
-  }, [storeId]);
+  }, [storeId, isMaster, selectedChildId, childStores.map((s) => s.id).join(",")]);
 
   const manageOrders = (() => {
     if (manageChannel === "takeout") return manageTakeoutOrders;
@@ -324,7 +344,8 @@ export default function StoreOrdersPage() {
   const [csvExporting, setCsvExporting] = useState(false);
 
   const { orders: historyOrders, loading: historyLoading } = useOrders({
-    storeId,
+    storeId: activeStoreId,
+    storeIds: activeStoreIds,
     pickupDateTo: todayStr,
     channel: historyChannel || undefined,
     fulfillmentStatus: historyFulfillment || undefined,
@@ -374,7 +395,7 @@ export default function StoreOrdersPage() {
     try {
       const orderIds = historyOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
-      const slug = (storeName || "store").replace(/\s+/g, "_");
+      const slug = (exportStoreName || "store").replace(/\s+/g, "_");
       const filename = `orders_history_${slug}_${yyyymmdd(new Date())}.csv`;
       downloadCSV(filename, buildCSV(historyOrders, optionsMap));
     } finally {
@@ -392,7 +413,7 @@ export default function StoreOrdersPage() {
     try {
       const orderIds = manageOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
-      const slug = (storeName || "store").replace(/\s+/g, "_");
+      const slug = (exportStoreName || "store").replace(/\s+/g, "_");
       const fromLabel = managePickupDateFromStr ?? todayStr;
       const toLabel = managePickupDateToStr ? `_${managePickupDateToStr}` : "以降";
       const filename = `orders_${slug}_${fromLabel}${toLabel}.csv`;
@@ -412,7 +433,7 @@ export default function StoreOrdersPage() {
     try {
       const orderIds = manageOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
-      const slug = (storeName || "store").replace(/\s+/g, "_");
+      const slug = (exportStoreName || "store").replace(/\s+/g, "_");
       const fromLabel = managePickupDateFromStr ?? todayStr;
       const toLabel = managePickupDateToStr ? `〜${managePickupDateToStr}` : "〜";
       printOrdersPDF(manageOrders, optionsMap, `予約管理 ${slug} ${fromLabel}${toLabel}`);
@@ -431,7 +452,7 @@ export default function StoreOrdersPage() {
     try {
       const orderIds = historyOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
-      const slug = (storeName || "store").replace(/\s+/g, "_");
+      const slug = (exportStoreName || "store").replace(/\s+/g, "_");
       printOrdersPDF(historyOrders, optionsMap, `注文履歴 ${slug} 〜${todayStr}`);
     } finally {
       setPdfExporting(false);
@@ -440,6 +461,35 @@ export default function StoreOrdersPage() {
 
   return (
     <div className="p-6">
+      {/* マスター店舗: 全店舗／子店舗ごとの切り替え */}
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          <button
+            onClick={() => setSelectedChildId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              selectedChildId === null
+                ? "bg-amber-400 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            全店舗
+          </button>
+          {childStores.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* タブ切り替え */}
       <div className="flex border-b border-gray-200 mb-6">
         {([["manage", "予約管理"], ["history", "注文履歴"]] as const).map(([value, label]) => (
@@ -601,9 +651,16 @@ export default function StoreOrdersPage() {
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-bold text-gray-800 leading-tight">
-                        {order.customerName || order.lineName || "-"}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                        <span className="text-sm font-bold text-gray-800 leading-tight">
+                          {order.customerName || order.lineName || "-"}
+                        </span>
+                        {isMaster && selectedChildId === null && (
+                          <span className="shrink-0 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                            {childStoreMap[order.storeId]}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isEc ? (
                           <div className="text-right text-xs text-gray-500 leading-tight line-clamp-1">
@@ -727,6 +784,11 @@ export default function StoreOrdersPage() {
                   )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
+                    {isMaster && selectedChildId === null && (
+                      <div className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block">
+                        {childStoreMap[order.storeId]}
+                      </div>
+                    )}
                   </div>
                   <div className="text-sm text-gray-700">
                     {isEc ? (
@@ -891,9 +953,16 @@ export default function StoreOrdersPage() {
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-sm font-bold text-gray-800 leading-tight">
-                        {order.customerName || order.lineName || "-"}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                        <span className="text-sm font-bold text-gray-800 leading-tight">
+                          {order.customerName || order.lineName || "-"}
+                        </span>
+                        {isMaster && selectedChildId === null && (
+                          <span className="shrink-0 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                            {childStoreMap[order.storeId]}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="text-right">
                           {order.pickupDate && <div className="text-sm font-medium text-gray-700">{order.pickupDate}</div>}
@@ -997,6 +1066,11 @@ export default function StoreOrdersPage() {
                   )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
+                    {isMaster && selectedChildId === null && (
+                      <div className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block">
+                        {childStoreMap[order.storeId]}
+                      </div>
+                    )}
                   </div>
                   <div className="text-sm text-gray-700">
                     {order.pickupDate && <div className="font-medium">{order.pickupDate}</div>}

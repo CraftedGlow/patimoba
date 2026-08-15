@@ -79,13 +79,12 @@ export async function POST(req: NextRequest) {
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;
 
-    if (lineConfig.channelAccessToken) {
-      channelAccessToken = lineConfig.channelAccessToken;
-    } else if (liffId && channelSecret) {
+    // LINEミニアプリでは長期トークン不可のためstatelessを優先する。
+    if (liffId && channelSecret) {
       const channelId = liffId.split("-")[0];
       channelAccessToken = await getStatelessToken(channelId, channelSecret);
     } else {
-      channelAccessToken = "";
+      channelAccessToken = lineConfig.channelAccessToken ?? "";
     }
 
     if (!channelAccessToken) {

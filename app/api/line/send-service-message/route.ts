@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
       // Messaging APIチャネルのアクセストークンを直接使用する。
       resolvedByLiff = {
         liffId: sourceLiffId,
-        channelAccessToken: null,
-        channelSecret: process.env.LINE_CHANNEL_SECRET ?? null,
+        channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? null,
+        channelSecret: null,
       };
     }
     const lineConfig = resolvedByLiff ?? await resolveStoreLineConfig(order.store_id, supabaseAdmin);
@@ -79,11 +79,13 @@ export async function POST(req: NextRequest) {
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;
 
-    if (liffId && channelSecret) {
+    if (lineConfig.channelAccessToken) {
+      channelAccessToken = lineConfig.channelAccessToken;
+    } else if (liffId && channelSecret) {
       const channelId = liffId.split("-")[0];
       channelAccessToken = await getStatelessToken(channelId, channelSecret);
     } else {
-      channelAccessToken = lineConfig.channelAccessToken ?? "";
+      channelAccessToken = "";
     }
 
     if (!channelAccessToken) {

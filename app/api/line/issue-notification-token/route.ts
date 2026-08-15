@@ -55,8 +55,8 @@ export async function POST(req: NextRequest) {
       // Messaging APIチャネルのアクセストークンを直接使用する。
       resolvedByLiff = {
         liffId: sourceLiffId,
-        channelAccessToken: null,
-        channelSecret: process.env.LINE_CHANNEL_SECRET ?? null,
+        channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? null,
+        channelSecret: null,
       };
     }
     const lineConfig = resolvedByLiff ?? await resolveStoreLineConfig(resolvedStoreId, supabaseAdmin);
@@ -64,11 +64,16 @@ export async function POST(req: NextRequest) {
     const channelSecret: string = lineConfig.channelSecret ?? "";
     let channelAccessToken: string;
 
-    if (liffId && channelSecret) {
+    // DBに保存済みのアクセストークンを優先する。
+    // statelessトークンはliff_idのLoginチャネルIDとMessaging APIチャネルIDが
+    // 一致している場合のみ有効なため、保存済みトークンがある場合はそちらを使う。
+    if (lineConfig.channelAccessToken) {
+      channelAccessToken = lineConfig.channelAccessToken;
+    } else if (liffId && channelSecret) {
       const channelId = liffId.split("-")[0];
       channelAccessToken = await getStatelessToken(channelId, channelSecret);
     } else {
-      channelAccessToken = lineConfig.channelAccessToken ?? "";
+      channelAccessToken = "";
     }
 
     if (!channelAccessToken) {

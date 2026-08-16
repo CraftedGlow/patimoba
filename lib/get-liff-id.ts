@@ -29,9 +29,8 @@ export function parseLiffStateStoreId(): string | null {
 
 /**
  * LIFF IDを取得する優先順位:
- * 1. sessionStorage (liff-loading で保存済み)
- * 2. storeId が分かればDBから取得
- * 3. 環境変数にフォールバック
+ * 1. storeId が分かればDBから取得（子店舗の場合は親店舗にフォールバック）
+ * 2. sessionStorage (liff-loading で保存済み)
  */
 export async function getLiffId(storeId?: string | null): Promise<string> {
   // storeIdがある場合は常にDBからis_masterを取得してsessionStorageを更新する。
@@ -41,7 +40,7 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
     try {
       const { data } = await supabase
         .from("stores")
-        .select("liff_id, is_master")
+        .select("liff_id, is_master, parent_store_id")
         .eq("id", storeId)
         .single();
       if (data) {
@@ -49,6 +48,18 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
         if (data.liff_id) {
           saveLiffId(data.liff_id);
           return data.liff_id;
+        }
+        // 子店舗で liff_id が未設定の場合は親店舗の liff_id を使う
+        if (data.parent_store_id) {
+          const { data: parent } = await supabase
+            .from("stores")
+            .select("liff_id")
+            .eq("id", data.parent_store_id)
+            .single();
+          if (parent?.liff_id) {
+            saveLiffId(parent.liff_id);
+            return parent.liff_id;
+          }
         }
       }
     } catch {}

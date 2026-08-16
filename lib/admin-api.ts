@@ -195,7 +195,11 @@ export async function saveClosedDays(storeId: string, closedDays: string[]) {
   if (insErr) throw insErr;
 }
 
-export async function saveClosedDayRules(storeId: string, rules: ClosedDayRule[]) {
+export async function saveClosedDayRules(
+  storeId: string,
+  rules: ClosedDayRule[],
+  hours: { openTime: string; closeTime: string }
+) {
   const { error: delErr } = await supabase
     .from("store_business_hours")
     .delete()
@@ -209,6 +213,8 @@ export async function saveClosedDayRules(storeId: string, rules: ClosedDayRule[]
       day_of_week: i,
       is_closed: !!rule,
       closed_week_rule: rule?.rule ?? null,
+      open_time: hours.openTime,
+      close_time: hours.closeTime,
     };
   });
 

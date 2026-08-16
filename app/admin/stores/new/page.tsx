@@ -136,6 +136,7 @@ export default function AdminStoreNewPage() {
         invoice_num: invoiceNum || null,
         accepts_walkin: acceptsWalkin,
         is_master: isMaster,
+        is_active: true,
         parent_store_id: !isMaster && parentStoreId ? parentStoreId : null,
         tokusho_text: tokushoText || null,
         privacy_policy_text: privacyPolicyText || null,
@@ -145,9 +146,7 @@ export default function AdminStoreNewPage() {
         const imageUrl = await uploadStoreImage(imageFile, created.id);
         await supabase.from("stores").update({ image: imageUrl }).eq("id", created.id);
       }
-      if (closedDayRules.length > 0) {
-        await saveClosedDayRules(created.id, closedDayRules);
-      }
+      await saveClosedDayRules(created.id, closedDayRules, { openTime, closeTime });
 
       const res = await fetch("/api/admin/create-user", {
         method: "POST",

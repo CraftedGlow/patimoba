@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LayoutGrid, Building2, ChartBar as BarChart3, Lightbulb, User, LogOut, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/lib/auth-context";
 
 const navItems = [
   { href: "/admin", icon: LayoutGrid, label: "ダッシュボード" },
@@ -16,6 +17,8 @@ const navItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-14 bg-white border-r border-gray-200 flex flex-col items-center py-4 z-50">
@@ -50,7 +53,15 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      <Link href="/" title="ログアウト" className="mt-auto mb-2">
+      <button
+        type="button"
+        title="ログアウト"
+        onClick={() => {
+          logout();
+          router.push("/");
+        }}
+        className="mt-auto mb-2"
+      >
         <motion.div
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
@@ -58,7 +69,7 @@ export function AdminSidebar() {
         >
           <LogOut className="w-5 h-5" />
         </motion.div>
-      </Link>
+      </button>
     </aside>
   );
 }

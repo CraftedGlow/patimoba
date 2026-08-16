@@ -25,6 +25,7 @@ import {
   type Order,
   type Store,
 } from "@/lib/admin-api";
+import { totalMrrYen } from "@/lib/store-plans";
 
 function formatDate(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -116,7 +117,7 @@ export default function AdminInsightsPage() {
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, o) => sum + (o.subtotal ?? 0), 0);
   const avgOrderValue = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-  const totalMRR = 0;
+  const totalMRR = totalMrrYen(stores);
 
   const timeData = buildTimeDistribution(orders);
   const outsideHoursOrders = (timeData[0]?.orders ?? 0) + (timeData[4]?.orders ?? 0) + (timeData[5]?.orders ?? 0);

@@ -86,3 +86,15 @@ export function mrrYenForStorePlan(plan: string | null | undefined): number {
   if (n === "standard") return 98_000;
   return 0;
 }
+
+/** 店舗一覧の合計MRR（円・月）。 */
+export function totalMrrYen(stores: { plan?: string | null }[]): number {
+  return stores.reduce((sum, s) => sum + mrrYenForStorePlan(s.plan), 0);
+}
+
+/** プラン別の配色（バッジ・グラフ共通）。 */
+export const PLAN_COLORS: Record<StorePlanSlug, string> = {
+  light: "#9CA3AF",
+  standard: "#FBBF24",
+  premium: "#F59E0B",
+};

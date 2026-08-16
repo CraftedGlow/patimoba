@@ -83,7 +83,7 @@ async function fetchAdminProfile(): Promise<AdminProfile | null> {
     name: data.name ?? "",
     email: data.email ?? "",
     phone: data.phone ?? "",
-    notificationSettings: {},
+    notificationSettings: (data as { notification_settings?: Record<string, boolean> }).notification_settings ?? {},
   };
 }
 
@@ -100,7 +100,8 @@ export default function AdminAccountPage() {
   const [phone, setPhone] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
+  const [securityNewPassword, setSecurityNewPassword] = useState("");
+  const [securityConfirmPassword, setSecurityConfirmPassword] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordSaved, setPasswordSaved] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -193,6 +194,7 @@ export default function AdminAccountPage() {
             name: basePayload.name,
             email: basePayload.email,
             phone: basePayload.phone,
+            notification_settings: basePayload.notification_settings,
             auth_user_id: authUserId,
             user_type: "admin",
           })
@@ -213,6 +215,7 @@ export default function AdminAccountPage() {
             name: basePayload.name,
             email: basePayload.email,
             phone: basePayload.phone,
+            notification_settings: basePayload.notification_settings,
           })
           .eq("id", profileId);
         if (err) throw err;
@@ -231,15 +234,15 @@ export default function AdminAccountPage() {
     if (passwordSaving) return;
     setPasswordError(null);
 
-    if (!newPassword.trim()) {
+    if (!securityNewPassword.trim()) {
       setPasswordError("新しいパスワードを入力してください");
       return;
     }
-    if (newPassword.length < 6) {
+    if (securityNewPassword.length < 6) {
       setPasswordError("パスワードは6文字以上で設定してください");
       return;
     }
-    if (newPassword !== confirmPassword) {
+    if (securityNewPassword !== securityConfirmPassword) {
       setPasswordError("新しいパスワードが一致しません");
       return;
     }
@@ -251,14 +254,13 @@ export default function AdminAccountPage() {
     setPasswordSaving(true);
     try {
       const { error: err } = await supabase.auth.updateUser({
-        password: newPassword,
+        password: securityNewPassword,
       });
       if (err) throw err;
 
       setHasPassword(true);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      setSecurityNewPassword("");
+      setSecurityConfirmPassword("");
       setPasswordSaved(true);
       setTimeout(() => setPasswordSaved(false), 2500);
     } catch (e) {
@@ -425,8 +427,8 @@ export default function AdminAccountPage() {
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                   <PasswordInput
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    value={securityNewPassword}
+                    onChange={(e) => setSecurityNewPassword(e.target.value)}
                     placeholder="新しいパスワードを入力"
                     className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   />
@@ -439,8 +441,8 @@ export default function AdminAccountPage() {
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                   <PasswordInput
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    value={securityConfirmPassword}
+                    onChange={(e) => setSecurityConfirmPassword(e.target.value)}
                     placeholder="もう一度入力"
                     className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                   />
@@ -461,10 +463,7 @@ export default function AdminAccountPage() {
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                onClick={() => {
-                  setNewPassword(currentPassword);
-                  handleChangePassword();
-                }}
+                onClick={handleChangePassword}
                 disabled={passwordSaving || isNew}
                 className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
@@ -64,12 +64,19 @@ type FilterState = {
 
 export default function AdminStoresPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Store | null>(null);
   const [showFilter, setShowFilter] = useState(false);
-  const [filter, setFilter] = useState<FilterState>({ status: "all", plan: "all" });
+  const [filter, setFilter] = useState<FilterState>(() => {
+    const status = searchParams.get("status");
+    return {
+      status: status === "active" || status === "risk" ? status : "all",
+      plan: "all",
+    };
+  });
   const [toast, setToast] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -154,7 +161,6 @@ export default function AdminStoresPage() {
     { label: "総店舗数", value: `${total}店舗`, color: "text-gray-900", filterVal: "all" as const },
     { label: "稼働中", value: `${activeCount}店舗`, color: "text-green-600", filterVal: "active" as const },
     { label: "リスク", value: `${riskCount}店舗`, color: "text-red-600", filterVal: "risk" as const },
-    { label: "非稼働", value: `${total - activeCount - riskCount}店舗`, color: "text-gray-900", filterVal: "all" as const },
   ];
 
   return (
@@ -183,7 +189,7 @@ export default function AdminStoresPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
             <input
               type="text"
-              placeholder="店舗名、オーナー名、所在地で検索..."
+              placeholder="店舗名、メール、電話、所在地で検索..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
@@ -286,7 +292,7 @@ export default function AdminStoresPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
           {summaryCards.map((card, i) => (
             <motion.div
               key={card.label}
@@ -344,8 +350,8 @@ export default function AdminStoresPage() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1.5fr_1fr_1fr] gap-2 sm:gap-4 items-start mt-1">
                         <div>
-                          <p className="text-xs text-gray-500">オーナー</p>
-                          <p className="text-sm truncate">{store.name || "-"}</p>
+                          <p className="text-xs text-gray-500">電話番号</p>
+                          <p className="text-sm truncate">{store.phone || "-"}</p>
                         </div>
                         <div className="flex items-start gap-1">
                           <MapPin className="w-3.5 h-3.5 text-gray-600 mt-0.5 flex-shrink-0" />

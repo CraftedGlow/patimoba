@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import {
   BarChart,
@@ -25,6 +25,14 @@ import {
   type Store,
   type Order,
 } from "@/lib/admin-api";
+import {
+  totalMrrYen,
+  mrrYenForStorePlan,
+  normalizeStorePlan,
+  PLAN_OPTIONS,
+  PLAN_COLORS,
+  STORE_PLAN_SLUGS,
+} from "@/lib/store-plans";
 
 function groupByMonth<T extends { created_at: string | null }>(
   items: T[],
@@ -113,12 +121,21 @@ export default function AdminRevenuePage() {
   });
 
   const thisMonthRevenue = thisMonthOrders.reduce((sum, o) => sum + (o.subtotal ?? 0), 0);
-  const totalMRR = 0;
+  const totalMRR = totalMrrYen(stores);
   const displayMRR = Math.round(totalMRR / 10000);
   const arrEstimate = Math.round((totalMRR * 12) / 100000000 * 100) / 100;
-  const avgPerStore = stores.length > 0 ? Math.round(totalMRR / stores.length) : 0;
 
-  const planBreakdown: { name: string; value: number; color: string; amount: number; stores: number }[] = [];
+  const planBreakdown = STORE_PLAN_SLUGS.map((slug) => {
+    const storesForPlan = stores.filter((s) => normalizeStorePlan(s.plan) === slug);
+    const planMrr = storesForPlan.length * mrrYenForStorePlan(slug);
+    return {
+      name: PLAN_OPTIONS.find((p) => p.slug === slug)?.label ?? slug,
+      value: totalMRR > 0 ? Math.round((planMrr / totalMRR) * 100) : 0,
+      color: PLAN_COLORS[slug],
+      amount: Math.round(planMrr / 10000),
+      stores: storesForPlan.length,
+    };
+  }).filter((p) => p.stores > 0);
 
   const monthlyOrderData = groupByMonth(allOrders, 7, refDate);
   const monthlyRevenueData = groupRevenueByMonth(allOrders, 7, refDate);
@@ -128,15 +145,12 @@ export default function AdminRevenuePage() {
     revenue: Math.round(m.revenue / 10000),
   }));
 
-  const mrrByMonth = groupByMonth(stores, 7, refDate).map((m, i) => {
-    const storeCountAtMonth = stores.filter((s) => {
-      if (!s.created_at) return true;
-      const d = new Date(s.created_at);
-      return d <= new Date(m.year, m.m + 1, 0);
-    }).length;
+  const mrrByMonth = groupByMonth(stores, 7, refDate).map((m) => {
+    const monthEnd = new Date(m.year, m.m + 1, 0, 23, 59, 59);
+    const storesByThen = stores.filter((s) => !s.created_at || new Date(s.created_at) <= monthEnd);
     return {
       month: m.month,
-      value: Math.round(storeCountAtMonth * (avgPerStore || 58000) / 10000),
+      value: Math.round(totalMrrYen(storesByThen) / 10000),
     };
   });
 
@@ -149,6 +163,7 @@ export default function AdminRevenuePage() {
       rate: prev > 0 ? Number((((cur - prev) / prev) * 100).toFixed(1)) : 0,
     };
   });
+  const latestMomRate = momGrowth.length > 0 ? momGrowth[momGrowth.length - 1].rate : 0;
 
   const dateLabel = `${selYear}年${selMonth}月期`;
 
@@ -170,8 +185,8 @@ export default function AdminRevenuePage() {
     {
       label: "月間注文売上（万円）",
       value: `${Math.round(thisMonthRevenue / 10000).toLocaleString()}`,
-      sub: `${thisMonthOrders.length}件の注文合計`,
-      subColor: "text-gray-500",
+      sub: `${thisMonthOrders.length}件の注文合計・前月比${latestMomRate >= 0 ? "+" : ""}${latestMomRate}%`,
+      subColor: latestMomRate > 0 ? "text-green-600" : latestMomRate < 0 ? "text-red-500" : "text-gray-500",
       icon: null,
     },
     {
@@ -226,6 +241,9 @@ export default function AdminRevenuePage() {
               <p className={`text-xs mt-1 flex items-center gap-1 ${kpi.subColor}`}>
                 {kpi.subColor === "text-green-600" && (
                   <TrendingUp className="w-3 h-3" />
+                )}
+                {kpi.subColor === "text-red-500" && (
+                  <TrendingDown className="w-3 h-3" />
                 )}
                 {kpi.sub}
               </p>

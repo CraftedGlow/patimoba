@@ -1,4 +1,30 @@
+import { isJapaneseHoliday } from "@/lib/japanese-holidays";
+
 export type ViewMode = "month" | "week" | "day";
+
+export interface HoursProfile {
+  open: string;
+  close: string;
+}
+
+export interface StoreHoursProfiles {
+  weekday: HoursProfile;
+  weekend: HoursProfile;
+  holiday: HoursProfile;
+}
+
+/** 祝日 > 休日(土日) > 平日 の優先順で、その日に適用される営業時間を返す */
+export function getDefaultHoursForDate(
+  profiles: StoreHoursProfiles,
+  year: number,
+  month: number,
+  day: number
+): HoursProfile {
+  if (isJapaneseHoliday(year, month, day)) return profiles.holiday;
+  const dow = new Date(year, month, day).getDay();
+  if (dow === 0 || dow === 6) return profiles.weekend;
+  return profiles.weekday;
+}
 
 export interface DaySchedule {
   isOpen: boolean;

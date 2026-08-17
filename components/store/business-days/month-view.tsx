@@ -1,8 +1,14 @@
 "use client";
 
-import { formatDateKey, isClosedByRule } from "./types";
-import type { DaySchedule, ClosedDayRule } from "./types";
+import { formatDateKey, isClosedByRule, getDefaultHoursForDate } from "./types";
+import type { DaySchedule, ClosedDayRule, StoreHoursProfiles } from "./types";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
+
+const DEFAULT_HOURS_PROFILES: StoreHoursProfiles = {
+  weekday: { open: "10:00", close: "19:00" },
+  weekend: { open: "10:00", close: "19:00" },
+  holiday: { open: "10:00", close: "19:00" },
+};
 
 const EN_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -14,8 +20,7 @@ interface MonthViewProps {
   month: number;
   schedules: Record<string, DaySchedule>;
   onDayClick: (y: number, m: number, d: number) => void;
-  defaultOpenTime?: string;
-  defaultCloseTime?: string;
+  hoursProfiles?: StoreHoursProfiles;
   closedDayRules?: ClosedDayRule[];
 }
 
@@ -24,8 +29,7 @@ export function MonthView({
   month,
   schedules,
   onDayClick,
-  defaultOpenTime = "10:00",
-  defaultCloseTime = "19:00",
+  hoursProfiles = DEFAULT_HOURS_PROFILES,
   closedDayRules = [],
 }: MonthViewProps) {
   const firstDay = new Date(year, month, 1).getDay();
@@ -77,6 +81,7 @@ export function MonthView({
           const dayOfWeek = new Date(cell.y, cell.m, cell.d).getDay();
           const isSunday = dayOfWeek === 0;
           const isHoliday = cell.isCurrentMonth && isJapaneseHoliday(cell.y, cell.m, cell.d);
+          const cellDefault = getDefaultHoursForDate(hoursProfiles, cell.y, cell.m, cell.d);
 
           return (
             <div
@@ -106,7 +111,7 @@ export function MonthView({
                     {cell.d}
                   </div>
                   {cell.isCurrentMonth && schedule && isOpen && (
-                    schedule.openTime !== defaultOpenTime || schedule.closeTime !== defaultCloseTime
+                    schedule.openTime !== cellDefault.open || schedule.closeTime !== cellDefault.close
                   ) && (
                     <p className="text-[10px] text-gray-500 mt-0.5 tabular-nums leading-none">
                       {schedule.openTime.slice(0, 5)}〜{schedule.closeTime.slice(0, 5)}

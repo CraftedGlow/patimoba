@@ -10,10 +10,11 @@ import {
   createStore,
   uploadStoreLogo,
   uploadStoreImage,
-  saveClosedDayRules,
+  saveStoreHours,
   fetchMasterStores,
   type ClosedDayRule,
   type Store,
+  type StoreHoursInput,
 } from "@/lib/admin-api";
 import { supabase } from "@/lib/supabase";
 import type { StorePlanSlug } from "@/lib/store-plans";
@@ -59,8 +60,14 @@ export default function AdminStoreNewPage() {
   const [prefecture, setPrefecture] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
-  const [openTime, setOpenTime] = useState("10:00");
-  const [closeTime, setCloseTime] = useState("19:00");
+  const [weekdayOpen, setWeekdayOpen] = useState("10:00");
+  const [weekdayClose, setWeekdayClose] = useState("19:00");
+  const [sameWeekend, setSameWeekend] = useState(true);
+  const [weekendOpen, setWeekendOpen] = useState("10:00");
+  const [weekendClose, setWeekendClose] = useState("19:00");
+  const [sameHoliday, setSameHoliday] = useState(true);
+  const [holidayOpen, setHolidayOpen] = useState("10:00");
+  const [holidayClose, setHolidayClose] = useState("19:00");
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [acceptsWalkin, setAcceptsWalkin] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
@@ -146,7 +153,15 @@ export default function AdminStoreNewPage() {
         const imageUrl = await uploadStoreImage(imageFile, created.id);
         await supabase.from("stores").update({ image: imageUrl }).eq("id", created.id);
       }
-      await saveClosedDayRules(created.id, closedDayRules, { openTime, closeTime });
+      const hoursInput: StoreHoursInput = {
+        weekdayOpen,
+        weekdayClose,
+        weekendOpen: sameWeekend ? weekdayOpen : weekendOpen,
+        weekendClose: sameWeekend ? weekdayClose : weekendClose,
+        holidayOpen: sameHoliday ? weekdayOpen : holidayOpen,
+        holidayClose: sameHoliday ? weekdayClose : holidayClose,
+      };
+      await saveStoreHours(created.id, hoursInput, closedDayRules);
 
       const res = await fetch("/api/admin/create-user", {
         method: "POST",
@@ -411,22 +426,89 @@ export default function AdminStoreNewPage() {
           )}
 
           <Field label="営業時間">
-            <div className="flex items-center gap-3 flex-wrap">
-              <select
-                value={openTime}
-                onChange={(e) => setOpenTime(e.target.value)}
-                className="form-select"
-              >
-                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
-              </select>
-              <span className="text-gray-500">〜</span>
-              <select
-                value={closeTime}
-                onChange={(e) => setCloseTime(e.target.value)}
-                className="form-select"
-              >
-                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
-              </select>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-1.5">平日</p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <select
+                    value={weekdayOpen}
+                    onChange={(e) => setWeekdayOpen(e.target.value)}
+                    className="form-select"
+                  >
+                    {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <span className="text-gray-500">〜</span>
+                  <select
+                    value={weekdayClose}
+                    onChange={(e) => setWeekdayClose(e.target.value)}
+                    className="form-select"
+                  >
+                    {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1.5">
+                  <input
+                    type="checkbox"
+                    checked={sameWeekend}
+                    onChange={(e) => setSameWeekend(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  休日（土日）も平日と同じ
+                </label>
+                {!sameWeekend && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <select
+                      value={weekendOpen}
+                      onChange={(e) => setWeekendOpen(e.target.value)}
+                      className="form-select"
+                    >
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <span className="text-gray-500">〜</span>
+                    <select
+                      value={weekendClose}
+                      onChange={(e) => setWeekendClose(e.target.value)}
+                      className="form-select"
+                    >
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1.5">
+                  <input
+                    type="checkbox"
+                    checked={sameHoliday}
+                    onChange={(e) => setSameHoliday(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  祝日も平日と同じ
+                </label>
+                {!sameHoliday && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <select
+                      value={holidayOpen}
+                      onChange={(e) => setHolidayOpen(e.target.value)}
+                      className="form-select"
+                    >
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <span className="text-gray-500">〜</span>
+                    <select
+                      value={holidayClose}
+                      onChange={(e) => setHolidayClose(e.target.value)}
+                      className="form-select"
+                    >
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
           </Field>
 

@@ -11,6 +11,7 @@ import { useCart } from "@/lib/cart-context";
 import { useBags } from "@/hooks/use-bags";
 import { supabase } from "@/lib/supabase";
 import { isClosedByRule } from "@/components/store/business-days/types";
+import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
@@ -82,6 +83,7 @@ export default function TakeoutPickupPage() {
   const [minFutureDays, setMinFutureDays] = useState(2);
   const [maxFutureDays, setMaxFutureDays] = useState(30);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
+  const [holidayHours, setHolidayHours] = useState<{ openTime: string | null; closeTime: string | null }>({ openTime: null, closeTime: null });
   // 特定日の営業状況 override: key = "YYYY-MM-DD"
   const [businessDayOverrides, setBusinessDayOverrides] = useState<Record<string, boolean>>({});
   const [specialDateHours, setSpecialDateHours] = useState<Record<string, { openTime: string | null; closeTime: string | null }>>({});
@@ -116,11 +118,18 @@ export default function TakeoutPickupPage() {
         setMinFutureDays(minFuture);
         setMaxFutureDays(rules?.max_future_days ?? 30);
 
-        // 曜日別営業時間
-        const { data: bhRows } = await supabase
-          .from("store_business_hours")
-          .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
-          .eq("store_id", storeId);
+        // 曜日別営業時間・祝日営業時間
+        const [{ data: bhRows }, { data: storeRow }] = await Promise.all([
+          supabase
+            .from("store_business_hours")
+            .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
+            .eq("store_id", storeId),
+          supabase
+            .from("stores")
+            .select("holiday_open_time, holiday_close_time")
+            .eq("id", storeId)
+            .maybeSingle(),
+        ]);
         setBusinessHours((bhRows || []).map((r: any) => ({
           dayOfWeek: r.day_of_week,
           isClosed: r.is_closed,
@@ -128,6 +137,10 @@ export default function TakeoutPickupPage() {
           closeTime: r.close_time,
           closedWeekRule: r.closed_week_rule,
         })));
+        setHolidayHours({
+          openTime: storeRow?.holiday_open_time ?? null,
+          closeTime: storeRow?.holiday_close_time ?? null,
+        });
 
         // 特定日の営業状況 (今日から3ヶ月分)
         const fromDate = dateKey(today);
@@ -259,9 +272,10 @@ export default function TakeoutPickupPage() {
     const bh = businessHours.find((b) => b.dayOfWeek === todayDow);
     // 定休日として設定されていて（隔週ルール含む）、特定日のoverride(is_open=true)もない場合は空
     if (isBusinessHourClosedOn(bh, now) && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
-    // 特定日の営業時間 → 曜日ルールの順で優先
+    // 特定日の営業時間 → 祝日営業時間 → 曜日ルールの順で優先
     const specialHour = specialDateHours[key];
-    const closeTime = specialHour?.closeTime ?? bh?.closeTime;
+    const isHolidayToday = isJapaneseHoliday(now.getFullYear(), now.getMonth(), now.getDate());
+    const closeTime = specialHour?.closeTime ?? (isHolidayToday ? holidayHours.closeTime : null) ?? bh?.closeTime;
     if (!closeTime) return [];
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const closeMin = toMin(closeTime);
@@ -281,10 +295,11 @@ export default function TakeoutPickupPage() {
     const bh = businessHours.find((b) => b.dayOfWeek === dow);
     // 定休日として設定されていて（隔週ルール含む）、特定日のoverride(is_open=true)もない場合は空
     if (isBusinessHourClosedOn(bh, selectedDate) && !(key in businessDayOverrides && businessDayOverrides[key])) return [];
-    // 特定日の営業時間 → 曜日ルール → デフォルトの順で優先
+    // 特定日の営業時間 → 祝日営業時間 → 曜日ルール → デフォルトの順で優先
     const specialHour = specialDateHours[key];
-    const openTime = specialHour?.openTime ?? bh?.openTime ?? "10:00";
-    const closeTime = specialHour?.closeTime ?? bh?.closeTime ?? "19:00";
+    const isHolidaySelected = isJapaneseHoliday(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    const openTime = specialHour?.openTime ?? (isHolidaySelected ? holidayHours.openTime : null) ?? bh?.openTime ?? "10:00";
+    const closeTime = specialHour?.closeTime ?? (isHolidaySelected ? holidayHours.closeTime : null) ?? bh?.closeTime ?? "19:00";
     const openMin = toMin(openTime);
     const closeMin = toMin(closeTime);
     // 深夜越え（例: 23:00〜10:00）は endMin に +1440 して対応

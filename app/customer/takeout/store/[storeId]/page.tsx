@@ -16,6 +16,7 @@ import { toUIStore } from "@/lib/types";
 import type { Store } from "@/lib/types";
 import { isClosedByRule } from "@/components/store/business-days/types";
 import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
+import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
 const TERMS_SECTIONS = [
   { title: "第1条（適用）", body: "本規約は、ユーザーと運営者との間に成立する、当サービスの利用に関わる一切の関係に適用されます。" },
@@ -118,13 +119,22 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
       const yesterdayKey = fmtKey(yesterday);
       const yesterdayDow = yesterday.getDay();
 
-      const { data: hours } = await supabase
-        .from("store_business_hours")
-        .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
-        .eq("store_id", store.id);
+      const [{ data: hours }, { data: storeRow }] = await Promise.all([
+        supabase
+          .from("store_business_hours")
+          .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
+          .eq("store_id", store.id),
+        supabase
+          .from("stores")
+          .select("holiday_open_time, holiday_close_time")
+          .eq("id", store.id)
+          .maybeSingle(),
+      ]);
 
       const hoursMap = new Map<number, { is_closed: boolean; open_time: string | null; close_time: string | null; closed_week_rule: string | null }>();
       (hours || []).forEach((h: any) => hoursMap.set(h.day_of_week, h));
+      const holidayOpen = storeRow?.holiday_open_time ?? null;
+      const holidayClose = storeRow?.holiday_close_time ?? null;
 
       // 「第2・4」等の隔週ルールを加味した、その日固有の定休日判定（店舗管理画面のカレンダーと同じロジック）
       const isClosedOn = (d: Date) => {
@@ -146,8 +156,9 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
 
       const cutoffMinutes = orderRules?.default_lead_time_minutes ?? 60;
       const todayHours = hoursMap.get(todayDow);
-      const defaultOpen = todayHours?.open_time ?? null;
-      const defaultClose = todayHours?.close_time ?? null;
+      const isHolidayToday = isJapaneseHoliday(now.getFullYear(), now.getMonth(), now.getDate());
+      const defaultOpen = (isHolidayToday && holidayOpen) || todayHours?.open_time || null;
+      const defaultClose = (isHolidayToday && holidayClose) || todayHours?.close_time || null;
       const isOvernightStore =
         defaultOpen && defaultClose && toMin(defaultOpen) > toMin(defaultClose);
 
@@ -165,8 +176,11 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
           }
         } else {
           const yHours = hoursMap.get(yesterdayDow);
+          const isHolidayYesterday = isJapaneseHoliday(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
           if (!isClosedOn(yesterday)) {
-            checkTimeWindow(cutoffMinutes, yHours?.open_time ?? defaultOpen, yHours?.close_time ?? defaultClose, now, setStatus);
+            const yOpen = (isHolidayYesterday && holidayOpen) || yHours?.open_time || defaultOpen;
+            const yClose = (isHolidayYesterday && holidayClose) || yHours?.close_time || defaultClose;
+            checkTimeWindow(cutoffMinutes, yOpen, yClose, now, setStatus);
             return;
           }
         }

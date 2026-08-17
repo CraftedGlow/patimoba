@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarDays } from "lucide-react";
 import type { Store } from "@/lib/types";
 import { isClosedByRule } from "@/components/store/business-days/types";
+import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
 interface OrderTypeModalProps {
   open: boolean;
@@ -56,14 +57,23 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
       const yesterdayKey = fmtKey(yesterday);
       const yesterdayDow = yesterday.getDay();
 
-      // store_business_hours から曜日別営業時間を取得
-      const { data: hours } = await supabase
-        .from("store_business_hours")
-        .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
-        .eq("store_id", store.id);
+      // store_business_hours から曜日別営業時間、stores から祝日営業時間を取得
+      const [{ data: hours }, { data: storeRow }] = await Promise.all([
+        supabase
+          .from("store_business_hours")
+          .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
+          .eq("store_id", store.id),
+        supabase
+          .from("stores")
+          .select("holiday_open_time, holiday_close_time")
+          .eq("id", store.id)
+          .maybeSingle(),
+      ]);
 
       const hoursMap = new Map<number, { is_closed: boolean; open_time: string | null; close_time: string | null; closed_week_rule: string | null }>();
       (hours || []).forEach((h: any) => hoursMap.set(h.day_of_week, h));
+      const holidayOpen = storeRow?.holiday_open_time ?? null;
+      const holidayClose = storeRow?.holiday_close_time ?? null;
 
       // 「第2・4」等の隔週ルールを加味した、その日固有の定休日判定（店舗管理画面のカレンダーと同じロジック）
       const isClosedOn = (d: Date) => {
@@ -87,8 +97,9 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
       const cutoffMinutes = orderRules?.default_lead_time_minutes ?? 60;
 
       const todayHours = hoursMap.get(todayDow);
-      const defaultOpen = todayHours?.open_time ?? null;
-      const defaultClose = todayHours?.close_time ?? null;
+      const isHolidayToday = isJapaneseHoliday(now.getFullYear(), now.getMonth(), now.getDate());
+      const defaultOpen = (isHolidayToday && holidayOpen) || todayHours?.open_time || null;
+      const defaultClose = (isHolidayToday && holidayClose) || todayHours?.close_time || null;
 
       const isOvernightStore =
         defaultOpen && defaultClose &&
@@ -113,9 +124,10 @@ function useSameDayAvailability(store: Store | null): SameDayStatus {
           }
         } else {
           const yHours = hoursMap.get(yesterdayDow);
+          const isHolidayYesterday = isJapaneseHoliday(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
           if (!isClosedOn(yesterday)) {
-            const yOpen = yHours?.open_time ?? defaultOpen;
-            const yClose = yHours?.close_time ?? defaultClose;
+            const yOpen = (isHolidayYesterday && holidayOpen) || yHours?.open_time || defaultOpen;
+            const yClose = (isHolidayYesterday && holidayClose) || yHours?.close_time || defaultClose;
             checkTimeWindow(cutoffMinutes, yOpen, yClose, now, setStatus);
             return;
           }

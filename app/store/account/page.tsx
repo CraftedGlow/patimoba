@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
 import { uploadStoreLogo, uploadStoreImage } from "@/lib/upload-image";
+import { saveStoreHours, fetchStoreHours, fetchClosedDayRules, type StoreHoursInput, type ClosedDayRule } from "@/lib/admin-api";
 import type { Database } from "@/lib/database.types";
 
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
@@ -66,25 +67,6 @@ async function fetchStoreForUser(storeIdHint: string | null): Promise<StoreRow |
   return data;
 }
 
-interface ClosedDayRuleRow {
-  dayOfWeek: number;
-  rule: string;
-}
-
-async function fetchClosedDayRules(storeId: string): Promise<ClosedDayRuleRow[]> {
-  const { data, error } = await supabase
-    .from("store_business_hours")
-    .select("day_of_week, is_closed, closed_week_rule")
-    .eq("store_id", storeId)
-    .eq("is_closed", true)
-    .order("day_of_week", { ascending: true });
-  if (error || !data) return [];
-  return data.map((r: any) => ({
-    dayOfWeek: Number(r.day_of_week),
-    rule: r.closed_week_rule ?? "毎週",
-  }));
-}
-
 export default function StoreAccountPage() {
   const { user } = useAuth();
   const { setStoreLogo: updateSidebarLogo } = useStoreContext();
@@ -110,8 +92,14 @@ export default function StoreAccountPage() {
   const [pwError, setPwError] = useState<string | null>(null);
   const [hasPassword, setHasPassword] = useState(false);
 
-  const [openTime, setOpenTime] = useState("10:00");
-  const [closeTime, setCloseTime] = useState("19:00");
+  const [hours, setHours] = useState<StoreHoursInput>({
+    weekdayOpen: "10:00",
+    weekdayClose: "19:00",
+    weekendOpen: "10:00",
+    weekendClose: "19:00",
+    holidayOpen: "10:00",
+    holidayClose: "19:00",
+  });
   const [cutoffHours, setCutoffHours] = useState("3");
   const [prepTimeHours, setPrepTimeHours] = useState("1.5");
   const [minFutureDays, setMinFutureDays] = useState("2");
@@ -119,8 +107,9 @@ export default function StoreAccountPage() {
   const [acceptsWalkin, setAcceptsWalkin] = useState(true);
   const [pendingWalkin, setPendingWalkin] = useState(true);
 
-  const [modalOpenTime, setModalOpenTime] = useState(openTime);
-  const [modalCloseTime, setModalCloseTime] = useState(closeTime);
+  const [modalHours, setModalHours] = useState<StoreHoursInput>(hours);
+  const [modalSameWeekend, setModalSameWeekend] = useState(true);
+  const [modalSameHoliday, setModalSameHoliday] = useState(true);
   const [modalCutoff, setModalCutoff] = useState(cutoffHours);
   const [modalPrepTime, setModalPrepTime] = useState(prepTimeHours);
   const [modalMinFutureDays, setModalMinFutureDays] = useState(minFutureDays);
@@ -182,16 +171,9 @@ export default function StoreAccountPage() {
 
         setAcceptsWalkin(store.accepts_walkin ?? true);
 
-        // store_business_hours から通常営業時間を取得（最初の営業日を基準に）
-        const { data: bhRows } = await supabase
-          .from("store_business_hours")
-          .select("open_time, close_time, is_closed")
-          .eq("store_id", store.id)
-          .eq("is_closed", false)
-          .limit(1)
-          .maybeSingle();
-        if (bhRows?.open_time) setOpenTime(bhRows.open_time);
-        if (bhRows?.close_time) setCloseTime(bhRows.close_time);
+        // 平日・休日(土日)・祝日の3区分で営業時間を取得
+        const storeHours = await fetchStoreHours(store.id);
+        setHours(storeHours);
 
         const rules = await fetchClosedDayRules(store.id);
         const names = ["日", "月", "火", "水", "木", "金", "土"];
@@ -219,10 +201,11 @@ export default function StoreAccountPage() {
   }, [loadStore]);
 
   const openHoursModal = useCallback(() => {
-    setModalOpenTime(openTime);
-    setModalCloseTime(closeTime);
+    setModalHours(hours);
+    setModalSameWeekend(hours.weekendOpen === hours.weekdayOpen && hours.weekendClose === hours.weekdayClose);
+    setModalSameHoliday(hours.holidayOpen === hours.weekdayOpen && hours.holidayClose === hours.weekdayClose);
     setModal("hours");
-  }, [openTime, closeTime]);
+  }, [hours]);
 
   const openCutoffModal = useCallback(() => {
     setModalCutoff(cutoffHours);
@@ -245,27 +228,30 @@ export default function StoreAccountPage() {
   }, [maxFutureDays]);
 
   const saveHours = useCallback(async () => {
+    if (!storeId) return;
     setSaving(true);
     try {
-      if (storeId) {
-        // store_business_hours の営業日の open_time, close_time を一括更新
-        await supabase
-          .from("store_business_hours")
-          .update({
-            open_time: modalOpenTime,
-            close_time: modalCloseTime,
-          })
-          .eq("store_id", storeId)
-          .eq("is_closed", false);
-      }
-      setOpenTime(modalOpenTime);
-      setCloseTime(modalCloseTime);
+      const nextHours: StoreHoursInput = {
+        weekdayOpen: modalHours.weekdayOpen,
+        weekdayClose: modalHours.weekdayClose,
+        weekendOpen: modalSameWeekend ? modalHours.weekdayOpen : modalHours.weekendOpen,
+        weekendClose: modalSameWeekend ? modalHours.weekdayClose : modalHours.weekendClose,
+        holidayOpen: modalSameHoliday ? modalHours.weekdayOpen : modalHours.holidayOpen,
+        holidayClose: modalSameHoliday ? modalHours.weekdayClose : modalHours.holidayClose,
+      };
+      const closedDayRules: ClosedDayRule[] = holidays.map((h) => ({
+        dayOfWeek: h.dayOfWeek,
+        day: h.day,
+        rule: h.freq,
+      }));
+      await saveStoreHours(storeId, nextHours, closedDayRules);
+      setHours(nextHours);
       setModal("saved");
       setTimeout(() => setModal(null), 1500);
     } finally {
       setSaving(false);
     }
-  }, [modalOpenTime, modalCloseTime, storeId]);
+  }, [modalHours, modalSameWeekend, modalSameHoliday, storeId, holidays]);
 
   const upsertOrderRules = useCallback(async (updates: Record<string, unknown>) => {
     if (!storeId) return;
@@ -440,25 +426,13 @@ export default function StoreAccountPage() {
     if (!storeId) return;
     setSaving(true);
     try {
-      // store_business_hours を再構築
-      await supabase.from("store_business_hours").delete().eq("store_id", storeId);
-
-      const allDays = Array.from({ length: 7 }, (_, i) => {
-        const isClosed = modalHolidays.some((h) => h.dayOfWeek === i);
-        const closedRule = modalHolidays.find((h) => h.dayOfWeek === i)?.rule ?? null;
-        return {
-          store_id: storeId,
-          day_of_week: i,
-          is_closed: isClosed,
-          open_time: isClosed ? null : openTime,
-          close_time: isClosed ? null : closeTime,
-          closed_week_rule: isClosed ? closedRule : null,
-        };
-      });
-      const { error } = await supabase.from("store_business_hours").insert(allDays);
-      if (error) throw error;
-
       const names = ["日", "月", "火", "水", "木", "金", "土"];
+      const closedDayRules: ClosedDayRule[] = modalHolidays.map((h) => ({
+        dayOfWeek: h.dayOfWeek,
+        day: names[h.dayOfWeek] ?? "",
+        rule: h.rule,
+      }));
+      await saveStoreHours(storeId, hours, closedDayRules);
       setHolidays(modalHolidays.map((h) => ({
         day: names[h.dayOfWeek] ?? "",
         freq: h.rule,
@@ -701,11 +675,28 @@ export default function StoreAccountPage() {
           </div>
 
           <div>
-            <p className="text-sm text-gray-500 mb-2">通常の営業時間</p>
-            <div className="flex items-center gap-3">
-              <span className="text-xl font-semibold">
-                {(openTime || "").slice(0, 5)}~{(closeTime || "").slice(0, 5)}
-              </span>
+            <p className="text-sm text-gray-500 mb-2">営業時間（平日・休日・祝日）</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-3 flex-wrap text-sm">
+                <span>
+                  <span className="text-gray-500">平日</span>{" "}
+                  <span className="text-lg font-semibold">
+                    {hours.weekdayOpen}~{hours.weekdayClose}
+                  </span>
+                </span>
+                <span>
+                  <span className="text-gray-500">休日</span>{" "}
+                  <span className="text-lg font-semibold">
+                    {hours.weekendOpen}~{hours.weekendClose}
+                  </span>
+                </span>
+                <span>
+                  <span className="text-gray-500">祝日</span>{" "}
+                  <span className="text-lg font-semibold">
+                    {hours.holidayOpen}~{hours.holidayClose}
+                  </span>
+                </span>
+              </div>
               <motion.button
                 type="button"
                 whileHover={{ scale: 1.05 }}
@@ -980,16 +971,71 @@ export default function StoreAccountPage() {
             <h2 className="text-lg font-bold text-center mb-6">
               営業時間の変更
             </h2>
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <TimeSelect
-                value={modalOpenTime}
-                onChange={setModalOpenTime}
-              />
-              <span className="text-gray-500">～</span>
-              <TimeSelect
-                value={modalCloseTime}
-                onChange={setModalCloseTime}
-              />
+            <div className="space-y-4 mb-6">
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">平日</p>
+                <div className="flex items-center justify-center gap-3">
+                  <TimeSelect
+                    value={modalHours.weekdayOpen}
+                    onChange={(v) => setModalHours((p) => ({ ...p, weekdayOpen: v }))}
+                  />
+                  <span className="text-gray-500">～</span>
+                  <TimeSelect
+                    value={modalHours.weekdayClose}
+                    onChange={(v) => setModalHours((p) => ({ ...p, weekdayClose: v }))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={modalSameWeekend}
+                    onChange={(e) => setModalSameWeekend(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  休日（土日）も平日と同じにする
+                </label>
+                {!modalSameWeekend && (
+                  <div className="flex items-center justify-center gap-3">
+                    <TimeSelect
+                      value={modalHours.weekendOpen}
+                      onChange={(v) => setModalHours((p) => ({ ...p, weekendOpen: v }))}
+                    />
+                    <span className="text-gray-500">～</span>
+                    <TimeSelect
+                      value={modalHours.weekendClose}
+                      onChange={(v) => setModalHours((p) => ({ ...p, weekendClose: v }))}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={modalSameHoliday}
+                    onChange={(e) => setModalSameHoliday(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  祝日も平日と同じにする
+                </label>
+                {!modalSameHoliday && (
+                  <div className="flex items-center justify-center gap-3">
+                    <TimeSelect
+                      value={modalHours.holidayOpen}
+                      onChange={(v) => setModalHours((p) => ({ ...p, holidayOpen: v }))}
+                    />
+                    <span className="text-gray-500">～</span>
+                    <TimeSelect
+                      value={modalHours.holidayClose}
+                      onChange={(v) => setModalHours((p) => ({ ...p, holidayClose: v }))}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex justify-center">
               <motion.button

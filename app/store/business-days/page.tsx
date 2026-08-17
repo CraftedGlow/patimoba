@@ -8,7 +8,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import { MonthView } from "@/components/store/business-days/month-view";
 import { WeekView } from "@/components/store/business-days/week-view";
 import { DayView } from "@/components/store/business-days/day-view";
-import type { DaySchedule, ViewMode, ClosedDayRule } from "@/components/store/business-days/types";
+import type { DaySchedule, ViewMode, ClosedDayRule, StoreHoursProfiles } from "@/components/store/business-days/types";
 import {
   getWeekStartDate,
   formatDateKey,
@@ -16,10 +16,12 @@ import {
   formatTimeHm,
   formatTimeRange,
   isClosedByRule,
+  getDefaultHoursForDate,
 } from "@/components/store/business-days/types";
 import { useStoreContext } from "@/lib/store-context";
 import { useBusinessDays } from "@/hooks/use-business-days";
 import { supabase } from "@/lib/supabase";
+import { saveStoreHours, fetchStoreHours, type StoreHoursInput } from "@/lib/admin-api";
 
 const WEEKDAYS = [
   { label: "日", value: 0 },
@@ -160,12 +162,28 @@ export default function BusinessDaysPage() {
     }
   };
 
-  const [storeOpenTime, setStoreOpenTime] = useState("10:00");
-  const [storeCloseTime, setStoreCloseTime] = useState("19:00");
+  const [hoursProfiles, setHoursProfiles] = useState<StoreHoursProfiles>({
+    weekday: { open: "10:00", close: "19:00" },
+    weekend: { open: "10:00", close: "19:00" },
+    holiday: { open: "10:00", close: "19:00" },
+  });
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [showHolidayModal, setShowHolidayModal] = useState(false);
   const [modalHolidays, setModalHolidays] = useState<{ dayOfWeek: number; rule: string }[]>([]);
   const [holidaySaving, setHolidaySaving] = useState(false);
+
+  const [showHoursModal, setShowHoursModal] = useState(false);
+  const [modalHours, setModalHours] = useState<StoreHoursInput>({
+    weekdayOpen: "10:00",
+    weekdayClose: "19:00",
+    weekendOpen: "10:00",
+    weekendClose: "19:00",
+    holidayOpen: "10:00",
+    holidayClose: "19:00",
+  });
+  const [modalSameWeekend, setModalSameWeekend] = useState(true);
+  const [modalSameHoliday, setModalSameHoliday] = useState(true);
+  const [hoursSaving, setHoursSaving] = useState(false);
 
   const [weekStart, setWeekStart] = useState(() => {
     const d = new Date(today);
@@ -180,31 +198,32 @@ export default function BusinessDaysPage() {
     let cancelled = false;
 
     (async () => {
-      // store_business_hours から営業時間と定休日を取得
-      const { data: bhData } = await supabase
-        .from("store_business_hours")
-        .select("day_of_week, open_time, close_time, is_closed, closed_week_rule")
-        .eq("store_id", storeId)
-        .order("day_of_week", { ascending: true });
+      // 平日・休日(土日)・祝日の3区分の営業時間と、曜日単位の定休日を取得
+      const [storeHours, { data: bhData }] = await Promise.all([
+        fetchStoreHours(storeId),
+        supabase
+          .from("store_business_hours")
+          .select("day_of_week, is_closed, closed_week_rule")
+          .eq("store_id", storeId)
+          .order("day_of_week", { ascending: true }),
+      ]);
       if (cancelled) return;
-      if (bhData && bhData.length > 0) {
-        const openDay = bhData.find((r: any) => !r.is_closed);
-        if (openDay) {
-          setStoreOpenTime(formatTimeHm(openDay.open_time) || "10:00");
-          setStoreCloseTime(formatTimeHm(openDay.close_time) || "19:00");
-        }
-        const closed = bhData.filter((r: any) => r.is_closed);
-        if (closed.length > 0) {
-          setClosedDayRules(
-            closed.map((r: any) => ({
-              dayOfWeek: r.day_of_week,
-              day: weekdayNames[r.day_of_week] ?? `${r.day_of_week}`,
-              rule: r.closed_week_rule ?? "毎週",
-            }))
-          );
-        } else {
-          setClosedDayRules([]);
-        }
+
+      setHoursProfiles({
+        weekday: { open: storeHours.weekdayOpen, close: storeHours.weekdayClose },
+        weekend: { open: storeHours.weekendOpen, close: storeHours.weekendClose },
+        holiday: { open: storeHours.holidayOpen, close: storeHours.holidayClose },
+      });
+
+      const closed = (bhData ?? []).filter((r: any) => r.is_closed);
+      if (closed.length > 0) {
+        setClosedDayRules(
+          closed.map((r: any) => ({
+            dayOfWeek: r.day_of_week,
+            day: weekdayNames[r.day_of_week] ?? `${r.day_of_week}`,
+            rule: r.closed_week_rule ?? "毎週",
+          }))
+        );
       } else {
         setClosedDayRules([]);
       }
@@ -217,15 +236,17 @@ export default function BusinessDaysPage() {
   useEffect(() => {
     const map: Record<string, DaySchedule> = {};
     for (const bd of businessDays) {
+      const [y, m, d] = bd.date.split("-").map(Number);
+      const cellDefault = getDefaultHoursForDate(hoursProfiles, y, m - 1, d);
       map[bd.date] = {
         isOpen: bd.isOpen,
-        openTime: formatTimeHm(bd.openTime) || storeOpenTime,
-        closeTime: formatTimeHm(bd.closeTime) || storeCloseTime,
+        openTime: formatTimeHm(bd.openTime) || cellDefault.open,
+        closeTime: formatTimeHm(bd.closeTime) || cellDefault.close,
         dailyNote: bd.dailyNote ?? "",
       };
     }
     setSchedules(map);
-  }, [businessDays, storeOpenTime, storeCloseTime]);
+  }, [businessDays, hoursProfiles]);
 
   const nextMonthLabel = `${month + 2 > 12 ? 1 : month + 2}月`;
 
@@ -284,27 +305,24 @@ export default function BusinessDaysPage() {
     if (!storeId) return;
     setHolidaySaving(true);
     try {
-      await supabase.from("store_business_hours").delete().eq("store_id", storeId);
-      const allDays = Array.from({ length: 7 }, (_, i) => {
-        const isClosed = modalHolidays.some((h) => h.dayOfWeek === i);
-        const closedRule = modalHolidays.find((h) => h.dayOfWeek === i)?.rule ?? null;
-        return {
-          store_id: storeId,
-          day_of_week: i,
-          is_closed: isClosed,
-          open_time: isClosed ? null : storeOpenTime,
-          close_time: isClosed ? null : storeCloseTime,
-          closed_week_rule: isClosed ? closedRule : null,
-        };
-      });
-      await supabase.from("store_business_hours").insert(allDays);
-      setClosedDayRules(
-        modalHolidays.map((h) => ({
-          dayOfWeek: h.dayOfWeek,
-          day: weekdayNames[h.dayOfWeek] ?? "",
-          rule: h.rule,
-        }))
+      const nextClosedDayRules: ClosedDayRule[] = modalHolidays.map((h) => ({
+        dayOfWeek: h.dayOfWeek,
+        day: weekdayNames[h.dayOfWeek] ?? "",
+        rule: h.rule,
+      }));
+      await saveStoreHours(
+        storeId,
+        {
+          weekdayOpen: hoursProfiles.weekday.open,
+          weekdayClose: hoursProfiles.weekday.close,
+          weekendOpen: hoursProfiles.weekend.open,
+          weekendClose: hoursProfiles.weekend.close,
+          holidayOpen: hoursProfiles.holiday.open,
+          holidayClose: hoursProfiles.holiday.close,
+        },
+        nextClosedDayRules
       );
+      setClosedDayRules(nextClosedDayRules);
       setShowHolidayModal(false);
     } catch (err) {
       console.error(err);
@@ -313,22 +331,69 @@ export default function BusinessDaysPage() {
     }
   };
 
+  const openHoursModal = useCallback(() => {
+    setModalHours({
+      weekdayOpen: hoursProfiles.weekday.open,
+      weekdayClose: hoursProfiles.weekday.close,
+      weekendOpen: hoursProfiles.weekend.open,
+      weekendClose: hoursProfiles.weekend.close,
+      holidayOpen: hoursProfiles.holiday.open,
+      holidayClose: hoursProfiles.holiday.close,
+    });
+    setModalSameWeekend(
+      hoursProfiles.weekend.open === hoursProfiles.weekday.open &&
+        hoursProfiles.weekend.close === hoursProfiles.weekday.close
+    );
+    setModalSameHoliday(
+      hoursProfiles.holiday.open === hoursProfiles.weekday.open &&
+        hoursProfiles.holiday.close === hoursProfiles.weekday.close
+    );
+    setShowHoursModal(true);
+  }, [hoursProfiles]);
+
+  const saveHoursProfiles = async () => {
+    if (!storeId) return;
+    setHoursSaving(true);
+    try {
+      const nextHours: StoreHoursInput = {
+        weekdayOpen: modalHours.weekdayOpen,
+        weekdayClose: modalHours.weekdayClose,
+        weekendOpen: modalSameWeekend ? modalHours.weekdayOpen : modalHours.weekendOpen,
+        weekendClose: modalSameWeekend ? modalHours.weekdayClose : modalHours.weekendClose,
+        holidayOpen: modalSameHoliday ? modalHours.weekdayOpen : modalHours.holidayOpen,
+        holidayClose: modalSameHoliday ? modalHours.weekdayClose : modalHours.holidayClose,
+      };
+      await saveStoreHours(storeId, nextHours, closedDayRules);
+      setHoursProfiles({
+        weekday: { open: nextHours.weekdayOpen, close: nextHours.weekdayClose },
+        weekend: { open: nextHours.weekendOpen, close: nextHours.weekendClose },
+        holiday: { open: nextHours.holidayOpen, close: nextHours.holidayClose },
+      });
+      setShowHoursModal(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setHoursSaving(false);
+    }
+  };
+
   const handleDayClick = useCallback((y: number, m: number, d: number) => {
     const dateKey = formatDateKey(y, m, d);
     setEditDate(dateKey);
     setSaveError(null);
     const s = schedules[dateKey];
+    const cellDefault = getDefaultHoursForDate(hoursProfiles, y, m, d);
     const inferredOpen = s ? s.isOpen : !isClosedByRule(closedDayRules, y, m, d);
     setEditOpen(
-      inferredOpen ? (s?.openTime || storeOpenTime) : storeOpenTime
+      inferredOpen ? (s?.openTime || cellDefault.open) : cellDefault.open
     );
     setEditClose(
-      inferredOpen ? (s?.closeTime || storeCloseTime) : storeCloseTime
+      inferredOpen ? (s?.closeTime || cellDefault.close) : cellDefault.close
     );
     setEditNote(s?.dailyNote ?? "");
     setShowEditPanel(true);
     setYear(y); setMonth(m); setSelectedDay(d);
-  }, [schedules, storeOpenTime, storeCloseTime, closedDayRules]);
+  }, [schedules, hoursProfiles, closedDayRules]);
 
   const handleUpdateSchedule = useCallback(
     (key: string, schedule: DaySchedule) => {
@@ -342,8 +407,10 @@ export default function BusinessDaysPage() {
     setSaveError(null);
     try {
       const note = editNote.trim() || null;
-      const openT = (editOpen && editOpen.trim()) || storeOpenTime;
-      const closeT = (editClose && editClose.trim()) || storeCloseTime;
+      const [editY, editM, editD] = editDate.split("-").map(Number);
+      const editCellDefault = getDefaultHoursForDate(hoursProfiles, editY, editM - 1, editD);
+      const openT = (editOpen && editOpen.trim()) || editCellDefault.open;
+      const closeT = (editClose && editClose.trim()) || editCellDefault.close;
       const existing = businessDays.find((bd) => bd.date === editDate);
       if (existing) {
         await updateBusinessDay(existing.id, {
@@ -385,6 +452,8 @@ export default function BusinessDaysPage() {
     setSaveError(null);
     try {
       const note = editNote.trim() || null;
+      const [editY, editM, editD] = editDate.split("-").map(Number);
+      const editCellDefault = getDefaultHoursForDate(hoursProfiles, editY, editM - 1, editD);
       const existing = businessDays.find((bd) => bd.date === editDate);
       if (existing) {
         await updateBusinessDay(existing.id, {
@@ -407,8 +476,8 @@ export default function BusinessDaysPage() {
         ...prev,
         [editDate]: {
           isOpen: false,
-          openTime: storeOpenTime,
-          closeTime: storeCloseTime,
+          openTime: editCellDefault.open,
+          closeTime: editCellDefault.close,
           dailyNote: note ?? "",
         },
       }));
@@ -450,15 +519,34 @@ export default function BusinessDaysPage() {
       <div className="flex-1">
         <div className="flex items-center justify-between gap-4 md:gap-8 mb-6">
           <div>
-            <div className="flex items-center gap-4 md:gap-8 mb-1">
+            <div className="flex items-center gap-3 md:gap-5 mb-1 flex-wrap">
               <div>
-                <span className="text-xs text-gray-500 block">OPEN</span>
-                <span className="text-xl md:text-3xl font-normal block mt-1">{storeOpenTime}</span>
+                <span className="text-xs text-gray-500 block">平日</span>
+                <span className="text-base md:text-xl font-normal block mt-0.5 tabular-nums">
+                  {hoursProfiles.weekday.open}-{hoursProfiles.weekday.close}
+                </span>
               </div>
               <div>
-                <span className="text-xs text-gray-500 block">CLOSE</span>
-                <span className="text-xl md:text-3xl font-normal block mt-1">{storeCloseTime}</span>
+                <span className="text-xs text-gray-500 block">休日</span>
+                <span className="text-base md:text-xl font-normal block mt-0.5 tabular-nums">
+                  {hoursProfiles.weekend.open}-{hoursProfiles.weekend.close}
+                </span>
               </div>
+              <div>
+                <span className="text-xs text-gray-500 block">祝日</span>
+                <span className="text-base md:text-xl font-normal block mt-0.5 tabular-nums">
+                  {hoursProfiles.holiday.open}-{hoursProfiles.holiday.close}
+                </span>
+              </div>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={openHoursModal}
+                className="px-2 md:px-3 py-1 rounded-md bg-amber-400 text-white text-xs font-bold hover:bg-amber-500 transition-colors self-end"
+              >
+                変更
+              </motion.button>
             </div>
             <div className="mt-1">
               <span className="text-sm text-gray-500">定休日</span>
@@ -603,7 +691,7 @@ export default function BusinessDaysPage() {
                 <span className="text-sm font-bold text-gray-700" style={{ textAlign: "right", width: "100%" }}>{storeName}</span>
               ) : null}
               <div style={{ textAlign: "right", width: "100%" }} className="text-base text-gray-700 mt-1 tabular-nums whitespace-nowrap">
-                {storeOpenTime} - {storeCloseTime}
+                {hoursProfiles.weekday.open} - {hoursProfiles.weekday.close}
               </div>
             </div>
           </div>
@@ -614,16 +702,15 @@ export default function BusinessDaysPage() {
             month={month}
             schedules={schedules}
             onDayClick={handleDayClick}
-            defaultOpenTime={storeOpenTime}
-            defaultCloseTime={storeCloseTime}
+            hoursProfiles={hoursProfiles}
             closedDayRules={closedDayRules}
           />
         )}
         {viewMode === "week" && (
-          <WeekView weekStart={weekStart} schedules={schedules} onDayClick={handleDayClick} defaultOpenTime={storeOpenTime} defaultCloseTime={storeCloseTime} closedDayRules={closedDayRules} />
+          <WeekView weekStart={weekStart} schedules={schedules} onDayClick={handleDayClick} hoursProfiles={hoursProfiles} closedDayRules={closedDayRules} />
         )}
         {viewMode === "day" && (
-          <DayView year={year} month={month} day={selectedDay} schedules={schedules} onUpdateSchedule={handleUpdateSchedule} defaultOpenTime={storeOpenTime} defaultCloseTime={storeCloseTime} closedDayRules={closedDayRules} />
+          <DayView year={year} month={month} day={selectedDay} schedules={schedules} onUpdateSchedule={handleUpdateSchedule} hoursProfiles={hoursProfiles} closedDayRules={closedDayRules} />
         )}
           </div>
         </div>
@@ -794,6 +881,136 @@ export default function BusinessDaysPage() {
                   className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
                 >
                   {holidaySaving && <LineSpinner size={16} />}
+                  以上の内容に変更
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showHoursModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+            onClick={() => setShowHoursModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-8 relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowHoursModal(false)}
+                className="absolute top-4 right-4 text-gray-600 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-lg font-bold text-center mb-6">営業時間の変更</h2>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">平日</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <select
+                      value={modalHours.weekdayOpen}
+                      onChange={(e) => setModalHours((p) => ({ ...p, weekdayOpen: e.target.value }))}
+                      className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                    >
+                      {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <span className="text-gray-500">～</span>
+                    <select
+                      value={modalHours.weekdayClose}
+                      onChange={(e) => setModalHours((p) => ({ ...p, weekdayClose: e.target.value }))}
+                      className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                    >
+                      {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={modalSameWeekend}
+                      onChange={(e) => setModalSameWeekend(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    休日（土日）も平日と同じにする
+                  </label>
+                  {!modalSameWeekend && (
+                    <div className="flex items-center justify-center gap-3">
+                      <select
+                        value={modalHours.weekendOpen}
+                        onChange={(e) => setModalHours((p) => ({ ...p, weekendOpen: e.target.value }))}
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                      >
+                        {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <span className="text-gray-500">～</span>
+                      <select
+                        value={modalHours.weekendClose}
+                        onChange={(e) => setModalHours((p) => ({ ...p, weekendClose: e.target.value }))}
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                      >
+                        {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={modalSameHoliday}
+                      onChange={(e) => setModalSameHoliday(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    祝日も平日と同じにする
+                  </label>
+                  {!modalSameHoliday && (
+                    <div className="flex items-center justify-center gap-3">
+                      <select
+                        value={modalHours.holidayOpen}
+                        onChange={(e) => setModalHours((p) => ({ ...p, holidayOpen: e.target.value }))}
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                      >
+                        {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <span className="text-gray-500">～</span>
+                      <select
+                        value={modalHours.holidayClose}
+                        onChange={(e) => setModalHours((p) => ({ ...p, holidayClose: e.target.value }))}
+                        className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                      >
+                        {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={saveHoursProfiles}
+                  disabled={hoursSaving}
+                  className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {hoursSaving && <LineSpinner size={16} />}
                   以上の内容に変更
                 </motion.button>
               </div>

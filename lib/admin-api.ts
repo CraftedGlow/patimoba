@@ -263,6 +263,86 @@ export async function fetchBusinessHours(storeId: string) {
   return data;
 }
 
+const WEEKEND_DAYS = new Set([0, 6]);
+
+export interface StoreHoursInput {
+  weekdayOpen: string;
+  weekdayClose: string;
+  weekendOpen: string;
+  weekendClose: string;
+  holidayOpen: string;
+  holidayClose: string;
+}
+
+/** 平日・休日(土日)・祝日の3区分で営業時間を保存する。定休日判定(closedDayRules)は曜日単位のまま維持。 */
+export async function saveStoreHours(
+  storeId: string,
+  hours: StoreHoursInput,
+  closedDayRules: ClosedDayRule[]
+) {
+  const { error: delErr } = await supabase
+    .from("store_business_hours")
+    .delete()
+    .eq("store_id", storeId);
+  if (delErr) throw delErr;
+
+  const rows = Array.from({ length: 7 }, (_, dayOfWeek) => {
+    const rule = closedDayRules.find((r) => r.dayOfWeek === dayOfWeek);
+    const isWeekend = WEEKEND_DAYS.has(dayOfWeek);
+    return {
+      store_id: storeId,
+      day_of_week: dayOfWeek,
+      is_closed: !!rule,
+      closed_week_rule: rule?.rule ?? null,
+      open_time: rule ? null : isWeekend ? hours.weekendOpen : hours.weekdayOpen,
+      close_time: rule ? null : isWeekend ? hours.weekendClose : hours.weekdayClose,
+    };
+  });
+
+  const { error: insErr } = await supabase.from("store_business_hours").insert(rows);
+  if (insErr) throw insErr;
+
+  const { error: storeErr } = await supabase
+    .from("stores")
+    .update({
+      holiday_open_time: hours.holidayOpen,
+      holiday_close_time: hours.holidayClose,
+    })
+    .eq("id", storeId);
+  if (storeErr) throw storeErr;
+}
+
+/** 平日(月)・休日(土)・祝日の代表値から3区分の営業時間を復元する */
+export async function fetchStoreHours(storeId: string): Promise<StoreHoursInput> {
+  const [{ data: bhData, error: bhErr }, { data: storeData, error: storeErr }] = await Promise.all([
+    supabase
+      .from("store_business_hours")
+      .select("day_of_week, open_time, close_time, is_closed")
+      .eq("store_id", storeId)
+      .order("day_of_week", { ascending: true }),
+    supabase
+      .from("stores")
+      .select("holiday_open_time, holiday_close_time")
+      .eq("id", storeId)
+      .single(),
+  ]);
+  if (bhErr) throw bhErr;
+  if (storeErr) throw storeErr;
+
+  const rows = (bhData ?? []) as { day_of_week: number; open_time: string | null; close_time: string | null; is_closed: boolean }[];
+  const weekdayRow = rows.find((r) => !WEEKEND_DAYS.has(r.day_of_week) && r.open_time) ?? rows.find((r) => !WEEKEND_DAYS.has(r.day_of_week));
+  const weekendRow = rows.find((r) => WEEKEND_DAYS.has(r.day_of_week) && r.open_time) ?? rows.find((r) => WEEKEND_DAYS.has(r.day_of_week));
+
+  return {
+    weekdayOpen: weekdayRow?.open_time?.slice(0, 5) || "10:00",
+    weekdayClose: weekdayRow?.close_time?.slice(0, 5) || "19:00",
+    weekendOpen: weekendRow?.open_time?.slice(0, 5) || weekdayRow?.open_time?.slice(0, 5) || "10:00",
+    weekendClose: weekendRow?.close_time?.slice(0, 5) || weekdayRow?.close_time?.slice(0, 5) || "19:00",
+    holidayOpen: storeData?.holiday_open_time?.slice(0, 5) || weekdayRow?.open_time?.slice(0, 5) || "10:00",
+    holidayClose: storeData?.holiday_close_time?.slice(0, 5) || weekdayRow?.close_time?.slice(0, 5) || "19:00",
+  };
+}
+
 export async function fetchMasterStores() {
   const { data, error } = await supabase
     .from("stores")

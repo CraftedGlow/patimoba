@@ -1385,6 +1385,8 @@ export type Database = {
           ec_button_color: string | null
           ec_header_color: string | null
           email: string | null
+          holiday_close_time: string | null
+          holiday_open_time: string | null
           id: string
           image: string | null
           images: string[] | null
@@ -1425,6 +1427,8 @@ export type Database = {
           ec_button_color?: string | null
           ec_header_color?: string | null
           email?: string | null
+          holiday_close_time?: string | null
+          holiday_open_time?: string | null
           id?: string
           image?: string | null
           images?: string[] | null
@@ -1465,6 +1469,8 @@ export type Database = {
           ec_button_color?: string | null
           ec_header_color?: string | null
           email?: string | null
+          holiday_close_time?: string | null
+          holiday_open_time?: string | null
           id?: string
           image?: string | null
           images?: string[] | null

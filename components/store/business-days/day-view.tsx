@@ -1,7 +1,13 @@
 "use client";
 
-import { weekdayLabels, formatDateKey, isClosedByRule, formatTimeHm, formatTimeRange } from "./types";
-import type { DaySchedule, ClosedDayRule } from "./types";
+import { weekdayLabels, formatDateKey, isClosedByRule, formatTimeHm, formatTimeRange, getDefaultHoursForDate } from "./types";
+import type { DaySchedule, ClosedDayRule, StoreHoursProfiles } from "./types";
+
+const DEFAULT_HOURS_PROFILES: StoreHoursProfiles = {
+  weekday: { open: "10:00", close: "19:00" },
+  weekend: { open: "10:00", close: "19:00" },
+  holiday: { open: "10:00", close: "19:00" },
+};
 
 interface DayViewProps {
   year: number;
@@ -9,22 +15,22 @@ interface DayViewProps {
   day: number;
   schedules: Record<string, DaySchedule>;
   onUpdateSchedule: (key: string, schedule: DaySchedule) => void;
-  defaultOpenTime?: string;
-  defaultCloseTime?: string;
+  hoursProfiles?: StoreHoursProfiles;
   closedDayRules?: ClosedDayRule[];
 }
 
 const hours = Array.from({ length: 10 }, (_, i) => i + 6);
 
-export function DayView({ year, month, day, schedules, onUpdateSchedule, defaultOpenTime = "10:00", defaultCloseTime = "19:00", closedDayRules = [] }: DayViewProps) {
+export function DayView({ year, month, day, schedules, onUpdateSchedule, hoursProfiles = DEFAULT_HOURS_PROFILES, closedDayRules = [] }: DayViewProps) {
   const date = new Date(year, month, day);
   const dayLabel = weekdayLabels[date.getDay()];
   const key = formatDateKey(year, month, day);
   const closedByRule = isClosedByRule(closedDayRules, year, month, day);
+  const cellDefault = getDefaultHoursForDate(hoursProfiles, year, month, day);
   const schedule = schedules[key] || {
     isOpen: !closedByRule,
-    openTime: defaultOpenTime,
-    closeTime: defaultCloseTime,
+    openTime: cellDefault.open,
+    closeTime: cellDefault.close,
     dailyNote: "",
   };
 
@@ -61,7 +67,7 @@ export function DayView({ year, month, day, schedules, onUpdateSchedule, default
               {inRange && hour === openH && (
                 <div className="absolute top-1.5 left-2 right-2 text-sm text-white font-semibold leading-snug">
                   <span className="tabular-nums">
-                    {formatTimeRange(schedule.openTime, schedule.closeTime, defaultOpenTime, defaultCloseTime)}
+                    {formatTimeRange(schedule.openTime, schedule.closeTime, cellDefault.open, cellDefault.close)}
                   </span>
                   <br />
                   <span className="font-bold">営業日</span>

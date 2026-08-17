@@ -12,13 +12,14 @@ import {
   uploadStoreLogo,
   uploadStoreImage,
   fetchClosedDayRules,
-  saveClosedDayRules,
+  saveStoreHours,
+  fetchStoreHours,
   type ClosedDayRule,
+  type StoreHoursInput,
 } from "@/lib/admin-api";
 import type { StorePlanSlug } from "@/lib/store-plans";
 import { normalizeStorePlan } from "@/lib/store-plans";
 import { StorePlanPicker } from "@/components/admin/store-plan-picker";
-import { supabase } from "@/lib/supabase";
 
 const RULE_OPTIONS = [
   { value: "", label: "なし" },
@@ -61,8 +62,14 @@ export default function AdminStoreEditPage() {
   const [phone, setPhone] = useState("");
   const [mail, setMail] = useState("");
   const [addressUrl, setAddressUrl] = useState("");
-  const [openTime, setOpenTime] = useState("10:00");
-  const [closeTime, setCloseTime] = useState("19:00");
+  const [weekdayOpen, setWeekdayOpen] = useState("10:00");
+  const [weekdayClose, setWeekdayClose] = useState("19:00");
+  const [sameWeekend, setSameWeekend] = useState(true);
+  const [weekendOpen, setWeekendOpen] = useState("10:00");
+  const [weekendClose, setWeekendClose] = useState("19:00");
+  const [sameHoliday, setSameHoliday] = useState(true);
+  const [holidayOpen, setHolidayOpen] = useState("10:00");
+  const [holidayClose, setHolidayClose] = useState("19:00");
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
@@ -105,23 +112,16 @@ export default function AdminStoreEditPage() {
         /* ignore */
       }
 
-      // 営業時間
-      const { data: bhData } = await supabase
-        .from("store_business_hours")
-        .select("day_of_week, open_time, close_time, is_closed")
-        .eq("store_id", storeId)
-        .order("day_of_week", { ascending: true });
-      if (bhData && bhData.length > 0) {
-        const openDay = bhData.find((r: any) => !r.is_closed);
-        if (openDay?.open_time) {
-          const [h, m] = String(openDay.open_time).split(":");
-          setOpenTime(`${h.padStart(2, "0")}:${m.padStart(2, "0")}`);
-        }
-        if (openDay?.close_time) {
-          const [h, m] = String(openDay.close_time).split(":");
-          setCloseTime(`${h.padStart(2, "0")}:${m.padStart(2, "0")}`);
-        }
-      }
+      // 営業時間（平日・休日・祝日）
+      const storeHours = await fetchStoreHours(storeId);
+      setWeekdayOpen(storeHours.weekdayOpen);
+      setWeekdayClose(storeHours.weekdayClose);
+      setWeekendOpen(storeHours.weekendOpen);
+      setWeekendClose(storeHours.weekendClose);
+      setHolidayOpen(storeHours.holidayOpen);
+      setHolidayClose(storeHours.holidayClose);
+      setSameWeekend(storeHours.weekendOpen === storeHours.weekdayOpen && storeHours.weekendClose === storeHours.weekdayClose);
+      setSameHoliday(storeHours.holidayOpen === storeHours.weekdayOpen && storeHours.holidayClose === storeHours.weekdayClose);
     } catch {
       setError("店舗情報の取得に失敗しました");
     } finally {
@@ -189,7 +189,15 @@ export default function AdminStoreEditPage() {
       if (logoUrl !== undefined) updates.logo_url = logoUrl;
       if (storeImageUrl !== undefined) updates.image = storeImageUrl;
       await updateStore(storeId, updates);
-      await saveClosedDayRules(storeId, closedDayRules, { openTime, closeTime });
+      const hoursInput: StoreHoursInput = {
+        weekdayOpen,
+        weekdayClose,
+        weekendOpen: sameWeekend ? weekdayOpen : weekendOpen,
+        weekendClose: sameWeekend ? weekdayClose : weekendClose,
+        holidayOpen: sameHoliday ? weekdayOpen : holidayOpen,
+        holidayClose: sameHoliday ? weekdayClose : holidayClose,
+      };
+      await saveStoreHours(storeId, hoursInput, closedDayRules);
 
       setSuccess(true);
       setTimeout(() => {
@@ -364,14 +372,65 @@ export default function AdminStoreEditPage() {
           </Field>
 
           <Field label="営業時間">
-            <div className="flex items-center gap-3 flex-wrap">
-              <select value={openTime} onChange={(e) => setOpenTime(e.target.value)} className="form-select">
-                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
-              </select>
-              <span className="text-gray-500">〜</span>
-              <select value={closeTime} onChange={(e) => setCloseTime(e.target.value)} className="form-select">
-                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
-              </select>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs font-medium text-gray-600 mb-1.5">平日</p>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <select value={weekdayOpen} onChange={(e) => setWeekdayOpen(e.target.value)} className="form-select">
+                    {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <span className="text-gray-500">〜</span>
+                  <select value={weekdayClose} onChange={(e) => setWeekdayClose(e.target.value)} className="form-select">
+                    {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1.5">
+                  <input
+                    type="checkbox"
+                    checked={sameWeekend}
+                    onChange={(e) => setSameWeekend(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  休日（土日）も平日と同じ
+                </label>
+                {!sameWeekend && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <select value={weekendOpen} onChange={(e) => setWeekendOpen(e.target.value)} className="form-select">
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <span className="text-gray-500">〜</span>
+                    <select value={weekendClose} onChange={(e) => setWeekendClose(e.target.value)} className="form-select">
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-600 mb-1.5">
+                  <input
+                    type="checkbox"
+                    checked={sameHoliday}
+                    onChange={(e) => setSameHoliday(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  祝日も平日と同じ
+                </label>
+                {!sameHoliday && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <select value={holidayOpen} onChange={(e) => setHolidayOpen(e.target.value)} className="form-select">
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    <span className="text-gray-500">〜</span>
+                    <select value={holidayClose} onChange={(e) => setHolidayClose(e.target.value)} className="form-select">
+                      {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
           </Field>
 

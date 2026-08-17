@@ -1,24 +1,29 @@
 "use client";
 
-import { weekdayLabels, formatDateKey, isClosedByRule, formatTimeHm, formatTimeRange } from "./types";
-import type { DaySchedule, ClosedDayRule } from "./types";
+import { weekdayLabels, formatDateKey, isClosedByRule, formatTimeHm, formatTimeRange, getDefaultHoursForDate } from "./types";
+import type { DaySchedule, ClosedDayRule, StoreHoursProfiles } from "./types";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 
 const WEEK_GRID_COLS =
   "[grid-template-columns:3rem_minmax(0,0.88fr)_repeat(5,minmax(0,1fr))_minmax(0,0.88fr)]";
 
+const DEFAULT_HOURS_PROFILES: StoreHoursProfiles = {
+  weekday: { open: "10:00", close: "19:00" },
+  weekend: { open: "10:00", close: "19:00" },
+  holiday: { open: "10:00", close: "19:00" },
+};
+
 interface WeekViewProps {
   weekStart: Date;
   schedules: Record<string, DaySchedule>;
   onDayClick: (y: number, m: number, d: number) => void;
-  defaultOpenTime?: string;
-  defaultCloseTime?: string;
+  hoursProfiles?: StoreHoursProfiles;
   closedDayRules?: ClosedDayRule[];
 }
 
 const hours = Array.from({ length: 10 }, (_, i) => i + 6);
 
-export function WeekView({ weekStart, schedules, onDayClick, defaultOpenTime = "10:00", defaultCloseTime = "19:00", closedDayRules = [] }: WeekViewProps) {
+export function WeekView({ weekStart, schedules, onDayClick, hoursProfiles = DEFAULT_HOURS_PROFILES, closedDayRules = [] }: WeekViewProps) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
@@ -85,8 +90,9 @@ export function WeekView({ weekStart, schedules, onDayClick, defaultOpenTime = "
             const schedule = schedules[key];
             const closedByRule = isClosedByRule(closedDayRules, d.getFullYear(), d.getMonth(), d.getDate());
             const isOpen = schedule ? schedule.isOpen : !closedByRule;
-            const openStr = formatTimeHm(schedule?.openTime || defaultOpenTime) || schedule?.openTime || defaultOpenTime;
-            const closeStr = formatTimeHm(schedule?.closeTime || defaultCloseTime) || schedule?.closeTime || defaultCloseTime;
+            const cellDefault = getDefaultHoursForDate(hoursProfiles, d.getFullYear(), d.getMonth(), d.getDate());
+            const openStr = formatTimeHm(schedule?.openTime || cellDefault.open) || schedule?.openTime || cellDefault.open;
+            const closeStr = formatTimeHm(schedule?.closeTime || cellDefault.close) || schedule?.closeTime || cellDefault.close;
             const openH = parseInt(openStr.split(":")[0], 10);
             const closeH = parseInt(closeStr.split(":")[0], 10);
             const inRange = isOpen && hour >= openH && hour < closeH;
@@ -102,7 +108,7 @@ export function WeekView({ weekStart, schedules, onDayClick, defaultOpenTime = "
                 {inRange && hour === openH && (
                   <div className="absolute top-1 left-1 right-1 text-xs text-white font-semibold leading-snug">
                     <span className="tabular-nums">
-                      {formatTimeRange(schedule?.openTime, schedule?.closeTime, defaultOpenTime, defaultCloseTime)}
+                      {formatTimeRange(schedule?.openTime, schedule?.closeTime, cellDefault.open, cellDefault.close)}
                     </span>
                     <br />
                     <span className="font-bold">営業日</span>

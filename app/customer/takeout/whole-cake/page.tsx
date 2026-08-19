@@ -18,6 +18,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { uploadPrintPhoto } from "@/lib/upload-image";
 import { supabase } from "@/lib/supabase";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
 import type {
   UICartItem,
@@ -61,15 +62,16 @@ export default function WholeCakePage() {
   useEffect(() => {
     if (!selectedStoreId || loading) return;
     setPrintGroupLoading(true);
-    supabase
-      .from("decorations")
-      .select("id, name, price, image_url, preparation_days")
-      .eq("store_id", selectedStoreId)
-      .eq("category", "print")
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
+    getStoreIdsWithParent(selectedStoreId).then(({ storeIds }) =>
+      supabase
+        .from("decorations")
+        .select("id, name, price, image_url, preparation_days")
+        .in("store_id", storeIds)
+        .eq("category", "print")
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle()
+    ).then(({ data }) => {
         setPrintDeco(
           data
             ? {

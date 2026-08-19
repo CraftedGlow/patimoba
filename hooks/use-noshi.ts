@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 
 const db = supabase as any;
 
@@ -14,9 +15,10 @@ export interface NoshiItem {
   displayOrder: number;
   supportedPurposes: string[];
   nameInputEnabled: boolean;
+  isMasterItem?: boolean;
 }
 
-function toNoshi(row: any): NoshiItem {
+function toNoshi(row: any, parentStoreId: string | null): NoshiItem {
   return {
     id: row.id,
     storeId: row.store_id,
@@ -26,6 +28,7 @@ function toNoshi(row: any): NoshiItem {
     displayOrder: row.display_order ?? 0,
     supportedPurposes: Array.isArray(row.supported_purposes) ? row.supported_purposes : [],
     nameInputEnabled: row.name_input_enabled ?? false,
+    isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
   };
 }
 
@@ -36,12 +39,13 @@ export function useNoshi(storeId: string | undefined) {
   const fetch = useCallback(async () => {
     if (!storeId) { setLoading(false); return; }
     setLoading(true);
+    const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId);
     const { data } = await db
       .from("noshi")
       .select("*")
-      .eq("store_id", storeId)
+      .in("store_id", storeIds)
       .order("display_order", { ascending: true });
-    setNoshiList((data ?? []).map(toNoshi));
+    setNoshiList((data ?? []).map((row: any) => toNoshi(row, parentStoreId)));
     setLoading(false);
   }, [storeId]);
 

@@ -13,6 +13,7 @@ import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } f
 import { useNoshi } from "@/hooks/use-noshi";
 import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
 import { toLocalDateString } from "@/lib/date-utils";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 import Link from "next/link";
 
 interface ProductRow {
@@ -39,6 +40,7 @@ interface ProductRow {
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
   tags: string[] | null;
+  isMasterProduct?: boolean;
 }
 
 const PRODUCT_TAGS = [
@@ -135,12 +137,15 @@ export function CakeTab() {
       return;
     }
     setLoading(true);
+    const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId);
     const { data } = await supabase
       .from("products")
       .select("*")
-      .eq("store_id", storeId)
+      .in("store_id", storeIds)
       .order("display_order", { ascending: true });
-    const rows = ((data ?? []) as unknown as ProductRow[]).filter((p) => p.category_name !== "ec");
+    const rows = ((data ?? []) as unknown as ProductRow[])
+      .filter((p) => p.category_name !== "ec")
+      .map((p) => ({ ...p, isMasterProduct: parentStoreId !== null && p.store_id === parentStoreId }));
 
     // 期間限定商品の自動オフ: 受取終了日 - 準備日数 <= 今日 なら is_active を false に
     const today = new Date();
@@ -429,8 +434,8 @@ export function CakeTab() {
         >
           <option value="">＋ 新規登録</option>
           {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name || `商品 #${p.id}`}
+            <option key={p.id} value={p.id} disabled={p.isMasterProduct}>
+              {p.name || `商品 #${p.id}`}{p.isMasterProduct ? "（共有・編集不可）" : ""}
             </option>
           ))}
         </select>

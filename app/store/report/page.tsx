@@ -51,6 +51,7 @@ interface OrderItemRow {
   product_name_snapshot: string | null;
   quantity: number | null;
   subtotal: number | null;
+  order_item_options?: { id: string }[] | null;
 }
 
 interface OrderRow {
@@ -61,6 +62,18 @@ interface OrderRow {
   order_type: string;
   users?: { name: string | null; line_name: string | null } | null;
   order_items?: OrderItemRow[] | null;
+}
+
+interface PrevOrderRow {
+  total_amount: number | null;
+  customer_id: string | null;
+}
+
+interface BusinessHourRow {
+  day_of_week: number;
+  is_closed: boolean;
+  open_time: string | null;
+  close_time: string | null;
 }
 
 interface ProductSale {
@@ -77,10 +90,15 @@ interface CustomerSummary {
 }
 
 export default function StoreReportPage() {
-  const { storeId } = useStoreContext();
+  const { storeId: ownStoreId, isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const storeId = isMaster ? (selectedChildId ?? childStores[0]?.id ?? "") : ownStoreId;
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth());
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [prevOrders, setPrevOrders] = useState<PrevOrderRow[]>([]);
+  const [businessHours, setBusinessHours] = useState<BusinessHourRow[]>([]);
+  const [repeatCustomerIds, setRepeatCustomerIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const monthLabel = `${year}年${month + 1}月`;
@@ -100,19 +118,51 @@ export default function StoreReportPage() {
     const start = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const nextM = new Date(year, month + 1, 1);
     const end = `${nextM.getFullYear()}-${String(nextM.getMonth() + 1).padStart(2, "0")}-01`;
+    const prevM = new Date(year, month - 1, 1);
+    const prevStart = `${prevM.getFullYear()}-${String(prevM.getMonth() + 1).padStart(2, "0")}-01`;
 
     (async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id, total_amount, created_at, customer_id, order_type, users:users!orders_customer_id_fkey(name, line_name), order_items(product_name_snapshot, quantity, subtotal)")
-        .eq("store_id", storeId)
-        .gte("created_at", start)
-        .lt("created_at", end)
-        .order("created_at", { ascending: true });
+      const [{ data, error }, { data: prevData }, { data: bhRows }] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("id, total_amount, created_at, customer_id, order_type, users:users!orders_customer_id_fkey(name, line_name), order_items(product_name_snapshot, quantity, subtotal, order_item_options(id))")
+          .eq("store_id", storeId)
+          .gte("created_at", start)
+          .lt("created_at", end)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("orders")
+          .select("total_amount, customer_id")
+          .eq("store_id", storeId)
+          .gte("created_at", prevStart)
+          .lt("created_at", start),
+        supabase
+          .from("store_business_hours")
+          .select("day_of_week, is_closed, open_time, close_time")
+          .eq("store_id", storeId),
+      ]);
 
       if (!error && data) {
         setOrders(data as unknown as OrderRow[]);
+
+        // リピーター判定: 今月登場した顧客について、今月より前の注文が1件でもあれば既存顧客
+        const customerIds = Array.from(
+          new Set((data as unknown as OrderRow[]).map((o) => o.customer_id).filter((id): id is string => !!id))
+        );
+        if (customerIds.length > 0) {
+          const { data: histRows } = await supabase
+            .from("orders")
+            .select("customer_id")
+            .eq("store_id", storeId)
+            .in("customer_id", customerIds)
+            .lt("created_at", start);
+          setRepeatCustomerIds(new Set((histRows ?? []).map((r: any) => r.customer_id).filter(Boolean)));
+        } else {
+          setRepeatCustomerIds(new Set());
+        }
       }
+      setPrevOrders((prevData ?? []) as PrevOrderRow[]);
+      setBusinessHours((bhRows ?? []) as BusinessHourRow[]);
       setLoading(false);
     })();
   }, [storeId, year, month]);
@@ -121,9 +171,57 @@ export default function StoreReportPage() {
     const totalOrders = orders.length;
     const totalRevenue = orders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
     const avgSpend = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
-    const uniqueCustomers = new Set(orders.filter((o) => o.customer_id).map((o) => o.customer_id));
+    const uniqueCustomerIds = new Set(orders.filter((o) => o.customer_id).map((o) => o.customer_id as string));
+    const repeatCustomerCount = Array.from(uniqueCustomerIds).filter((id) => repeatCustomerIds.has(id)).length;
+
+    const optionOrdersCount = orders.filter((o) =>
+      (o.order_items ?? []).some((item) => (item.order_item_options ?? []).length > 0)
+    ).length;
+
+    const outsideHoursCount = orders.filter((o) => {
+      const d = new Date(o.created_at);
+      const dow = d.getDay();
+      const bh = businessHours.find((b) => b.day_of_week === dow);
+      if (!bh) return false; // 営業時間が未設定なら判定不能として除外
+      if (bh.is_closed) return true;
+      if (!bh.open_time || !bh.close_time) return false;
+      const minutes = d.getHours() * 60 + d.getMinutes();
+      const [oh, om] = bh.open_time.split(":").map(Number);
+      const [ch, cm] = bh.close_time.split(":").map(Number);
+      const openMin = oh * 60 + (om || 0);
+      const closeMin = ch * 60 + (cm || 0);
+      return minutes < openMin || minutes > closeMin;
+    }).length;
+
+    return {
+      totalOrders,
+      totalRevenue,
+      avgSpend,
+      newCustomers: uniqueCustomerIds.size,
+      repeatCustomerCount,
+      optionOrdersCount,
+      outsideHoursCount,
+    };
+  }, [orders, businessHours, repeatCustomerIds]);
+
+  const prevStats = useMemo(() => {
+    const totalOrders = prevOrders.length;
+    const totalRevenue = prevOrders.reduce((s, o) => s + (Number(o.total_amount) || 0), 0);
+    const avgSpend = totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0;
+    const uniqueCustomers = new Set(prevOrders.filter((o) => o.customer_id).map((o) => o.customer_id));
     return { totalOrders, totalRevenue, avgSpend, newCustomers: uniqueCustomers.size };
-  }, [orders]);
+  }, [prevOrders]);
+
+  // 前月比（前月データが0件の場合は算出不能として null を返す）
+  const pctChange = (current: number, prev: number): number | null => {
+    if (prev === 0) return null;
+    return ((current - prev) / prev) * 100;
+  };
+  const formatPctChange = (value: number | null): { change: string; up: boolean } => {
+    if (value === null) return { change: "ー", up: true };
+    const rounded = Math.round(value * 10) / 10;
+    return { change: `${rounded > 0 ? "+" : ""}${rounded}%`, up: rounded >= 0 };
+  };
 
   const dailySales = useMemo(() => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -263,11 +361,13 @@ export default function StoreReportPage() {
     ? `約${Math.floor(savedMinutes / 60)}時間${savedMinutes % 60 > 0 ? `${savedMinutes % 60}分` : ""}`
     : `約${savedMinutes}分`;
 
+  const repeatRatePct = stats.newCustomers > 0 ? Math.round((stats.repeatCustomerCount / stats.newCustomers) * 100) : 0;
+
   const kpiCards = [
-    { icon: Clock, label: "営業時間外に届いた注文", value: `${Math.floor(stats.totalOrders * 0.3)}件`, sub: "あなたが寝ている間に注文が入りました", note: "" },
+    { icon: Clock, label: "営業時間外に届いた注文", value: `${stats.outsideHoursCount}件`, sub: "あなたが寝ている間に注文が入りました", note: "" },
     { icon: Timer, label: "削減できた対応時間", value: savedTimeLabel, sub: "電話対応や予約管理の時間を削減", note: "注文1件あたり電話・手書き対応の約2分を節約できたと推定" },
-    { icon: Package, label: "オプション追加注文", value: `${Math.floor(stats.totalOrders * 0.21)}件`, sub: "ホールケーキのカスタマイズなど", note: "" },
-    { icon: Repeat, label: "リピーターからの注文", value: `${Math.floor(stats.totalOrders * 0.51)}件`, sub: `全体の51%がリピーター`, note: "" },
+    { icon: Package, label: "オプション追加注文", value: `${stats.optionOrdersCount}件`, sub: "ホールケーキのカスタマイズなど", note: "" },
+    { icon: Repeat, label: "リピーターからの注文", value: `${stats.repeatCustomerCount}件`, sub: `購入顧客の${repeatRatePct}%がリピーター`, note: "" },
   ];
 
   const containerVariants = {
@@ -278,6 +378,14 @@ export default function StoreReportPage() {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 },
   };
+
+  if (isMaster && childStores.length === 0) {
+    return (
+      <div className="p-6 text-center text-sm text-gray-600">
+        子店舗が登録されていません。
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -294,6 +402,24 @@ export default function StoreReportPage() {
         <h1 className="text-xl font-bold">月次レポート</h1>
         <p className="text-sm text-gray-600">プレミアムプラン店舗向け</p>
       </div>
+
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {childStores.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                storeId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 月選択 */}
       <div className="flex items-center justify-between mb-6">
@@ -352,10 +478,10 @@ export default function StoreReportPage() {
         className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8"
       >
         {[
-          { label: "総注文件数", value: `${stats.totalOrders}件`, change: "+12.5%", up: true },
-          { label: "総売上金額", value: `¥${stats.totalRevenue.toLocaleString()}`, change: "+8.3%", up: true },
-          { label: "平均客単価", value: `¥${stats.avgSpend.toLocaleString()}`, change: "-2.1%", up: false },
-          { label: "新規顧客数", value: `${stats.newCustomers}名`, change: "+15.8%", up: true },
+          { label: "総注文件数", value: `${stats.totalOrders}件`, ...formatPctChange(pctChange(stats.totalOrders, prevStats.totalOrders)) },
+          { label: "総売上金額", value: `¥${stats.totalRevenue.toLocaleString()}`, ...formatPctChange(pctChange(stats.totalRevenue, prevStats.totalRevenue)) },
+          { label: "平均客単価", value: `¥${stats.avgSpend.toLocaleString()}`, ...formatPctChange(pctChange(stats.avgSpend, prevStats.avgSpend)) },
+          { label: "新規顧客数", value: `${stats.newCustomers}名`, ...formatPctChange(pctChange(stats.newCustomers, prevStats.newCustomers)) },
         ].map((item, i) => (
           <motion.div
             key={i}

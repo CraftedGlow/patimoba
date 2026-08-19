@@ -49,27 +49,20 @@ interface BlackoutPeriod {
 }
 
 async function fetchStoreForUser(storeIdHint: string | null): Promise<StoreRow | null> {
-  if (storeIdHint) {
-    const { data } = await supabase
-      .from("stores")
-      .select("*")
-      .eq("id", storeIdHint)
-      .maybeSingle();
-    if (data) return data;
-  }
-  const { data, error } = await supabase
+  if (!storeIdHint) return null;
+  const { data } = await supabase
     .from("stores")
     .select("*")
-    .order("created_at", { ascending: true })
-    .limit(1)
+    .eq("id", storeIdHint)
     .maybeSingle();
-  if (error || !data) return null;
-  return data;
+  return data ?? null;
 }
 
 export default function StoreAccountPage() {
   const { user } = useAuth();
-  const { setStoreLogo: updateSidebarLogo } = useStoreContext();
+  const { setStoreLogo: updateSidebarLogo, isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const activeStoreId = isMaster ? (selectedChildId ?? childStores[0]?.id ?? null) : (user?.storeId ?? null);
   const [loading, setLoading] = useState(true);
   const [storeId, setStoreId] = useState<string | null>(null);
 
@@ -132,8 +125,9 @@ export default function StoreAccountPage() {
   const [newBlackoutLabel, setNewBlackoutLabel] = useState("");
 
   const loadStore = useCallback(async () => {
+    setLoading(true);
     try {
-      const store = await fetchStoreForUser(user?.storeId ?? null);
+      const store = await fetchStoreForUser(activeStoreId);
       if (store) {
         setStoreId(store.id);
         setStoreName(store.name ?? "");
@@ -194,7 +188,7 @@ export default function StoreAccountPage() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, activeStoreId]);
 
   useEffect(() => {
     loadStore();
@@ -488,6 +482,14 @@ export default function StoreAccountPage() {
     }
   };
 
+  if (isMaster && childStores.length === 0) {
+    return (
+      <div className="p-6 text-center text-sm text-gray-600">
+        子店舗が登録されていません。
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -499,6 +501,24 @@ export default function StoreAccountPage() {
   return (
     <div className="p-6 md:p-10 max-w-5xl">
       <h1 className="text-xl font-bold mb-8">登録情報確認</h1>
+
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {childStores.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                activeStoreId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {storeId && (
         <div className="mb-8 flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-lg px-4 py-3">

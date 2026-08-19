@@ -15,6 +15,7 @@ import type { WholeCakeProduct } from "@/lib/types";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
@@ -157,10 +158,11 @@ export default function TakeoutProductsPage() {
     }
     let cancelled = false;
     (async () => {
+      const { storeIds } = await getStoreIdsWithParent(storeId);
       const { data: deco } = await supabase
         .from("decorations")
         .select("price, preparation_days")
-        .eq("store_id", storeId)
+        .in("store_id", storeIds)
         .eq("category", "print")
         .eq("is_active", true)
         .limit(1)

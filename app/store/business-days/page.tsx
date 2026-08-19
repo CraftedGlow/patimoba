@@ -39,7 +39,31 @@ const EN_MONTHS = [
 ];
 
 export default function BusinessDaysPage() {
-  const { storeId, storeName, storeLogo } = useStoreContext();
+  const { storeId: ownStoreId, storeName: ownStoreName, storeLogo: ownStoreLogo, isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const activeStoreId = isMaster ? (selectedChildId ?? childStores[0]?.id ?? null) : ownStoreId;
+  const storeId = activeStoreId ?? undefined;
+
+  const [childStoreName, setChildStoreName] = useState("");
+  const [childStoreLogo, setChildStoreLogo] = useState("");
+  useEffect(() => {
+    if (!isMaster || !activeStoreId) return;
+    let cancelled = false;
+    supabase
+      .from("stores")
+      .select("name, logo_url")
+      .eq("id", activeStoreId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        setChildStoreName(data?.name ?? "");
+        setChildStoreLogo(data?.logo_url ?? "");
+      });
+    return () => { cancelled = true; };
+  }, [isMaster, activeStoreId]);
+  const storeName = isMaster ? childStoreName : ownStoreName;
+  const storeLogo = isMaster ? childStoreLogo : ownStoreLogo;
+
   const { businessDays, loading, addBusinessDay, updateBusinessDay } = useBusinessDays(storeId);
 
   const today = new Date();
@@ -506,6 +530,14 @@ export default function BusinessDaysPage() {
       })()
     : "";
 
+  if (isMaster && childStores.length === 0) {
+    return (
+      <div className="p-6 text-center text-sm text-gray-600">
+        子店舗が登録されていません。
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
@@ -517,6 +549,23 @@ export default function BusinessDaysPage() {
   return (
     <div className="p-4 lg:p-6 relative flex flex-col lg:flex-row gap-6">
       <div className="flex-1">
+        {isMaster && childStores.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-5">
+            {childStores.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setSelectedChildId(s.id)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  activeStoreId === s.id
+                    ? "bg-amber-400 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-center justify-between gap-4 md:gap-8 mb-6">
           <div>
             <div className="flex items-center gap-3 md:gap-5 mb-1 flex-wrap">

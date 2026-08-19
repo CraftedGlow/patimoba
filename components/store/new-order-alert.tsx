@@ -8,8 +8,9 @@ import { useNewOrderAlert } from "@/hooks/use-new-order-alert";
 
 export function NewOrderAlert() {
   const router = useRouter();
-  const { storeId } = useStoreContext();
-  const { showAlert, dismiss } = useNewOrderAlert(storeId);
+  const { storeId, isMaster, childStores } = useStoreContext();
+  const watchIds = storeId ? (isMaster ? [storeId, ...childStores.map((s) => s.id)] : [storeId]) : [];
+  const { showAlert, dismiss } = useNewOrderAlert(watchIds);
 
   const handleConfirm = (e: React.MouseEvent) => {
     e.stopPropagation();

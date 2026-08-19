@@ -265,11 +265,15 @@ export function NoshiTab() {
             <p className="text-xs text-gray-600 py-4 text-center">のしが登録されていません</p>
           ) : (
             <ul className="space-y-1.5 overflow-y-auto max-h-[480px] pr-1">
-              {noshiList.map((item) => (
+              {noshiList.map((item) => {
+                const isMaster = item.isMasterItem ?? false
+                return (
                 <li key={item.id}>
                   <div
                     className={`w-full px-3 py-2.5 rounded-lg text-sm flex items-start gap-2 border transition-colors ${
-                      editingId === item.id
+                      isMaster
+                        ? "bg-blue-50/40 border-blue-100"
+                        : editingId === item.id
                         ? "bg-amber-50 border-amber-200"
                         : "bg-gray-50 border-transparent"
                     }`}
@@ -280,7 +284,12 @@ export function NoshiTab() {
                       className="w-9 h-9 object-cover rounded flex-shrink-0 mt-0.5"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-700 truncate">{item.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-gray-700 truncate">{item.name}</p>
+                        {isMaster && (
+                          <span className="text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded shrink-0">共有</span>
+                        )}
+                      </div>
                       {item.supportedPurposes.length > 0 && (
                         <p className="text-[11px] text-gray-600 truncate mt-0.5">{item.supportedPurposes.join("・")}</p>
                       )}
@@ -291,20 +300,23 @@ export function NoshiTab() {
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => startEdit(item)}
-                      className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
-                        editingId === item.id
-                          ? "bg-amber-400 text-white"
-                          : "bg-white border border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600"
-                      }`}
-                    >
-                      <Pencil size={11} />
-                      編集
-                    </button>
+                    {!isMaster && (
+                      <button
+                        onClick={() => startEdit(item)}
+                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
+                          editingId === item.id
+                            ? "bg-amber-400 text-white"
+                            : "bg-white border border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600"
+                        }`}
+                      >
+                        <Pencil size={11} />
+                        編集
+                      </button>
+                    )}
                   </div>
                 </li>
-              ))}
+                )
+              })}
             </ul>
           )}
         </div>

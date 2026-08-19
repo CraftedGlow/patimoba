@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, User, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -25,10 +26,17 @@ interface CustomerDetail {
 }
 
 export default function StoreCustomersPage() {
-  const { storeId } = useStoreContext();
+  const router = useRouter();
+  const { storeId, isMaster } = useStoreContext();
   const { customers, loading } = useCustomers({ storeId });
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  useEffect(() => {
+    if (isMaster) router.replace("/store/dashboard");
+  }, [isMaster, router]);
+
+  if (isMaster) return null;
 
   const handleRowClick = async (customer: Customer) => {
     setDetailLoading(true);

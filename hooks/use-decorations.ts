@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy"
 import type { DecorationItem } from "@/lib/types"
 
-function toDecorationItem(row: any): DecorationItem {
+function toDecorationItem(row: any, parentStoreId: string | null): DecorationItem {
   return {
     id: String(row.id),
     name: row.name || "",
@@ -18,6 +19,7 @@ function toDecorationItem(row: any): DecorationItem {
     seasonEnd: row.season_end ?? null,
     preparationDays: row.preparation_days != null ? Number(row.preparation_days) : null,
     displayOrder: Number(row.display_order) || 0,
+    isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
   }
 }
 
@@ -28,12 +30,13 @@ export function useDecorations(storeId?: string) {
   const fetchDecorations = useCallback(async () => {
     if (!storeId) { setLoading(false); return }
     setLoading(true)
+    const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId)
     const { data } = await supabase
       .from("decorations")
       .select("*")
-      .eq("store_id", storeId)
+      .in("store_id", storeIds)
       .order("display_order", { ascending: true })
-    setDecorations((data ?? []).map(toDecorationItem))
+    setDecorations((data ?? []).map((row) => toDecorationItem(row, parentStoreId)))
     setLoading(false)
   }, [storeId])
 

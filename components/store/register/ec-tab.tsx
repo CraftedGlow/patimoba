@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useNoshi } from "@/hooks/use-noshi";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 
 interface EcProductRow {
   id: string;
@@ -27,6 +28,7 @@ interface EcProductRow {
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
   tags: string[] | null;
+  isMasterProduct?: boolean;
 }
 
 const SHIPPING_OPTIONS = ["常温", "冷蔵", "冷凍"];
@@ -78,13 +80,18 @@ export function EcTab() {
   const fetchProducts = useCallback(async () => {
     if (!storeId) { setLoading(false); return; }
     setLoading(true);
+    const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId);
     const { data } = await supabase
       .from("products")
       .select("*")
-      .eq("store_id", storeId)
+      .in("store_id", storeIds)
       .eq("category_name", "ec")
       .order("display_order", { ascending: true });
-    setProducts((data ?? []) as unknown as EcProductRow[]);
+    const rows = ((data ?? []) as unknown as EcProductRow[]).map((p) => ({
+      ...p,
+      isMasterProduct: parentStoreId !== null && p.store_id === parentStoreId,
+    }));
+    setProducts(rows);
     setLoading(false);
   }, [storeId]);
 
@@ -297,7 +304,9 @@ export function EcTab() {
         >
           <option value="">登録済み商品リスト(EC)</option>
           {products.map((p) => (
-            <option key={p.id} value={p.id}>{p.name || `EC商品 #${p.id}`}</option>
+            <option key={p.id} value={p.id} disabled={p.isMasterProduct}>
+              {p.name || `EC商品 #${p.id}`}{p.isMasterProduct ? "（共有・編集不可）" : ""}
+            </option>
           ))}
         </select>
         {selectedId && (

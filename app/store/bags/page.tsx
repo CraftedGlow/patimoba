@@ -239,8 +239,10 @@ export default function BagsPage() {
         <p className="text-sm text-gray-600 py-10 text-center">登録された袋がありません</p>
       ) : (
         <div className="space-y-2">
-          {bags.map((bag) => (
-            <div key={bag.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${bag.isActive ? "border-gray-200 bg-white hover:bg-gray-50" : "border-gray-100 bg-gray-50 opacity-60"}`}>
+          {bags.map((bag) => {
+            const isMaster = bag.isMasterItem ?? false
+            return (
+            <div key={bag.id} className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${isMaster ? "border-blue-100 bg-blue-50/40" : bag.isActive ? "border-gray-200 bg-white hover:bg-gray-50" : "border-gray-100 bg-gray-50 opacity-60"}`}>
               <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
                 {bag.imageUrl ? (
                   <img src={bag.imageUrl} alt={bag.name} className="w-full h-full object-cover" />
@@ -251,6 +253,9 @@ export default function BagsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <p className="text-sm font-bold">{bag.name}</p>
+                  {isMaster && (
+                    <span className="text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded shrink-0">共有</span>
+                  )}
                   <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full shrink-0">
                     {bag.capacity}個まで
                   </span>
@@ -272,25 +277,31 @@ export default function BagsPage() {
               <div className="flex items-center gap-1 shrink-0 ml-2">
                 <button
                   type="button"
+                  disabled={isMaster}
                   onClick={() => updateBag(bag.id, {
                     name: bag.name, imageUrl: bag.imageUrl, price: bag.price,
                     capacity: bag.capacity, productIds: bag.productIds, isActive: !bag.isActive,
                   })}
-                  className={`relative w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none ${bag.isActive ? "bg-amber-400" : "bg-gray-300"}`}
+                  className={`relative w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none ${isMaster ? "bg-gray-300 cursor-default" : bag.isActive ? "bg-amber-400" : "bg-gray-300"}`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${bag.isActive ? "translate-x-4" : "translate-x-0"}`} />
                 </button>
-                <button type="button" onClick={() => setPanel(bag.id)}
-                  className="p-2 rounded-lg text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition-colors">
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={() => setDeleteBagId(bag.id)}
-                  className="p-2 rounded-lg text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {!isMaster && (
+                  <>
+                    <button type="button" onClick={() => setPanel(bag.id)}
+                      className="p-2 rounded-lg text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button type="button" onClick={() => setDeleteBagId(bag.id)}
+                      className="p-2 rounded-lg text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

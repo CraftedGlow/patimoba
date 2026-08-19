@@ -6,6 +6,7 @@ import { Check, Truck } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
+import { useStoreContext } from "@/lib/store-context";
 import { REGION_BLOCKS, regionForPrefecture } from "@/lib/constants/regions";
 import { FALLBACK_FLAT_FEE } from "@/lib/shipping-fee";
 
@@ -31,7 +32,9 @@ const DEFAULTS: ShippingSettingsRow = {
 
 export default function StoreShippingPage() {
   const { user } = useAuth();
-  const storeId = user?.storeId ?? "";
+  const { isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const storeId = isMaster ? (selectedChildId ?? childStores[0]?.id ?? "") : (user?.storeId ?? "");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -168,6 +171,14 @@ export default function StoreShippingPage() {
     }
   }, [storeId, settings, originRegion, regionFees, masterFees]);
 
+  if (isMaster && childStores.length === 0) {
+    return (
+      <div className="p-6 text-center text-sm text-gray-600">
+        子店舗が登録されていません。
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -183,6 +194,24 @@ export default function StoreShippingPage() {
         配送設定
       </h1>
       <p className="text-sm text-gray-600 mb-8">EC（配送）注文の送料の決め方を設定します。テイクアウトの注文には影響しません。</p>
+
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {childStores.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                storeId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-8">
         <div>

@@ -179,6 +179,7 @@ export interface DecorationItem {
   seasonEnd: string | null
   preparationDays: number | null
   displayOrder: number
+  isMasterItem?: boolean
 }
 
 export interface DecorationGroupWithItems {

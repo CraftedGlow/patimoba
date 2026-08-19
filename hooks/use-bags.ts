@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 
 const db = supabase as any;
 
@@ -15,9 +16,10 @@ export interface BagItem {
   productIds: string[];
   isActive: boolean;
   displayOrder: number;
+  isMasterItem?: boolean;
 }
 
-function toBag(row: any): BagItem {
+function toBag(row: any, parentStoreId: string | null): BagItem {
   return {
     id: row.id,
     storeId: row.store_id,
@@ -28,6 +30,7 @@ function toBag(row: any): BagItem {
     productIds: Array.isArray(row.product_ids) ? row.product_ids : [],
     isActive: row.is_active ?? true,
     displayOrder: row.display_order ?? 0,
+    isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
   };
 }
 
@@ -38,12 +41,13 @@ export function useBags(storeId: string | undefined) {
   const fetch = useCallback(async () => {
     if (!storeId) { setLoading(false); return; }
     setLoading(true);
+    const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId);
     const { data } = await db
       .from("bags")
       .select("*")
-      .eq("store_id", storeId)
+      .in("store_id", storeIds)
       .order("display_order", { ascending: true });
-    setBags((data ?? []).map(toBag));
+    setBags((data ?? []).map((row: any) => toBag(row, parentStoreId)));
     setLoading(false);
   }, [storeId]);
 

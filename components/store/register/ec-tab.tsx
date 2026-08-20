@@ -304,8 +304,8 @@ export function EcTab() {
         >
           <option value="">登録済み商品リスト(EC)</option>
           {products.map((p) => (
-            <option key={p.id} value={p.id} disabled={p.isMasterProduct}>
-              {p.name || `EC商品 #${p.id}`}{p.isMasterProduct ? "（共有・編集不可）" : ""}
+            <option key={p.id} value={p.id}>
+              {p.name || `EC商品 #${p.id}`}{p.isMasterProduct ? "（共有）" : ""}
             </option>
           ))}
         </select>

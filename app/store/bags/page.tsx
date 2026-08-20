@@ -277,27 +277,22 @@ export default function BagsPage() {
               <div className="flex items-center gap-1 shrink-0 ml-2">
                 <button
                   type="button"
-                  disabled={isMaster}
                   onClick={() => updateBag(bag.id, {
                     name: bag.name, imageUrl: bag.imageUrl, price: bag.price,
                     capacity: bag.capacity, productIds: bag.productIds, isActive: !bag.isActive,
                   })}
-                  className={`relative w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none ${isMaster ? "bg-gray-300 cursor-default" : bag.isActive ? "bg-amber-400" : "bg-gray-300"}`}
+                  className={`relative w-10 h-6 rounded-full transition-colors duration-200 focus:outline-none ${bag.isActive ? "bg-amber-400" : "bg-gray-300"}`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${bag.isActive ? "translate-x-4" : "translate-x-0"}`} />
                 </button>
-                {!isMaster && (
-                  <>
-                    <button type="button" onClick={() => setPanel(bag.id)}
-                      className="p-2 rounded-lg text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition-colors">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button type="button" onClick={() => setDeleteBagId(bag.id)}
-                      className="p-2 rounded-lg text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
+                <button type="button" onClick={() => setPanel(bag.id)}
+                  className="p-2 rounded-lg text-gray-600 hover:text-amber-600 hover:bg-amber-50 transition-colors">
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button type="button" onClick={() => setDeleteBagId(bag.id)}
+                  className="p-2 rounded-lg text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
             )

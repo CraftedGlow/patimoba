@@ -300,19 +300,17 @@ export function NoshiTab() {
                         )}
                       </div>
                     </div>
-                    {!isMaster && (
-                      <button
-                        onClick={() => startEdit(item)}
-                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
-                          editingId === item.id
-                            ? "bg-amber-400 text-white"
-                            : "bg-white border border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600"
-                        }`}
-                      >
-                        <Pencil size={11} />
-                        編集
-                      </button>
-                    )}
+                    <button
+                      onClick={() => startEdit(item)}
+                      className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold transition-colors ${
+                        editingId === item.id
+                          ? "bg-amber-400 text-white"
+                          : "bg-white border border-gray-200 text-gray-500 hover:border-amber-400 hover:text-amber-600"
+                      }`}
+                    >
+                      <Pencil size={11} />
+                      編集
+                    </button>
                   </div>
                 </li>
                 )

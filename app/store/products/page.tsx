@@ -283,15 +283,15 @@ export default function StoreProductsPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.02 }}
-                    onClick={() => !isMaster && setSelectedProduct(product)}
-                    className={`border border-gray-200 rounded-lg p-3 mb-2 flex gap-3 items-start transition-colors ${
-                      isMaster
-                        ? "bg-blue-50/40 cursor-default"
-                        : isSelected
-                        ? "bg-amber-50 cursor-pointer hover:bg-gray-50"
+                    onClick={() => setSelectedProduct(product)}
+                    className={`border border-gray-200 rounded-lg p-3 mb-2 flex gap-3 items-start transition-colors cursor-pointer ${
+                      isSelected
+                        ? "bg-amber-50 hover:bg-gray-50"
+                        : isMaster
+                        ? "bg-blue-50/40 hover:bg-blue-50"
                         : isInactive
-                        ? "bg-pink-50/40 cursor-pointer hover:bg-gray-50"
-                        : "cursor-pointer hover:bg-gray-50"
+                        ? "bg-pink-50/40 hover:bg-gray-50"
+                        : "hover:bg-gray-50"
                     }`}
                   >
                     {/* 商品画像 */}
@@ -333,8 +333,8 @@ export default function StoreProductsPage() {
                         <div onClick={(e) => e.stopPropagation()}>
                           <ToggleSwitch
                             enabled={product.is_active}
-                            onToggle={() => !isMaster && handleToggleAccept(product)}
-                            colorOn={isMaster ? "bg-gray-300" : "bg-green-500"}
+                            onToggle={() => handleToggleAccept(product)}
+                            colorOn="bg-green-500"
                           />
                         </div>
 

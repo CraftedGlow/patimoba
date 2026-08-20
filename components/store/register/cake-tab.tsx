@@ -434,8 +434,8 @@ export function CakeTab() {
         >
           <option value="">＋ 新規登録</option>
           {products.map((p) => (
-            <option key={p.id} value={p.id} disabled={p.isMasterProduct}>
-              {p.name || `商品 #${p.id}`}{p.isMasterProduct ? "（共有・編集不可）" : ""}
+            <option key={p.id} value={p.id}>
+              {p.name || `商品 #${p.id}`}{p.isMasterProduct ? "（共有）" : ""}
             </option>
           ))}
         </select>

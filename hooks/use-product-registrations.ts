@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { supabase } from "@/lib/supabase"
+import { fetchProductStoreOverrides, applyProductStoreOverride, upsertProductStoreOverride } from "@/lib/store-hierarchy"
 
 export interface ProductCustomOptionValue {
   label: string
@@ -125,6 +126,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
   const [categories, setCategories] = useState<string[]>(["すべて"])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const parentStoreIdRef = useRef<string | null>(null)
 
   const fetchProducts = useCallback(async (silent = false) => {
     if (!options.storeId) {
@@ -147,8 +149,9 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
       parentStoreId = storeData.parent_store_id
       storeIds.push(parentStoreId)
     }
+    parentStoreIdRef.current = parentStoreId
 
-    let query = supabase
+    const query = supabase
       .from("products")
       .select("*, product_variants(id, price, is_active)")
       .in("store_id", storeIds)
@@ -157,21 +160,30 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
       .order("base_price", { ascending: true })
       .order("created_at", { ascending: true })
 
-    if (options.publishedOnly) {
-      query = query.eq("is_active", true)
-    }
+    // 共有商品は店舗ごとの上書き（受付状況など）で is_active が変わりうるため、
+    // 階層がある場合は publishedOnly の絞り込みをマージ後に行う
+    const finalQuery = options.publishedOnly && parentStoreId === null
+      ? query.eq("is_active", true)
+      : query
 
-    const { data, error: err } = await query
+    const [{ data, error: err }, overrides] = await Promise.all([
+      finalQuery,
+      fetchProductStoreOverrides(options.storeId, parentStoreId),
+    ])
     if (err) {
       setError(err.message)
     } else {
       const categorySet = new Set<string>()
-      const mapped = (data ?? []).map((row: any) => {
-        const p = mapRow(row)
+      let mapped = (data ?? []).map((row: any) => {
+        const merged = applyProductStoreOverride(row, row.id, parentStoreId, overrides)
+        const p = mapRow(merged)
         p.isMasterProduct = parentStoreId !== null && row.store_id === parentStoreId
         if (p.category_name) categorySet.add(p.category_name)
         return p
       })
+      if (options.publishedOnly && parentStoreId !== null) {
+        mapped = mapped.filter((p) => p.is_active)
+      }
       setProducts(mapped)
       setCategories(["すべて", ...Array.from(categorySet)])
     }
@@ -186,23 +198,40 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     id: string,
     updates: Partial<Omit<ProductRegistration, "id" | "store_id">>
   ) => {
+    // 共有商品（マスター登録）を子店舗の文脈で編集している場合、受付状況などの
+    // 運用項目はこの店舗専用の上書き（product_store_overrides）として保存し、
+    // 共有マスタ自体（他店にも影響する値）は変更しない
+    const isMasterProduct = products.find((p) => p.id === id)?.isMasterProduct ?? false
+    const isChildContext = parentStoreIdRef.current !== null
+    const routeToOverride = isMasterProduct && isChildContext
+    const OVERRIDE_FIELDS = ["is_active", "same_day_order_allowed", "daily_max_quantity", "preparation_days"] as const
+
     const payload: any = {}
+    const overridePayload: any = {}
+    const assign = (key: (typeof OVERRIDE_FIELDS)[number] | string, value: unknown) => {
+      if (routeToOverride && (OVERRIDE_FIELDS as readonly string[]).includes(key)) {
+        overridePayload[key] = value
+      } else {
+        payload[key] = value
+      }
+    }
+
     if (updates.name !== undefined) payload.name = updates.name
     if (updates.description !== undefined) payload.description = updates.description
     if (updates.base_price !== undefined) payload.base_price = updates.base_price
     if (updates.image !== undefined) payload.image = updates.image
     if (updates.cross_section_image !== undefined) payload.cross_section_image = updates.cross_section_image
     if (updates.category_name !== undefined) payload.category_name = updates.category_name
-    if (updates.is_active !== undefined) payload.is_active = updates.is_active
+    if (updates.is_active !== undefined) assign("is_active", updates.is_active)
     if (updates.is_preorder_required !== undefined) payload.is_preorder_required = updates.is_preorder_required
-    if (updates.same_day_order_allowed !== undefined) payload.same_day_order_allowed = updates.same_day_order_allowed
+    if (updates.same_day_order_allowed !== undefined) assign("same_day_order_allowed", updates.same_day_order_allowed)
     if (updates.min_order_lead_minutes !== undefined) payload.min_order_lead_minutes = updates.min_order_lead_minutes
     if (updates.tax_type !== undefined) payload.tax_type = updates.tax_type
     if (updates.display_order !== undefined) payload.display_order = updates.display_order
     if (updates.is_takeout !== undefined) payload.is_takeout = updates.is_takeout
     if (updates.is_ec !== undefined) payload.is_ec = updates.is_ec
-    if (updates.daily_max_quantity !== undefined) payload.daily_max_quantity = updates.daily_max_quantity
-    if (updates.preparation_days !== undefined) payload.preparation_days = updates.preparation_days
+    if (updates.daily_max_quantity !== undefined) assign("daily_max_quantity", updates.daily_max_quantity)
+    if (updates.preparation_days !== undefined) assign("preparation_days", updates.preparation_days)
     if (updates.custom_options !== undefined) payload.custom_options = updates.custom_options
     if (updates.print_decoration_enabled !== undefined) payload.print_decoration_enabled = updates.print_decoration_enabled
     if (updates.noshi_enabled !== undefined) payload.noshi_enabled = updates.noshi_enabled
@@ -210,7 +239,6 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.limited_from !== undefined) payload.limited_from = updates.limited_from
     if (updates.limited_until !== undefined) payload.limited_until = updates.limited_until
     if (updates.tags !== undefined) payload.tags = updates.tags
-    if (updates.same_day_order_allowed !== undefined) payload.same_day_order_allowed = updates.same_day_order_allowed
     if (updates.cross_section_image !== undefined) payload.cross_section_image = updates.cross_section_image
     if (updates.shipping_method !== undefined) payload.shipping_method = updates.shipping_method
     if (updates.storage_method !== undefined) payload.storage_method = updates.storage_method
@@ -218,13 +246,18 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.best_before_days !== undefined) payload.best_before_days = updates.best_before_days
     if (updates.content_quantity !== undefined) payload.content_quantity = updates.content_quantity
 
-    const { error } = await supabase
-      .from("products")
-      .update(payload)
-      .eq("id", id)
+    let errorMessage: string | null = null
+    if (Object.keys(payload).length > 0) {
+      const { error } = await supabase.from("products").update(payload).eq("id", id)
+      if (error) errorMessage = error.message
+    }
+    if (!errorMessage && Object.keys(overridePayload).length > 0 && options.storeId) {
+      const { error } = await upsertProductStoreOverride(id, options.storeId, overridePayload)
+      if (error) errorMessage = error
+    }
 
-    if (!error) await fetchProducts(true)
-    return { error: error?.message || null }
+    if (!errorMessage) await fetchProducts(true)
+    return { error: errorMessage }
   }
 
   const deleteProduct = async (id: string) => {

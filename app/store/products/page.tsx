@@ -452,8 +452,11 @@ export default function StoreProductsPage() {
                           : "hover:bg-gray-50"
                       }`}
                     >
-                      <span className="text-sm font-medium truncate pr-2">
-                        {product.name}
+                      <span className="text-sm font-medium truncate pr-2 flex items-center gap-1.5">
+                        <span className="truncate">{product.name}</span>
+                        {product.isMasterProduct && (
+                          <span className="shrink-0 text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">共有</span>
+                        )}
                       </span>
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                         {product.image ? (
@@ -508,8 +511,11 @@ export default function StoreProductsPage() {
                           : "hover:bg-gray-50"
                       }`}
                     >
-                      <span className="text-sm font-medium truncate pr-2">
-                        {product.name}
+                      <span className="text-sm font-medium truncate pr-2 flex items-center gap-1.5">
+                        <span className="truncate">{product.name}</span>
+                        {product.isMasterProduct && (
+                          <span className="shrink-0 text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">共有</span>
+                        )}
                       </span>
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                         {product.image ? (

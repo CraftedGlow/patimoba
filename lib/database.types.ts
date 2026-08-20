@@ -848,6 +848,57 @@ export type Database = {
           },
         ]
       }
+      product_store_overrides: {
+        Row: {
+          created_at: string
+          daily_max_quantity: number | null
+          id: string
+          is_active: boolean | null
+          preparation_days: number | null
+          product_id: string
+          same_day_order_allowed: boolean | null
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daily_max_quantity?: number | null
+          id?: string
+          is_active?: boolean | null
+          preparation_days?: number | null
+          product_id: string
+          same_day_order_allowed?: boolean | null
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daily_max_quantity?: number | null
+          id?: string
+          is_active?: boolean | null
+          preparation_days?: number | null
+          product_id?: string
+          same_day_order_allowed?: boolean | null
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_store_overrides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_store_overrides_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_variants: {
         Row: {
           created_at: string

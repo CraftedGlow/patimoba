@@ -16,3 +16,77 @@ export async function getStoreIdsWithParent(
   const storeIds = parentStoreId ? [storeId, parentStoreId] : [storeId]
   return { storeIds, parentStoreId }
 }
+
+export interface ProductStoreOverride {
+  is_active: boolean | null
+  same_day_order_allowed: boolean | null
+  daily_max_quantity: number | null
+  preparation_days: number | null
+}
+
+/**
+ * 共有商品（マスター登録）の受付状況・当日受付・最大個数・準備日数は、
+ * この店舗専用の上書き設定（product_store_overrides）があればそちらを優先する。
+ * parentStoreId が null（=マスター自身の閲覧）の場合は上書きの概念がないため空で返す。
+ */
+export async function fetchProductStoreOverrides(
+  storeId: string,
+  parentStoreId: string | null
+): Promise<Map<string, ProductStoreOverride>> {
+  const map = new Map<string, ProductStoreOverride>()
+  if (parentStoreId === null) return map
+  const { data } = await supabase
+    .from("product_store_overrides")
+    .select("product_id, is_active, same_day_order_allowed, daily_max_quantity, preparation_days")
+    .eq("store_id", storeId)
+  for (const row of data ?? []) {
+    map.set(row.product_id, {
+      is_active: row.is_active,
+      same_day_order_allowed: row.same_day_order_allowed,
+      daily_max_quantity: row.daily_max_quantity,
+      preparation_days: row.preparation_days,
+    })
+  }
+  return map
+}
+
+/** 共有商品の行に、この店舗の上書き値をマージする（自店舗登録の商品はそのまま） */
+export function applyProductStoreOverride<
+  T extends { store_id: string; is_active?: boolean; same_day_order_allowed?: boolean; daily_max_quantity?: number | null; preparation_days?: number }
+>(row: T, productId: string, parentStoreId: string | null, overrides: Map<string, ProductStoreOverride>): T {
+  if (parentStoreId === null || row.store_id !== parentStoreId) return row
+  const ov = overrides.get(productId)
+  if (!ov) return row
+  return {
+    ...row,
+    is_active: ov.is_active ?? row.is_active,
+    same_day_order_allowed: ov.same_day_order_allowed ?? row.same_day_order_allowed,
+    daily_max_quantity: ov.daily_max_quantity !== null ? ov.daily_max_quantity : row.daily_max_quantity,
+    preparation_days: ov.preparation_days ?? row.preparation_days,
+  }
+}
+
+/** is_active/same_day_order_allowed/daily_max_quantity/preparation_days の上書きを保存する */
+export async function upsertProductStoreOverride(
+  productId: string,
+  storeId: string,
+  updates: Partial<ProductStoreOverride>
+): Promise<{ error: string | null }> {
+  const { data: existing } = await supabase
+    .from("product_store_overrides")
+    .select("id")
+    .eq("product_id", productId)
+    .eq("store_id", storeId)
+    .maybeSingle()
+  if (existing) {
+    const { error } = await supabase
+      .from("product_store_overrides")
+      .update(updates)
+      .eq("id", existing.id)
+    return { error: error?.message ?? null }
+  }
+  const { error } = await supabase
+    .from("product_store_overrides")
+    .insert({ product_id: productId, store_id: storeId, ...updates })
+  return { error: error?.message ?? null }
+}

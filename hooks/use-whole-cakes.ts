@@ -6,6 +6,7 @@ import {
   WholeCakeProduct,
   toUIWholeCakeSize,
 } from "@/lib/types"
+import { fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy"
 
 export interface CandleOption {
   id: string
@@ -34,6 +35,7 @@ export function useWholeCakes(storeId?: string) {
         .eq("is_preorder_required", true)
         .order("display_order", { ascending: true })
 
+      let parentStoreId: string | null = null
       if (storeId) {
         const storeIds = [storeId]
         const { data: storeData } = await supabase
@@ -41,25 +43,33 @@ export function useWholeCakes(storeId?: string) {
           .select("parent_store_id")
           .eq("id", storeId)
           .single()
-        if (storeData?.parent_store_id) storeIds.push(storeData.parent_store_id)
+        if (storeData?.parent_store_id) {
+          parentStoreId = storeData.parent_store_id
+          storeIds.push(parentStoreId)
+        }
         query = query.in("store_id", storeIds)
       }
 
-      const { data: products, error: prodErr } = await query
+      const [{ data: products, error: prodErr }, overrides] = await Promise.all([
+        query,
+        storeId ? fetchProductStoreOverrides(storeId, parentStoreId) : Promise.resolve(new Map()),
+      ])
       if (prodErr) throw prodErr
 
-      const cakes: WholeCakeProduct[] = (products || []).map((product: any) => ({
-        id: String(product.id),
-        storeId: String(product.store_id),
-        name: product.name || "",
-        image: product.image || "",
-        sizes: (product.product_variants || []).map(toUIWholeCakeSize),
-        printDecorationEnabled: product.print_decoration_enabled ?? false,
-        isActive: product.is_active ?? true,
-        sameDayOrderAllowed: product.same_day_order_allowed ?? false,
-        customOptions: Array.isArray(product.custom_options) ? product.custom_options : [],
-        tags: Array.isArray(product.tags) ? product.tags : [],
-      }))
+      const cakes: WholeCakeProduct[] = (products || [])
+        .map((product: any) => applyProductStoreOverride(product, product.id, parentStoreId, overrides))
+        .map((product: any) => ({
+          id: String(product.id),
+          storeId: String(product.store_id),
+          name: product.name || "",
+          image: product.image || "",
+          sizes: (product.product_variants || []).map(toUIWholeCakeSize),
+          printDecorationEnabled: product.print_decoration_enabled ?? false,
+          isActive: product.is_active ?? true,
+          sameDayOrderAllowed: product.same_day_order_allowed ?? false,
+          customOptions: Array.isArray(product.custom_options) ? product.custom_options : [],
+          tags: Array.isArray(product.tags) ? product.tags : [],
+        }))
 
       setWholeCakes(cakes)
     } catch (e: any) {

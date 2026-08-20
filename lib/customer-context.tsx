@@ -188,3 +188,8 @@ export function useCustomerContext() {
   }
   return context
 }
+
+/** CustomerProvider の外（ルート直下の CartProvider など）でも安全に呼べる版。ない場合は null。 */
+export function useOptionalCustomerContext() {
+  return useContext(CustomerContext) ?? null
+}

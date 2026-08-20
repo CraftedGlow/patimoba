@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
 import type { UICartItem } from "./types"
+import { useOptionalCustomerContext } from "./customer-context"
 
 interface DeliveryAddress {
   postalCode: string
@@ -175,6 +176,16 @@ export function CartProvider({ children, storageKey = DEFAULT_STORAGE_KEY }: { c
     setShippingFeeState(0)
     setUsedPointsState(0)
   }, [])
+
+  // 別の店舗に切り替えたら、前の店舗のカートは持ち越さない
+  const customerContext = useOptionalCustomerContext()
+  const selectedStoreId = customerContext?.selectedStoreId ?? null
+  useEffect(() => {
+    if (!loaded) return
+    if (selectedStoreId && storeId && selectedStoreId !== storeId) {
+      clear()
+    }
+  }, [loaded, selectedStoreId, storeId, clear])
 
   const total = items.reduce((sum, item) => {
     let itemTotal = item.price * item.quantity

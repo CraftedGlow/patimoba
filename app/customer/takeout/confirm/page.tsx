@@ -80,23 +80,26 @@ export default function TakeoutConfirmPage() {
   const [selectedBag, setSelectedBag] = useState<{ id: string; name: string; price: number; quantity: number } | null>(null);
   // カート内に「店頭決済のみ」の商品が含まれるか
   const [paymentRestricted, setPaymentRestricted] = useState(false);
+  // カート内に「おまかせ（金額の幅あり）」の商品が含まれるか
+  const [hasOmakaseItem, setHasOmakaseItem] = useState(false);
 
   useEffect(() => {
     const sid = selectedStoreId || cartStoreId;
     const productIds = cartItems.map((i) => i.productId).filter(Boolean);
-    if (!sid || productIds.length === 0) { setPaymentRestricted(false); return; }
+    if (!sid || productIds.length === 0) { setPaymentRestricted(false); setHasOmakaseItem(false); return; }
     let cancelled = false;
     (async () => {
       const { data: rows } = await supabase
         .from("products")
-        .select("id, store_id, payment_method_restriction")
+        .select("id, store_id, payment_method_restriction, price_min, price_max")
         .in("id", productIds);
       if (cancelled || !rows) return;
       const { parentStoreId } = await getStoreIdsWithParent(sid);
       const overrides = await fetchProductStoreOverrides(sid, parentStoreId);
       const merged = rows.map((row: any) => applyProductStoreOverride(row, row.id, parentStoreId, overrides));
       const restricted = merged.some((r: any) => r.payment_method_restriction === "store_only");
-      if (!cancelled) setPaymentRestricted(restricted);
+      const hasOmakase = merged.some((r: any) => r.price_min != null && r.price_max != null);
+      if (!cancelled) { setPaymentRestricted(restricted); setHasOmakaseItem(hasOmakase); }
     })();
     return () => { cancelled = true; };
   }, [selectedStoreId, cartStoreId, cartItems]);
@@ -649,6 +652,11 @@ export default function TakeoutConfirmPage() {
                 <span className="ml-1 text-gray-600" style={{ fontSize: 11 }}>(税込)</span>
               </div>
             </div>
+            {hasOmakaseItem && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                おまかせ商品が含まれているため、上記の金額は目安です。実際の金額は内容に応じて店頭にて確定いたします。
+              </p>
+            )}
             <div className="flex justify-between items-start">
               <span className="text-sm font-bold">獲得予定ポイント</span>
               <div className="text-right">

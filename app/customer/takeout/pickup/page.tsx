@@ -12,6 +12,7 @@ import { useBags } from "@/hooks/use-bags";
 import { supabase } from "@/lib/supabase";
 import { isClosedByRule } from "@/components/store/business-days/types";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
+import { getStoreIdsWithParent, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
@@ -94,6 +95,8 @@ export default function TakeoutPickupPage() {
   const [itemPreparationDays, setItemPreparationDays] = useState(0);
   const [limitedFrom, setLimitedFrom] = useState<Date | null>(null);
   const [limitedUntil, setLimitedUntil] = useState<Date | null>(null);
+  // カート内商品の「毎月の受け取り可能日」の共通部分（積集合）。nullなら制限なし
+  const [allowedDaysOfMonth, setAllowedDaysOfMonth] = useState<number[] | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -170,11 +173,18 @@ export default function TakeoutPickupPage() {
           .flatMap((i) => (i.customization?.options ?? []).map((o) => o.wholeCakeOptionId))
           .filter(Boolean);
         if (productIds.length > 0) {
-          const { data: productRows } = await supabase
+          const { data: rawProductRows } = await supabase
             .from("products")
-            .select("id, preparation_days, limited_from, limited_until")
+            .select("id, store_id, preparation_days, limited_from, limited_until, available_days_of_month")
             .in("id", productIds);
-          if (productRows && productRows.length > 0) {
+          if (rawProductRows && rawProductRows.length > 0) {
+            // 共有商品はこの店舗の上書き設定（毎月の受け取り可能日など）をマージする
+            const { parentStoreId } = await getStoreIdsWithParent(storeId);
+            const overrides = await fetchProductStoreOverrides(storeId, parentStoreId);
+            const productRows = rawProductRows.map((row: any) =>
+              applyProductStoreOverride(row, row.id, parentStoreId, overrides)
+            );
+
             let maxDays = Math.max(...productRows.map((p: any) => Number(p.preparation_days) || 0));
 
             // デコレーションの準備日数も加味する
@@ -198,7 +208,26 @@ export default function TakeoutPickupPage() {
             setLimitedFrom(froms.length > 0 ? froms.reduce((a, b) => (a > b ? a : b)) : null);
             // limited_until: 最も早い終了日
             setLimitedUntil(untils.length > 0 ? untils.reduce((a, b) => (a < b ? a : b)) : null);
+
+            // 毎月の受け取り可能日: カート内商品それぞれの許可日の積集合（1つでも制限があれば絞り込む）
+            const dayRestricted = productRows.filter(
+              (p: any) => Array.isArray(p.available_days_of_month) && p.available_days_of_month.length > 0
+            );
+            if (dayRestricted.length > 0) {
+              let intersection: number[] | null = null;
+              for (const p of dayRestricted as { available_days_of_month: number[] }[]) {
+                const days = p.available_days_of_month;
+                intersection = intersection === null ? days : intersection.filter((d) => days.includes(d));
+              }
+              setAllowedDaysOfMonth(intersection ?? []);
+            } else {
+              setAllowedDaysOfMonth(null);
+            }
+          } else {
+            setAllowedDaysOfMonth(null);
           }
+        } else {
+          setAllowedDaysOfMonth(null);
         }
       } finally {
         setLoading(false);
@@ -254,6 +283,9 @@ export default function TakeoutPickupPage() {
       lu.setHours(23, 59, 59, 999);
       if (date > lu) return false;
     }
+
+    // 毎月の受け取り可能日チェック
+    if (allowedDaysOfMonth && !allowedDaysOfMonth.includes(date.getDate())) return false;
 
     // 営業日チェック（特定日override + 曜日ルール）
     return isDateOpen(date);
@@ -354,6 +386,10 @@ export default function TakeoutPickupPage() {
     return null;
   })();
 
+  const dayRestrictionNote = allowedDaysOfMonth
+    ? `カート内の商品は毎月${allowedDaysOfMonth.map((d) => `${d}日`).join("・")}のみ受け取り可能です`
+    : null;
+
   return (
     <div className="min-h-screen bg-white">
       <CustomerHeader
@@ -421,6 +457,9 @@ export default function TakeoutPickupPage() {
 
             {limitedNote && (
               <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mt-3">{limitedNote}</p>
+            )}
+            {dayRestrictionNote && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mt-3">{dayRestrictionNote}</p>
             )}
           </div>
         )}

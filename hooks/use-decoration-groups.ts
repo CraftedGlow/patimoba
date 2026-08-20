@@ -18,6 +18,7 @@ function toDecorationItem(row: any): DecorationItem {
     seasonEnd: row.season_end ?? null,
     preparationDays: row.preparation_days != null ? Number(row.preparation_days) : null,
     displayOrder: Number(row.display_order) || 0,
+    excludesCategories: Array.isArray(row.excludes_categories) ? row.excludes_categories : [],
   }
 }
 
@@ -43,7 +44,7 @@ const GROUP_SELECT = `
   id, store_id, name, description, selection_type, max_selections, required, display_order,
   decoration_group_items (
     id, display_order, decoration_id,
-    decorations ( id, name, description, image_url, category, price, is_active, is_seasonal, season_start, season_end, display_order )
+    decorations ( id, name, description, image_url, category, price, is_active, is_seasonal, season_start, season_end, display_order, excludes_categories )
   )
 `
 

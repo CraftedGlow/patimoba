@@ -9,6 +9,7 @@ interface CreateOrderInput {
   customerId: string | null
   customerName?: string | null
   paymentStatus?: string
+  paymentMethod?: string | null
   items: UICartItem[]
   subtotal: number
   discountAmount?: number
@@ -78,6 +79,7 @@ export function useOrderMutations() {
         order_type: derived.type,
         order_status: "pending",
         payment_status: input.paymentStatus ?? "unpaid",
+        payment_method: input.paymentMethod ?? null,
         subtotal: input.subtotal,
         discount_amount: input.discountAmount ?? 0,
         total_amount: totalAmount,

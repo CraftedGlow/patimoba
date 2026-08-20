@@ -42,7 +42,7 @@ interface DecorationFormProps {
   onSave: (data: {
     name: string; description: string; imageUrl: string | null; category: string
     price: number; isSeasonal: boolean; seasonStart: string | null; seasonEnd: string | null
-    preparationDays: number | null
+    preparationDays: number | null; excludesCategories: string[]
   }) => Promise<{ error: string | null }>
   onClose: () => void
 }
@@ -57,6 +57,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
   const [seasonStart, setSeasonStart] = useState(initial?.seasonStart ?? "")
   const [seasonEnd, setSeasonEnd] = useState(initial?.seasonEnd ?? "")
   const [preparationDays, setPreparationDays] = useState<number | null>(initial?.preparationDays ?? null)
+  const [excludesCategories, setExcludesCategories] = useState<string[]>(initial?.excludesCategories ?? [])
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -89,6 +90,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
       seasonStart: isSeasonal && seasonStart ? seasonStart : null,
       seasonEnd: isSeasonal && seasonEnd ? seasonEnd : null,
       preparationDays,
+      excludesCategories,
     })
     setSaving(false)
     if (err) { setError(err); return }
@@ -226,6 +228,39 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
             <option key={d} value={d}>{d}日前まで</option>
           ))}
         </select>
+      </div>
+
+      {/* 除外カテゴリ */}
+      <div>
+        <label className="text-xs font-medium text-gray-600 block mb-1">
+          これを選ぶと選択不可にするカテゴリー（任意）
+        </label>
+        <p className="text-[11px] text-gray-500 mb-2">
+          例: プリントデコレーションを選んだら、プレートは追加できないようにする
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.filter((c) => c !== category).map((c) => {
+            const active = excludesCategories.includes(c)
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() =>
+                  setExcludesCategories((prev) =>
+                    prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
+                  )
+                }
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  active
+                    ? "bg-red-400 border-red-400 text-white"
+                    : "bg-white border-gray-200 text-gray-600 hover:border-red-300"
+                }`}
+              >
+                {CATEGORY_LABELS[c]}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
@@ -665,6 +700,7 @@ export default function DecorationsPage() {
                         isSeasonal: data.isSeasonal,
                         seasonStart: data.seasonStart, seasonEnd: data.seasonEnd,
                         preparationDays: data.preparationDays,
+                        excludesCategories: data.excludesCategories,
                       })
                     } else {
                       return createDecoration(storeId, {
@@ -673,6 +709,7 @@ export default function DecorationsPage() {
                         price: data.price, isSeasonal: data.isSeasonal,
                         seasonStart: data.seasonStart, seasonEnd: data.seasonEnd,
                         preparationDays: data.preparationDays,
+                        excludesCategories: data.excludesCategories,
                       })
                     }
                   }}

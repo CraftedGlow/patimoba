@@ -48,6 +48,8 @@ export interface ProductRegistration {
   content_quantity: string | null
   limited_from: string | null
   limited_until: string | null
+  available_days_of_month: number[] | null
+  payment_method_restriction: string | null
   created_at: string | null
   updated_at: string | null
   isMasterProduct?: boolean
@@ -116,6 +118,8 @@ function mapRow(row: any): ProductRegistration {
     content_quantity: row.content_quantity ?? null,
     limited_from: row.limited_from ?? null,
     limited_until: row.limited_until ?? null,
+    available_days_of_month: Array.isArray(row.available_days_of_month) && row.available_days_of_month.length > 0 ? row.available_days_of_month : null,
+    payment_method_restriction: row.payment_method_restriction ?? null,
     created_at: row.created_at ?? null,
     updated_at: row.updated_at ?? null,
   }
@@ -204,7 +208,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     const isMasterProduct = products.find((p) => p.id === id)?.isMasterProduct ?? false
     const isChildContext = parentStoreIdRef.current !== null
     const routeToOverride = isMasterProduct && isChildContext
-    const OVERRIDE_FIELDS = ["is_active", "same_day_order_allowed", "daily_max_quantity", "preparation_days"] as const
+    const OVERRIDE_FIELDS = ["is_active", "same_day_order_allowed", "daily_max_quantity", "preparation_days", "available_days_of_month", "payment_method_restriction"] as const
 
     const payload: any = {}
     const overridePayload: any = {}
@@ -238,6 +242,8 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.noshi_ids !== undefined) payload.noshi_ids = updates.noshi_ids
     if (updates.limited_from !== undefined) payload.limited_from = updates.limited_from
     if (updates.limited_until !== undefined) payload.limited_until = updates.limited_until
+    if (updates.available_days_of_month !== undefined) assign("available_days_of_month", updates.available_days_of_month)
+    if (updates.payment_method_restriction !== undefined) assign("payment_method_restriction", updates.payment_method_restriction)
     if (updates.tags !== undefined) payload.tags = updates.tags
     if (updates.cross_section_image !== undefined) payload.cross_section_image = updates.cross_section_image
     if (updates.shipping_method !== undefined) payload.shipping_method = updates.shipping_method

@@ -67,6 +67,13 @@ export function ProductDetailPanel({
   const [limitedFrom, setLimitedFrom] = useState(product.limited_from ?? "");
   const [limitedUntil, setLimitedUntil] = useState(product.limited_until ?? "");
 
+  // 毎月の受け取り可能日
+  const [isDayRestricted, setIsDayRestricted] = useState(!!product.available_days_of_month);
+  const [availableDays, setAvailableDays] = useState<number[]>(product.available_days_of_month ?? []);
+
+  // 決済方法制限
+  const [paymentMethodRestriction, setPaymentMethodRestriction] = useState<string | null>(product.payment_method_restriction);
+
   // タグ
   const [selectedTags, setSelectedTags] = useState<string[]>(Array.isArray(product.tags) ? product.tags : []);
 
@@ -138,6 +145,9 @@ export function ProductDetailPanel({
     setIsLimited(!!(product.limited_from || product.limited_until));
     setLimitedFrom(product.limited_from ?? "");
     setLimitedUntil(product.limited_until ?? "");
+    setIsDayRestricted(!!product.available_days_of_month);
+    setAvailableDays(product.available_days_of_month ?? []);
+    setPaymentMethodRestriction(product.payment_method_restriction);
     setSelectedTags(Array.isArray(product.tags) ? product.tags : []);
     setNoshiEnabled(product.noshi_enabled);
     setNoshiIds(product.noshi_ids);
@@ -195,6 +205,8 @@ export function ProductDetailPanel({
         print_decoration_enabled: isHole ? printDecorationEnabled : false,
         limited_from: isLimited && limitedFrom ? limitedFrom : null,
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
+        available_days_of_month: isDayRestricted && availableDays.length > 0 ? [...availableDays].sort((a, b) => a - b) : null,
+        payment_method_restriction: paymentMethodRestriction,
         tags: selectedTags.length > 0 ? selectedTags : null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
@@ -506,6 +518,62 @@ export function ProductDetailPanel({
                 当日注文可
               </label>
             </div>
+          </div>
+
+          {/* 決済方法 */}
+          <div>
+            <label className="text-sm font-bold block mb-2">決済方法</label>
+            <div className="flex flex-col gap-1.5 text-sm">
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="paymentMethodRestriction" checked={paymentMethodRestriction !== "store_only"}
+                  onChange={() => setPaymentMethodRestriction(null)} className="w-4 h-4 accent-amber-500" />
+                通常（クレジットカード・店頭どちらも可）
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="radio" name="paymentMethodRestriction" checked={paymentMethodRestriction === "store_only"}
+                  onChange={() => setPaymentMethodRestriction("store_only")} className="w-4 h-4 accent-amber-500" />
+                店頭決済のみ
+              </label>
+            </div>
+            {paymentMethodRestriction === "store_only" && (
+              <p className="text-[11px] text-amber-600 mt-1">
+                この商品がカートに含まれる注文は、クレジットカード決済を選べなくなります
+              </p>
+            )}
+          </div>
+
+          {/* 毎月の受け取り可能日 */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-bold cursor-pointer mb-1">
+              <input type="checkbox" checked={isDayRestricted}
+                onChange={(e) => { setIsDayRestricted(e.target.checked); if (!e.target.checked) setAvailableDays([]); }}
+                className="w-4 h-4 accent-amber-500" />
+              受け取り可能日を毎月◯日に限定する
+            </label>
+            <AnimatePresence>
+              {isDayRestricted && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pl-6 overflow-hidden">
+                  <div className="grid grid-cols-7 gap-1 py-1">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                      const active = availableDays.includes(day);
+                      return (
+                        <button key={day} type="button"
+                          onClick={() => setAvailableDays((prev) => active ? prev.filter((d) => d !== day) : [...prev, day])}
+                          className={`aspect-square rounded-md text-xs font-medium transition-colors ${
+                            active ? "bg-amber-400 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {availableDays.length === 0 && (
+                    <p className="text-[11px] text-red-500 mt-1">受け取り可能日を1つ以上選択してください</p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* 期間限定 */}

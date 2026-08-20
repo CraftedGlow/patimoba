@@ -192,6 +192,7 @@ export type Database = {
           created_at: string
           description: string | null
           display_order: number
+          excludes_categories: string[]
           id: string
           image_url: string | null
           is_active: boolean
@@ -209,6 +210,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          excludes_categories?: string[]
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -226,6 +228,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
+          excludes_categories?: string[]
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -588,6 +591,7 @@ export type Database = {
           order_type: string
           ordered_at: string | null
           payjp_charge_id: string | null
+          payment_method: string | null
           payment_status: string
           pickup_date: string | null
           pickup_time: string | null
@@ -624,6 +628,7 @@ export type Database = {
           order_type?: string
           ordered_at?: string | null
           payjp_charge_id?: string | null
+          payment_method?: string | null
           payment_status?: string
           pickup_date?: string | null
           pickup_time?: string | null
@@ -660,6 +665,7 @@ export type Database = {
           order_type?: string
           ordered_at?: string | null
           payjp_charge_id?: string | null
+          payment_method?: string | null
           payment_status?: string
           pickup_date?: string | null
           pickup_time?: string | null
@@ -850,10 +856,12 @@ export type Database = {
       }
       product_store_overrides: {
         Row: {
+          available_days_of_month: number[] | null
           created_at: string
           daily_max_quantity: number | null
           id: string
           is_active: boolean | null
+          payment_method_restriction: string | null
           preparation_days: number | null
           product_id: string
           same_day_order_allowed: boolean | null
@@ -861,10 +869,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          available_days_of_month?: number[] | null
           created_at?: string
           daily_max_quantity?: number | null
           id?: string
           is_active?: boolean | null
+          payment_method_restriction?: string | null
           preparation_days?: number | null
           product_id: string
           same_day_order_allowed?: boolean | null
@@ -872,10 +882,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          available_days_of_month?: number[] | null
           created_at?: string
           daily_max_quantity?: number | null
           id?: string
           is_active?: boolean | null
+          payment_method_restriction?: string | null
           preparation_days?: number | null
           product_id?: string
           same_day_order_allowed?: boolean | null
@@ -949,6 +961,7 @@ export type Database = {
       products: {
         Row: {
           allergens: string[] | null
+          available_days_of_month: number[] | null
           base_price: number
           best_before_days: number | null
           category_name: string | null
@@ -976,6 +989,7 @@ export type Database = {
           name: string
           noshi_enabled: boolean
           noshi_ids: string[]
+          payment_method_restriction: string | null
           preparation_days: number | null
           print_decoration_enabled: boolean
           same_day_order_allowed: boolean | null
@@ -989,6 +1003,7 @@ export type Database = {
         }
         Insert: {
           allergens?: string[] | null
+          available_days_of_month?: number[] | null
           base_price?: number
           best_before_days?: number | null
           category_name?: string | null
@@ -1016,6 +1031,7 @@ export type Database = {
           name?: string
           noshi_enabled?: boolean
           noshi_ids?: string[]
+          payment_method_restriction?: string | null
           preparation_days?: number | null
           print_decoration_enabled?: boolean
           same_day_order_allowed?: boolean | null
@@ -1029,6 +1045,7 @@ export type Database = {
         }
         Update: {
           allergens?: string[] | null
+          available_days_of_month?: number[] | null
           base_price?: number
           best_before_days?: number | null
           category_name?: string | null
@@ -1056,6 +1073,7 @@ export type Database = {
           name?: string
           noshi_enabled?: boolean
           noshi_ids?: string[]
+          payment_method_restriction?: string | null
           preparation_days?: number | null
           print_decoration_enabled?: boolean
           same_day_order_allowed?: boolean | null

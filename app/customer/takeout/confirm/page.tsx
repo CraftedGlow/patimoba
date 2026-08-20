@@ -13,6 +13,7 @@ import { useCart } from "@/lib/cart-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { supabase } from "@/lib/supabase";
 import { getLiffId } from "@/lib/get-liff-id";
+import { getStoreIdsWithParent, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
 
 const TERMS_SECTIONS = [
   { title: "第1条（適用）", body: "本規約は、ユーザーと運営者との間に成立する、当サービスの利用に関わる一切の関係に適用されます。" },
@@ -77,6 +78,32 @@ export default function TakeoutConfirmPage() {
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
   const [selectedBag, setSelectedBag] = useState<{ id: string; name: string; price: number; quantity: number } | null>(null);
+  // カート内に「店頭決済のみ」の商品が含まれるか
+  const [paymentRestricted, setPaymentRestricted] = useState(false);
+
+  useEffect(() => {
+    const sid = selectedStoreId || cartStoreId;
+    const productIds = cartItems.map((i) => i.productId).filter(Boolean);
+    if (!sid || productIds.length === 0) { setPaymentRestricted(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await supabase
+        .from("products")
+        .select("id, store_id, payment_method_restriction")
+        .in("id", productIds);
+      if (cancelled || !rows) return;
+      const { parentStoreId } = await getStoreIdsWithParent(sid);
+      const overrides = await fetchProductStoreOverrides(sid, parentStoreId);
+      const merged = rows.map((row: any) => applyProductStoreOverride(row, row.id, parentStoreId, overrides));
+      const restricted = merged.some((r: any) => r.payment_method_restriction === "store_only");
+      if (!cancelled) setPaymentRestricted(restricted);
+    })();
+    return () => { cancelled = true; };
+  }, [selectedStoreId, cartStoreId, cartItems]);
+
+  useEffect(() => {
+    if (paymentRestricted) setPaymentMethod("store");
+  }, [paymentRestricted]);
 
   useEffect(() => {
     if (!showTokushoModal) return;
@@ -230,6 +257,7 @@ export default function TakeoutConfirmPage() {
     const storeIdForOrder = selectedStoreId || cartStoreId || persistedStoreId;
     if (!storeIdForOrder) { submittingRef.current = false; setSubmitError("店舗が選択されていません"); return; }
     if (cartItems.length === 0) { submittingRef.current = false; setSubmitError("カートに商品がありません"); return; }
+    if (paymentRestricted && paymentMethod === "credit") { submittingRef.current = false; setSubmitError("この注文は店頭決済のみご利用いただけます"); return; }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -268,6 +296,7 @@ export default function TakeoutConfirmPage() {
       customerId: userId,
       customerName: `${lastName} ${firstName}`.trim() || null,
       paymentStatus: paymentMethod === "credit" ? "paid" : "unpaid",
+      paymentMethod,
       items: cartItems,
       subtotal,
       discountAmount: usedPoints,
@@ -494,16 +523,18 @@ export default function TakeoutConfirmPage() {
         <div className="mb-4">
           <p className="text-sm font-bold mb-2">お支払い方法</p>
           <div className="flex items-center gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="payment"
-                checked={paymentMethod === "credit"}
-                onChange={() => setPaymentMethod("credit")}
-                className="w-4 h-4 accent-green-500"
-              />
-              <span className="text-sm">クレジットカード</span>
-            </label>
+            {!paymentRestricted && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === "credit"}
+                  onChange={() => setPaymentMethod("credit")}
+                  className="w-4 h-4 accent-green-500"
+                />
+                <span className="text-sm">クレジットカード</span>
+              </label>
+            )}
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
@@ -515,6 +546,11 @@ export default function TakeoutConfirmPage() {
               <span className="text-sm">店頭支払い</span>
             </label>
           </div>
+          {paymentRestricted && (
+            <p className="text-xs text-amber-600 mt-2">
+              店頭決済のみご利用いただける商品が含まれているため、店頭支払いのみとなります
+            </p>
+          )}
         </div>
 
         {paymentMethod === "credit" && (

@@ -56,7 +56,7 @@ export default function WholeCakePage() {
   const { wholeCakes, loading } = useWholeCakes(selectedStoreId ?? "");
 
   // カテゴリ=printのデコレーションを直接取得（グループ紐付け不要）
-  const [printDeco, setPrintDeco] = useState<{ id: string; name: string; price: number; imageUrl: string | null; preparationDays: number | null } | null>(null);
+  const [printDeco, setPrintDeco] = useState<{ id: string; name: string; price: number; imageUrl: string | null; preparationDays: number | null; excludesCategories: string[] } | null>(null);
   const [printGroupLoading, setPrintGroupLoading] = useState(false);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function WholeCakePage() {
     getStoreIdsWithParent(selectedStoreId).then(({ storeIds }) =>
       supabase
         .from("decorations")
-        .select("id, name, price, image_url, preparation_days")
+        .select("id, name, price, image_url, preparation_days, excludes_categories")
         .in("store_id", storeIds)
         .eq("category", "print")
         .eq("is_active", true)
@@ -80,6 +80,7 @@ export default function WholeCakePage() {
                 price: Number(data.price) || 0,
                 imageUrl: data.image_url ?? null,
                 preparationDays: data.preparation_days != null ? Number(data.preparation_days) : null,
+                excludesCategories: Array.isArray(data.excludes_categories) ? data.excludes_categories : [],
               }
             : null
         );
@@ -174,6 +175,7 @@ export default function WholeCakePage() {
         seasonEnd: null,
         preparationDays: printDeco.preparationDays,
         displayOrder: 9999,
+        excludesCategories: printDeco.excludesCategories,
       }],
     };
     return [...linkedDecorationGroups, printGroup];

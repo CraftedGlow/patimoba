@@ -19,6 +19,7 @@ function toDecorationItem(row: any, parentStoreId: string | null): DecorationIte
     seasonEnd: row.season_end ?? null,
     preparationDays: row.preparation_days != null ? Number(row.preparation_days) : null,
     displayOrder: Number(row.display_order) || 0,
+    excludesCategories: Array.isArray(row.excludes_categories) ? row.excludes_categories : [],
     isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
   }
 }
@@ -54,6 +55,7 @@ export function useDecorations(storeId?: string) {
       seasonStart?: string | null
       seasonEnd?: string | null
       preparationDays?: number | null
+      excludesCategories?: string[]
     }
   ): Promise<{ error: string | null }> => {
     const { error } = await supabase.from("decorations").insert({
@@ -67,6 +69,7 @@ export function useDecorations(storeId?: string) {
       season_start: data.seasonStart ?? null,
       season_end: data.seasonEnd ?? null,
       preparation_days: data.preparationDays ?? null,
+      excludes_categories: data.excludesCategories ?? [],
     })
     if (!error) await fetchDecorations()
     return { error: error?.message ?? null }
@@ -85,6 +88,7 @@ export function useDecorations(storeId?: string) {
       seasonStart: string | null
       seasonEnd: string | null
       preparationDays: number | null
+      excludesCategories: string[]
     }>
   ): Promise<{ error: string | null }> => {
     const payload: any = {}
@@ -98,6 +102,7 @@ export function useDecorations(storeId?: string) {
     if (data.seasonStart !== undefined) payload.season_start = data.seasonStart
     if (data.seasonEnd !== undefined) payload.season_end = data.seasonEnd
     if (data.preparationDays !== undefined) payload.preparation_days = data.preparationDays
+    if (data.excludesCategories !== undefined) payload.excludes_categories = data.excludesCategories
     payload.updated_at = new Date().toISOString()
 
     const { error } = await supabase.from("decorations").update(payload).eq("id", id)

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Check, Cherry, StickyNote, Candy, IceCream2, Tag, type LucideIcon } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -43,6 +44,44 @@ export function WholeCakeOptionsStep({
   const visibleGroups = excludeGroupIds?.length
     ? decorationGroups.filter((g) => !excludeGroupIds.includes(g.id))
     : decorationGroups;
+
+  // 選択済みデコレーションが除外するカテゴリー（例: プリント選択でプレートを除外）と、その理由（どの項目のせいか）
+  const excludedCategoryReasons = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const group of decorationGroups) {
+      const selectedIds = selectedDecorations[group.id] ?? [];
+      for (const item of group.items) {
+        if (!selectedIds.includes(item.id)) continue;
+        for (const c of item.excludesCategories) {
+          const names = map.get(c) ?? [];
+          names.push(item.name);
+          map.set(c, names);
+        }
+      }
+    }
+    return map;
+  }, [decorationGroups, selectedDecorations]);
+
+  // 除外対象になったカテゴリーの選択済みデコレーションは自動的に解除する
+  useEffect(() => {
+    if (excludedCategoryReasons.size === 0) return;
+    let changed = false;
+    const next = { ...selectedDecorations };
+    for (const group of decorationGroups) {
+      const selectedIds = next[group.id] ?? [];
+      const filtered = selectedIds.filter((id) => {
+        const item = group.items.find((i) => i.id === id);
+        return !item || !excludedCategoryReasons.has(item.category);
+      });
+      if (filtered.length !== selectedIds.length) {
+        next[group.id] = filtered;
+        changed = true;
+      }
+    }
+    if (changed) onDecorationsChange(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [excludedCategoryReasons]);
+
   const handleSelect = (groupId: string, decorationId: string, group: DecorationGroupWithItems) => {
     const current = selectedDecorations[groupId] ?? [];
 
@@ -122,11 +161,19 @@ export function WholeCakeOptionsStep({
                     <p className="text-xs text-gray-500 mb-3">{group.description}</p>
                   )}
 
+                  {/* 除外中の注記 */}
+                  {group.items.some((deco) => !selected.includes(deco.id) && excludedCategoryReasons.has(deco.category)) && (
+                    <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-1.5 mb-3">
+                      「{Array.from(new Set(group.items.flatMap((deco) => excludedCategoryReasons.get(deco.category) ?? []))).join("・")}」を選択中のため、一部の項目は選択できません
+                    </p>
+                  )}
+
                   {/* デコレーションカードグリッド */}
                   <div className="grid grid-cols-3 gap-2">
                     {group.items.map((deco) => {
                       const isSelected = selected.includes(deco.id);
-                      const isDisabled = !isSelected && atMax;
+                      const isExcluded = !isSelected && excludedCategoryReasons.has(deco.category);
+                      const isDisabled = (!isSelected && atMax) || isExcluded;
 
                       return (
                         <motion.button

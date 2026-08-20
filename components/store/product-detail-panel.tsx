@@ -74,6 +74,10 @@ export function ProductDetailPanel({
   // 決済方法制限
   const [paymentMethodRestriction, setPaymentMethodRestriction] = useState<string | null>(product.payment_method_restriction);
 
+  // おまかせ商品: 金額の幅
+  const [priceMin, setPriceMin] = useState(product.price_min != null ? String(product.price_min) : "");
+  const [priceMax, setPriceMax] = useState(product.price_max != null ? String(product.price_max) : "");
+
   // タグ
   const [selectedTags, setSelectedTags] = useState<string[]>(Array.isArray(product.tags) ? product.tags : []);
 
@@ -89,6 +93,7 @@ export function ProductDetailPanel({
   const [contentQuantity, setContentQuantity] = useState(product.content_quantity ?? "");
 
   const isHole = category === "ホール";
+  const isOmakase = category === "おまかせ";
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -148,6 +153,8 @@ export function ProductDetailPanel({
     setIsDayRestricted(!!product.available_days_of_month);
     setAvailableDays(product.available_days_of_month ?? []);
     setPaymentMethodRestriction(product.payment_method_restriction);
+    setPriceMin(product.price_min != null ? String(product.price_min) : "");
+    setPriceMax(product.price_max != null ? String(product.price_max) : "");
     setSelectedTags(Array.isArray(product.tags) ? product.tags : []);
     setNoshiEnabled(product.noshi_enabled);
     setNoshiIds(product.noshi_ids);
@@ -184,6 +191,10 @@ export function ProductDetailPanel({
 
   const handleSave = async () => {
     setError(null);
+    if (isOmakase && (!priceMin.trim() || !priceMax.trim())) {
+      setError("金額の幅（下限・上限）を入力してください");
+      return;
+    }
     setSaving(true);
     try {
       const typeMatch = productTypes.find((t) => t.productType === category);
@@ -191,7 +202,7 @@ export function ProductDetailPanel({
       const { error: err } = await onSave(product.id, {
         name: name.trim(),
         description: description.trim(),
-        base_price: isHole ? 0 : parsePriceValue(price),
+        base_price: isHole ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
         category_name: category || null,
         image: image || null,
         cross_section_image: crossImage || null,
@@ -207,6 +218,8 @@ export function ProductDetailPanel({
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
         available_days_of_month: isDayRestricted && availableDays.length > 0 ? [...availableDays].sort((a, b) => a - b) : null,
         payment_method_restriction: paymentMethodRestriction,
+        price_min: isOmakase && priceMin.trim() ? parsePriceValue(priceMin) : null,
+        price_max: isOmakase && priceMax.trim() ? parsePriceValue(priceMax) : null,
         tags: selectedTags.length > 0 ? selectedTags : null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
@@ -475,6 +488,23 @@ export function ProductDetailPanel({
                 </label>
               </div>
             </div>
+          ) : isOmakase ? (
+            <div>
+              <label className="text-sm font-bold block mb-1">金額の幅</label>
+              <div className="flex items-center gap-2">
+                <input type="number" min={0} value={priceMin} onChange={(e) => setPriceMin(e.target.value)}
+                  placeholder="3500"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300" />
+                <span className="text-sm text-gray-500">〜</span>
+                <input type="number" min={0} value={priceMax} onChange={(e) => setPriceMax(e.target.value)}
+                  placeholder="4500"
+                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300" />
+                <span className="text-sm text-gray-500">円</span>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-1">
+                顧客には「¥{priceMin || "0"}〜{priceMax || "0"}」のように表示されます。実際の受取金額は下限を基準に記録し、最終的な精算は店頭で行います。
+              </p>
+            </div>
           ) : (
             <div>
               <label className="text-sm font-bold block mb-1">商品の金額</label>
@@ -621,10 +651,21 @@ export function ProductDetailPanel({
           {/* ケーキタイプ */}
           <div>
             <label className="text-sm font-bold block mb-1">ケーキのタイプ</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)}
+            <select value={category} onChange={(e) => {
+                const next = e.target.value;
+                setCategory(next);
+                if (next === "おまかせ" && paymentMethodRestriction === null) {
+                  setPaymentMethodRestriction("store_only");
+                }
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all">
               {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+            {isOmakase && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mt-1.5">
+                「おまかせ」は内容・金額が日によって変わる商品向けです。金額は幅で設定でき、決済方法は初期状態で店頭決済のみになります（変更可）。
+              </p>
+            )}
           </div>
 
           {/* EC商品情報 */}

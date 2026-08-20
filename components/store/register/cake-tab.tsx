@@ -14,7 +14,7 @@ import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } f
 import { useNoshi } from "@/hooks/use-noshi";
 import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
 import { toLocalDateString } from "@/lib/date-utils";
-import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
+import { getStoreIdsWithParent, upsertProductStoreOverride, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
 import Link from "next/link";
 
 interface ProductRow {
@@ -37,6 +37,10 @@ interface ProductRow {
   preparation_days: number | null;
   limited_from: string | null;
   limited_until: string | null;
+  available_days_of_month: number[] | null;
+  payment_method_restriction: string | null;
+  price_min: number | null;
+  price_max: number | null;
   custom_options: any;
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
@@ -97,7 +101,18 @@ export function CakeTab() {
   // ホール用サイズ (product_variants)
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
 
+  // 毎月の受け取り可能日
+  const [isDayRestricted, setIsDayRestricted] = useState(false);
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
+  // 決済方法制限
+  const [paymentMethodRestriction, setPaymentMethodRestriction] = useState<string | null>(null);
+  // おまかせ商品: 金額の幅
+  const [priceMin, setPriceMin] = useState("");
+  const [priceMax, setPriceMax] = useState("");
+
   const isHole = category === "ホール";
+  const isOmakase = category === "おまかせ";
+  const parentStoreIdRef = useRef<string | null>(null);
 
   const PREDEFINED_SIZES = [
     { name: "4号", desc: "2〜4名分" },
@@ -142,13 +157,18 @@ export function CakeTab() {
     }
     setLoading(true);
     const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId);
-    const { data } = await supabase
-      .from("products")
-      .select("*")
-      .in("store_id", storeIds)
-      .order("display_order", { ascending: true });
+    parentStoreIdRef.current = parentStoreId;
+    const [{ data }, overrides] = await Promise.all([
+      supabase
+        .from("products")
+        .select("*")
+        .in("store_id", storeIds)
+        .order("display_order", { ascending: true }),
+      fetchProductStoreOverrides(storeId, parentStoreId),
+    ]);
     const rows = ((data ?? []) as unknown as ProductRow[])
       .filter((p) => p.category_name !== "ec")
+      .map((p) => applyProductStoreOverride<ProductRow>(p, p.id, parentStoreId, overrides))
       .map((p) => ({ ...p, isMasterProduct: parentStoreId !== null && p.store_id === parentStoreId }));
 
     // 期間限定商品の自動オフ: 受取終了日 - 準備日数 <= 今日 なら is_active を false に
@@ -199,6 +219,11 @@ export function CakeTab() {
     setSizes([]);
     setMainImage(null);
     setCrossImage(null);
+    setIsDayRestricted(false);
+    setAvailableDays([]);
+    setPaymentMethodRestriction(null);
+    setPriceMin("");
+    setPriceMax("");
     setError(null);
   }, []);
 
@@ -230,6 +255,11 @@ export function CakeTab() {
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
+      setIsDayRestricted(!!p.available_days_of_month);
+      setAvailableDays(p.available_days_of_month ?? []);
+      setPaymentMethodRestriction(p.payment_method_restriction ?? null);
+      setPriceMin(p.price_min != null ? String(p.price_min) : "");
+      setPriceMax(p.price_max != null ? String(p.price_max) : "");
       setError(null);
       // デコレーショングループ紐付けを取得
       getProductGroupIds(p.id).then((ids) => setSelectedGroupIds(ids));
@@ -288,8 +318,12 @@ export function CakeTab() {
       setError("商品名を入力してください");
       return;
     }
-    if (!isHole && !price.trim()) {
+    if (!isHole && !isOmakase && !price.trim()) {
       setError("金額を入力してください");
+      return;
+    }
+    if (isOmakase && (!priceMin.trim() || !priceMax.trim())) {
+      setError("金額の幅（下限・上限）を入力してください");
       return;
     }
     if (!storeId) {
@@ -302,7 +336,7 @@ export function CakeTab() {
         store_id: storeId,
         name: productName.trim(),
         description: description.trim(),
-        base_price: isHole ? 0 : parsePriceValue(price),
+        base_price: isHole ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
         category_name: category || null,
         image: mainImage ?? null,
         cross_section_image: crossImage ?? null,
@@ -323,6 +357,23 @@ export function CakeTab() {
         tags: selectedTags.length > 0 ? selectedTags : null,
       };
 
+      // 共有商品を子店舗の文脈で編集している場合、毎月の受け取り可能日・決済方法制限・
+      // 金額の幅はこの店舗専用の上書き（product_store_overrides）として保存する
+      const editingMasterProduct = selectedId
+        ? products.find((r) => r.id === selectedId)?.isMasterProduct ?? false
+        : false;
+      const routeToOverride = editingMasterProduct && parentStoreIdRef.current !== null;
+
+      const overridePayload = {
+        available_days_of_month: isDayRestricted && availableDays.length > 0 ? [...availableDays].sort((a, b) => a - b) : null,
+        payment_method_restriction: paymentMethodRestriction,
+        price_min: isOmakase && priceMin.trim() ? parsePriceValue(priceMin) : null,
+        price_max: isOmakase && priceMax.trim() ? parsePriceValue(priceMax) : null,
+      };
+      if (!routeToOverride) {
+        Object.assign(payload, overridePayload);
+      }
+
       let savedProductId = selectedId
       if (selectedId) {
         const { error: err } = await supabase
@@ -338,6 +389,11 @@ export function CakeTab() {
           .single();
         if (err) throw err;
         savedProductId = newProduct?.id ?? null;
+      }
+
+      if (routeToOverride && savedProductId) {
+        const { error: ovErr } = await upsertProductStoreOverride(savedProductId, storeId, overridePayload);
+        if (ovErr) throw new Error(ovErr);
       }
 
       // デコレーショングループ紐付けを保存
@@ -506,7 +562,13 @@ export function CakeTab() {
         {/* ケーキの種類 (product_types) */}
         <select
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setCategory(next);
+            if (next === "おまかせ" && paymentMethodRestriction === null) {
+              setPaymentMethodRestriction("store_only");
+            }
+          }}
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         >
           <option value="">ケーキの種類を選択</option>
@@ -516,6 +578,11 @@ export function CakeTab() {
             </option>
           ))}
         </select>
+        {isOmakase && (
+          <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+            「おまかせ」は内容・金額が日によって変わる商品向けです。金額は幅で設定でき、決済方法は初期状態で店頭決済のみになります（変更可）。
+          </p>
+        )}
 
         {/* 商品名 */}
         <div className="relative">
@@ -623,8 +690,8 @@ export function CakeTab() {
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
 
-        {/* 金額（ホール以外のみ。ホールはサイズ別価格で管理） */}
-        {!isHole && (
+        {/* 金額（ホール以外のみ。ホールはサイズ別価格で管理。おまかせは幅で設定） */}
+        {!isHole && !isOmakase && (
           <input
             type="text"
             value={price}
@@ -632,6 +699,34 @@ export function CakeTab() {
             placeholder="¥700"
             className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
           />
+        )}
+        {isOmakase && (
+          <div>
+            <label className="text-xs text-gray-600 block mb-1">金額の幅</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+                placeholder="3500"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300"
+              />
+              <span className="text-sm text-gray-500">〜</span>
+              <input
+                type="number"
+                min={0}
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+                placeholder="4500"
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-amber-300"
+              />
+              <span className="text-sm text-gray-500">円</span>
+            </div>
+            <p className="text-[11px] text-gray-500 mt-1">
+              顧客には「¥{priceMin || "0"}〜{priceMax || "0"}」のように表示されます。実際の受取金額は下限を基準に記録し、最終的な精算は店頭で行います。
+            </p>
+          </div>
         )}
 
         {/* 1日の最大数 / 準備日数 */}
@@ -932,6 +1027,57 @@ export function CakeTab() {
                 <p className="text-xs text-gray-600">
                   準備日数が設定されている場合、受取終了日の準備日数前に自動で受付停止になります
                 </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* 決済方法 */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-gray-700 block">決済方法</label>
+          <div className="flex flex-col gap-1.5 text-sm">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="cakePaymentMethodRestriction" checked={paymentMethodRestriction !== "store_only"}
+                onChange={() => setPaymentMethodRestriction(null)} className="w-4 h-4 accent-amber-500" />
+              通常（クレジットカード・店頭どちらも可）
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="cakePaymentMethodRestriction" checked={paymentMethodRestriction === "store_only"}
+                onChange={() => setPaymentMethodRestriction("store_only")} className="w-4 h-4 accent-amber-500" />
+              店頭決済のみ
+            </label>
+          </div>
+        </div>
+
+        {/* 毎月の受け取り可能日 */}
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={isDayRestricted}
+              onChange={(e) => { setIsDayRestricted(e.target.checked); if (!e.target.checked) setAvailableDays([]); }}
+              className="w-4 h-4 accent-amber-500" />
+            受け取り可能日を毎月◯日に限定する
+          </label>
+          <AnimatePresence>
+            {isDayRestricted && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pl-6 overflow-hidden">
+                <div className="grid grid-cols-7 gap-1 py-1 max-w-[280px]">
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                    const active = availableDays.includes(day);
+                    return (
+                      <button key={day} type="button"
+                        onClick={() => setAvailableDays((prev) => active ? prev.filter((d) => d !== day) : [...prev, day])}
+                        className={`aspect-square rounded-md text-xs font-medium transition-colors ${
+                          active ? "bg-amber-400 text-white" : "bg-white text-gray-600 hover:bg-amber-100"
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+                {availableDays.length === 0 && (
+                  <p className="text-[11px] text-red-500 mt-1">受け取り可能日を1つ以上選択してください</p>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

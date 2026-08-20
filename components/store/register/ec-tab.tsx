@@ -9,7 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useNoshi } from "@/hooks/use-noshi";
-import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
+import { getStoreIdsWithParent, fetchProductStoreOverrides, applyProductStoreOverride, upsertProductStoreOverride } from "@/lib/store-hierarchy";
 
 interface EcProductRow {
   id: string;
@@ -29,6 +29,8 @@ interface EcProductRow {
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
   tags: string[] | null;
+  available_days_of_month: number[] | null;
+  payment_method_restriction: string | null;
   isMasterProduct?: boolean;
 }
 
@@ -81,20 +83,33 @@ export function EcTab() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // 毎月の受け取り可能日
+  const [isDayRestricted, setIsDayRestricted] = useState(false);
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
+  // 決済方法制限
+  const [paymentMethodRestriction, setPaymentMethodRestriction] = useState<string | null>(null);
+  const parentStoreIdRef = useRef<string | null>(null);
+
   const fetchProducts = useCallback(async () => {
     if (!storeId) { setLoading(false); return; }
     setLoading(true);
     const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId);
-    const { data } = await supabase
-      .from("products")
-      .select("*")
-      .in("store_id", storeIds)
-      .eq("category_name", "ec")
-      .order("display_order", { ascending: true });
-    const rows = ((data ?? []) as unknown as EcProductRow[]).map((p) => ({
-      ...p,
-      isMasterProduct: parentStoreId !== null && p.store_id === parentStoreId,
-    }));
+    parentStoreIdRef.current = parentStoreId;
+    const [{ data }, overrides] = await Promise.all([
+      supabase
+        .from("products")
+        .select("*")
+        .in("store_id", storeIds)
+        .eq("category_name", "ec")
+        .order("display_order", { ascending: true }),
+      fetchProductStoreOverrides(storeId, parentStoreId),
+    ]);
+    const rows = ((data ?? []) as unknown as EcProductRow[])
+      .map((p) => applyProductStoreOverride<EcProductRow>(p, p.id, parentStoreId, overrides))
+      .map((p) => ({
+        ...p,
+        isMasterProduct: parentStoreId !== null && p.store_id === parentStoreId,
+      }));
     setProducts(rows);
     setLoading(false);
   }, [storeId]);
@@ -117,6 +132,9 @@ export function EcTab() {
     setMainImage(null);
     setCrossImage(null);
     setExtraImage(null);
+    setIsDayRestricted(false);
+    setAvailableDays([]);
+    setPaymentMethodRestriction(null);
     setError(null);
   }, []);
 
@@ -144,6 +162,9 @@ export function EcTab() {
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
       setExtraImage(null);
+      setIsDayRestricted(!!p.available_days_of_month);
+      setAvailableDays(p.available_days_of_month ?? []);
+      setPaymentMethodRestriction(p.payment_method_restriction ?? null);
       setError(null);
     },
     [products]
@@ -202,15 +223,38 @@ export function EcTab() {
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
         tags: selectedTags.length > 0 ? selectedTags : null,
-      };
+      } as any;
 
+      // 共有商品を子店舗の文脈で編集している場合、毎月の受け取り可能日・決済方法制限は
+      // この店舗専用の上書き（product_store_overrides）として保存する
+      const editingMasterProduct = selectedId
+        ? products.find((r) => r.id === selectedId)?.isMasterProduct ?? false
+        : false;
+      const routeToOverride = editingMasterProduct && parentStoreIdRef.current !== null;
+
+      const overridePayload = {
+        available_days_of_month: isDayRestricted && availableDays.length > 0 ? [...availableDays].sort((a, b) => a - b) : null,
+        payment_method_restriction: paymentMethodRestriction,
+      };
+      if (!routeToOverride) {
+        Object.assign(payload, overridePayload);
+      }
+
+      let savedProductId = selectedId;
       if (selectedId) {
         const { error: err } = await supabase.from("products").update(payload).eq("id", selectedId);
         if (err) throw err;
       } else {
-        const { error: err } = await supabase.from("products").insert(payload);
+        const { data: newProduct, error: err } = await supabase.from("products").insert(payload).select("id").single();
         if (err) throw err;
+        savedProductId = newProduct?.id ?? null;
       }
+
+      if (routeToOverride && savedProductId) {
+        const { error: ovErr } = await upsertProductStoreOverride(savedProductId, storeId, overridePayload);
+        if (ovErr) throw new Error(ovErr);
+      }
+
       await fetchProducts();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -550,6 +594,57 @@ export function EcTab() {
               )}
             </div>
           )}
+        </div>
+
+        {/* 決済方法 */}
+        <div className="space-y-2 pt-1">
+          <label className="text-sm font-bold text-gray-700 block">決済方法</label>
+          <div className="flex flex-col gap-1.5 text-sm">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="ecPaymentMethodRestriction" checked={paymentMethodRestriction !== "store_only"}
+                onChange={() => setPaymentMethodRestriction(null)} className="w-4 h-4 accent-amber-500" />
+              通常（クレジットカード・店頭どちらも可）
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="ecPaymentMethodRestriction" checked={paymentMethodRestriction === "store_only"}
+                onChange={() => setPaymentMethodRestriction("store_only")} className="w-4 h-4 accent-amber-500" />
+              店頭決済のみ
+            </label>
+          </div>
+        </div>
+
+        {/* 毎月の受け取り可能日 */}
+        <div className="space-y-1 pt-1">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={isDayRestricted}
+              onChange={(e) => { setIsDayRestricted(e.target.checked); if (!e.target.checked) setAvailableDays([]); }}
+              className="w-4 h-4 accent-amber-500" />
+            受け取り可能日を毎月◯日に限定する
+          </label>
+          <AnimatePresence>
+            {isDayRestricted && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="pl-6 overflow-hidden">
+                <div className="grid grid-cols-7 gap-1 py-1 max-w-[280px]">
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
+                    const active = availableDays.includes(day);
+                    return (
+                      <button key={day} type="button"
+                        onClick={() => setAvailableDays((prev) => active ? prev.filter((d) => d !== day) : [...prev, day])}
+                        className={`aspect-square rounded-md text-xs font-medium transition-colors ${
+                          active ? "bg-amber-400 text-white" : "bg-white text-gray-600 hover:bg-amber-100"
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+                {availableDays.length === 0 && (
+                  <p className="text-[11px] text-red-500 mt-1">受け取り可能日を1つ以上選択してください</p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <AnimatePresence>

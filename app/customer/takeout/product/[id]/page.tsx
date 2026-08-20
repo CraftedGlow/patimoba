@@ -540,16 +540,26 @@ export default function TakeoutProductDetailPage() {
         {!isWholeCake && (
           <div className="flex items-center justify-between mb-2">
             <div>
-              <p className="flex items-baseline gap-0.5">
-                <span className="text-3xl font-bold text-gray-900 tabular-nums">
-                  {((product.base_price + optionsAdditional + noshiAdditional) * quantity).toLocaleString()}
-                </span>
-                <span className="text-lg font-bold text-gray-900">円</span>
-              </p>
-              {quantity > 1 && (
-                <p className="text-xs text-gray-500">
-                  ¥{(product.base_price + optionsAdditional + noshiAdditional).toLocaleString()} × {quantity}
+              {product.price_min != null && product.price_max != null ? (
+                <p className="flex items-baseline gap-0.5">
+                  <span className="text-2xl font-bold text-gray-900 tabular-nums">
+                    ¥{product.price_min.toLocaleString()}〜{product.price_max.toLocaleString()}
+                  </span>
                 </p>
+              ) : (
+                <>
+                  <p className="flex items-baseline gap-0.5">
+                    <span className="text-3xl font-bold text-gray-900 tabular-nums">
+                      {((product.base_price + optionsAdditional + noshiAdditional) * quantity).toLocaleString()}
+                    </span>
+                    <span className="text-lg font-bold text-gray-900">円</span>
+                  </p>
+                  {quantity > 1 && (
+                    <p className="text-xs text-gray-500">
+                      ¥{(product.base_price + optionsAdditional + noshiAdditional).toLocaleString()} × {quantity}
+                    </p>
+                  )}
+                </>
               )}
             </div>
 

@@ -67,7 +67,9 @@ function RegistrationCard({ product, basePath }: { product: ProductRegistration;
           {product.name}
         </h3>
         <p className="text-sm text-gray-900">
-          &yen;{product.base_price.toLocaleString()}
+          {product.price_min != null && product.price_max != null
+            ? `¥${product.price_min.toLocaleString()}〜${product.price_max.toLocaleString()}`
+            : `¥${product.base_price.toLocaleString()}`}
         </p>
       </motion.div>
     </Link>

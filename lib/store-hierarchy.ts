@@ -24,11 +24,13 @@ export interface ProductStoreOverride {
   preparation_days: number | null
   available_days_of_month: number[] | null
   payment_method_restriction: string | null
+  price_min: number | null
+  price_max: number | null
 }
 
 /**
  * 共有商品（マスター登録）の受付状況・当日受付・最大個数・準備日数・毎月の受け取り可能日・
- * 決済方法制限は、この店舗専用の上書き設定（product_store_overrides）があればそちらを優先する。
+ * 決済方法制限・金額の幅は、この店舗専用の上書き設定（product_store_overrides）があればそちらを優先する。
  * parentStoreId が null（=マスター自身の閲覧）の場合は上書きの概念がないため空で返す。
  */
 export async function fetchProductStoreOverrides(
@@ -39,7 +41,7 @@ export async function fetchProductStoreOverrides(
   if (parentStoreId === null) return map
   const { data } = await supabase
     .from("product_store_overrides")
-    .select("product_id, is_active, same_day_order_allowed, daily_max_quantity, preparation_days, available_days_of_month, payment_method_restriction")
+    .select("product_id, is_active, same_day_order_allowed, daily_max_quantity, preparation_days, available_days_of_month, payment_method_restriction, price_min, price_max")
     .eq("store_id", storeId)
   for (const row of data ?? []) {
     map.set(row.product_id, {
@@ -49,6 +51,8 @@ export async function fetchProductStoreOverrides(
       preparation_days: row.preparation_days,
       available_days_of_month: row.available_days_of_month,
       payment_method_restriction: row.payment_method_restriction,
+      price_min: row.price_min,
+      price_max: row.price_max,
     })
   }
   return map
@@ -57,13 +61,15 @@ export async function fetchProductStoreOverrides(
 /** 共有商品の行に、この店舗の上書き値をマージする（自店舗登録の商品はそのまま） */
 export function applyProductStoreOverride<
   T extends {
-    store_id: string
-    is_active?: boolean
-    same_day_order_allowed?: boolean
+    store_id: string | null
+    is_active?: boolean | null
+    same_day_order_allowed?: boolean | null
     daily_max_quantity?: number | null
-    preparation_days?: number
+    preparation_days?: number | null
     available_days_of_month?: number[] | null
     payment_method_restriction?: string | null
+    price_min?: number | null
+    price_max?: number | null
   }
 >(row: T, productId: string, parentStoreId: string | null, overrides: Map<string, ProductStoreOverride>): T {
   if (parentStoreId === null || row.store_id !== parentStoreId) return row
@@ -77,10 +83,12 @@ export function applyProductStoreOverride<
     preparation_days: ov.preparation_days ?? row.preparation_days,
     available_days_of_month: ov.available_days_of_month ?? row.available_days_of_month,
     payment_method_restriction: ov.payment_method_restriction ?? row.payment_method_restriction,
+    price_min: ov.price_min !== null ? ov.price_min : row.price_min,
+    price_max: ov.price_max !== null ? ov.price_max : row.price_max,
   }
 }
 
-/** is_active/same_day_order_allowed/daily_max_quantity/preparation_days/available_days_of_month/payment_method_restriction の上書きを保存する */
+/** is_active/same_day_order_allowed/daily_max_quantity/preparation_days/available_days_of_month/payment_method_restriction/price_min/price_max の上書きを保存する */
 export async function upsertProductStoreOverride(
   productId: string,
   storeId: string,

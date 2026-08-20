@@ -31,6 +31,7 @@ export const PRODUCT_TYPES: ProductTypeConst[] = [
   { id: "4", productType: "ドリンク", typeCode: 4 },
   { id: "5", productType: "その他", typeCode: 5 },
   { id: "6", productType: "クリスマス限定", typeCode: 6 },
+  { id: "7", productType: "おまかせ", typeCode: 7 },
 ]
 
 /** ろうそくオプション (旧 candle_options テーブル) */

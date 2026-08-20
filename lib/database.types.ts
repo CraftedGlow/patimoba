@@ -863,6 +863,8 @@ export type Database = {
           is_active: boolean | null
           payment_method_restriction: string | null
           preparation_days: number | null
+          price_max: number | null
+          price_min: number | null
           product_id: string
           same_day_order_allowed: boolean | null
           store_id: string
@@ -876,6 +878,8 @@ export type Database = {
           is_active?: boolean | null
           payment_method_restriction?: string | null
           preparation_days?: number | null
+          price_max?: number | null
+          price_min?: number | null
           product_id: string
           same_day_order_allowed?: boolean | null
           store_id: string
@@ -889,6 +893,8 @@ export type Database = {
           is_active?: boolean | null
           payment_method_restriction?: string | null
           preparation_days?: number | null
+          price_max?: number | null
+          price_min?: number | null
           product_id?: string
           same_day_order_allowed?: boolean | null
           store_id?: string
@@ -991,6 +997,8 @@ export type Database = {
           noshi_ids: string[]
           payment_method_restriction: string | null
           preparation_days: number | null
+          price_max: number | null
+          price_min: number | null
           print_decoration_enabled: boolean
           same_day_order_allowed: boolean | null
           shipping_method: string | null
@@ -1033,6 +1041,8 @@ export type Database = {
           noshi_ids?: string[]
           payment_method_restriction?: string | null
           preparation_days?: number | null
+          price_max?: number | null
+          price_min?: number | null
           print_decoration_enabled?: boolean
           same_day_order_allowed?: boolean | null
           shipping_method?: string | null
@@ -1075,6 +1085,8 @@ export type Database = {
           noshi_ids?: string[]
           payment_method_restriction?: string | null
           preparation_days?: number | null
+          price_max?: number | null
+          price_min?: number | null
           print_decoration_enabled?: boolean
           same_day_order_allowed?: boolean | null
           shipping_method?: string | null

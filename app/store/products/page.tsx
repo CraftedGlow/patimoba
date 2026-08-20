@@ -14,7 +14,9 @@ import { supabase } from "@/lib/supabase";
 type Tab = "takeout" | "ec";
 
 export default function StoreProductsPage() {
-  const { storeId } = useStoreContext();
+  const { storeId: ownStoreId, isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const storeId = isMaster ? (selectedChildId ?? ownStoreId) : ownStoreId;
   const [tab, setTab] = useState<Tab>("takeout");
   const isEc = tab === "ec";
 
@@ -117,6 +119,14 @@ export default function StoreProductsPage() {
     }
   };
 
+  if (isMaster && childStores.length === 0) {
+    return (
+      <div className="p-6 text-center text-sm text-gray-600">
+        子店舗が登録されていません。
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
@@ -128,6 +138,35 @@ export default function StoreProductsPage() {
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">
       <div className="flex-1 overflow-auto p-6">
+        {isMaster && childStores.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setSelectedChildId(null)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === null
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              全店舗（共有）
+            </button>
+            {childStores.map((s) => (
+              <button
+                type="button"
+                key={s.id}
+                onClick={() => setSelectedChildId(s.id)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  selectedChildId === s.id
+                    ? "bg-amber-400 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {s.name}
+              </button>
+            ))}
+          </div>
+        )}
         {/* ヘッダー: 検索 + 注文設定 */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">

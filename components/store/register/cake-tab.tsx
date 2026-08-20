@@ -7,6 +7,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import type { ProductCustomOption, ProductCustomOptionValue } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
+import { useStoreContext } from "@/lib/store-context";
 import { useProductTypes } from "@/hooks/use-product-types";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
@@ -51,7 +52,10 @@ const PRODUCT_TAGS = [
 
 export function CakeTab() {
   const { user } = useAuth();
-  const storeId = user?.storeId ?? null;
+  const { isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const ownStoreId = user?.storeId ?? null;
+  const storeId = isMaster ? (selectedChildId ?? ownStoreId) : ownStoreId;
   const { productTypes } = useProductTypes();
 
   const [products, setProducts] = useState<ProductRow[]>([]);
@@ -197,6 +201,11 @@ export function CakeTab() {
     setCrossImage(null);
     setError(null);
   }, []);
+
+  // マスターが対象店舗を切り替えたら編集中フォームをリセット
+  useEffect(() => {
+    clearForm();
+  }, [storeId, clearForm]);
 
   const selectProduct = useCallback(
     (id: string) => {
@@ -408,6 +417,14 @@ export function CakeTab() {
 
   const typeCategories = productTypes.map((t) => t.productType);
 
+  if (isMaster && childStores.length === 0) {
+    return (
+      <div className="py-10 text-center text-sm text-gray-600">
+        子店舗が登録されていません。
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -418,6 +435,35 @@ export function CakeTab() {
 
   return (
     <div>
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setSelectedChildId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              selectedChildId === null
+                ? "bg-amber-400 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            全店舗（共有）
+          </button>
+          {childStores.map((s) => (
+            <button
+              type="button"
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <h2 className="text-lg font-bold">商品登録画面</h2>
         <select

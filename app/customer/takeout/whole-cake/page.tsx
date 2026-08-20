@@ -274,7 +274,7 @@ export default function WholeCakePage() {
       price: 0,
       quantity: 1,
       image: selectedCake.image,
-      storeId: selectedCake.storeId,
+      storeId: selectedStoreId ?? selectedCake.storeId,
       isCustomCake: true,
       uid: `wc-${selectedCake.id}-${Date.now()}`,
       customization: {

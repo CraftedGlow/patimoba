@@ -152,7 +152,7 @@ export default function TakeoutProductDetailPage() {
       price: product.base_price,
       image: product.image || "",
       quantity,
-      storeId: product.store_id,
+      storeId: selectedStoreId ?? product.store_id,
       isTakeout: true,
       customization: (cartCustomOptions.length > 0 || (useNoshi && selectedNoshiDesign))
         ? {

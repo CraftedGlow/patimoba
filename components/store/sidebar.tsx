@@ -21,6 +21,7 @@ const menuItems: MenuItem[] = [
   { label: "ダッシュボード", href: "/store/dashboard", offsetLabel: true },
   { label: "予約管理", href: "/store/orders", offsetLabel: true },
   { label: "顧客管理", href: "/store/customers", offsetLabel: true },
+  { label: "クーポン管理", href: "/store/coupons", offsetLabel: true },
   { label: "商品管理", href: "/store/products", offsetLabel: true },
   { label: "商品登録", href: "/store/register" },
   { label: "デコレーション", href: "/store/decorations" },

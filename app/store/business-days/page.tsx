@@ -120,7 +120,7 @@ export default function BusinessDaysPage() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  type ExportFormat = "square" | "landscape" | "portrait" | "natural";
+  type ExportFormat = "square" | "landscape" | "portrait" | "a4" | "natural";
 
   /** カレンダー領域を画像化（正方形・横長・縦長・原寸のいずれか） */
   const handleExportImage = async (format: ExportFormat) => {
@@ -137,7 +137,8 @@ export default function BusinessDaysPage() {
 
       const nodeW = node.offsetWidth;
       const nodeH = node.offsetHeight;
-      const pixelRatio = format === "natural" ? 2 : 3;
+      // A4は印刷時ににじまないよう高めの解像度でキャプチャする
+      const pixelRatio = format === "natural" ? 2 : format === "a4" ? 6 : 3;
 
       // style オプションで幅を明示固定（html-to-image がキャプチャ時に
       // max-width 制約を失い要素が画面幅まで拡張されるバグを回避）
@@ -166,11 +167,14 @@ export default function BusinessDaysPage() {
         square: [1080, 1080],
         landscape: [1920, 1080],
         portrait: [1080, 1920],
+        // A4 縦向き・300dpi相当（210mm × 297mm）。そのまま印刷してもA4に収まるサイズ
+        a4: [2480, 3508],
       };
       const suffixes: Record<string, string> = {
         square: "1080x1080",
         landscape: "1920x1080",
         portrait: "1080x1920",
+        a4: "A4",
       };
       const [targetW, targetH] = targets[format];
 
@@ -183,7 +187,9 @@ export default function BusinessDaysPage() {
       const iw = img.naturalWidth || nodeW * pixelRatio;
       const ih = img.naturalHeight || nodeH * pixelRatio;
 
-      const scale = Math.min(targetW / iw, targetH / ih);
+      // A4は家庭用プリンタの印刷不可領域（余白）で端が切れないよう、少し内側に収める
+      const marginFactor = format === "a4" ? 0.92 : 1;
+      const scale = Math.min((targetW * marginFactor) / iw, (targetH * marginFactor) / ih);
       const drawW = Math.round(iw * scale);
       const drawH = Math.round(ih * scale);
       const x = Math.round((targetW - drawW) / 2);
@@ -685,6 +691,13 @@ export default function BusinessDaysPage() {
                     className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors border-t border-gray-100"
                   >
                     Xポスト用 (1920×1080)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleExportImage("a4")}
+                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-amber-50 transition-colors border-t border-gray-100"
+                  >
+                    印刷用 (A4)
                   </button>
                   <button
                     type="button"

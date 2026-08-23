@@ -45,6 +45,8 @@ interface BusinessHour {
   openTime: string | null;
   closeTime: string | null;
   closedWeekRule: string | null;
+  pickupStartTime: string | null;
+  pickupEndTime: string | null;
 }
 
 function isBusinessHourClosedOn(bh: BusinessHour | undefined, date: Date): boolean {
@@ -85,6 +87,7 @@ export default function TakeoutPickupPage() {
   const [maxFutureDays, setMaxFutureDays] = useState(30);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
   const [holidayHours, setHolidayHours] = useState<{ openTime: string | null; closeTime: string | null }>({ openTime: null, closeTime: null });
+  const [holidayPickupHours, setHolidayPickupHours] = useState<{ startTime: string | null; endTime: string | null }>({ startTime: null, endTime: null });
   // 特定日の営業状況 override: key = "YYYY-MM-DD"
   const [businessDayOverrides, setBusinessDayOverrides] = useState<Record<string, boolean>>({});
   const [specialDateHours, setSpecialDateHours] = useState<Record<string, { openTime: string | null; closeTime: string | null }>>({});
@@ -125,11 +128,11 @@ export default function TakeoutPickupPage() {
         const [{ data: bhRows }, { data: storeRow }] = await Promise.all([
           supabase
             .from("store_business_hours")
-            .select("day_of_week, is_closed, open_time, close_time, closed_week_rule")
+            .select("day_of_week, is_closed, open_time, close_time, closed_week_rule, pickup_start_time, pickup_last_time")
             .eq("store_id", storeId),
           supabase
             .from("stores")
-            .select("holiday_open_time, holiday_close_time")
+            .select("holiday_open_time, holiday_close_time, holiday_pickup_start_time, holiday_pickup_end_time")
             .eq("id", storeId)
             .maybeSingle(),
         ]);
@@ -139,10 +142,16 @@ export default function TakeoutPickupPage() {
           openTime: r.open_time,
           closeTime: r.close_time,
           closedWeekRule: r.closed_week_rule,
+          pickupStartTime: r.pickup_start_time,
+          pickupEndTime: r.pickup_last_time,
         })));
         setHolidayHours({
           openTime: storeRow?.holiday_open_time ?? null,
           closeTime: storeRow?.holiday_close_time ?? null,
+        });
+        setHolidayPickupHours({
+          startTime: storeRow?.holiday_pickup_start_time ?? null,
+          endTime: storeRow?.holiday_pickup_end_time ?? null,
         });
 
         // 特定日の営業状況 (今日から3ヶ月分)
@@ -309,12 +318,15 @@ export default function TakeoutPickupPage() {
     const isHolidayToday = isJapaneseHoliday(now.getFullYear(), now.getMonth(), now.getDate());
     const closeTime = specialHour?.closeTime ?? (isHolidayToday ? holidayHours.closeTime : null) ?? bh?.closeTime;
     if (!closeTime) return [];
+    // 受け取り可能時間（営業時間と別に設定されていればそちらを優先。未設定なら営業時間と同じ）
+    const pickupStartTime = (isHolidayToday ? holidayPickupHours.startTime : null) ?? bh?.pickupStartTime ?? null;
+    const pickupCloseTime = (isHolidayToday ? holidayPickupHours.endTime : null) ?? bh?.pickupEndTime ?? closeTime;
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const closeMin = toMin(closeTime);
-    // 当日注文受付終了（CLOSEのN分前）を過ぎていたら受付不可
-    if (nowMin > closeMin - leadTimeMinutes) return [];
-    const startMin = nowMin + prepMinutes;
-    return generateTimeSlots(startMin, closeMin);
+    const pickupCloseMin = toMin(pickupCloseTime);
+    // 当日注文受付終了（受け取り終了時刻のN分前）を過ぎていたら受付不可
+    if (nowMin > pickupCloseMin - leadTimeMinutes) return [];
+    const startMin = Math.max(nowMin + prepMinutes, pickupStartTime ? toMin(pickupStartTime) : 0);
+    return generateTimeSlots(startMin, pickupCloseMin);
   })();
 
   // 予約注文の時間スロット
@@ -332,8 +344,11 @@ export default function TakeoutPickupPage() {
     const isHolidaySelected = isJapaneseHoliday(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
     const openTime = specialHour?.openTime ?? (isHolidaySelected ? holidayHours.openTime : null) ?? bh?.openTime ?? "10:00";
     const closeTime = specialHour?.closeTime ?? (isHolidaySelected ? holidayHours.closeTime : null) ?? bh?.closeTime ?? "19:00";
-    const openMin = toMin(openTime);
-    const closeMin = toMin(closeTime);
+    // 受け取り可能時間（営業時間と別に設定されていればそちらを優先。未設定なら営業時間と同じ）
+    const pickupStartTime = (isHolidaySelected ? holidayPickupHours.startTime : null) ?? bh?.pickupStartTime ?? openTime;
+    const pickupCloseTime = (isHolidaySelected ? holidayPickupHours.endTime : null) ?? bh?.pickupEndTime ?? closeTime;
+    const openMin = toMin(pickupStartTime);
+    const closeMin = toMin(pickupCloseTime);
     // 深夜越え（例: 23:00〜10:00）は endMin に +1440 して対応
     const endMin = closeMin <= openMin ? closeMin + 1440 : closeMin;
     return generateTimeSlots(openMin, endMin);

@@ -272,6 +272,13 @@ export interface StoreHoursInput {
   weekendClose: string;
   holidayOpen: string;
   holidayClose: string;
+  // 受け取り可能時間（null = 営業時間と同じ）
+  weekdayPickupStart: string | null;
+  weekdayPickupEnd: string | null;
+  weekendPickupStart: string | null;
+  weekendPickupEnd: string | null;
+  holidayPickupStart: string | null;
+  holidayPickupEnd: string | null;
 }
 
 /** 平日・休日(土日)・祝日の3区分で営業時間を保存する。定休日判定(closedDayRules)は曜日単位のまま維持。 */
@@ -296,6 +303,8 @@ export async function saveStoreHours(
       closed_week_rule: rule?.rule ?? null,
       open_time: rule ? null : isWeekend ? hours.weekendOpen : hours.weekdayOpen,
       close_time: rule ? null : isWeekend ? hours.weekendClose : hours.weekdayClose,
+      pickup_start_time: rule ? null : isWeekend ? hours.weekendPickupStart : hours.weekdayPickupStart,
+      pickup_last_time: rule ? null : isWeekend ? hours.weekendPickupEnd : hours.weekdayPickupEnd,
     };
   });
 
@@ -307,29 +316,38 @@ export async function saveStoreHours(
     .update({
       holiday_open_time: hours.holidayOpen,
       holiday_close_time: hours.holidayClose,
+      holiday_pickup_start_time: hours.holidayPickupStart,
+      holiday_pickup_end_time: hours.holidayPickupEnd,
     })
     .eq("id", storeId);
   if (storeErr) throw storeErr;
 }
 
-/** 平日(月)・休日(土)・祝日の代表値から3区分の営業時間を復元する */
+/** 平日(月)・休日(土)・祝日の代表値から3区分の営業時間・受け取り可能時間を復元する */
 export async function fetchStoreHours(storeId: string): Promise<StoreHoursInput> {
   const [{ data: bhData, error: bhErr }, { data: storeData, error: storeErr }] = await Promise.all([
     supabase
       .from("store_business_hours")
-      .select("day_of_week, open_time, close_time, is_closed")
+      .select("day_of_week, open_time, close_time, is_closed, pickup_start_time, pickup_last_time")
       .eq("store_id", storeId)
       .order("day_of_week", { ascending: true }),
     supabase
       .from("stores")
-      .select("holiday_open_time, holiday_close_time")
+      .select("holiday_open_time, holiday_close_time, holiday_pickup_start_time, holiday_pickup_end_time")
       .eq("id", storeId)
       .single(),
   ]);
   if (bhErr) throw bhErr;
   if (storeErr) throw storeErr;
 
-  const rows = (bhData ?? []) as { day_of_week: number; open_time: string | null; close_time: string | null; is_closed: boolean }[];
+  const rows = (bhData ?? []) as {
+    day_of_week: number;
+    open_time: string | null;
+    close_time: string | null;
+    is_closed: boolean;
+    pickup_start_time: string | null;
+    pickup_last_time: string | null;
+  }[];
   const weekdayRow = rows.find((r) => !WEEKEND_DAYS.has(r.day_of_week) && r.open_time) ?? rows.find((r) => !WEEKEND_DAYS.has(r.day_of_week));
   const weekendRow = rows.find((r) => WEEKEND_DAYS.has(r.day_of_week) && r.open_time) ?? rows.find((r) => WEEKEND_DAYS.has(r.day_of_week));
 
@@ -340,6 +358,12 @@ export async function fetchStoreHours(storeId: string): Promise<StoreHoursInput>
     weekendClose: weekendRow?.close_time?.slice(0, 5) || weekdayRow?.close_time?.slice(0, 5) || "19:00",
     holidayOpen: storeData?.holiday_open_time?.slice(0, 5) || weekdayRow?.open_time?.slice(0, 5) || "10:00",
     holidayClose: storeData?.holiday_close_time?.slice(0, 5) || weekdayRow?.close_time?.slice(0, 5) || "19:00",
+    weekdayPickupStart: weekdayRow?.pickup_start_time?.slice(0, 5) || null,
+    weekdayPickupEnd: weekdayRow?.pickup_last_time?.slice(0, 5) || null,
+    weekendPickupStart: weekendRow?.pickup_start_time?.slice(0, 5) || null,
+    weekendPickupEnd: weekendRow?.pickup_last_time?.slice(0, 5) || null,
+    holidayPickupStart: storeData?.holiday_pickup_start_time?.slice(0, 5) || null,
+    holidayPickupEnd: storeData?.holiday_pickup_end_time?.slice(0, 5) || null,
   };
 }
 

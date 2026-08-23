@@ -160,6 +160,13 @@ export default function AdminStoreNewPage() {
         weekendClose: sameWeekend ? weekdayClose : weekendClose,
         holidayOpen: sameHoliday ? weekdayOpen : holidayOpen,
         holidayClose: sameHoliday ? weekdayClose : holidayClose,
+        // 受け取り可能時間は未設定（営業時間と同じ）で作成し、必要なら店舗側の営業日設定で個別に設定する
+        weekdayPickupStart: null,
+        weekdayPickupEnd: null,
+        weekendPickupStart: null,
+        weekendPickupEnd: null,
+        holidayPickupStart: null,
+        holidayPickupEnd: null,
       };
       await saveStoreHours(created.id, hoursInput, closedDayRules);
 

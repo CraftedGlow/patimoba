@@ -221,6 +221,16 @@ export default function BusinessDaysPage() {
     weekend: { open: "10:00", close: "19:00" },
     holiday: { open: "10:00", close: "19:00" },
   });
+  // 受け取り可能時間（営業時間と別に設定したい場合のみ値が入る。nullなら営業時間と同じ）
+  const [pickupHoursProfiles, setPickupHoursProfiles] = useState<{
+    weekday: { start: string | null; end: string | null };
+    weekend: { start: string | null; end: string | null };
+    holiday: { start: string | null; end: string | null };
+  }>({
+    weekday: { start: null, end: null },
+    weekend: { start: null, end: null },
+    holiday: { start: null, end: null },
+  });
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [showHolidayModal, setShowHolidayModal] = useState(false);
   const [modalHolidays, setModalHolidays] = useState<{ dayOfWeek: number; rule: string }[]>([]);
@@ -234,6 +244,12 @@ export default function BusinessDaysPage() {
     weekendClose: "19:00",
     holidayOpen: "10:00",
     holidayClose: "19:00",
+    weekdayPickupStart: null,
+    weekdayPickupEnd: null,
+    weekendPickupStart: null,
+    weekendPickupEnd: null,
+    holidayPickupStart: null,
+    holidayPickupEnd: null,
   });
   const [modalSameWeekend, setModalSameWeekend] = useState(true);
   const [modalSameHoliday, setModalSameHoliday] = useState(true);
@@ -267,6 +283,11 @@ export default function BusinessDaysPage() {
         weekday: { open: storeHours.weekdayOpen, close: storeHours.weekdayClose },
         weekend: { open: storeHours.weekendOpen, close: storeHours.weekendClose },
         holiday: { open: storeHours.holidayOpen, close: storeHours.holidayClose },
+      });
+      setPickupHoursProfiles({
+        weekday: { start: storeHours.weekdayPickupStart, end: storeHours.weekdayPickupEnd },
+        weekend: { start: storeHours.weekendPickupStart, end: storeHours.weekendPickupEnd },
+        holiday: { start: storeHours.holidayPickupStart, end: storeHours.holidayPickupEnd },
       });
 
       const closed = (bhData ?? []).filter((r: any) => r.is_closed);
@@ -373,6 +394,12 @@ export default function BusinessDaysPage() {
           weekendClose: hoursProfiles.weekend.close,
           holidayOpen: hoursProfiles.holiday.open,
           holidayClose: hoursProfiles.holiday.close,
+          weekdayPickupStart: pickupHoursProfiles.weekday.start,
+          weekdayPickupEnd: pickupHoursProfiles.weekday.end,
+          weekendPickupStart: pickupHoursProfiles.weekend.start,
+          weekendPickupEnd: pickupHoursProfiles.weekend.end,
+          holidayPickupStart: pickupHoursProfiles.holiday.start,
+          holidayPickupEnd: pickupHoursProfiles.holiday.end,
         },
         nextClosedDayRules
       );
@@ -393,6 +420,12 @@ export default function BusinessDaysPage() {
       weekendClose: hoursProfiles.weekend.close,
       holidayOpen: hoursProfiles.holiday.open,
       holidayClose: hoursProfiles.holiday.close,
+      weekdayPickupStart: pickupHoursProfiles.weekday.start,
+      weekdayPickupEnd: pickupHoursProfiles.weekday.end,
+      weekendPickupStart: pickupHoursProfiles.weekend.start,
+      weekendPickupEnd: pickupHoursProfiles.weekend.end,
+      holidayPickupStart: pickupHoursProfiles.holiday.start,
+      holidayPickupEnd: pickupHoursProfiles.holiday.end,
     });
     setModalSameWeekend(
       hoursProfiles.weekend.open === hoursProfiles.weekday.open &&
@@ -403,7 +436,7 @@ export default function BusinessDaysPage() {
         hoursProfiles.holiday.close === hoursProfiles.weekday.close
     );
     setShowHoursModal(true);
-  }, [hoursProfiles]);
+  }, [hoursProfiles, pickupHoursProfiles]);
 
   const saveHoursProfiles = async () => {
     if (!storeId) return;
@@ -416,12 +449,23 @@ export default function BusinessDaysPage() {
         weekendClose: modalSameWeekend ? modalHours.weekdayClose : modalHours.weekendClose,
         holidayOpen: modalSameHoliday ? modalHours.weekdayOpen : modalHours.holidayOpen,
         holidayClose: modalSameHoliday ? modalHours.weekdayClose : modalHours.holidayClose,
+        weekdayPickupStart: modalHours.weekdayPickupStart,
+        weekdayPickupEnd: modalHours.weekdayPickupEnd,
+        weekendPickupStart: modalHours.weekendPickupStart,
+        weekendPickupEnd: modalHours.weekendPickupEnd,
+        holidayPickupStart: modalHours.holidayPickupStart,
+        holidayPickupEnd: modalHours.holidayPickupEnd,
       };
       await saveStoreHours(storeId, nextHours, closedDayRules);
       setHoursProfiles({
         weekday: { open: nextHours.weekdayOpen, close: nextHours.weekdayClose },
         weekend: { open: nextHours.weekendOpen, close: nextHours.weekendClose },
         holiday: { open: nextHours.holidayOpen, close: nextHours.holidayClose },
+      });
+      setPickupHoursProfiles({
+        weekday: { start: nextHours.weekdayPickupStart, end: nextHours.weekdayPickupEnd },
+        weekend: { start: nextHours.weekendPickupStart, end: nextHours.weekendPickupEnd },
+        holiday: { start: nextHours.holidayPickupStart, end: nextHours.holidayPickupEnd },
       });
       setShowHoursModal(false);
     } catch (err) {
@@ -543,6 +587,54 @@ export default function BusinessDaysPage() {
     setSaving(false);
   };
 
+  /** 営業時間モーダル内で使う「受け取り時間を営業時間と別に設定する」欄 */
+  const renderPickupHoursFields = (
+    startKey: "weekdayPickupStart" | "weekendPickupStart" | "holidayPickupStart",
+    endKey: "weekdayPickupEnd" | "weekendPickupEnd" | "holidayPickupEnd",
+    effectiveOpen: string,
+    effectiveClose: string
+  ) => {
+    const enabled = modalHours[startKey] !== null || modalHours[endKey] !== null;
+    return (
+      <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
+        <label className="flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setModalHours((p) => ({ ...p, [startKey]: effectiveOpen, [endKey]: effectiveClose }));
+              } else {
+                setModalHours((p) => ({ ...p, [startKey]: null, [endKey]: null }));
+              }
+            }}
+            className="rounded border-gray-300"
+          />
+          受け取り時間を営業時間と別に設定する
+        </label>
+        {enabled && (
+          <div className="flex items-center justify-center gap-3 mt-2">
+            <select
+              value={modalHours[startKey] ?? effectiveOpen}
+              onChange={(e) => setModalHours((p) => ({ ...p, [startKey]: e.target.value }))}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+            >
+              {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <span className="text-gray-500">～</span>
+            <select
+              value={modalHours[endKey] ?? effectiveClose}
+              onChange={(e) => setModalHours((p) => ({ ...p, [endKey]: e.target.value }))}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+            >
+              {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const getTitle = () => {
     if (viewMode === "month") return `${year}年${month + 1}月`;
     if (viewMode === "week") {
@@ -627,6 +719,11 @@ export default function BusinessDaysPage() {
                 変更
               </motion.button>
             </div>
+            {(pickupHoursProfiles.weekday.start || pickupHoursProfiles.weekend.start || pickupHoursProfiles.holiday.start) && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 inline-block mb-1">
+                受け取り可能時間を営業時間と別に設定しています
+              </p>
+            )}
             <div className="mt-1">
               <span className="text-sm text-gray-500">定休日</span>
               <div className="flex items-center gap-2 md:gap-3 mt-0.5 flex-wrap">
@@ -1022,6 +1119,7 @@ export default function BusinessDaysPage() {
                       {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
+                  {renderPickupHoursFields("weekdayPickupStart", "weekdayPickupEnd", modalHours.weekdayOpen, modalHours.weekdayClose)}
                 </div>
 
                 <div>
@@ -1053,6 +1151,12 @@ export default function BusinessDaysPage() {
                       </select>
                     </div>
                   )}
+                  {renderPickupHoursFields(
+                    "weekendPickupStart",
+                    "weekendPickupEnd",
+                    modalSameWeekend ? modalHours.weekdayOpen : modalHours.weekendOpen,
+                    modalSameWeekend ? modalHours.weekdayClose : modalHours.weekendClose
+                  )}
                 </div>
 
                 <div>
@@ -1083,6 +1187,12 @@ export default function BusinessDaysPage() {
                         {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>
                     </div>
+                  )}
+                  {renderPickupHoursFields(
+                    "holidayPickupStart",
+                    "holidayPickupEnd",
+                    modalSameHoliday ? modalHours.weekdayOpen : modalHours.holidayOpen,
+                    modalSameHoliday ? modalHours.weekdayClose : modalHours.holidayClose
                   )}
                 </div>
               </div>

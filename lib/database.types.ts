@@ -1260,6 +1260,7 @@ export type Database = {
           kitchen_cutoff_time: string | null
           open_time: string | null
           pickup_last_time: string | null
+          pickup_start_time: string | null
           store_id: string
           updated_at: string
         }
@@ -1273,6 +1274,7 @@ export type Database = {
           kitchen_cutoff_time?: string | null
           open_time?: string | null
           pickup_last_time?: string | null
+          pickup_start_time?: string | null
           store_id: string
           updated_at?: string
         }
@@ -1286,6 +1288,7 @@ export type Database = {
           kitchen_cutoff_time?: string | null
           open_time?: string | null
           pickup_last_time?: string | null
+          pickup_start_time?: string | null
           store_id?: string
           updated_at?: string
         }
@@ -1548,6 +1551,8 @@ export type Database = {
           email: string | null
           holiday_close_time: string | null
           holiday_open_time: string | null
+          holiday_pickup_end_time: string | null
+          holiday_pickup_start_time: string | null
           id: string
           image: string | null
           images: string[] | null
@@ -1591,6 +1596,8 @@ export type Database = {
           email?: string | null
           holiday_close_time?: string | null
           holiday_open_time?: string | null
+          holiday_pickup_end_time?: string | null
+          holiday_pickup_start_time?: string | null
           id?: string
           image?: string | null
           images?: string[] | null
@@ -1635,6 +1642,8 @@ export type Database = {
           email?: string | null
           holiday_close_time?: string | null
           holiday_open_time?: string | null
+          holiday_pickup_end_time?: string | null
+          holiday_pickup_start_time?: string | null
           id?: string
           image?: string | null
           images?: string[] | null

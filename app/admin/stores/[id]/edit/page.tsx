@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Upload } from "lucide-react";
@@ -70,6 +70,14 @@ export default function AdminStoreEditPage() {
   const [sameHoliday, setSameHoliday] = useState(true);
   const [holidayOpen, setHolidayOpen] = useState("10:00");
   const [holidayClose, setHolidayClose] = useState("19:00");
+  const pickupHoursRef = useRef<Pick<StoreHoursInput, "weekdayPickupStart" | "weekdayPickupEnd" | "weekendPickupStart" | "weekendPickupEnd" | "holidayPickupStart" | "holidayPickupEnd">>({
+    weekdayPickupStart: null,
+    weekdayPickupEnd: null,
+    weekendPickupStart: null,
+    weekendPickupEnd: null,
+    holidayPickupStart: null,
+    holidayPickupEnd: null,
+  });
   const [closedDayRules, setClosedDayRules] = useState<ClosedDayRule[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<StorePlanSlug>("light");
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
@@ -124,6 +132,15 @@ export default function AdminStoreEditPage() {
       setHolidayClose(storeHours.holidayClose);
       setSameWeekend(storeHours.weekendOpen === storeHours.weekdayOpen && storeHours.weekendClose === storeHours.weekdayClose);
       setSameHoliday(storeHours.holidayOpen === storeHours.weekdayOpen && storeHours.holidayClose === storeHours.weekdayClose);
+      // 受け取り可能時間はこの画面では編集しない（店舗側の営業日設定で設定）ので保存時にそのまま維持する
+      pickupHoursRef.current = {
+        weekdayPickupStart: storeHours.weekdayPickupStart,
+        weekdayPickupEnd: storeHours.weekdayPickupEnd,
+        weekendPickupStart: storeHours.weekendPickupStart,
+        weekendPickupEnd: storeHours.weekendPickupEnd,
+        holidayPickupStart: storeHours.holidayPickupStart,
+        holidayPickupEnd: storeHours.holidayPickupEnd,
+      };
     } catch {
       setError("店舗情報の取得に失敗しました");
     } finally {
@@ -199,6 +216,7 @@ export default function AdminStoreEditPage() {
         weekendClose: sameWeekend ? weekdayClose : weekendClose,
         holidayOpen: sameHoliday ? weekdayOpen : holidayOpen,
         holidayClose: sameHoliday ? weekdayClose : holidayClose,
+        ...pickupHoursRef.current,
       };
       await saveStoreHours(storeId, hoursInput, closedDayRules);
 

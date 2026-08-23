@@ -92,6 +92,12 @@ export default function StoreAccountPage() {
     weekendClose: "19:00",
     holidayOpen: "10:00",
     holidayClose: "19:00",
+    weekdayPickupStart: null,
+    weekdayPickupEnd: null,
+    weekendPickupStart: null,
+    weekendPickupEnd: null,
+    holidayPickupStart: null,
+    holidayPickupEnd: null,
   });
   const [cutoffHours, setCutoffHours] = useState("3");
   const [prepTimeHours, setPrepTimeHours] = useState("1.5");
@@ -232,6 +238,13 @@ export default function StoreAccountPage() {
         weekendClose: modalSameWeekend ? modalHours.weekdayClose : modalHours.weekendClose,
         holidayOpen: modalSameHoliday ? modalHours.weekdayOpen : modalHours.holidayOpen,
         holidayClose: modalSameHoliday ? modalHours.weekdayClose : modalHours.holidayClose,
+        // 受け取り可能時間はこの画面では編集しない（営業日設定ページで設定）ので現在の値を維持する
+        weekdayPickupStart: modalHours.weekdayPickupStart,
+        weekdayPickupEnd: modalHours.weekdayPickupEnd,
+        weekendPickupStart: modalHours.weekendPickupStart,
+        weekendPickupEnd: modalHours.weekendPickupEnd,
+        holidayPickupStart: modalHours.holidayPickupStart,
+        holidayPickupEnd: modalHours.holidayPickupEnd,
       };
       const closedDayRules: ClosedDayRule[] = holidays.map((h) => ({
         dayOfWeek: h.dayOfWeek,

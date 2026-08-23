@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      coupon_deliveries: {
+        Row: {
+          coupon_id: string
+          id: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          coupon_id: string
+          id?: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          coupon_id?: string
+          id?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_deliveries_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_deliveries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          store_id: string
+          title: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          store_id: string
+          title: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          store_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bags: {
         Row: {
           capacity: number
@@ -1475,6 +1555,7 @@ export type Database = {
           invoice_number: string | null
           is_active: boolean
           is_corporate_ready: boolean
+          anniversary_reminder_enabled: boolean
           is_dev_only: boolean
           is_master: boolean
           is_published: boolean
@@ -1513,6 +1594,7 @@ export type Database = {
           id?: string
           image?: string | null
           images?: string[] | null
+          anniversary_reminder_enabled?: boolean
           invoice_num?: string | null
           invoice_number?: string | null
           is_active?: boolean
@@ -1540,6 +1622,7 @@ export type Database = {
         Update: {
           accepts_walkin?: boolean
           address?: string | null
+          anniversary_reminder_enabled?: boolean
           area?: string | null
           blackout_periods?: Json | null
           building?: string | null

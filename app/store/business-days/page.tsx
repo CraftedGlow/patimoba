@@ -734,36 +734,36 @@ export default function BusinessDaysPage() {
 
         <div ref={calendarRef} className="bg-white rounded-lg border border-gray-200 max-w-[480px] mx-auto">
           {/* ヘッダー: 左スペーサー | 中央月数字 | 右ロゴ+営業時間 — 下揃え */}
-          <div className="flex items-end px-8 pt-8 pb-5 gap-4">
+          <div className="flex items-end px-4 pt-5 pb-4 gap-2 sm:px-8 sm:pt-8 sm:pb-5 sm:gap-4">
             {/* 左スペーサー (右列と同幅を確保して月数字を真ん中に) */}
-            <div className="flex-1" />
+            <div className="flex-1 min-w-0" />
 
             {/* 中央: 月数字 + April | 2026 */}
             <div className="text-center shrink-0">
-              <div className="text-[72px] font-normal leading-none text-gray-800 tabular-nums relative top-1">
+              <div className="text-[40px] sm:text-[72px] font-normal leading-none text-gray-800 tabular-nums relative top-1">
                 {String(month + 1).padStart(2, "0")}
               </div>
-              <div className="text-base font-medium text-gray-500 mt-1 whitespace-nowrap">
+              <div className="text-xs sm:text-base font-medium text-gray-500 mt-1 whitespace-nowrap">
                 {EN_MONTHS[month]} | {year}
               </div>
             </div>
 
             {/* 右: ロゴ + 営業時間 (下揃え = April | 2026 行と同じベースライン) */}
-            <div className="flex-1 flex flex-col justify-end" style={{ alignItems: "flex-end" }}>
+            <div className="flex-1 min-w-0 flex flex-col justify-end" style={{ alignItems: "flex-end" }}>
               {storeLogo ? (
                 <div style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={storeLogo}
                     alt={storeName || ""}
-                    style={{ maxHeight: 53, maxWidth: 123, objectFit: "contain" }}
+                    className="max-h-[28px] max-w-[64px] sm:max-h-[53px] sm:max-w-[123px] object-contain"
                     crossOrigin="anonymous"
                   />
                 </div>
               ) : storeName ? (
-                <span className="text-sm font-bold text-gray-700" style={{ textAlign: "right", width: "100%" }}>{storeName}</span>
+                <span className="text-xs sm:text-sm font-bold text-gray-700 truncate" style={{ textAlign: "right", width: "100%" }}>{storeName}</span>
               ) : null}
-              <div style={{ textAlign: "right", width: "100%" }} className="text-base text-gray-700 mt-1 tabular-nums whitespace-nowrap">
+              <div style={{ textAlign: "right", width: "100%" }} className="text-xs sm:text-base text-gray-700 mt-1 tabular-nums whitespace-nowrap">
                 {hoursProfiles.weekday.open} - {hoursProfiles.weekday.close}
               </div>
             </div>

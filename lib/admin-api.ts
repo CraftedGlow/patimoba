@@ -301,10 +301,10 @@ export async function saveStoreHours(
       day_of_week: dayOfWeek,
       is_closed: !!rule,
       closed_week_rule: rule?.rule ?? null,
-      open_time: rule ? null : isWeekend ? hours.weekendOpen : hours.weekdayOpen,
-      close_time: rule ? null : isWeekend ? hours.weekendClose : hours.weekdayClose,
-      pickup_start_time: rule ? null : isWeekend ? hours.weekendPickupStart : hours.weekdayPickupStart,
-      pickup_last_time: rule ? null : isWeekend ? hours.weekendPickupEnd : hours.weekdayPickupEnd,
+      open_time: isWeekend ? hours.weekendOpen : hours.weekdayOpen,
+      close_time: isWeekend ? hours.weekendClose : hours.weekdayClose,
+      pickup_start_time: isWeekend ? hours.weekendPickupStart : hours.weekdayPickupStart,
+      pickup_last_time: isWeekend ? hours.weekendPickupEnd : hours.weekdayPickupEnd,
     };
   });
 

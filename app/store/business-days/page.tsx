@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { toJpeg } from "html-to-image";
+import { toBlob } from "html-to-image";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -37,6 +37,32 @@ const EN_MONTHS = [
   "January","February","March","April","May","June",
   "July","August","September","October","November","December",
 ];
+
+/**
+ * 画像をカメラロール/写真アプリへ保存する。
+ * Web Share API（ファイル共有）に対応した端末（iOS Safari・LINE内蔵ブラウザ含む）では
+ * 共有シートから「画像を保存」を選べば写真アプリに直接保存される。
+ * 未対応の環境（主にPC）では従来通りダウンロードにフォールバックする。
+ */
+async function saveOrShareImage(blob: Blob, filename: string): Promise<void> {
+  const file = new File([blob], filename, { type: "image/jpeg" });
+  if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return;
+    } catch (e) {
+      // ユーザーが共有シートをキャンセルした場合は何もしない
+      if ((e as any)?.name === "AbortError") return;
+      // それ以外のエラーはダウンロードにフォールバック
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.download = filename;
+  link.href = url;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export default function BusinessDaysPage() {
   const { storeId: ownStoreId, storeName: ownStoreName, storeLogo: ownStoreLogo, isMaster, childStores } = useStoreContext();
@@ -121,7 +147,7 @@ export default function BusinessDaysPage() {
         margin: "0",
       };
 
-      const rawDataUrl = await toJpeg(node, {
+      const rawBlob = await toBlob(node, {
         quality: 0.95,
         backgroundColor: "#ffffff",
         pixelRatio,
@@ -129,12 +155,10 @@ export default function BusinessDaysPage() {
         height: nodeH,
         style: captureStyle,
       });
+      if (!rawBlob) throw new Error("画像の生成に失敗しました");
 
       if (format === "natural") {
-        const link = document.createElement("a");
-        link.download = `calendar-${year}-${month + 1}-natural.jpg`;
-        link.href = rawDataUrl;
-        link.click();
+        await saveOrShareImage(rawBlob, `calendar-${year}-${month + 1}-natural.jpg`);
         return;
       }
 
@@ -150,9 +174,11 @@ export default function BusinessDaysPage() {
       };
       const [targetW, targetH] = targets[format];
 
+      const rawObjectUrl = URL.createObjectURL(rawBlob);
       const img = new Image();
-      img.src = rawDataUrl;
+      img.src = rawObjectUrl;
       await img.decode();
+      URL.revokeObjectURL(rawObjectUrl);
 
       const iw = img.naturalWidth || nodeW * pixelRatio;
       const ih = img.naturalHeight || nodeH * pixelRatio;
@@ -173,11 +199,9 @@ export default function BusinessDaysPage() {
       ctx.fillRect(0, 0, targetW, targetH);
       ctx.drawImage(img, x, y, drawW, drawH);
 
-      const finalDataUrl = canvas.toDataURL("image/jpeg", 0.95);
-      const link = document.createElement("a");
-      link.download = `calendar-${year}-${month + 1}-${suffixes[format]}.jpg`;
-      link.href = finalDataUrl;
-      link.click();
+      const finalBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.95));
+      if (!finalBlob) throw new Error("画像の生成に失敗しました");
+      await saveOrShareImage(finalBlob, `calendar-${year}-${month + 1}-${suffixes[format]}.jpg`);
     } catch (e) {
       console.error(e);
       setSaveError("画像の保存に失敗しました。もう一度お試しください。");

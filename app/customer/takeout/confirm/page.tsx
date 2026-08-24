@@ -591,6 +591,7 @@ export default function TakeoutConfirmPage() {
                 ...(c?.options ?? []).map((op) => op.price),
                 ...(c?.customOptions ?? []).map((o) => o.additionalPrice || 0),
                 c?.noshi?.price ?? 0,
+                c?.messagePlateOption?.price ?? 0,
               ].reduce((s, v) => s + v, 0);
               const lineTotal = (item.price + optSum) * item.quantity;
               return (
@@ -609,6 +610,11 @@ export default function TakeoutConfirmPage() {
                     {c?.noshi && (
                       <p className="text-xs text-gray-500">
                         のし：{c.noshi.name}{c.noshi.purpose && `（${c.noshi.purpose}）`}{c.noshi.displayName && `「${c.noshi.displayName}」`}
+                      </p>
+                    )}
+                    {c?.messagePlateOption && (
+                      <p className="text-xs text-gray-500">
+                        メッセージプレート：{c.messagePlateOption.name}{c.messagePlate && `「${c.messagePlate}」`}
                       </p>
                     )}
                   </div>

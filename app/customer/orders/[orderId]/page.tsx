@@ -299,6 +299,11 @@ export default function CustomerOrderDetailPage() {
                           {combinedMessageLabel && (
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-xs text-gray-500">{combinedMessageLabel}</span>
+                              {(plateOpt?.price_delta ?? 0) > 0 && (
+                                <span className="text-xs text-gray-500 whitespace-nowrap">
+                                  ¥{Number(plateOpt?.price_delta).toLocaleString()}
+                                </span>
+                              )}
                             </div>
                           )}
                           {combinedNoshiLabel && (

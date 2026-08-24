@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useNoshi } from "@/hooks/use-noshi";
+import { useMessagePlates } from "@/hooks/use-message-plates";
 import { getStoreIdsWithParent, fetchProductStoreOverrides, applyProductStoreOverride, upsertProductStoreOverride } from "@/lib/store-hierarchy";
 
 interface EcProductRow {
@@ -28,6 +29,8 @@ interface EcProductRow {
   content_quantity: string | null;
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
+  message_plate_enabled: boolean | null;
+  message_plate_ids: string[] | null;
   tags: string[] | null;
   available_days_of_month: number[] | null;
   payment_method_restriction: string | null;
@@ -49,6 +52,7 @@ export function EcTab() {
   const ownStoreId = user?.storeId ?? null;
   const storeId = isMaster ? (selectedChildId ?? ownStoreId) : ownStoreId;
   const { noshiList } = useNoshi(storeId ?? undefined);
+  const { messagePlateList } = useMessagePlates(storeId ?? undefined);
 
   const [products, setProducts] = useState<EcProductRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -64,6 +68,8 @@ export function EcTab() {
   const [contentQuantity, setContentQuantity] = useState("");
   const [noshiEnabled, setNoshiEnabled] = useState(false);
   const [noshiIds, setNoshiIds] = useState<string[]>([]);
+  const [messagePlateEnabled, setMessagePlateEnabled] = useState(false);
+  const [messagePlateIds, setMessagePlateIds] = useState<string[]>([]);
 
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [crossImage, setCrossImage] = useState<string | null>(null);
@@ -128,6 +134,8 @@ export function EcTab() {
     setContentQuantity("");
     setNoshiEnabled(false);
     setNoshiIds([]);
+    setMessagePlateEnabled(false);
+    setMessagePlateIds([]);
     setSelectedTags([]);
     setMainImage(null);
     setCrossImage(null);
@@ -158,6 +166,8 @@ export function EcTab() {
       setContentQuantity(p.content_quantity ?? "");
       setNoshiEnabled(p.noshi_enabled ?? false);
       setNoshiIds(Array.isArray(p.noshi_ids) ? p.noshi_ids : []);
+      setMessagePlateEnabled(p.message_plate_enabled ?? false);
+      setMessagePlateIds(Array.isArray(p.message_plate_ids) ? p.message_plate_ids : []);
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
@@ -222,6 +232,8 @@ export function EcTab() {
         content_quantity: contentQuantity.trim() || null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
+        message_plate_enabled: messagePlateEnabled,
+        message_plate_ids: messagePlateEnabled ? messagePlateIds : [],
         tags: selectedTags.length > 0 ? selectedTags : null,
       } as any;
 
@@ -589,6 +601,40 @@ export function EcTab() {
                     <img src={n.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
                     <span>{n.name}</span>
                     {n.price > 0 && <span className="text-xs text-gray-600">+¥{n.price.toLocaleString()}</span>}
+                  </label>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* メッセージプレート設定 */}
+        <div className="space-y-2 pt-1">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={messagePlateEnabled}
+              onChange={(e) => { setMessagePlateEnabled(e.target.checked); if (!e.target.checked) setMessagePlateIds([]); }}
+              className="w-4 h-4 accent-amber-500"
+            />
+            メッセージプレートを使用する
+          </label>
+          {messagePlateEnabled && (
+            <div className="pl-6 space-y-1.5">
+              {messagePlateList.length === 0 ? (
+                <p className="text-xs text-gray-600">メッセージプレートが未登録です。メッセージプレート管理タブから登録してください。</p>
+              ) : (
+                messagePlateList.map((m) => (
+                  <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={messagePlateIds.includes(m.id)}
+                      onChange={(e) => setMessagePlateIds((prev) => e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id))}
+                      className="w-4 h-4 accent-amber-500"
+                    />
+                    <img src={m.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
+                    <span>{m.name}</span>
+                    {m.price > 0 && <span className="text-xs text-gray-600">+¥{m.price.toLocaleString()}</span>}
                   </label>
                 ))
               )}

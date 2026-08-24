@@ -109,9 +109,10 @@ export function useOrderMutations() {
         const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0)
         const customOptionSum = (c.customOptions || []).reduce((s, op) => s + (op.additionalPrice || 0), 0)
         const noshiPrice = c.noshi?.price ?? 0
+        const messagePlatePrice = c.messagePlateOption?.price ?? 0
         return (
           item.price * item.quantity +
-          ((c.sizePrice ?? 0) + candleSum + optionSum + customOptionSum + noshiPrice) * item.quantity
+          ((c.sizePrice ?? 0) + candleSum + optionSum + customOptionSum + noshiPrice + messagePlatePrice) * item.quantity
         )
       }
 
@@ -186,6 +187,14 @@ export function useOrderMutations() {
               price_delta: 0,
             })
           }
+        }
+        if (c.messagePlateOption) {
+          options.push({
+            order_item_id: insertedId,
+            option_group_name_snapshot: "メッセージプレート",
+            option_item_name_snapshot: c.messagePlateOption.name,
+            price_delta: c.messagePlateOption.price || 0,
+          })
         }
         if (c.messagePlate) {
           options.push({

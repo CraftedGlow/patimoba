@@ -5,13 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CakeTab } from "@/components/store/register/cake-tab";
 import { EcTab } from "@/components/store/register/ec-tab";
 import { NoshiTab } from "@/components/store/register/noshi-tab";
+import { MessagePlateTab } from "@/components/store/register/message-plate-tab";
 
-type TabId = "cake" | "ec" | "noshi";
+type TabId = "cake" | "ec" | "noshi" | "messagePlate";
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "cake", label: "テイクアウト" },
   { id: "ec", label: "EC商品" },
   { id: "noshi", label: "のし管理" },
+  { id: "messagePlate", label: "メッセージプレート管理" },
 ];
 
 export default function StoreRegisterPage() {
@@ -43,7 +45,7 @@ export default function StoreRegisterPage() {
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.15 }}
         >
-          {activeTab === "cake" ? <CakeTab /> : activeTab === "ec" ? <EcTab /> : <NoshiTab />}
+          {activeTab === "cake" ? <CakeTab /> : activeTab === "ec" ? <EcTab /> : activeTab === "noshi" ? <NoshiTab /> : <MessagePlateTab />}
         </motion.div>
       </AnimatePresence>
     </div>

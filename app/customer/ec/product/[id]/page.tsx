@@ -11,6 +11,7 @@ import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useProduct } from "@/hooks/use-products";
 import { useProductRegistration } from "@/hooks/use-product-registrations";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
+import { fetchMessagePlatesByIds, MessagePlateItem } from "@/hooks/use-message-plates";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
@@ -101,6 +102,20 @@ export default function ECProductDetailPage() {
 
   const selectedNoshiDesign = noshiItems.find((n) => n.id === selectedNoshiId) ?? null;
 
+  // メッセージプレート（デザイン選択 → メッセージ入力）
+  const [messagePlateItems, setMessagePlateItems] = useState<MessagePlateItem[]>([]);
+  const [useMessagePlate, setUseMessagePlate] = useState(false);
+  const [selectedMessagePlateId, setSelectedMessagePlateId] = useState<string | null>(null);
+  const [messagePlateText, setMessagePlateText] = useState("");
+
+  useEffect(() => {
+    if (productReg?.message_plate_enabled && productReg.message_plate_ids?.length) {
+      fetchMessagePlatesByIds(productReg.message_plate_ids).then(setMessagePlateItems);
+    }
+  }, [productReg?.id, productReg?.message_plate_enabled]);
+
+  const selectedMessagePlateDesign = messagePlateItems.find((m) => m.id === selectedMessagePlateId) ?? null;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--ec-bg,#ffffff)] flex items-center justify-center">
@@ -131,6 +146,7 @@ export default function ECProductDetailPage() {
   }, 0);
 
   const noshiAdditional = (useNoshi && selectedNoshiDesign) ? selectedNoshiDesign.price : 0;
+  const messagePlateAdditional = (useMessagePlate && selectedMessagePlateDesign) ? selectedMessagePlateDesign.price : 0;
 
   const allergens = detectAllergens(productReg?.ingredients);
   const bestBeforeText = formatBestBefore(productReg?.best_before_days);
@@ -176,7 +192,7 @@ export default function ECProductDetailPage() {
       quantity,
       storeId: effectiveStoreId,
       isEc: true,
-      customization: (cartCustomOptions.length > 0 || (useNoshi && selectedNoshiDesign))
+      customization: (cartCustomOptions.length > 0 || (useNoshi && selectedNoshiDesign) || (useMessagePlate && selectedMessagePlateDesign))
         ? {
             customOptions: cartCustomOptions,
             ...(useNoshi && selectedNoshiDesign ? {
@@ -187,6 +203,14 @@ export default function ECProductDetailPage() {
                 displayName: noshiName.trim() || undefined,
                 price: selectedNoshiDesign.price,
               },
+            } : {}),
+            ...(useMessagePlate && selectedMessagePlateDesign ? {
+              messagePlateOption: {
+                id: selectedMessagePlateDesign.id,
+                name: selectedMessagePlateDesign.name,
+                price: selectedMessagePlateDesign.price,
+              },
+              messagePlate: messagePlateText.trim() || undefined,
             } : {}),
           }
         : undefined,
@@ -243,7 +267,7 @@ export default function ECProductDetailPage() {
             <div>
               <p>
                 <span className="text-3xl font-bold text-gray-900">
-                  {((product.price + optionsAdditional + noshiAdditional) * quantity).toLocaleString()}
+                  {((product.price + optionsAdditional + noshiAdditional + messagePlateAdditional) * quantity).toLocaleString()}
                 </span>
                 <span className="text-base text-gray-600 ml-1">円（税込）</span>
               </p>
@@ -479,6 +503,79 @@ export default function ECProductDetailPage() {
                         value={noshiName}
                         onChange={(e) => setNoshiName(e.target.value)}
                         placeholder={"例：山田 太郎\n（改行可）"}
+                        rows={2}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--ec-300,#fcd34d)] focus:border-[var(--ec-400,#fbbf24)] resize-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* メッセージプレート */}
+          {productReg?.message_plate_enabled && messagePlateItems.length > 0 && (
+            <div className="mb-6 space-y-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div
+                  onClick={() => {
+                    setUseMessagePlate((v) => !v);
+                    setSelectedMessagePlateId(null);
+                    setMessagePlateText("");
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${useMessagePlate ? "bg-[var(--ec-400,#fbbf24)]" : "bg-gray-200"}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${useMessagePlate ? "translate-x-4" : ""}`} />
+                </div>
+                <span className="text-[16px] text-gray-700 font-medium">メッセージプレートを付ける</span>
+              </label>
+
+              {useMessagePlate && (
+                <div className="space-y-4 pl-1">
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-600">デザインを選択</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {messagePlateItems.map((m) => {
+                        const active = selectedMessagePlateId === m.id;
+                        return (
+                          <motion.button
+                            key={m.id}
+                            type="button"
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setSelectedMessagePlateId(m.id)}
+                            className={`relative rounded-xl overflow-hidden border-2 text-left transition-colors ${
+                              active
+                                ? "border-[var(--ec-400,#fbbf24)] bg-[var(--ec-50,#fffbeb)]"
+                                : "border-gray-200 bg-white hover:border-[var(--ec-200,#fde68a)]"
+                            }`}
+                          >
+                            <div className="w-full aspect-square bg-gray-100 overflow-hidden">
+                              <img src={m.imageUrl || "/noshi-default.jpg"} alt={m.name} className="w-full h-full object-cover" />
+                            </div>
+                            {active && (
+                              <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-[var(--ec-400,#fbbf24)] rounded-full flex items-center justify-center">
+                                <Check className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                            <div className="p-2">
+                              <p className="text-xs font-bold leading-tight line-clamp-2">{m.name}</p>
+                              <p className={`text-xs mt-0.5 font-medium ${m.price === 0 ? "text-green-600" : "text-[var(--ec-600,#d97706)]"}`}>
+                                {m.price === 0 ? "無料" : `+¥${m.price.toLocaleString()}`}
+                              </p>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {selectedMessagePlateDesign && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-600 block">メッセージ内容</label>
+                      <textarea
+                        value={messagePlateText}
+                        onChange={(e) => setMessagePlateText(e.target.value)}
+                        placeholder={"例：お誕生日おめでとう\n（改行可）"}
                         rows={2}
                         className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--ec-300,#fcd34d)] focus:border-[var(--ec-400,#fbbf24)] resize-none"
                       />

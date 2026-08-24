@@ -227,6 +227,11 @@ export interface UICartItem {
       displayName?: string
       price: number
     }
+    messagePlateOption?: {
+      id: string
+      name: string
+      price: number
+    }
   }
 }
 

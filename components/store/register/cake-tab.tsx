@@ -12,6 +12,7 @@ import { useProductTypes } from "@/hooks/use-product-types";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
 import { useNoshi } from "@/hooks/use-noshi";
+import { useMessagePlates } from "@/hooks/use-message-plates";
 import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
 import { toLocalDateString } from "@/lib/date-utils";
 import { getStoreIdsWithParent, upsertProductStoreOverride, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
@@ -44,6 +45,8 @@ interface ProductRow {
   custom_options: any;
   noshi_enabled: boolean | null;
   noshi_ids: string[] | null;
+  message_plate_enabled: boolean | null;
+  message_plate_ids: string[] | null;
   tags: string[] | null;
   isMasterProduct?: boolean;
 }
@@ -97,6 +100,8 @@ export function CakeTab() {
 
   const [noshiEnabled, setNoshiEnabled] = useState(false);
   const [noshiIds, setNoshiIds] = useState<string[]>([]);
+  const [messagePlateEnabled, setMessagePlateEnabled] = useState(false);
+  const [messagePlateIds, setMessagePlateIds] = useState<string[]>([]);
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(false);
   // ホール用サイズ (product_variants)
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
@@ -123,6 +128,7 @@ export function CakeTab() {
 
   const { groups: allDecorationGroups } = useDecorationGroups(storeId ?? undefined);
   const { noshiList } = useNoshi(storeId ?? undefined);
+  const { messagePlateList } = useMessagePlates(storeId ?? undefined);
 
   useEffect(() => {
     if (selectedId) return;
@@ -214,6 +220,8 @@ export function CakeTab() {
     setSelectedGroupIds([]);
     setNoshiEnabled(false);
     setNoshiIds([]);
+    setMessagePlateEnabled(false);
+    setMessagePlateIds([]);
     setPrintDecorationEnabled(false);
     setSelectedTags([]);
     setSizes([]);
@@ -251,6 +259,8 @@ export function CakeTab() {
       setCustomOptions(Array.isArray(p.custom_options) ? (p.custom_options as ProductCustomOption[]) : []);
       setNoshiEnabled(p.noshi_enabled ?? false);
       setNoshiIds(Array.isArray(p.noshi_ids) ? p.noshi_ids : []);
+      setMessagePlateEnabled(p.message_plate_enabled ?? false);
+      setMessagePlateIds(Array.isArray(p.message_plate_ids) ? p.message_plate_ids : []);
       setPrintDecorationEnabled((p as any).print_decoration_enabled ?? false);
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
@@ -353,6 +363,8 @@ export function CakeTab() {
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
+        message_plate_enabled: !isHole && messagePlateEnabled,
+        message_plate_ids: !isHole && messagePlateEnabled ? messagePlateIds : [],
         print_decoration_enabled: isHole ? printDecorationEnabled : false,
         tags: selectedTags.length > 0 ? selectedTags : null,
       };
@@ -1213,6 +1225,57 @@ export function CakeTab() {
               </div>
             )}
           </div>
+
+        {/* メッセージプレート設定（ホール以外） */}
+        {!isHole && (
+          <div className="space-y-2 pt-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={messagePlateEnabled}
+                onChange={(e) => {
+                  setMessagePlateEnabled(e.target.checked);
+                  if (!e.target.checked) setMessagePlateIds([]);
+                }}
+                className="w-4 h-4 accent-amber-500"
+              />
+              メッセージプレートを使用する
+            </label>
+            {messagePlateEnabled && (
+              <div className="pl-6 space-y-1.5">
+                {messagePlateList.length === 0 ? (
+                  <p className="text-xs text-gray-600">
+                    メッセージプレートが未登録です。{" "}
+                    <Link href="/store/register" className="text-amber-600 underline">
+                      メッセージプレート管理
+                    </Link>
+                    タブから登録してください。
+                  </p>
+                ) : (
+                  messagePlateList.map((m) => (
+                    <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={messagePlateIds.includes(m.id)}
+                        onChange={(e) => {
+                          setMessagePlateIds((prev) =>
+                            e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id)
+                          );
+                        }}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      <img src={m.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
+                      <span>{m.name}</span>
+                      {m.price > 0 && (
+                        <span className="text-xs text-gray-600">+¥{m.price.toLocaleString()}</span>
+                      )}
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <motion.button
           whileHover={{ scale: 1.02 }}

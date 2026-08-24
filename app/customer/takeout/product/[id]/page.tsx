@@ -12,6 +12,7 @@ import { useProductRegistration } from "@/hooks/use-product-registrations";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
+import { fetchMessagePlatesByIds, MessagePlateItem } from "@/hooks/use-message-plates";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const DIGIT_OPTIONS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -50,6 +51,20 @@ export default function TakeoutProductDetailPage() {
   }, [product?.id, product?.noshi_enabled]);
 
   const selectedNoshiDesign = noshiItems.find((n) => n.id === selectedNoshiId) ?? null;
+
+  // メッセージプレート（デザイン選択 → メッセージ入力）
+  const [messagePlateItems, setMessagePlateItems] = useState<MessagePlateItem[]>([]);
+  const [useMessagePlate, setUseMessagePlate] = useState(false);
+  const [selectedMessagePlateId, setSelectedMessagePlateId] = useState<string | null>(null);
+  const [messagePlateText, setMessagePlateText] = useState("");
+
+  useEffect(() => {
+    if (product?.message_plate_enabled && product.message_plate_ids?.length) {
+      fetchMessagePlatesByIds(product.message_plate_ids).then(setMessagePlateItems);
+    }
+  }, [product?.id, product?.message_plate_enabled]);
+
+  const selectedMessagePlateDesign = messagePlateItems.find((m) => m.id === selectedMessagePlateId) ?? null;
 
   // ナンバーキャンドルのインデックスを特定
   useEffect(() => {
@@ -106,6 +121,7 @@ export default function TakeoutProductDetailPage() {
 
   // 合計追加金額
   const noshiAdditional = (useNoshi && selectedNoshiDesign) ? selectedNoshiDesign.price : 0;
+  const messagePlateAdditional = (useMessagePlate && selectedMessagePlateDesign) ? selectedMessagePlateDesign.price : 0;
 
   const numberCandleTotalCount = numberCandleSelections.reduce((s, r) => s + r.qty, 0);
 
@@ -154,7 +170,7 @@ export default function TakeoutProductDetailPage() {
       quantity,
       storeId: selectedStoreId ?? product.store_id,
       isTakeout: true,
-      customization: (cartCustomOptions.length > 0 || (useNoshi && selectedNoshiDesign))
+      customization: (cartCustomOptions.length > 0 || (useNoshi && selectedNoshiDesign) || (useMessagePlate && selectedMessagePlateDesign))
         ? {
             customOptions: cartCustomOptions,
             ...(useNoshi && selectedNoshiDesign ? {
@@ -166,6 +182,14 @@ export default function TakeoutProductDetailPage() {
           price: selectedNoshiDesign.price,
         }
       } : {}),
+            ...(useMessagePlate && selectedMessagePlateDesign ? {
+              messagePlateOption: {
+                id: selectedMessagePlateDesign.id,
+                name: selectedMessagePlateDesign.name,
+                price: selectedMessagePlateDesign.price,
+              },
+              messagePlate: messagePlateText.trim() || undefined,
+            } : {}),
           }
         : undefined,
     });
@@ -532,6 +556,79 @@ export default function TakeoutProductDetailPage() {
             </div>
           )}
 
+          {/* メッセージプレート */}
+          {product.message_plate_enabled && messagePlateItems.length > 0 && (
+            <div className="mt-6 space-y-4">
+              <label className="flex items-center gap-3 cursor-pointer mt-2">
+                <div
+                  onClick={() => {
+                    setUseMessagePlate((v) => !v);
+                    setSelectedMessagePlateId(null);
+                    setMessagePlateText("");
+                  }}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${useMessagePlate ? "bg-amber-400" : "bg-gray-200"}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${useMessagePlate ? "translate-x-4" : ""}`} />
+                </div>
+                <span className="text-[16px] text-gray-700 font-medium">メッセージプレートを付ける</span>
+              </label>
+
+              {useMessagePlate && (
+                <div className="space-y-4 pl-1">
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-gray-600">デザインを選択</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {messagePlateItems.map((m) => {
+                        const active = selectedMessagePlateId === m.id;
+                        return (
+                          <motion.button
+                            key={m.id}
+                            type="button"
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setSelectedMessagePlateId(m.id)}
+                            className={`relative rounded-xl overflow-hidden border-2 text-left transition-colors ${
+                              active
+                                ? "border-amber-400 bg-amber-50"
+                                : "border-gray-200 bg-white hover:border-amber-200 hover:bg-amber-50/30"
+                            }`}
+                          >
+                            <div className="w-full aspect-square bg-gray-100 overflow-hidden">
+                              <img src={m.imageUrl || "/noshi-default.jpg"} alt={m.name} className="w-full h-full object-cover" />
+                            </div>
+                            {active && (
+                              <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center">
+                                <Check className="w-3 h-3 text-white" />
+                              </div>
+                            )}
+                            <div className="p-2">
+                              <p className="text-xs font-bold leading-tight line-clamp-2">{m.name}</p>
+                              <p className={`text-xs mt-0.5 font-medium ${m.price === 0 ? "text-green-600" : "text-amber-600"}`}>
+                                {m.price === 0 ? "無料" : `+¥${m.price.toLocaleString()}`}
+                              </p>
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {selectedMessagePlateDesign && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-gray-600 block">メッセージ内容</label>
+                      <textarea
+                        value={messagePlateText}
+                        onChange={(e) => setMessagePlateText(e.target.value)}
+                        placeholder={"例：お誕生日おめでとう\n（改行可）"}
+                        rows={2}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 resize-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
         </motion.div>
       </div>
 
@@ -550,13 +647,13 @@ export default function TakeoutProductDetailPage() {
                 <>
                   <p className="flex items-baseline gap-0.5">
                     <span className="text-3xl font-bold text-gray-900 tabular-nums">
-                      {((product.base_price + optionsAdditional + noshiAdditional) * quantity).toLocaleString()}
+                      {((product.base_price + optionsAdditional + noshiAdditional + messagePlateAdditional) * quantity).toLocaleString()}
                     </span>
                     <span className="text-lg font-bold text-gray-900">円</span>
                   </p>
                   {quantity > 1 && (
                     <p className="text-xs text-gray-500">
-                      ¥{(product.base_price + optionsAdditional + noshiAdditional).toLocaleString()} × {quantity}
+                      ¥{(product.base_price + optionsAdditional + noshiAdditional + messagePlateAdditional).toLocaleString()} × {quantity}
                     </p>
                   )}
                 </>

@@ -121,6 +121,7 @@ interface CartItem {
     allergyNote?: string;
     customOptions?: { name: string; values: string[]; additionalPrice: number }[];
     noshi?: { id: string; name: string; purpose?: string; displayName?: string; price: number };
+    messagePlateOption?: { id: string; name: string; price: number };
   };
 }
 
@@ -130,7 +131,8 @@ function calcItemSubtotal(item: CartItem): number {
   const candleSum = (c.candles || []).reduce((s, cd) => s + cd.price * cd.quantity, 0);
   const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0);
   const noshiPrice = c.noshi?.price ?? 0;
-  return (item.price * item.quantity) + ((c.sizePrice ?? 0) + candleSum + optionSum + noshiPrice) * item.quantity;
+  const messagePlatePrice = c.messagePlateOption?.price ?? 0;
+  return (item.price * item.quantity) + ((c.sizePrice ?? 0) + candleSum + optionSum + noshiPrice + messagePlatePrice) * item.quantity;
 }
 
 export async function POST(req: NextRequest) {
@@ -273,14 +275,6 @@ export async function POST(req: NextRequest) {
             price_delta: op.price,
           });
         }
-        if (c.messagePlate) {
-          options.push({
-            order_item_id: insertedId,
-            option_group_name_snapshot: "メッセージ",
-            option_item_name_snapshot: c.messagePlate,
-            price_delta: 0,
-          });
-        }
         if (c.allergyNote) {
           options.push({
             order_item_id: insertedId,
@@ -315,6 +309,24 @@ export async function POST(req: NextRequest) {
             price_delta: 0,
           });
         }
+      }
+
+      // メッセージプレートも商品種別を問わず対象
+      if (c.messagePlateOption) {
+        options.push({
+          order_item_id: insertedId,
+          option_group_name_snapshot: "メッセージプレート",
+          option_item_name_snapshot: c.messagePlateOption.name,
+          price_delta: c.messagePlateOption.price || 0,
+        });
+      }
+      if (c.messagePlate) {
+        options.push({
+          order_item_id: insertedId,
+          option_group_name_snapshot: "メッセージ",
+          option_item_name_snapshot: c.messagePlate,
+          price_delta: 0,
+        });
       }
 
       if (options.length > 0) {

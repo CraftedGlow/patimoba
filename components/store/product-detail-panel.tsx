@@ -8,6 +8,7 @@ import { useProductTypes } from "@/hooks/use-product-types";
 import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { supabase } from "@/lib/supabase";
 import { useNoshi } from "@/hooks/use-noshi";
+import { useMessagePlates } from "@/hooks/use-message-plates";
 import type { ProductRegistration, ProductCustomOption } from "@/hooks/use-product-registrations";
 import { ProductCustomOptionPresetChips } from "@/components/store/product-custom-option-preset-chips";
 
@@ -43,6 +44,7 @@ export function ProductDetailPanel({
   const { productTypes } = useProductTypes();
   const categories = productTypes.map((t) => t.productType);
   const { noshiList } = useNoshi(product.store_id);
+  const { messagePlateList } = useMessagePlates(product.store_id);
 
   const [name, setName] = useState(product.name);
   const [description, setDescription] = useState(product.description || "");
@@ -84,6 +86,8 @@ export function ProductDetailPanel({
   // のし
   const [noshiEnabled, setNoshiEnabled] = useState(product.noshi_enabled);
   const [noshiIds, setNoshiIds] = useState<string[]>(product.noshi_ids);
+  const [messagePlateEnabled, setMessagePlateEnabled] = useState(product.message_plate_enabled);
+  const [messagePlateIds, setMessagePlateIds] = useState<string[]>(product.message_plate_ids);
 
   // EC商品情報
   const [shippingMethod, setShippingMethod] = useState(product.shipping_method ?? "");
@@ -158,6 +162,8 @@ export function ProductDetailPanel({
     setSelectedTags(Array.isArray(product.tags) ? product.tags : []);
     setNoshiEnabled(product.noshi_enabled);
     setNoshiIds(product.noshi_ids);
+    setMessagePlateEnabled(product.message_plate_enabled);
+    setMessagePlateIds(product.message_plate_ids);
     setShippingMethod(product.shipping_method ?? "");
     setStorageMethod(product.storage_method ?? "");
     setIngredients(product.ingredients ?? "");
@@ -223,6 +229,8 @@ export function ProductDetailPanel({
         tags: selectedTags.length > 0 ? selectedTags : null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
+        message_plate_enabled: !isHole && messagePlateEnabled,
+        message_plate_ids: !isHole && messagePlateEnabled ? messagePlateIds : [],
         shipping_method: isEc ? shippingMethod.trim() || null : undefined,
         storage_method: isEc ? storageMethod.trim() || null : undefined,
         ingredients: isEc ? ingredients.trim() || null : undefined,
@@ -805,6 +813,36 @@ export function ProductDetailPanel({
               </div>
             )}
           </div>
+
+          {/* メッセージプレート設定（ホール以外） */}
+          {!isHole && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-bold cursor-pointer mb-1">
+                <input type="checkbox" checked={messagePlateEnabled}
+                  onChange={(e) => { setMessagePlateEnabled(e.target.checked); if (!e.target.checked) setMessagePlateIds([]); }}
+                  className="w-4 h-4 accent-amber-500" />
+                メッセージプレートを使用する
+              </label>
+              {messagePlateEnabled && (
+                <div className="pl-6 space-y-1.5">
+                  {messagePlateList.length === 0 ? (
+                    <p className="text-xs text-gray-600">メッセージプレートが未登録です。メッセージプレート管理タブから登録してください。</p>
+                  ) : (
+                    messagePlateList.map((m) => (
+                      <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input type="checkbox" checked={messagePlateIds.includes(m.id)}
+                          onChange={(e) => setMessagePlateIds((prev) => e.target.checked ? [...prev, m.id] : prev.filter((id) => id !== m.id))}
+                          className="w-4 h-4 accent-amber-500" />
+                        <img src={m.imageUrl || "/noshi-default.jpg"} alt="" className="w-6 h-6 rounded object-cover" />
+                        <span>{m.name}</span>
+                        {m.price > 0 && <span className="text-xs text-gray-600">+¥{m.price.toLocaleString()}</span>}
+                      </label>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <AnimatePresence>
             {error && (

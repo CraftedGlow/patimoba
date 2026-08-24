@@ -19,6 +19,7 @@ function itemCartKey(item: UICartItem): string {
     .map((o) => `${o.name}=${(o.values || []).join(",")}`)
     .join("|");
   const noshiKey = c.noshi ? `${c.noshi.id}=${c.noshi.purpose || ""}=${c.noshi.displayName || ""}` : "";
+  const messagePlateKey = c.messagePlateOption?.id || "";
   return [
     item.productId,
     c.sizeId || "",
@@ -27,6 +28,7 @@ function itemCartKey(item: UICartItem): string {
     c.messagePlate || "",
     customOptKey,
     noshiKey,
+    messagePlateKey,
   ].join(":");
 }
 
@@ -130,9 +132,10 @@ export function CartDrawer({
                         0
                       );
                       const noshiPrice = c?.noshi?.price ?? 0;
+                      const messagePlatePrice = c?.messagePlateOption?.price ?? 0;
                       const itemTotal =
                         item.price * item.quantity +
-                        ((c?.sizePrice || 0) + candleSum + optionSum + customOptSum + noshiPrice) * item.quantity;
+                        ((c?.sizePrice || 0) + candleSum + optionSum + customOptSum + noshiPrice + messagePlatePrice) * item.quantity;
                       const key = itemCartKey(item);
 
                       return (
@@ -180,6 +183,12 @@ export function CartDrawer({
                                     オプション: {op.name}
                                   </p>
                                 ))}
+                                {c.messagePlateOption && (
+                                  <p className="text-xs text-gray-500">
+                                    メッセージプレート: {c.messagePlateOption.name}
+                                    {c.messagePlateOption.price > 0 && ` (+¥${c.messagePlateOption.price.toLocaleString()})`}
+                                  </p>
+                                )}
                                 {c.messagePlate && (
                                   <p className="text-xs text-gray-500">
                                     プレート: 「{c.messagePlate}」

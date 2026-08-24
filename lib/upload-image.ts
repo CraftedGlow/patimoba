@@ -84,6 +84,23 @@ export async function uploadNoshiImage(
   return { url: data.publicUrl, error: null }
 }
 
+export async function uploadMessagePlateImage(
+  file: File,
+  storeId: string
+): Promise<{ url: string | null; error: string | null }> {
+  const { blob, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
+  if (!blob) return { url: null, error: compressError }
+  const path = `${storeId}/message-plate-${Date.now()}.jpg`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: "image/jpeg",
+  })
+  if (error) return { url: null, error: error.message }
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
 export async function uploadBagImage(
   file: File,
   storeId: string

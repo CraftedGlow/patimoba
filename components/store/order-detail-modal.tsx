@@ -231,6 +231,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                       return (
                         <div className="text-xs text-gray-500 mt-0.5 ml-2">
                           メッセージ：{plate}{msg && `「${msg}」`}
+                          {(plateOpt?.priceDelta ?? 0) > 0 && <span className="text-gray-600 ml-1">+¥{plateOpt!.priceDelta.toLocaleString()}</span>}
                         </div>
                       );
                     })()}

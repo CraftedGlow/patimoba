@@ -67,6 +67,7 @@ function cartItemKey(item: UICartItem): string {
     .map((o) => `${o.name}=${(o.values || []).join(",")}`)
     .join("|")
   const noshiKey = c.noshi ? `${c.noshi.id}=${c.noshi.purpose || ""}=${c.noshi.displayName || ""}` : ""
+  const messagePlateKey = c.messagePlateOption?.id || ""
   return [
     item.productId,
     c.sizeId || "",
@@ -75,6 +76,7 @@ function cartItemKey(item: UICartItem): string {
     c.messagePlate || "",
     customOptKey,
     noshiKey,
+    messagePlateKey,
   ].join(":")
 }
 

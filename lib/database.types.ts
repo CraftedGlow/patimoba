@@ -502,6 +502,44 @@ export type Database = {
           },
         ]
       }
+      message_plates: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          store_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          name: string
+          price?: number
+          store_id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_plates_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       noshi: {
         Row: {
           created_at: string | null
@@ -1071,6 +1109,8 @@ export type Database = {
           is_takeout: boolean
           limited_from: string | null
           limited_until: string | null
+          message_plate_enabled: boolean
+          message_plate_ids: string[]
           min_order_lead_minutes: number | null
           name: string
           noshi_enabled: boolean
@@ -1115,6 +1155,8 @@ export type Database = {
           is_takeout?: boolean
           limited_from?: string | null
           limited_until?: string | null
+          message_plate_enabled?: boolean
+          message_plate_ids?: string[]
           min_order_lead_minutes?: number | null
           name?: string
           noshi_enabled?: boolean
@@ -1159,6 +1201,8 @@ export type Database = {
           is_takeout?: boolean
           limited_from?: string | null
           limited_until?: string | null
+          message_plate_enabled?: boolean
+          message_plate_ids?: string[]
           min_order_lead_minutes?: number | null
           name?: string
           noshi_enabled?: boolean

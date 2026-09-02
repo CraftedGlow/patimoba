@@ -15,7 +15,7 @@ export default function Home() {
 
   const handleLiffCallback = useCallback(async (liffId: string, storeId?: string | null) => {
     if (!liffId) {
-      router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
+      router.replace("/customer/login");
       return;
     }
 
@@ -44,9 +44,10 @@ export default function Home() {
           router.replace(returnPath || redirectedPath);
         } else {
           // /login はスタッフ・管理者専用の画面で顧客の行き場がないため、
-          // LINEログインをその場で促す（完了後は同じURLに戻ってくる）
+          // 顧客向けログイン画面へ誘導する（liff.login()はユーザー操作（ボタン）起点で
+          // ないと一部モバイルブラウザでブロックされるため、useEffect内で直接呼ばない）
           sessionStorage.setItem("liff_return_path", redirectedPath);
-          liff.login({ redirectUri: window.location.href });
+          router.replace("/customer/login");
         }
         return;
       }
@@ -57,10 +58,10 @@ export default function Home() {
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
         router.replace(returnPath || "/customer/takeout");
       } else {
-        liff.login({ redirectUri: window.location.href });
+        router.replace("/customer/login");
       }
     } catch {
-      router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
+      router.replace("/customer/login");
     }
   }, [router, setUser]);
 

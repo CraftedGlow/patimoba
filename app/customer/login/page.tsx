@@ -64,6 +64,19 @@ export default function CustomerLoginPage() {
     localStorage.removeItem("patimoba_cart_ec_v1");
     localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
     setUser(authUser);
+
+    const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token");
+    if (pendingCouponToken) {
+      sessionStorage.removeItem("patimoba_pending_coupon_token");
+      fetch("/api/coupons/claim-by-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: pendingCouponToken, userId: user.id }),
+      }).catch(() => {
+        // ベストエフォート。クーポン獲得に失敗してもログイン自体は成立させる
+      });
+    }
+
     const returnPath = sessionStorage.getItem("liff_return_path");
     sessionStorage.removeItem("liff_return_path");
     router.push(returnPath || "/customer/takeout");

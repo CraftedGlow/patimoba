@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { isWithinValidPeriod } from "@/lib/coupons";
+import { isWithinValidPeriod, formatDiscount } from "@/lib/coupons";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const { data: coupon } = await supabaseAdmin
       .from("coupons")
-      .select("id, is_active, valid_from, expires_at")
+      .select("id, title, discount_type, discount_value, is_active, valid_from, expires_at")
       .eq("share_token", token)
       .maybeSingle();
 
@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "claim_failed" }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      coupon: { title: coupon.title, discountLabel: formatDiscount(coupon) },
+    });
   } catch (e) {
     console.error("[coupons/claim-by-link] error:", e);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });

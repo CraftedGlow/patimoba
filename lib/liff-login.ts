@@ -61,20 +61,32 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   sessionStorage.removeItem("liff_login_pending")
   localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
 
+  const returnPath = sessionStorage.getItem("liff_return_path")
+  sessionStorage.removeItem("liff_return_path")
+
   const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token")
   if (pendingCouponToken) {
     sessionStorage.removeItem("patimoba_pending_coupon_token")
-    fetch("/api/coupons/claim-by-link", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: pendingCouponToken, userId: user.id }),
-    }).catch(() => {
+    try {
+      const claimRes = await fetch("/api/coupons/claim-by-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: pendingCouponToken, userId: user.id }),
+      })
+      if (claimRes.ok) {
+        const claimData = await claimRes.json()
+        if (claimData.coupon) {
+          sessionStorage.setItem(
+            "patimoba_claimed_coupon",
+            JSON.stringify({ title: claimData.coupon.title, discountLabel: claimData.coupon.discountLabel, nextPath: returnPath || "/customer/takeout" })
+          )
+          return { authUser, returnPath: "/customer/coupons/claimed" }
+        }
+      }
+    } catch {
       // ベストエフォート。クーポン獲得に失敗してもログイン自体は成立させる
-    })
+    }
   }
-
-  const returnPath = sessionStorage.getItem("liff_return_path")
-  sessionStorage.removeItem("liff_return_path")
 
   return { authUser, returnPath }
 }

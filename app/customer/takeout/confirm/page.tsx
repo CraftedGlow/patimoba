@@ -611,12 +611,16 @@ export default function TakeoutConfirmPage() {
                 onClick={() => setShowCouponModal(true)}
                 className="text-xs border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors"
               >
-                変更
+                {selectedCoupon ? "変更" : "選ぶ"}
               </button>
             </div>
-            <p className="text-sm text-gray-700 mt-0.5">
-              {selectedCoupon ? selectedCoupon.title : "利用しない"}
-            </p>
+            {selectedCoupon ? (
+              <p className="text-sm text-gray-700 mt-0.5">{selectedCoupon.title}</p>
+            ) : couponEligibility.some((c) => c.eligible) ? (
+              <p className="text-sm text-amber-600 font-bold mt-0.5">利用可能なクーポンがあります</p>
+            ) : (
+              <p className="text-sm text-gray-700 mt-0.5">利用しない</p>
+            )}
           </div>
         )}
 

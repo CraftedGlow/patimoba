@@ -35,6 +35,17 @@ export default function Home() {
         redirectedPath = `${missingStorePath[1]}store/${missingStorePath[2]}`;
       }
 
+      fetch("/api/debug/liff-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: "app/page.tsx:after-init",
+          url: window.location.href,
+          hasPendingCouponToken: !!sessionStorage.getItem("patimoba_pending_coupon_token"),
+          note: `redirectedPath=${redirectedPath} isLoggedIn=${liff.isLoggedIn()}`,
+        }),
+      }).catch(() => {});
+
       if (redirectedPath && redirectedPath !== "/") {
         if (liff.isLoggedIn()) {
           sessionStorage.setItem("liff_return_path", redirectedPath);
@@ -67,6 +78,15 @@ export default function Home() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    fetch("/api/debug/liff-entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page: "app/page.tsx:entry",
+        url: window.location.href,
+        hasPendingCouponToken: !!sessionStorage.getItem("patimoba_pending_coupon_token"),
+      }),
+    }).catch(() => {});
     // LIFF 認証コールバック or liff.state によるパス転送でなければ /login へ
     if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state")) {
       router.replace("/login");

@@ -23,6 +23,17 @@ export default function LiffLoadingPage() {
       const loginUrl = storeId ? `/login?storeId=${storeId}` : "/login";
       const fallbackPath = storeId ? `/customer/takeout/store/${storeId}` : "/customer/takeout";
 
+      fetch("/api/debug/liff-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: "app/liff-loading:entry",
+          url: window.location.href,
+          hasPendingCouponToken: !!sessionStorage.getItem("patimoba_pending_coupon_token"),
+          note: `storeId=${storeId}`,
+        }),
+      }).catch(() => {});
+
       try {
         const liffId = await getLiffId(storeId);
         if (!liffId) {

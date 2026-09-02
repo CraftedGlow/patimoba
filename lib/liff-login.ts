@@ -5,18 +5,7 @@ interface LiffLoginResult {
   returnPath: string | null
 }
 
-function debugLog(page: string, note?: string, hasPendingCouponToken?: boolean) {
-  try {
-    fetch("/api/debug/liff-entry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ page, url: window.location.href, note, hasPendingCouponToken }),
-    }).catch(() => {})
-  } catch {}
-}
-
 export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
-  debugLog("liff-login.ts:entry")
   const idToken = liff.getIDToken()
   if (!idToken) throw new Error("IDトークンを取得できませんでした")
 
@@ -39,7 +28,6 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   if (pendingCouponToken) {
     sessionStorage.removeItem("patimoba_pending_coupon_token")
   }
-  debugLog("liff-login.ts:before-login-post", `pendingCouponToken=${pendingCouponToken}`, !!pendingCouponToken)
 
   const res = await fetch("/api/line/liff-login", {
     method: "POST",
@@ -60,7 +48,6 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
 
   const result = await res.json()
   const { user, otp, coupon } = result
-  debugLog("liff-login.ts:login-response", `coupon=${JSON.stringify(coupon)}`)
 
   if (otp) {
     const { supabase } = await import("@/lib/supabase")
@@ -96,7 +83,6 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
       "patimoba_claimed_coupon",
       JSON.stringify({ title: coupon.title, discountLabel: coupon.discountLabel, nextPath })
     )
-    debugLog("liff-login.ts:redirect-to-claimed")
     return { authUser, returnPath: "/customer/coupons/claimed" }
   }
 
@@ -106,10 +92,8 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   // coupon が無くても獲得画面へ誘導する。そうしないと後続の呼び出しが
   // window.location.replace() で先行の遷移を上書きしてしまう。
   if (sessionStorage.getItem("patimoba_claimed_coupon")) {
-    debugLog("liff-login.ts:redirect-to-claimed-already-set")
     return { authUser, returnPath: "/customer/coupons/claimed" }
   }
 
-  debugLog("liff-login.ts:return-normal", `returnPath=${returnPath}`)
   return { authUser, returnPath }
 }

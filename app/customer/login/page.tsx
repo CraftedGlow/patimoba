@@ -31,15 +31,6 @@ export default function CustomerLoginPage() {
     if (pendingCouponToken) {
       sessionStorage.removeItem("patimoba_pending_coupon_token");
     }
-    fetch("/api/debug/liff-entry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        page: "customer/login:loginWithLiff",
-        url: window.location.href,
-        hasPendingCouponToken: !!pendingCouponToken,
-      }),
-    }).catch(() => {});
 
     const res = await fetch("/api/line/liff-login", {
       method: "POST",

@@ -25,38 +25,15 @@ export default function Home() {
 
     try {
       const liff = (await import("@line/liff")).default;
-      fetch("/api/debug/liff-entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page: "app/page.tsx:before-liff-init",
-          url: window.location.href,
-          note: `liffId=${liffId}`,
-        }),
-      }).catch(() => {});
 
       // liff.init() が解決も拒否もせずハングするケースが確認されたため、
       // 一定時間で強制的にタイムアウトさせてフォールバックできるようにする
-      let timedOut = false;
       await Promise.race([
         liff.init({ liffId }),
         new Promise((_, reject) =>
-          setTimeout(() => {
-            timedOut = true;
-            reject(new Error("liff_init_timeout"));
-          }, 8000)
+          setTimeout(() => reject(new Error("liff_init_timeout")), 8000)
         ),
       ]);
-
-      fetch("/api/debug/liff-entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page: "app/page.tsx:init-resolved",
-          url: window.location.href,
-          note: `timedOut=${timedOut}`,
-        }),
-      }).catch(() => {});
 
       // LIFF SDKがURLを書き換えた後のパスを取得
       // /customer/takeout/[uuid] 形式は /customer/takeout/store/[uuid] に補正
@@ -66,32 +43,12 @@ export default function Home() {
         redirectedPath = `${missingStorePath[1]}store/${missingStorePath[2]}`;
       }
 
-      fetch("/api/debug/liff-entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page: "app/page.tsx:after-init",
-          url: window.location.href,
-          hasPendingCouponToken: !!sessionStorage.getItem("patimoba_pending_coupon_token"),
-          note: `redirectedPath=${redirectedPath} isLoggedIn=${liff.isLoggedIn()}`,
-        }),
-      }).catch(() => {});
-
       if (redirectedPath && redirectedPath !== "/") {
         if (liff.isLoggedIn()) {
           sessionStorage.setItem("liff_return_path", redirectedPath);
           const { authUser, returnPath } = await completeLiffLogin(liff);
           setUser(authUser);
           sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
-          fetch("/api/debug/liff-entry", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              page: "app/page.tsx:before-final-replace",
-              url: window.location.href,
-              note: `target=${returnPath || redirectedPath}`,
-            }),
-          }).catch(() => {});
           // LIFF SDKが liff.init() 内で window.location を直接書き換えているため、
           // Next.jsのrouter.replace()だとルーター内部状態とのズレで遷移が反映されないことがある。
           // ここでの最終遷移は window.location.replace() で確実に行う。
@@ -114,53 +71,12 @@ export default function Home() {
       } else {
         router.replace("/customer/login");
       }
-    } catch (err: any) {
-      fetch("/api/debug/liff-entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page: "app/page.tsx:catch",
-          url: window.location.href,
-          note: `error=${err?.message || String(err)} stack=${err?.stack?.slice(0, 500) || ""}`,
-        }),
-      }).catch(() => {});
+    } catch {
       router.replace("/customer/login");
     }
   }, [router, setUser]);
 
   useEffect(() => {
-    const onError = (e: ErrorEvent) => {
-      fetch("/api/debug/liff-entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page: "app/page.tsx:window-error",
-          url: window.location.href,
-          note: `message=${e.message} filename=${e.filename} lineno=${e.lineno}`,
-        }),
-      }).catch(() => {});
-    };
-    const onRejection = (e: PromiseRejectionEvent) => {
-      fetch("/api/debug/liff-entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page: "app/page.tsx:unhandled-rejection",
-          url: window.location.href,
-          note: `reason=${e.reason?.message || String(e.reason)}`,
-        }),
-      }).catch(() => {});
-    };
-    const onUnload = () => {
-      navigator.sendBeacon?.(
-        "/api/debug/liff-entry",
-        JSON.stringify({ page: "app/page.tsx:beforeunload", url: window.location.href })
-      );
-    };
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onRejection);
-    window.addEventListener("beforeunload", onUnload);
-
     // LINE側が同じリンクを短時間に複数回リロードする挙動が確認されている。
     // 先行の読み込みで既にクーポンを獲得済み（獲得画面がまだ未表示）なら、
     // liff.init() からのログインをやり直さず即座に獲得画面へ遷移する。
@@ -171,15 +87,6 @@ export default function Home() {
     }
 
     const params = new URLSearchParams(window.location.search);
-    fetch("/api/debug/liff-entry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        page: "app/page.tsx:entry",
-        url: window.location.href,
-        hasPendingCouponToken: !!sessionStorage.getItem("patimoba_pending_coupon_token"),
-      }),
-    }).catch(() => {});
     // LIFF 認証コールバック / liff.state によるパス転送 / miniapp.line.me の
     // シンプルなクエリ形式(?coupon=)でなければ /login へ
     if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state") && !params.has("coupon")) {
@@ -199,15 +106,13 @@ export default function Home() {
         }
       }
 
-      // miniapp.line.me/{liffId}?coupon=xxx 形式は追加パスが無いため liff.state に
-      // 包まれずクエリがそのままエンドポイントに渡ってくる
+      // miniapp.line.me/{liffId}?coupon=xxx&store=xxx 形式は追加パスが無いため
+      // liff.state に包まれずクエリがそのままエンドポイントに渡ってくる
       const couponToken = params.get("coupon") || parseLiffStateCouponToken();
       if (couponToken) {
         try { sessionStorage.setItem("patimoba_pending_coupon_token", couponToken); } catch {}
       }
 
-      // miniapp.line.me/{liffId}?coupon=xxx&store=xxx 形式は追加パスが無いため
-      // liff.state に包まれずクエリがそのままエンドポイントに渡ってくる
       const storeId = params.get("store") || parseLiffStateStoreId();
       const liffId = await getLiffId(storeId);
       handleLiffCallback(liffId, storeId);

@@ -83,6 +83,15 @@ export default function Home() {
           const { authUser, returnPath } = await completeLiffLogin(liff);
           setUser(authUser);
           sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+          fetch("/api/debug/liff-entry", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              page: "app/page.tsx:before-final-replace",
+              url: window.location.href,
+              note: `target=${returnPath || redirectedPath}`,
+            }),
+          }).catch(() => {});
           // LIFF SDKが liff.init() 内で window.location を直接書き換えているため、
           // Next.jsのrouter.replace()だとルーター内部状態とのズレで遷移が反映されないことがある。
           // ここでの最終遷移は window.location.replace() で確実に行う。

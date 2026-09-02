@@ -19,13 +19,24 @@ export default function CouponClaimedPage() {
 
   useEffect(() => {
     let data: ClaimedCoupon | null = null;
+    let raw: string | null = null;
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
+      raw = sessionStorage.getItem(STORAGE_KEY);
       if (raw) data = JSON.parse(raw);
       sessionStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }
+
+    fetch("/api/debug/liff-entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page: "claimed-page:mounted",
+        url: window.location.href,
+        note: `raw=${raw}`,
+      }),
+    }).catch(() => {});
 
     if (!data) {
       router.replace("/customer/takeout");

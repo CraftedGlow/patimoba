@@ -101,6 +101,16 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
     }
   }
 
+  // LINE側が同じリンクを短時間に複数回リロードし、completeLiffLogin が連続で
+  // 呼ばれるケースが確認されている。先行の呼び出しで既にクーポンを獲得済み
+  // （= patimoba_claimed_coupon が未消費のまま残っている）なら、今回
+  // pendingCouponToken が無くても獲得画面へ誘導する。そうしないと後続の
+  // 呼び出しが window.location.replace() で先行の遷移を上書きしてしまう。
+  if (sessionStorage.getItem("patimoba_claimed_coupon")) {
+    debugLog("liff-login.ts:redirect-to-claimed-already-set")
+    return { authUser, returnPath: "/customer/coupons/claimed" }
+  }
+
   debugLog("liff-login.ts:return-normal", `returnPath=${returnPath}`)
   return { authUser, returnPath }
 }

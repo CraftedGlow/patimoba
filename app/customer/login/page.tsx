@@ -105,6 +105,13 @@ export default function CustomerLoginPage() {
       }
     }
 
+    // 先行の呼び出しで既にクーポンを獲得済み（patimoba_claimed_coupon が未消費）なら
+    // 今回 pendingCouponToken が無くても獲得画面へ誘導する（多重実行時の上書き防止）
+    if (sessionStorage.getItem("patimoba_claimed_coupon")) {
+      window.location.replace("/customer/coupons/claimed");
+      return;
+    }
+
     router.push(nextPath);
   }, [router, setUser]);
 

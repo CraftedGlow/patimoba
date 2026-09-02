@@ -8,8 +8,61 @@ function cmd(...bytes: number[]): Buffer {
   return Buffer.from(bytes)
 }
 
+// SNS等の「装飾フォント」で入力されたテキスト（Unicode数学英数字記号・全角英数字など）を
+// 通常の半角英数字に正規化する。Shift_JISにもプリンターのフォントにも存在しないため、
+// 正規化しないと iconv がすべて "?" に置き換えてしまう。
+const FANCY_LETTER_STYLE_STARTS = [
+  0x1d400, // Bold
+  0x1d434, // Italic
+  0x1d468, // Bold Italic
+  0x1d49c, // Script
+  0x1d4d0, // Bold Script
+  0x1d504, // Fraktur
+  0x1d538, // Double-struck
+  0x1d56c, // Bold Fraktur
+  0x1d5a0, // Sans-serif
+  0x1d5d4, // Sans-serif Bold
+  0x1d608, // Sans-serif Italic
+  0x1d63c, // Sans-serif Bold Italic
+  0x1d670, // Monospace
+]
+const FANCY_DIGIT_STYLE_STARTS = [
+  0x1d7ce, // Bold
+  0x1d7d8, // Double-struck
+  0x1d7e2, // Sans-serif
+  0x1d7ec, // Sans-serif Bold
+  0x1d7f6, // Monospace
+]
+
+function normalizeFancyUnicode(str: string): string {
+  let result = ""
+  for (const ch of str) {
+    const code = ch.codePointAt(0) ?? 0
+
+    if (code >= 0xff21 && code <= 0xff3a) { result += String.fromCharCode(0x41 + (code - 0xff21)); continue } // 全角A-Z
+    if (code >= 0xff41 && code <= 0xff5a) { result += String.fromCharCode(0x61 + (code - 0xff41)); continue } // 全角a-z
+    if (code >= 0xff10 && code <= 0xff19) { result += String.fromCharCode(0x30 + (code - 0xff10)); continue } // 全角0-9
+
+    const letterStart = FANCY_LETTER_STYLE_STARTS.find((s) => code >= s && code <= s + 51)
+    if (letterStart !== undefined) {
+      const offset = code - letterStart
+      result += offset < 26 ? String.fromCharCode(0x41 + offset) : String.fromCharCode(0x61 + (offset - 26))
+      continue
+    }
+
+    const digitStart = FANCY_DIGIT_STYLE_STARTS.find((s) => code >= s && code <= s + 9)
+    if (digitStart !== undefined) {
+      result += String.fromCharCode(0x30 + (code - digitStart))
+      continue
+    }
+
+    result += ch
+  }
+  return result
+}
+
 function line(str: string): Buffer {
-  return iconv.encode(str + "\n", "Shift_JIS")
+  return iconv.encode(normalizeFancyUnicode(str) + "\n", "Shift_JIS")
 }
 
 function blank(): Buffer {

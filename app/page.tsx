@@ -180,8 +180,9 @@ export default function Home() {
         hasPendingCouponToken: !!sessionStorage.getItem("patimoba_pending_coupon_token"),
       }),
     }).catch(() => {});
-    // LIFF 認証コールバック or liff.state によるパス転送でなければ /login へ
-    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state")) {
+    // LIFF 認証コールバック / liff.state によるパス転送 / miniapp.line.me の
+    // シンプルなクエリ形式(?coupon=)でなければ /login へ
+    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state") && !params.has("coupon")) {
       router.replace("/login");
       return;
     }
@@ -198,7 +199,9 @@ export default function Home() {
         }
       }
 
-      const couponToken = parseLiffStateCouponToken();
+      // miniapp.line.me/{liffId}?coupon=xxx 形式は追加パスが無いため liff.state に
+      // 包まれずクエリがそのままエンドポイントに渡ってくる
+      const couponToken = params.get("coupon") || parseLiffStateCouponToken();
       if (couponToken) {
         try { sessionStorage.setItem("patimoba_pending_coupon_token", couponToken); } catch {}
       }

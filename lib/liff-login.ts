@@ -20,15 +20,26 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   const idToken = liff.getIDToken()
   if (!idToken) throw new Error("IDトークンを取得できませんでした")
 
-  // liff.getProfile() で最新のLINE表示名・アイコンを取得（IDトークンはキャッシュされる場合がある）
+  // liff.getProfile() で最新のLINE表示名・アイコンを取得するが、LINE側が同じ
+  // リンクを短時間に複数回リロードする挙動があり、ここで待ちすぎると次の
+  // リロードに割り込まれてしまうため、一定時間で諦めてIDトークンにフォールバックする
   let lineProfile: { displayName?: string; pictureUrl?: string } = {}
   try {
-    const p = await liff.getProfile()
+    const p: any = await Promise.race([
+      liff.getProfile(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("getProfile_timeout")), 1500)),
+    ])
     lineProfile = { displayName: p.displayName, pictureUrl: p.pictureUrl }
-    console.log("[LIFF] getProfile 成功:", p.displayName)
   } catch (profileErr) {
-    console.warn("[LIFF] getProfile 失敗（IDトークンにフォールバック）:", profileErr)
+    console.warn("[LIFF] getProfile 失敗/タイムアウト（IDトークンにフォールバック）:", profileErr)
   }
+
+  // クーポン獲得も同じリクエストにまとめて往復回数を減らす
+  const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token")
+  if (pendingCouponToken) {
+    sessionStorage.removeItem("patimoba_pending_coupon_token")
+  }
+  debugLog("liff-login.ts:before-login-post", `pendingCouponToken=${pendingCouponToken}`, !!pendingCouponToken)
 
   const res = await fetch("/api/line/liff-login", {
     method: "POST",
@@ -38,6 +49,7 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
       liffId: liff.id,
       lineName: lineProfile.displayName,
       avatarUrl: lineProfile.pictureUrl,
+      couponToken: pendingCouponToken || undefined,
     }),
   })
 
@@ -47,7 +59,8 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   }
 
   const result = await res.json()
-  const { user, otp } = result
+  const { user, otp, coupon } = result
+  debugLog("liff-login.ts:login-response", `coupon=${JSON.stringify(coupon)}`)
 
   if (otp) {
     const { supabase } = await import("@/lib/supabase")
@@ -75,37 +88,23 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   const returnPath = sessionStorage.getItem("liff_return_path")
   sessionStorage.removeItem("liff_return_path")
 
-  const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token")
-  debugLog("liff-login.ts:before-claim", `pendingCouponToken=${pendingCouponToken}`, !!pendingCouponToken)
-  if (pendingCouponToken) {
-    sessionStorage.removeItem("patimoba_pending_coupon_token")
-    try {
-      const claimRes = await fetch("/api/coupons/claim-by-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: pendingCouponToken, userId: user.id }),
-      })
-      const claimData = await claimRes.json().catch(() => null)
-      debugLog("liff-login.ts:claim-response", `status=${claimRes.status} body=${JSON.stringify(claimData)}`)
-      if (claimRes.ok && claimData?.coupon) {
-        sessionStorage.setItem(
-          "patimoba_claimed_coupon",
-          JSON.stringify({ title: claimData.coupon.title, discountLabel: claimData.coupon.discountLabel, nextPath: returnPath || "/customer/takeout" })
-        )
-        debugLog("liff-login.ts:redirect-to-claimed")
-        return { authUser, returnPath: "/customer/coupons/claimed" }
-      }
-    } catch (claimErr: any) {
-      debugLog("liff-login.ts:claim-error", claimErr?.message || String(claimErr))
-      // ベストエフォート。クーポン獲得に失敗してもログイン自体は成立させる
-    }
+  if (coupon) {
+    // miniapp.line.me のクエリ形式ではURLに店舗パスが無いため、クーポン自身が
+    // 持つ store_id から遷移先を決定する（returnPath があればそちらを優先）
+    const nextPath = returnPath || (coupon.storeId ? `/customer/takeout/store/${coupon.storeId}` : "/customer/takeout")
+    sessionStorage.setItem(
+      "patimoba_claimed_coupon",
+      JSON.stringify({ title: coupon.title, discountLabel: coupon.discountLabel, nextPath })
+    )
+    debugLog("liff-login.ts:redirect-to-claimed")
+    return { authUser, returnPath: "/customer/coupons/claimed" }
   }
 
   // LINE側が同じリンクを短時間に複数回リロードし、completeLiffLogin が連続で
   // 呼ばれるケースが確認されている。先行の呼び出しで既にクーポンを獲得済み
   // （= patimoba_claimed_coupon が未消費のまま残っている）なら、今回
-  // pendingCouponToken が無くても獲得画面へ誘導する。そうしないと後続の
-  // 呼び出しが window.location.replace() で先行の遷移を上書きしてしまう。
+  // coupon が無くても獲得画面へ誘導する。そうしないと後続の呼び出しが
+  // window.location.replace() で先行の遷移を上書きしてしまう。
   if (sessionStorage.getItem("patimoba_claimed_coupon")) {
     debugLog("liff-login.ts:redirect-to-claimed-already-set")
     return { authUser, returnPath: "/customer/coupons/claimed" }

@@ -24,10 +24,27 @@ export default function CustomerLoginPage() {
     const idToken = liff.getIDToken();
     if (!idToken) throw new Error("IDトークンを取得できませんでした");
 
+    // クーポン獲得もログインと同じリクエストにまとめて往復回数を減らす
+    // （LINE側が同じリンクを短時間に複数回リロードするため、別リクエストに
+    // すると次のリロードに割り込まれて遷移が上書きされることがある）
+    const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token");
+    if (pendingCouponToken) {
+      sessionStorage.removeItem("patimoba_pending_coupon_token");
+    }
+    fetch("/api/debug/liff-entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page: "customer/login:loginWithLiff",
+        url: window.location.href,
+        hasPendingCouponToken: !!pendingCouponToken,
+      }),
+    }).catch(() => {});
+
     const res = await fetch("/api/line/liff-login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken }),
+      body: JSON.stringify({ idToken, couponToken: pendingCouponToken || undefined }),
     });
 
     if (!res.ok) {
@@ -37,7 +54,7 @@ export default function CustomerLoginPage() {
 
     const result = await res.json();
 
-    const { user, otp } = result;
+    const { user, otp, coupon } = result;
 
     if (otp) {
       const { supabase } = await import("@/lib/supabase");
@@ -69,44 +86,22 @@ export default function CustomerLoginPage() {
     sessionStorage.removeItem("liff_return_path");
     const nextPath = returnPath || "/customer/takeout";
 
-    const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token");
-    fetch("/api/debug/liff-entry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        page: "customer/login:loginWithLiff",
-        url: window.location.href,
-        hasPendingCouponToken: !!pendingCouponToken,
-      }),
-    }).catch(() => {});
-    if (pendingCouponToken) {
-      sessionStorage.removeItem("patimoba_pending_coupon_token");
-      try {
-        const claimRes = await fetch("/api/coupons/claim-by-link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: pendingCouponToken, userId: user.id }),
-        });
-        if (claimRes.ok) {
-          const claimData = await claimRes.json();
-          if (claimData.coupon) {
-            sessionStorage.setItem(
-              "patimoba_claimed_coupon",
-              JSON.stringify({ title: claimData.coupon.title, discountLabel: claimData.coupon.discountLabel, nextPath })
-            );
-            // liff.init() が window.location を直接書き換えている場合、Next.jsのrouter遷移が
-            // 反映されないことがあるため、確実に遷移させるため window.location.replace() を使う。
-            window.location.replace("/customer/coupons/claimed");
-            return;
-          }
-        }
-      } catch {
-        // ベストエフォート。クーポン獲得に失敗してもログイン自体は成立させる
-      }
+    if (coupon) {
+      // miniapp.line.me のクエリ形式ではURLに店舗パスが無いため、クーポン自身が
+      // 持つ store_id から遷移先を決定する（returnPath があればそちらを優先）
+      const couponNextPath = returnPath || (coupon.storeId ? `/customer/takeout/store/${coupon.storeId}` : "/customer/takeout");
+      sessionStorage.setItem(
+        "patimoba_claimed_coupon",
+        JSON.stringify({ title: coupon.title, discountLabel: coupon.discountLabel, nextPath: couponNextPath })
+      );
+      // liff.init() が window.location を直接書き換えている場合、Next.jsのrouter遷移が
+      // 反映されないことがあるため、確実に遷移させるため window.location.replace() を使う。
+      window.location.replace("/customer/coupons/claimed");
+      return;
     }
 
     // 先行の呼び出しで既にクーポンを獲得済み（patimoba_claimed_coupon が未消費）なら
-    // 今回 pendingCouponToken が無くても獲得画面へ誘導する（多重実行時の上書き防止）
+    // 今回 coupon が無くても獲得画面へ誘導する（多重実行時の上書き防止）
     if (sessionStorage.getItem("patimoba_claimed_coupon")) {
       window.location.replace("/customer/coupons/claimed");
       return;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/database.types"
 import { findOrCreateLineUser } from "@/lib/line-user"
+import { isWithinValidPeriod, formatDiscount } from "@/lib/coupons"
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
@@ -71,8 +72,35 @@ export async function POST(request: NextRequest) {
   }
 
   console.log(`[LIFF Login] ログイン成功: userId=${user.id}`)
+
+  // クーポントークンが同梱されている場合はここで獲得まで済ませる
+  // （クライアント側の別リクエストを待たず、往復を1回減らして LINE 側の
+  // リロード競合に負けにくくする）
+  let coupon: { title: string; discountLabel: string; storeId: string } | undefined
+  const couponToken: string | undefined = body?.couponToken
+  if (couponToken) {
+    const { data: couponRow } = await supabase
+      .from("coupons")
+      .select("id, store_id, title, discount_type, discount_value, is_active, valid_from, expires_at")
+      .eq("share_token", couponToken)
+      .maybeSingle()
+
+    if (couponRow && couponRow.is_active && isWithinValidPeriod(couponRow, new Date())) {
+      const { error: claimError } = await supabase
+        .from("coupon_deliveries")
+        .insert({ coupon_id: couponRow.id, user_id: user.id, claim_method: "link" })
+
+      if (!claimError || claimError.code === "23505") {
+        coupon = { title: couponRow.title, discountLabel: formatDiscount(couponRow as any), storeId: couponRow.store_id }
+      } else {
+        console.error("[LIFF Login] クーポン獲得失敗:", claimError)
+      }
+    }
+  }
+
   return NextResponse.json({
     user,
     otp: { email: authUserData.user.email, token: linkData.properties.email_otp },
+    coupon,
   })
 }

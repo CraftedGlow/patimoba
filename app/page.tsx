@@ -43,10 +43,11 @@ export default function Home() {
           sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
           router.replace(returnPath || redirectedPath);
         } else {
-          // LINEアプリ内であれば liff.login() は基本的に画面遷移なしで即完了するため、
-          // 独自のログイン選択画面を挟まずその場でログインさせる
+          // liff.login() をここで直接呼ぶとuseEffect起点のため一部端末・タイミングで
+          // 不安定になることが確認できたため、ユーザー操作起点で確実に動く
+          // /customer/login の「LINEでログイン」ボタン経由に統一する
           sessionStorage.setItem("liff_return_path", redirectedPath);
-          liff.login({ redirectUri: window.location.href });
+          router.replace("/customer/login");
         }
         return;
       }
@@ -57,7 +58,7 @@ export default function Home() {
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
         router.replace(returnPath || "/customer/takeout");
       } else {
-        liff.login({ redirectUri: window.location.href });
+        router.replace("/customer/login");
       }
     } catch {
       router.replace("/customer/login");

@@ -172,6 +172,17 @@ export async function releaseCouponReservation(deliveryId: string, supabaseAdmin
 }
 
 /**
+ * 注文キャンセル時にクーポンを未使用状態へ戻す（ポイント返還と同様の扱い）。
+ * finalizeCouponDelivery で order_id が確定済みの delivery が対象。
+ */
+export async function releaseCouponForCancelledOrder(orderId: string, supabaseAdmin: AdminClient) {
+  await supabaseAdmin
+    .from("coupon_deliveries")
+    .update({ used_at: null, order_id: null, discount_amount: 0 })
+    .eq("order_id", orderId);
+}
+
+/**
  * 注文作成後にクーポン券を注文へ確定紐付けする。
  * reserveCoupon で保存済みの discount_amount を正として orders.coupon_discount_amount / total_amount を
  * 上書き訂正する（takeoutはクライアント直接insertのため、注文作成時点の値をここで必ず正しい値に補正する）。

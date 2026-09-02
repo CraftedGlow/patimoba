@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { payjpPost } from "@/lib/payjp";
 import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
+import { releaseCouponForCancelledOrder } from "@/lib/coupons";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -92,6 +93,9 @@ export async function POST(
         .eq("id", order.customer_id)
     }
   }
+
+  // 使用済みクーポンを未使用状態へ戻す
+  await releaseCouponForCancelledOrder(orderId, supabaseAdmin)
 
   // order_status を cancelled に更新（ステータス確認済みのため単純 UPDATE）
   // 返金済みの場合は payment_status も反映し、店舗側の一覧・レシートで「決済済み」のまま残らないようにする

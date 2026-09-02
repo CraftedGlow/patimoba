@@ -43,7 +43,10 @@ export default function Home() {
           sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
           router.replace(returnPath || redirectedPath);
         } else {
-          router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
+          // /login はスタッフ・管理者専用の画面で顧客の行き場がないため、
+          // LINEログインをその場で促す（完了後は同じURLに戻ってくる）
+          sessionStorage.setItem("liff_return_path", redirectedPath);
+          liff.login({ redirectUri: window.location.href });
         }
         return;
       }
@@ -54,7 +57,7 @@ export default function Home() {
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
         router.replace(returnPath || "/customer/takeout");
       } else {
-        router.replace(storeId ? `/login?storeId=${storeId}` : "/login");
+        liff.login({ redirectUri: window.location.href });
       }
     } catch {
       router.replace(storeId ? `/login?storeId=${storeId}` : "/login");

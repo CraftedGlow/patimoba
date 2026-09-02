@@ -34,7 +34,29 @@ export default function Home() {
           note: `liffId=${liffId}`,
         }),
       }).catch(() => {});
-      await liff.init({ liffId });
+
+      // liff.init() が解決も拒否もせずハングするケースが確認されたため、
+      // 一定時間で強制的にタイムアウトさせてフォールバックできるようにする
+      let timedOut = false;
+      await Promise.race([
+        liff.init({ liffId }),
+        new Promise((_, reject) =>
+          setTimeout(() => {
+            timedOut = true;
+            reject(new Error("liff_init_timeout"));
+          }, 8000)
+        ),
+      ]);
+
+      fetch("/api/debug/liff-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: "app/page.tsx:init-resolved",
+          url: window.location.href,
+          note: `timedOut=${timedOut}`,
+        }),
+      }).catch(() => {});
 
       // LIFF SDKがURLを書き換えた後のパスを取得
       // /customer/takeout/[uuid] 形式は /customer/takeout/store/[uuid] に補正

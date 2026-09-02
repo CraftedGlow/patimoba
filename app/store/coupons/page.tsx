@@ -80,9 +80,9 @@ export default function StoreCouponsPage() {
 
   const copyLink = async (coupon: Coupon) => {
     if (!liffId) return;
-    // store を含めないと、キャッシュされたセッション情報がない初回起動時にどの店舗のLIFFか
-    // 判定できず /login のアカウント種別選択画面に落ちてしまう
-    const url = `https://liff.line.me/${liffId}?store=${coupon.store_id}&coupon=${coupon.share_token}`;
+    // liffId直後にパスを付けないと、LIFFがクエリをliff.stateに包まずそのまま
+    // エンドポイントへ渡してしまい、アプリ側でstore/couponを拾えない
+    const url = `https://liff.line.me/${liffId}/customer/takeout/store/${coupon.store_id}?coupon=${coupon.share_token}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedCouponId(coupon.id);

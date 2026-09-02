@@ -37,9 +37,10 @@ export function buildCouponFlexMessage(
   const expiryLabel = coupon.expires_at
     ? `${new Date(coupon.expires_at).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}まで`
     : "無期限";
-  // store を含めないと、キャッシュされたセッション情報がない初回起動時にどの店舗のLIFFか
-  // 判定できず /login のアカウント種別選択画面に落ちてしまう
-  const url = `https://liff.line.me/${liffId}?store=${coupon.store_id}&coupon=${coupon.share_token}`;
+  // liffId直後にパスを付けないと、LIFFがクエリをliff.stateに包まずそのまま
+  // エンドポイントへ渡してしまい、アプリ側でstore/couponを拾えない
+  // （/customer/orders/{id} 等、既存の動作実績があるパス付き形式に合わせる）
+  const url = `https://liff.line.me/${liffId}/customer/takeout/store/${coupon.store_id}?coupon=${coupon.share_token}`;
 
   return {
     type: "flex",

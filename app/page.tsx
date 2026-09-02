@@ -25,6 +25,15 @@ export default function Home() {
 
     try {
       const liff = (await import("@line/liff")).default;
+      fetch("/api/debug/liff-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: "app/page.tsx:before-liff-init",
+          url: window.location.href,
+          note: `liffId=${liffId}`,
+        }),
+      }).catch(() => {});
       await liff.init({ liffId });
 
       // LIFF SDKがURLを書き換えた後のパスを取得
@@ -71,12 +80,53 @@ export default function Home() {
       } else {
         router.replace("/customer/login");
       }
-    } catch {
+    } catch (err: any) {
+      fetch("/api/debug/liff-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: "app/page.tsx:catch",
+          url: window.location.href,
+          note: `error=${err?.message || String(err)} stack=${err?.stack?.slice(0, 500) || ""}`,
+        }),
+      }).catch(() => {});
       router.replace("/customer/login");
     }
   }, [router, setUser]);
 
   useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      fetch("/api/debug/liff-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: "app/page.tsx:window-error",
+          url: window.location.href,
+          note: `message=${e.message} filename=${e.filename} lineno=${e.lineno}`,
+        }),
+      }).catch(() => {});
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      fetch("/api/debug/liff-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page: "app/page.tsx:unhandled-rejection",
+          url: window.location.href,
+          note: `reason=${e.reason?.message || String(e.reason)}`,
+        }),
+      }).catch(() => {});
+    };
+    const onUnload = () => {
+      navigator.sendBeacon?.(
+        "/api/debug/liff-entry",
+        JSON.stringify({ page: "app/page.tsx:beforeunload", url: window.location.href })
+      );
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    window.addEventListener("beforeunload", onUnload);
+
     const params = new URLSearchParams(window.location.search);
     fetch("/api/debug/liff-entry", {
       method: "POST",

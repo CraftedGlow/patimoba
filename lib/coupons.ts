@@ -30,14 +30,16 @@ export function formatDiscount(c: Pick<Coupon, "discount_type" | "discount_value
  * ボタンを押すとそのままLIFFの注文アプリに遷移し、クーポンが自動で紐付いた状態で注文に進める。
  */
 export function buildCouponFlexMessage(
-  coupon: Pick<Coupon, "title" | "discount_type" | "discount_value" | "expires_at" | "share_token">,
+  coupon: Pick<Coupon, "title" | "discount_type" | "discount_value" | "expires_at" | "share_token" | "store_id">,
   liffId: string,
   heading = "クーポン"
 ) {
   const expiryLabel = coupon.expires_at
     ? `${new Date(coupon.expires_at).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}まで`
     : "無期限";
-  const url = `https://liff.line.me/${liffId}?coupon=${coupon.share_token}`;
+  // store を含めないと、キャッシュされたセッション情報がない初回起動時にどの店舗のLIFFか
+  // 判定できず /login のアカウント種別選択画面に落ちてしまう
+  const url = `https://liff.line.me/${liffId}?store=${coupon.store_id}&coupon=${coupon.share_token}`;
 
   return {
     type: "flex",

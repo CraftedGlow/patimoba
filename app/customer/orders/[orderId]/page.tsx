@@ -30,6 +30,7 @@ type OrderDetail = {
   total_amount: number;
   subtotal: number;
   discount_amount: number | null;
+  coupon_discount_amount: number | null;
   customer_name_snapshot: string | null;
   order_status: string;
   payment_status: string;
@@ -38,6 +39,7 @@ type OrderDetail = {
   customer_id: string | null;
   stores: { name: string; address: string; phone: string | null; invoice_num: string | null } | null;
   order_items: OrderItem[];
+  coupons: { title: string } | null;
 };
 
 const ORDER_TYPE_LABELS: Record<string, string> = {
@@ -174,6 +176,7 @@ export default function CustomerOrderDetailPage() {
   const pickupLabel = ORDER_TYPE_LABELS[order.order_type] ?? order.order_type;
   const datetimeStr = formatPickupDateTime(order.pickup_date, order.pickup_time);
   const hasDiscount = order.discount_amount != null && Number(order.discount_amount) > 0;
+  const hasCouponDiscount = order.coupon_discount_amount != null && Number(order.coupon_discount_amount) > 0;
 
   const isCancelled = order.order_status === "cancelled";
   const isCompleted = order.order_status === "completed";
@@ -347,6 +350,12 @@ export default function CustomerOrderDetailPage() {
               <div className="flex justify-between text-sm text-green-600">
                 <span>ポイント割引</span>
                 <span>−¥{Number(order.discount_amount).toLocaleString()}</span>
+              </div>
+            )}
+            {hasCouponDiscount && (
+              <div className="flex justify-between text-sm text-amber-600">
+                <span>クーポン{order.coupons?.title ? `（${order.coupons.title}）` : ""}</span>
+                <span>−¥{Number(order.coupon_discount_amount).toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between text-base font-bold text-gray-900 pt-1.5 border-t border-gray-100 mt-0.5">

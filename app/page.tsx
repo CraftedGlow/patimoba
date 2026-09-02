@@ -206,7 +206,9 @@ export default function Home() {
         try { sessionStorage.setItem("patimoba_pending_coupon_token", couponToken); } catch {}
       }
 
-      const storeId = parseLiffStateStoreId();
+      // miniapp.line.me/{liffId}?coupon=xxx&store=xxx 形式は追加パスが無いため
+      // liff.state に包まれずクエリがそのままエンドポイントに渡ってくる
+      const storeId = params.get("store") || parseLiffStateStoreId();
       const liffId = await getLiffId(storeId);
       handleLiffCallback(liffId, storeId);
     })();

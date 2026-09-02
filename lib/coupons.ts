@@ -40,8 +40,9 @@ export function buildCouponFlexMessage(
   // miniapp.line.me のシンプルなクエリ形式で開く。liff.line.me に追加パスを
   // 付けた形式だと liff.state 経由の状態受け渡しが必要になり、LINE側が同じ
   // リンクを何度もリロードする不安定な挙動が確認されたため採用しない。
-  // 遷移先の店舗はクーポン自身が持つ store_id から解決する（URLには含めない）。
-  const url = `https://miniapp.line.me/${liffId}?coupon=${coupon.share_token}`;
+  // store はキャッシュが無い初回アクセスでも liffId をDB解決できるよう
+  // クエリとして残す（追加パスではないため liff.state には包まれない）。
+  const url = `https://miniapp.line.me/${liffId}?coupon=${coupon.share_token}&store=${coupon.store_id}`;
 
   return {
     type: "flex",

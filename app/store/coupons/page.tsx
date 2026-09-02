@@ -81,8 +81,9 @@ export default function StoreCouponsPage() {
   const copyLink = async (coupon: Coupon) => {
     if (!liffId) return;
     // miniapp.line.me のシンプルなクエリ形式で開く（追加パス付きliff.line.me形式は
-    // liff.state経由の状態受け渡しが不安定なため使用しない）
-    const url = `https://miniapp.line.me/${liffId}?coupon=${coupon.share_token}`;
+    // liff.state経由の状態受け渡しが不安定なため使用しない）。storeはキャッシュが
+    // 無い初回アクセスでもliffIdをDB解決できるようクエリとして残す。
+    const url = `https://miniapp.line.me/${liffId}?coupon=${coupon.share_token}&store=${coupon.store_id}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedCouponId(coupon.id);

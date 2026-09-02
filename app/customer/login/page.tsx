@@ -45,7 +45,7 @@ export default function CustomerLoginPage() {
 
     const result = await res.json();
 
-    const { user, otp, coupon } = result;
+    const { user, otp, coupon, couponAlreadyUsed } = result;
 
     if (otp) {
       const { supabase } = await import("@/lib/supabase");
@@ -87,6 +87,16 @@ export default function CustomerLoginPage() {
       );
       // liff.init() が window.location を直接書き換えている場合、Next.jsのrouter遷移が
       // 反映されないことがあるため、確実に遷移させるため window.location.replace() を使う。
+      window.location.replace("/customer/coupons/claimed");
+      return;
+    }
+
+    if (couponAlreadyUsed) {
+      const usedNextPath = returnPath || (couponAlreadyUsed.storeId ? `/customer/takeout/store/${couponAlreadyUsed.storeId}` : "/customer/takeout");
+      sessionStorage.setItem(
+        "patimoba_claimed_coupon",
+        JSON.stringify({ title: couponAlreadyUsed.title, alreadyUsed: true, nextPath: usedNextPath })
+      );
       window.location.replace("/customer/coupons/claimed");
       return;
     }

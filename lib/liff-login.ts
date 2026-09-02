@@ -47,7 +47,7 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   }
 
   const result = await res.json()
-  const { user, otp, coupon } = result
+  const { user, otp, coupon, couponAlreadyUsed } = result
 
   if (otp) {
     const { supabase } = await import("@/lib/supabase")
@@ -82,6 +82,15 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
     sessionStorage.setItem(
       "patimoba_claimed_coupon",
       JSON.stringify({ title: coupon.title, discountLabel: coupon.discountLabel, nextPath })
+    )
+    return { authUser, returnPath: "/customer/coupons/claimed" }
+  }
+
+  if (couponAlreadyUsed) {
+    const nextPath = returnPath || (couponAlreadyUsed.storeId ? `/customer/takeout/store/${couponAlreadyUsed.storeId}` : "/customer/takeout")
+    sessionStorage.setItem(
+      "patimoba_claimed_coupon",
+      JSON.stringify({ title: couponAlreadyUsed.title, alreadyUsed: true, nextPath })
     )
     return { authUser, returnPath: "/customer/coupons/claimed" }
   }

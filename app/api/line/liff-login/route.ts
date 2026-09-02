@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
   // （クライアント側の別リクエストを待たず、往復を1回減らして LINE 側の
   // リロード競合に負けにくくする）
   let coupon: { title: string; discountLabel: string; storeId: string } | undefined
+  let couponAlreadyUsed: { title: string; storeId: string } | undefined
   const couponToken: string | undefined = body?.couponToken
   if (couponToken) {
     const { data: couponRow } = await supabase
@@ -86,14 +87,29 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     if (couponRow && couponRow.is_active && isWithinValidPeriod(couponRow, new Date())) {
-      const { error: claimError } = await supabase
+      // 既にこのクーポンを保持している場合は先に確認する。使用済み（used_at あり）なら
+      // 再獲得させず「使用済み」を返す。未使用ならそのまま保持中として扱う。
+      const { data: existingDelivery } = await supabase
         .from("coupon_deliveries")
-        .insert({ coupon_id: couponRow.id, user_id: user.id, claim_method: "link" })
+        .select("id, used_at")
+        .eq("coupon_id", couponRow.id)
+        .eq("user_id", user.id)
+        .maybeSingle()
 
-      if (!claimError || claimError.code === "23505") {
+      if (existingDelivery?.used_at) {
+        couponAlreadyUsed = { title: couponRow.title, storeId: couponRow.store_id }
+      } else if (existingDelivery) {
         coupon = { title: couponRow.title, discountLabel: formatDiscount(couponRow as any), storeId: couponRow.store_id }
       } else {
-        console.error("[LIFF Login] クーポン獲得失敗:", claimError)
+        const { error: claimError } = await supabase
+          .from("coupon_deliveries")
+          .insert({ coupon_id: couponRow.id, user_id: user.id, claim_method: "link" })
+
+        if (!claimError || claimError.code === "23505") {
+          coupon = { title: couponRow.title, discountLabel: formatDiscount(couponRow as any), storeId: couponRow.store_id }
+        } else {
+          console.error("[LIFF Login] クーポン獲得失敗:", claimError)
+        }
       }
     }
   }
@@ -102,5 +118,6 @@ export async function POST(request: NextRequest) {
     user,
     otp: { email: authUserData.user.email, token: linkData.properties.email_otp },
     coupon,
+    couponAlreadyUsed,
   })
 }

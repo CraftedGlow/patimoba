@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Gift } from "lucide-react";
+import { Gift, Ban } from "lucide-react";
 
 interface ClaimedCoupon {
   title: string;
-  discountLabel: string;
+  discountLabel?: string;
+  alreadyUsed?: boolean;
   nextPath: string;
 }
 
@@ -35,6 +36,43 @@ export default function CouponClaimedPage() {
   }, [router]);
 
   if (!claimed) return null;
+
+  if (claimed.alreadyUsed) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gray-50">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-sm text-center"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 14 }}
+            className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center mx-auto mb-5"
+          >
+            <Ban className="w-8 h-8 text-white" />
+          </motion.div>
+
+          <h1 className="text-lg font-bold text-gray-900 mb-2">このクーポンは使用済みです</h1>
+          <p className="text-sm text-gray-500 mb-6">すでにご注文でご利用いただいています</p>
+
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-8 shadow-sm">
+            <p className="font-bold text-gray-900 text-base">{claimed.title}</p>
+          </div>
+
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push(claimed.nextPath)}
+            className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl text-sm transition-colors"
+          >
+            お店のページへ進む
+          </motion.button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-gradient-to-b from-amber-50/60 to-white">

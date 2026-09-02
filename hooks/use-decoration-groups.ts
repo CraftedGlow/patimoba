@@ -8,6 +8,7 @@ function toDecorationItem(row: any): DecorationItem {
   return {
     id: String(row.id),
     name: row.name || "",
+    printShortName: row.print_short_name ?? null,
     description: row.description ?? null,
     imageUrl: row.image_url ?? null,
     category: row.category || "other",
@@ -44,7 +45,7 @@ const GROUP_SELECT = `
   id, store_id, name, description, selection_type, max_selections, required, display_order,
   decoration_group_items (
     id, display_order, decoration_id,
-    decorations ( id, name, description, image_url, category, price, is_active, is_seasonal, season_start, season_end, display_order, excludes_categories )
+    decorations ( id, name, print_short_name, description, image_url, category, price, is_active, is_seasonal, season_start, season_end, display_order, excludes_categories )
   )
 `
 

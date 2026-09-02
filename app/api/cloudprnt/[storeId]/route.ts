@@ -126,11 +126,12 @@ export async function GET(
       pickup_date, pickup_time, payment_status, created_at,
       users:users!orders_customer_id_fkey(line_name, phone),
       order_items (
-        product_name_snapshot, quantity, unit_price, subtotal,
+        product_name_snapshot, product_short_name_snapshot, quantity, unit_price, subtotal,
         variant_name_snapshot,
         order_item_options (
           option_group_name_snapshot,
           option_item_name_snapshot,
+          option_item_short_name_snapshot,
           price_delta,
           quantity
         )
@@ -164,13 +165,13 @@ export async function GET(
     orderDate: orderDateFmt,
     paymentStatus: formatPaymentStatus(order.payment_status),
     items: ((order.order_items as any[]) ?? []).map((item) => ({
-      name: item.product_name_snapshot,
+      name: item.product_short_name_snapshot || item.product_name_snapshot,
       quantity: item.quantity,
       subtotal: item.subtotal,
       variantName: item.variant_name_snapshot,
       options: (item.order_item_options ?? []).map((opt: any) => ({
         groupName: opt.option_group_name_snapshot,
-        itemName: opt.option_item_name_snapshot,
+        itemName: opt.option_item_short_name_snapshot || opt.option_item_name_snapshot,
         priceDelta: opt.price_delta,
         quantity: opt.quantity,
       })),

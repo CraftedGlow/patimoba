@@ -137,10 +137,29 @@ export function useOrderMutations() {
         )
       }
 
+      // レシート印字用の短縮名を解決するため、商品のカスタムオプション定義と
+      // デコレーション選択肢の短縮名をまとめて取得しておく（注文作成時にスナップショット）
+      const productIds = Array.from(new Set(input.items.map((i) => i.productId).filter(Boolean))) as string[]
+      const { data: printShortNameProducts } = productIds.length
+        ? await supabase.from("products").select("id, print_short_name, custom_options").in("id", productIds)
+        : { data: [] as any[] }
+      const productPrintInfoMap = new Map((printShortNameProducts ?? []).map((p: any) => [p.id, p]))
+
+      const decorationIds = Array.from(
+        new Set(
+          input.items.flatMap((i) => (i.customization?.options ?? []).map((o) => o.wholeCakeOptionId)).filter(Boolean)
+        )
+      )
+      const { data: printShortNameDecorations } = decorationIds.length
+        ? await supabase.from("decorations").select("id, print_short_name").in("id", decorationIds)
+        : { data: [] as any[] }
+      const decorationShortNameMap = new Map((printShortNameDecorations ?? []).map((d: any) => [d.id, d.print_short_name]))
+
       const orderItems: any[] = input.items.map((item) => ({
         order_id: order.id,
         product_id: item.productId,
         product_name_snapshot: item.name,
+        product_short_name_snapshot: productPrintInfoMap.get(item.productId)?.print_short_name ?? null,
         quantity: item.quantity,
         unit_price: item.price,
         subtotal: calcItemSubtotal(item),
@@ -198,6 +217,7 @@ export function useOrderMutations() {
             order_item_id: insertedId,
             option_group_name_snapshot: op.groupName ?? "デコレーション",
             option_item_name_snapshot: op.name,
+            option_item_short_name_snapshot: decorationShortNameMap.get(op.wholeCakeOptionId) ?? null,
             price_delta: op.price,
           })
           if (op.message) {
@@ -235,10 +255,23 @@ export function useOrderMutations() {
         }
         for (const co of c.customOptions || []) {
           if (!co.values?.length) continue
+          const productCustomOptions = productPrintInfoMap.get(item.productId)?.custom_options as
+            | { name: string; values: { label: string; print_short_name?: string }[] }[]
+            | undefined
+          const matchingGroup = productCustomOptions?.find((g) => g.name === co.name)
+          const hasShortNames = co.values.some((label) =>
+            matchingGroup?.values.find((v) => v.label === label)?.print_short_name
+          )
+          const shortNameJoined = hasShortNames
+            ? co.values
+                .map((label) => matchingGroup?.values.find((v) => v.label === label)?.print_short_name || label)
+                .join("、")
+            : null
           options.push({
             order_item_id: insertedId,
             option_group_name_snapshot: co.name,
             option_item_name_snapshot: co.values.join("、"),
+            option_item_short_name_snapshot: shortNameJoined,
             price_delta: co.additionalPrice || 0,
           })
         }

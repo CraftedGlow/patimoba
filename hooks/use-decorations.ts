@@ -9,6 +9,7 @@ function toDecorationItem(row: any, parentStoreId: string | null): DecorationIte
   return {
     id: String(row.id),
     name: row.name || "",
+    printShortName: row.print_short_name ?? null,
     description: row.description ?? null,
     imageUrl: row.image_url ?? null,
     category: row.category || "other",
@@ -47,6 +48,7 @@ export function useDecorations(storeId?: string) {
     storeId: string,
     data: {
       name: string
+      printShortName?: string | null
       description?: string
       imageUrl?: string
       category: string
@@ -61,6 +63,7 @@ export function useDecorations(storeId?: string) {
     const { error } = await supabase.from("decorations").insert({
       store_id: storeId,
       name: data.name,
+      print_short_name: data.printShortName ?? null,
       description: data.description ?? null,
       image_url: data.imageUrl ?? null,
       category: data.category,
@@ -79,6 +82,7 @@ export function useDecorations(storeId?: string) {
     id: string,
     data: Partial<{
       name: string
+      printShortName: string | null
       description: string | null
       imageUrl: string | null
       category: string
@@ -93,6 +97,7 @@ export function useDecorations(storeId?: string) {
   ): Promise<{ error: string | null }> => {
     const payload: any = {}
     if (data.name !== undefined) payload.name = data.name
+    if (data.printShortName !== undefined) payload.print_short_name = data.printShortName
     if (data.description !== undefined) payload.description = data.description
     if (data.imageUrl !== undefined) payload.image_url = data.imageUrl
     if (data.category !== undefined) payload.category = data.category

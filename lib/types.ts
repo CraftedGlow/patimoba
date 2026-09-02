@@ -33,6 +33,7 @@ export interface Product {
 export interface ProductCustomOptionValue {
   label: string
   additional_price: number
+  print_short_name?: string
 }
 
 export interface ProductCustomOption {
@@ -169,6 +170,7 @@ export interface CartCakeOptionEntry {
 export interface DecorationItem {
   id: string
   name: string
+  printShortName: string | null
   description: string | null
   imageUrl: string | null
   category: string

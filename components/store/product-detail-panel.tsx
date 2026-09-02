@@ -47,6 +47,7 @@ export function ProductDetailPanel({
   const { messagePlateList } = useMessagePlates(product.store_id);
 
   const [name, setName] = useState(product.name);
+  const [printShortName, setPrintShortName] = useState(product.print_short_name ?? "");
   const [description, setDescription] = useState(product.description || "");
   const [price, setPrice] = useState(
     product.base_price > 0 ? `¥${product.base_price.toLocaleString()}` : ""
@@ -207,6 +208,7 @@ export function ProductDetailPanel({
       void typeMatch;
       const { error: err } = await onSave(product.id, {
         name: name.trim(),
+        print_short_name: printShortName.trim() || null,
         description: description.trim(),
         base_price: isHole ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
         category_name: category || null,
@@ -378,6 +380,19 @@ export function ProductDetailPanel({
               onChange={(e) => setName(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
             />
+          </div>
+
+          {/* 印刷用の短い名前 */}
+          <div>
+            <label className="text-sm font-bold block mb-1">印刷用の短い名前（任意）</label>
+            <input
+              type="text"
+              value={printShortName}
+              onChange={(e) => setPrintShortName(e.target.value)}
+              placeholder="レシート印字が折り返す場合に設定"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
+            />
+            <p className="text-xs text-gray-400 mt-1">未設定の場合は商品名がそのまま印字されます</p>
           </div>
 
           {/* 画像（メイン + 断面） */}
@@ -766,6 +781,9 @@ export function ProductDetailPanel({
                           <input type="text" value={v.label}
                             onChange={(e) => { const next = [...customOptions]; const values = [...next[oi].values]; values[vi] = { ...values[vi], label: e.target.value }; next[oi] = { ...next[oi], values }; setCustomOptions(next); }}
                             placeholder="選択肢" className="flex-1 border border-gray-300 rounded px-2 py-0.5 text-xs" />
+                          <input type="text" value={v.print_short_name ?? ""}
+                            onChange={(e) => { const next = [...customOptions]; const values = [...next[oi].values]; values[vi] = { ...values[vi], print_short_name: e.target.value || undefined }; next[oi] = { ...next[oi], values }; setCustomOptions(next); }}
+                            placeholder="印字用（任意）" className="w-24 border border-gray-300 rounded px-2 py-0.5 text-xs" />
                           <input type="number" value={v.additional_price}
                             onChange={(e) => { const next = [...customOptions]; const values = [...next[oi].values]; values[vi] = { ...values[vi], additional_price: Number(e.target.value) || 0 }; next[oi] = { ...next[oi], values }; setCustomOptions(next); }}
                             placeholder="+¥" className="w-16 border border-gray-300 rounded px-1 py-0.5 text-xs" />

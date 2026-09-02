@@ -258,10 +258,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: orderErr?.message || "注文の作成に失敗しました" }, { status: 500 });
     }
 
+    // レシート印字用の短縮名を注文作成時にスナップショットする
+    const productIds = Array.from(new Set(items.map((i) => i.productId).filter(Boolean))) as string[];
+    const { data: printShortNameProducts } = productIds.length
+      ? await supabaseAdmin.from("products").select("id, print_short_name").in("id", productIds)
+      : { data: [] as any[] };
+    const productShortNameMap = new Map((printShortNameProducts ?? []).map((p: any) => [p.id, p.print_short_name]));
+
+    const decorationIds = Array.from(
+      new Set(items.flatMap((i) => (i.customization?.options ?? []).map((o) => o.wholeCakeOptionId)).filter(Boolean))
+    );
+    const { data: printShortNameDecorations } = decorationIds.length
+      ? await supabaseAdmin.from("decorations").select("id, print_short_name").in("id", decorationIds)
+      : { data: [] as any[] };
+    const decorationShortNameMap = new Map((printShortNameDecorations ?? []).map((d: any) => [d.id, d.print_short_name]));
+
     const orderItems = items.map((item) => ({
       order_id: order.id,
       product_id: item.productId,
       product_name_snapshot: item.name,
+      product_short_name_snapshot: productShortNameMap.get(item.productId) ?? null,
       quantity: item.quantity,
       unit_price: item.price,
       subtotal: calcItemSubtotal(item),
@@ -314,6 +330,7 @@ export async function POST(req: NextRequest) {
             order_item_id: insertedId,
             option_group_name_snapshot: op.groupName ?? "デコレーション",
             option_item_name_snapshot: op.name,
+            option_item_short_name_snapshot: decorationShortNameMap.get(op.wholeCakeOptionId) ?? null,
             price_delta: op.price,
           });
         }

@@ -7,6 +7,7 @@ import { fetchProductStoreOverrides, applyProductStoreOverride, upsertProductSto
 export interface ProductCustomOptionValue {
   label: string
   additional_price: number
+  print_short_name?: string
 }
 
 export interface ProductCustomOption {
@@ -20,6 +21,7 @@ export interface ProductRegistration {
   id: string
   store_id: string
   name: string
+  print_short_name: string | null
   description: string
   base_price: number
   image: string | null
@@ -94,6 +96,7 @@ function mapRow(row: any): ProductRegistration {
     id: row.id,
     store_id: row.store_id ?? "",
     name: row.name ?? "",
+    print_short_name: row.print_short_name ?? null,
     description: row.description ?? "",
     base_price: row.base_price ?? 0,
     image: row.image ?? null,
@@ -229,6 +232,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     }
 
     if (updates.name !== undefined) payload.name = updates.name
+    if (updates.print_short_name !== undefined) payload.print_short_name = updates.print_short_name
     if (updates.description !== undefined) payload.description = updates.description
     if (updates.base_price !== undefined) payload.base_price = updates.base_price
     if (updates.image !== undefined) payload.image = updates.image

@@ -40,7 +40,7 @@ interface DecorationFormProps {
   storeId: string
   initial?: DecorationItem
   onSave: (data: {
-    name: string; description: string; imageUrl: string | null; category: string
+    name: string; printShortName: string | null; description: string; imageUrl: string | null; category: string
     price: number; isSeasonal: boolean; seasonStart: string | null; seasonEnd: string | null
     preparationDays: number | null; excludesCategories: string[]
   }) => Promise<{ error: string | null }>
@@ -49,6 +49,7 @@ interface DecorationFormProps {
 
 function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormProps) {
   const [name, setName] = useState(initial?.name ?? "")
+  const [printShortName, setPrintShortName] = useState(initial?.printShortName ?? "")
   const [category, setCategory] = useState(initial?.category ?? "other")
   const [price, setPrice] = useState(String(initial?.price ?? 0))
   const [description, setDescription] = useState(initial?.description ?? "")
@@ -82,6 +83,7 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
     setError(null)
     const { error: err } = await onSave({
       name: name.trim(),
+      printShortName: printShortName.trim() || null,
       description: description.trim(),
       imageUrl,
       category,
@@ -127,6 +129,18 @@ function DecorationForm({ storeId, initial, onSave, onClose }: DecorationFormPro
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="例: いちごデコレーション"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+        />
+      </div>
+
+      {/* 印刷用の短い名前 */}
+      <div>
+        <label className="text-xs font-medium text-gray-600 block mb-1">印刷用の短い名前（任意）</label>
+        <input
+          type="text"
+          value={printShortName}
+          onChange={(e) => setPrintShortName(e.target.value)}
+          placeholder="例: プリント（レシート印字が折り返す場合に設定）"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
         />
       </div>
@@ -695,7 +709,7 @@ export default function DecorationsPage() {
                   onSave={async (data) => {
                     if (editingDeco) {
                       return updateDecoration(editingDeco.id, {
-                        name: data.name, description: data.description || null,
+                        name: data.name, printShortName: data.printShortName, description: data.description || null,
                         imageUrl: data.imageUrl, category: data.category, price: data.price,
                         isSeasonal: data.isSeasonal,
                         seasonStart: data.seasonStart, seasonEnd: data.seasonEnd,
@@ -704,7 +718,7 @@ export default function DecorationsPage() {
                       })
                     } else {
                       return createDecoration(storeId, {
-                        name: data.name, description: data.description || undefined,
+                        name: data.name, printShortName: data.printShortName, description: data.description || undefined,
                         imageUrl: data.imageUrl ?? undefined, category: data.category,
                         price: data.price, isSeasonal: data.isSeasonal,
                         seasonStart: data.seasonStart, seasonEnd: data.seasonEnd,

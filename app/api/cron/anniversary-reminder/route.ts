@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { resolveChannelByLiffId } from "@/lib/line";
+import { isWithinValidPeriod, ensureCouponDeliveryForReminder, buildCouponFlexMessage, type Coupon } from "@/lib/coupons";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,15 +20,30 @@ export async function GET(req: NextRequest) {
 
   const { data: enabledStores } = await supabaseAdmin
     .from("stores")
-    .select("liff_id")
+    .select("id, liff_id, line_channel_access_token")
     .eq("anniversary_reminder_enabled", true)
     .not("liff_id", "is", null);
 
   const enabledLiffIds = (enabledStores ?? []).map((s: { liff_id: string }) => s.liff_id);
+  const liffIdToStoreId = new Map((enabledStores ?? []).map((s: { id: string; liff_id: string }) => [s.liff_id, s.id]));
+  // liff_id をキーに店舗のLINEチャネル設定をまとめて引けるようにし、ユーザーごとのstoresクエリを避ける
+  const liffIdToChannelToken = new Map(
+    (enabledStores ?? []).map((s: { liff_id: string; line_channel_access_token: string | null }) => [s.liff_id, s.line_channel_access_token])
+  );
 
   if (enabledLiffIds.length === 0) {
     return NextResponse.json({ sent: 0, failed: 0, total: 0 });
   }
+
+  // 各店舗の「記念日リマインダー用」クーポン（store_idごとに1件想定）を取得
+  const storeIds = (enabledStores ?? []).map((s: { id: string }) => s.id);
+  const { data: anniversaryCoupons } = await supabaseAdmin
+    .from("coupons")
+    .select("*")
+    .in("store_id", storeIds)
+    .eq("is_anniversary_coupon", true)
+    .eq("is_active", true);
+  const storeIdToCoupon = new Map((anniversaryCoupons ?? []).map((c: Coupon) => [c.store_id, c]));
 
   const { data: users, error } = await supabaseAdmin
     .from("users")
@@ -68,8 +83,8 @@ export async function GET(req: NextRequest) {
         return;
       }
 
-      const lineConfig = await resolveChannelByLiffId(user.liff_id, supabaseAdmin);
-      if (!lineConfig?.channelAccessToken) {
+      const channelAccessToken = liffIdToChannelToken.get(user.liff_id);
+      if (!channelAccessToken) {
         console.warn("[anniversary-reminder] no channel token for user:", user.id);
         return;
       }
@@ -78,15 +93,27 @@ export async function GET(req: NextRequest) {
       const label = labels.join("・");
       const message = `${name}\n\n2週間後に ${label} が近づいてきました🎉\n\n特別な日にぴったりなケーキをご用意しております。\nぜひお早めにご予約・ご注文をご検討ください🎂✨`;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const messages: any[] = [{ type: "text", text: message }];
+
+      const storeId = liffIdToStoreId.get(user.liff_id);
+      const coupon = storeId ? storeIdToCoupon.get(storeId) : undefined;
+      if (coupon && isWithinValidPeriod(coupon, new Date())) {
+        const status = await ensureCouponDeliveryForReminder(coupon.id, user.id, supabaseAdmin);
+        if (status !== "used") {
+          messages.push(buildCouponFlexMessage(coupon, user.liff_id, `${label}記念クーポン`));
+        }
+      }
+
       const res = await fetch("https://api.line.me/v2/bot/message/push", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${lineConfig.channelAccessToken}`,
+          Authorization: `Bearer ${channelAccessToken}`,
         },
         body: JSON.stringify({
           to: user.line_user_id,
-          messages: [{ type: "text", text: message }],
+          messages,
         }),
       });
 

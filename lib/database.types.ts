@@ -16,21 +16,33 @@ export type Database = {
     Tables: {
       coupon_deliveries: {
         Row: {
+          claim_method: string
           coupon_id: string
+          discount_amount: number
           id: string
+          order_id: string | null
           sent_at: string
+          used_at: string | null
           user_id: string
         }
         Insert: {
+          claim_method?: string
           coupon_id: string
+          discount_amount?: number
           id?: string
+          order_id?: string | null
           sent_at?: string
+          used_at?: string | null
           user_id: string
         }
         Update: {
+          claim_method?: string
           coupon_id?: string
+          discount_amount?: number
           id?: string
+          order_id?: string | null
           sent_at?: string
+          used_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -48,41 +60,60 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "coupon_deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
         ]
       }
       coupons: {
         Row: {
-          code: string
           created_at: string
           discount_type: string
           discount_value: number
           expires_at: string | null
           id: string
           is_active: boolean
+          is_anniversary_coupon: boolean
+          min_order_amount: number | null
+          share_token: string
           store_id: string
           title: string
+          valid_from: string | null
+          whole_cake_only: boolean
         }
         Insert: {
-          code: string
           created_at?: string
           discount_type: string
           discount_value: number
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_anniversary_coupon?: boolean
+          min_order_amount?: number | null
+          share_token?: string
           store_id: string
           title: string
+          valid_from?: string | null
+          whole_cake_only?: boolean
         }
         Update: {
-          code?: string
           created_at?: string
           discount_type?: string
           discount_value?: number
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_anniversary_coupon?: boolean
+          min_order_amount?: number | null
+          share_token?: string
           store_id?: string
           title?: string
+          valid_from?: string | null
+          whole_cake_only?: boolean
         }
         Relationships: [
           {
@@ -90,6 +121,88 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_sends: {
+        Row: {
+          coupon_id: string
+          created_at: string
+          created_by: string | null
+          filter_gender: string | null
+          filter_ordered_only: boolean
+          id: string
+          recipient_limit: number | null
+          result_failed: number | null
+          result_sent: number | null
+          result_skipped: number | null
+          scheduled_at: string
+          selection_mode: string | null
+          sent_at: string | null
+          status: string
+          store_id: string
+          target_type: string
+          target_user_ids: string[] | null
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string
+          created_by?: string | null
+          filter_gender?: string | null
+          filter_ordered_only?: boolean
+          id?: string
+          recipient_limit?: number | null
+          result_failed?: number | null
+          result_sent?: number | null
+          result_skipped?: number | null
+          scheduled_at?: string
+          selection_mode?: string | null
+          sent_at?: string | null
+          status?: string
+          store_id: string
+          target_type: string
+          target_user_ids?: string[] | null
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string
+          created_by?: string | null
+          filter_gender?: string | null
+          filter_ordered_only?: boolean
+          id?: string
+          recipient_limit?: number | null
+          result_failed?: number | null
+          result_sent?: number | null
+          result_skipped?: number | null
+          scheduled_at?: string
+          selection_mode?: string | null
+          sent_at?: string | null
+          status?: string
+          store_id?: string
+          target_type?: string
+          target_user_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_sends_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_sends_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_sends_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -696,6 +809,8 @@ export type Database = {
           created_at: string
           customer_id: string | null
           customer_name_snapshot: string | null
+          coupon_discount_amount: number
+          coupon_id: string | null
           delivery_time_slot: string | null
           discount_amount: number | null
           fulfilled_at: string | null
@@ -733,6 +848,8 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           customer_name_snapshot?: string | null
+          coupon_discount_amount?: number
+          coupon_id?: string | null
           delivery_time_slot?: string | null
           discount_amount?: number | null
           fulfilled_at?: string | null
@@ -770,6 +887,8 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           customer_name_snapshot?: string | null
+          coupon_discount_amount?: number
+          coupon_id?: string | null
           delivery_time_slot?: string | null
           discount_amount?: number | null
           fulfilled_at?: string | null
@@ -807,6 +926,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
             referencedColumns: ["id"]
           },
           {

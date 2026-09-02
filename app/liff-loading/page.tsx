@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
-import { getLiffId, parseLiffStateStoreId, saveLiffId } from "@/lib/get-liff-id";
+import { getLiffId, parseLiffStateStoreId, parseLiffStateCouponToken, saveLiffId } from "@/lib/get-liff-id";
 
 export default function LiffLoadingPage() {
   const router = useRouter();
@@ -11,6 +11,10 @@ export default function LiffLoadingPage() {
   useEffect(() => {
     (async () => {
       const storeId = parseLiffStateStoreId();
+      const couponToken = parseLiffStateCouponToken();
+      if (couponToken) {
+        try { sessionStorage.setItem("patimoba_pending_coupon_token", couponToken); } catch {}
+      }
       const loginUrl = storeId ? `/login?storeId=${storeId}` : "/login";
       try {
         const liffId = await getLiffId(storeId);

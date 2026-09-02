@@ -27,6 +27,22 @@ export function parseLiffStateStoreId(): string | null {
   }
 }
 
+/** liff.state クエリパラメータから coupon 共有トークンを取り出す（例: ?coupon=xxxx） */
+export function parseLiffStateCouponToken(): string | null {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const liffState = params.get("liff.state");
+    if (!liffState) return null;
+    const decoded = decodeURIComponent(liffState);
+    const qIndex = decoded.indexOf("?");
+    if (qIndex === -1) return null;
+    const stateParams = new URLSearchParams(decoded.slice(qIndex + 1));
+    return stateParams.get("coupon");
+  } catch {
+    return null;
+  }
+}
+
 /**
  * LIFF IDを取得する優先順位:
  * 1. storeId が分かればDBから取得（子店舗の場合は親店舗にフォールバック）

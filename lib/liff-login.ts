@@ -61,6 +61,18 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   sessionStorage.removeItem("liff_login_pending")
   localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
 
+  const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token")
+  if (pendingCouponToken) {
+    sessionStorage.removeItem("patimoba_pending_coupon_token")
+    fetch("/api/coupons/claim-by-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: pendingCouponToken, userId: user.id }),
+    }).catch(() => {
+      // ベストエフォート。クーポン獲得に失敗してもログイン自体は成立させる
+    })
+  }
+
   const returnPath = sessionStorage.getItem("liff_return_path")
   sessionStorage.removeItem("liff_return_path")
 

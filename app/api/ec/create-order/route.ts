@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTINGS, FALLBACK_FLAT_FEE, type RegionRate } from "@/lib/shipping-fee";
 import { regionForPrefecture } from "@/lib/constants/regions";
 import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
+import { releaseCouponReservation, finalizeCouponDelivery } from "@/lib/coupons";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -144,6 +145,8 @@ export async function POST(req: NextRequest) {
       items,
       subtotal,
       discountAmount,
+      couponId,
+      couponDeliveryId,
       notes,
       shippingAddress,
       deliveryTimeSlot,
@@ -157,6 +160,8 @@ export async function POST(req: NextRequest) {
       items: CartItem[];
       subtotal: number;
       discountAmount: number;
+      couponId?: string | null;
+      couponDeliveryId?: string | null;
       notes?: string;
       shippingAddress?: ShippingAddress | null;
       deliveryTimeSlot?: string | null;
@@ -166,6 +171,7 @@ export async function POST(req: NextRequest) {
     } = await req.json();
 
     if (!storeId || !items?.length) {
+      if (couponDeliveryId) await releaseCouponReservation(couponDeliveryId, supabaseAdmin);
       return NextResponse.json({ error: "storeId and items are required" }, { status: 400 });
     }
 
@@ -176,12 +182,42 @@ export async function POST(req: NextRequest) {
       .eq("id", storeId)
       .maybeSingle();
     if (!isDevOnlyStoreVisible(storeRow?.is_dev_only)) {
+      if (couponDeliveryId) await releaseCouponReservation(couponDeliveryId, supabaseAdmin);
       return NextResponse.json({ error: "この店舗では注文できません" }, { status: 400 });
     }
 
     // 送料はクライアントの申告値を信用せず、店舗設定に基づきサーバー側で再計算する
     const shippingFee = await resolveShippingFee(storeId, shippingAddress?.prefecture, subtotal);
-    const totalAmount = subtotal - (discountAmount ?? 0) + shippingFee;
+
+    // クーポンは注文確定前に /api/coupons/apply で予約済み（deliveryId）である前提。
+    // 割引額はクライアント申告値を一切信用せず、reserveCoupon がサーバー側で計算し
+    // coupon_deliveries に保存した discount_amount だけを正として使う。
+    if ((couponId && !couponDeliveryId) || (!couponId && couponDeliveryId)) {
+      if (couponDeliveryId) await releaseCouponReservation(couponDeliveryId, supabaseAdmin);
+      return NextResponse.json({ error: "coupon_reservation_invalid" }, { status: 400 });
+    }
+
+    let couponDiscountAmount = 0;
+    if (couponId && couponDeliveryId) {
+      if (!customerId) {
+        await releaseCouponReservation(couponDeliveryId, supabaseAdmin);
+        return NextResponse.json({ error: "クーポンの利用にはログインが必要です" }, { status: 400 });
+      }
+      const { data: delivery } = await supabaseAdmin
+        .from("coupon_deliveries")
+        .select("id, used_at, order_id, discount_amount")
+        .eq("id", couponDeliveryId)
+        .eq("coupon_id", couponId)
+        .eq("user_id", customerId)
+        .maybeSingle();
+      if (!delivery || !delivery.used_at || delivery.order_id) {
+        await releaseCouponReservation(couponDeliveryId, supabaseAdmin);
+        return NextResponse.json({ error: "coupon_reservation_invalid" }, { status: 400 });
+      }
+      couponDiscountAmount = Math.max(0, Math.min(delivery.discount_amount, subtotal));
+    }
+
+    const totalAmount = Math.max(0, subtotal - (discountAmount ?? 0) - couponDiscountAmount) + shippingFee;
 
     // EC は配送日フィールドがないため作成から24時間をキャンセル期限とする
     const cancelDeadlineAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
@@ -196,6 +232,8 @@ export async function POST(req: NextRequest) {
         payment_status: paymentStatus ?? "unpaid",
         subtotal,
         discount_amount: discountAmount ?? 0,
+        coupon_id: couponId ?? null,
+        coupon_discount_amount: couponDiscountAmount,
         total_amount: totalAmount,
         shipping_fee: shippingFee,
         shipping_postal_code: shippingAddress?.postalCode ?? null,
@@ -216,6 +254,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (orderErr || !order) {
+      if (couponDeliveryId) await releaseCouponReservation(couponDeliveryId, supabaseAdmin);
       return NextResponse.json({ error: orderErr?.message || "注文の作成に失敗しました" }, { status: 500 });
     }
 
@@ -236,8 +275,11 @@ export async function POST(req: NextRequest) {
 
     if (itemsErr) {
       await supabaseAdmin.from("orders").delete().eq("id", order.id);
+      if (couponDeliveryId) await releaseCouponReservation(couponDeliveryId, supabaseAdmin);
       return NextResponse.json({ error: itemsErr.message }, { status: 500 });
     }
+
+    if (couponDeliveryId) await finalizeCouponDelivery(couponDeliveryId, order.id, supabaseAdmin);
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];

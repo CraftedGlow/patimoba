@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
-import { getLiffId, parseLiffStateStoreId } from "@/lib/get-liff-id";
+import { getLiffId, parseLiffStateStoreId, parseLiffStateCouponToken } from "@/lib/get-liff-id";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp"
 
@@ -79,6 +79,11 @@ export default function Home() {
           window.location.replace(pathOnly);
           return;
         }
+      }
+
+      const couponToken = parseLiffStateCouponToken();
+      if (couponToken) {
+        try { sessionStorage.setItem("patimoba_pending_coupon_token", couponToken); } catch {}
       }
 
       const storeId = parseLiffStateStoreId();

@@ -13,6 +13,24 @@ import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
 import { PrintReceipt } from "@/components/customer/ec/print-receipt";
 import type { UICartItem } from "@/lib/types";
+import { useMyCoupons, type MyCouponEligibility } from "@/hooks/use-my-coupons";
+import { calcCouponDiscountAmount } from "@/lib/coupons";
+
+function previewCouponDiscount(c: Pick<MyCouponEligibility, "discountType" | "discountValue">, subtotal: number) {
+  return calcCouponDiscountAmount({ discount_type: c.discountType, discount_value: c.discountValue }, subtotal);
+}
+
+async function releaseCoupon(deliveryId: string) {
+  try {
+    await fetch("/api/coupons/release", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deliveryId }),
+    });
+  } catch {
+    // ベストエフォート。失敗しても呼び出し元のエラー表示自体は成立させる
+  }
+}
 
 const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
@@ -39,6 +57,10 @@ export default function ECConfirmPage() {
   const { storeLogoUrl } = useEcContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { evaluateEligibility } = useMyCoupons({ userId, storeId: selectedStoreId || cartStoreId });
+  const [couponEligibility, setCouponEligibility] = useState<MyCouponEligibility[]>([]);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [selectedCoupon, setSelectedCoupon] = useState<MyCouponEligibility | null>(null);
 
   const [lastName, setLastName] = useState(() => { try { return sessionStorage.getItem("ec_customer_last_name") ?? "" } catch { return "" } });
   const [firstName, setFirstName] = useState(() => { try { return sessionStorage.getItem("ec_customer_first_name") ?? "" } catch { return "" } });
@@ -207,8 +229,21 @@ export default function ECConfirmPage() {
         ? Math.min(Number(partialPoints) || 0, availablePoints, subtotal)
         : 0;
 
-  const total = subtotal + shippingFee - usedPoints;
+  const couponDiscountAmount = selectedCoupon ? previewCouponDiscount(selectedCoupon, subtotal) : 0;
+  const total = Math.max(0, subtotal - usedPoints - couponDiscountAmount) + shippingFee;
   const earnedPoints = Math.floor((subtotal - usedPoints) / 200); // 100円 = 0.5pt。送料分にはポイントを付与しない
+
+  const productIdsKey = cartItems.map((i) => i.productId).filter(Boolean).sort().join(",");
+  useEffect(() => {
+    const productIds = productIdsKey ? productIdsKey.split(",") : [];
+    evaluateEligibility(subtotal, productIds).then(setCouponEligibility);
+  }, [subtotal, productIdsKey, evaluateEligibility]);
+
+  useEffect(() => {
+    if (!selectedCoupon) return;
+    const stillEligible = couponEligibility.find((c) => c.deliveryId === selectedCoupon.deliveryId)?.eligible;
+    if (stillEligible === false) setSelectedCoupon(null);
+  }, [couponEligibility, selectedCoupon]);
 
   const handleConfirmOrder = async () => {
     console.log("[ec-confirm] 注文を確定するボタン clicked, total:", total, "userId:", userId);
@@ -227,51 +262,94 @@ export default function ECConfirmPage() {
       : undefined;
     const guestEmailVal = email.trim() || null;
 
-    // EC はクレジットカード払いのみ → 先に PAY.JP で課金する
-    console.log("[ec-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", total);
-    const chargeRes = await fetch("/api/payjp/charge", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId,
-        storeId: storeIdForOrder,
-        amount: total,
-        currency: "jpy",
-      }),
-    });
-    const chargeData = await chargeRes.json();
-    console.log("[ec-confirm] charge →", chargeRes.status, chargeData);
-    if (!chargeRes.ok) {
+    // クーポンを選択している場合は注文確定の直前でサーバー側検証つきで予約する。
+    // apply〜注文作成までの間で例外が発生した場合も必ずクーポンを解放できるよう、
+    // この区間全体を try/catch で囲む。
+    let couponDeliveryId: string | null = null;
+    let couponDiscountAmountFinal = 0;
+    let result: { orderId: string; error: string | null };
+    try {
+      if (selectedCoupon) {
+        const applyRes = await fetch("/api/coupons/apply", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            couponId: selectedCoupon.couponId,
+            userId,
+            storeId: storeIdForOrder,
+            subtotal,
+            productIds: cartItems.map((i) => i.productId).filter(Boolean),
+          }),
+        });
+        if (!applyRes.ok) {
+          submittingRef.current = false;
+          setSubmitting(false);
+          setSelectedCoupon(null);
+          setSubmitError("クーポンをご利用いただけませんでした。お手数ですが再度お試しください。");
+          return;
+        }
+        const applyData = await applyRes.json();
+        couponDeliveryId = applyData.deliveryId;
+        couponDiscountAmountFinal = applyData.discountAmount;
+      }
+
+      const totalWithCoupon = Math.max(0, subtotal - usedPoints - couponDiscountAmountFinal) + shippingFee;
+
+      // EC はクレジットカード払いのみ → 先に PAY.JP で課金する
+      console.log("[ec-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", totalWithCoupon);
+      const chargeRes = await fetch("/api/payjp/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          storeId: storeIdForOrder,
+          amount: totalWithCoupon,
+          currency: "jpy",
+        }),
+      });
+      const chargeData = await chargeRes.json();
+      console.log("[ec-confirm] charge →", chargeRes.status, chargeData);
+      if (!chargeRes.ok) {
+        if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
+        submittingRef.current = false;
+        setSubmitting(false);
+        setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
+        return;
+      }
+
+      // EC注文は常にサーバーAPI経由（RLSをバイパス）
+      console.log("[ec-confirm] create-order 開始");
+      const res = await fetch("/api/ec/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId: storeIdForOrder,
+          customerId: userId ?? null,
+          paymentStatus: hasCardInfo ? "paid" : "unpaid",
+          items: cartItems,
+          subtotal,
+          discountAmount: usedPoints,
+          couponId: selectedCoupon?.couponId ?? null,
+          couponDeliveryId,
+          notes: notesStr,
+          shippingAddress,
+          deliveryTimeSlot: deliveryTime,
+          guestEmail: guestEmailVal,
+          customerName: `${lastName} ${firstName}`.trim() || null,
+          payjpChargeId: chargeData.chargeId ?? null,
+        }),
+      });
+      const json = await res.json();
+      result = res.ok
+        ? { orderId: json.orderId, error: null }
+        : { orderId: "", error: json.error || "注文の作成に失敗しました" };
+    } catch (e: any) {
+      if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
       submittingRef.current = false;
       setSubmitting(false);
-      setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
+      setSubmitError(e?.message || "注文処理中にエラーが発生しました");
       return;
     }
-
-    // EC注文は常にサーバーAPI経由（RLSをバイパス）
-    console.log("[ec-confirm] create-order 開始");
-    const res = await fetch("/api/ec/create-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        storeId: storeIdForOrder,
-        customerId: userId ?? null,
-        paymentStatus: hasCardInfo ? "paid" : "unpaid",
-        items: cartItems,
-        subtotal,
-        discountAmount: usedPoints,
-        notes: notesStr,
-        shippingAddress,
-        deliveryTimeSlot: deliveryTime,
-        guestEmail: guestEmailVal,
-        customerName: `${lastName} ${firstName}`.trim() || null,
-        payjpChargeId: chargeData.chargeId ?? null,
-      }),
-    });
-    const json = await res.json();
-    const result: { orderId: string; error: string | null } = res.ok
-      ? { orderId: json.orderId, error: null }
-      : { orderId: "", error: json.error || "注文の作成に失敗しました" };
 
     submittingRef.current = false;
     setSubmitting(false);
@@ -441,6 +519,20 @@ export default function ECConfirmPage() {
           </p>
         </div>
 
+        {/* クーポン利用 */}
+        {couponEligibility.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-bold">クーポン</span>
+              <button onClick={() => setShowCouponModal(true)}
+                className="text-xs border border-gray-300 rounded-md px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                変更
+              </button>
+            </div>
+            <p className="text-sm text-gray-700">{selectedCoupon ? selectedCoupon.title : "利用しない"}</p>
+          </div>
+        )}
+
         {/* お支払い方法 */}
         <div className="mb-4">
           <p className="text-sm font-bold mb-2">お支払い方法</p>
@@ -557,6 +649,12 @@ export default function ECConfirmPage() {
               <span className="text-sm text-gray-600">ポイント利用</span>
               <span className="text-sm text-gray-500">{pointLabel}</span>
             </div>
+            {selectedCoupon && (
+              <div className="flex justify-between">
+                <span className="text-sm text-gray-600">クーポン割引</span>
+                <span className="text-sm text-gray-500">-{couponDiscountAmount.toLocaleString()}円</span>
+              </div>
+            )}
             <div className="flex justify-between items-end pt-2 border-t border-gray-200">
               <span className="text-sm font-bold">支払い金額</span>
               <div className="text-right">
@@ -638,6 +736,47 @@ export default function ECConfirmPage() {
                 className="w-full bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-full text-sm">
                 変更する
               </motion.button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* クーポン選択モーダル */}
+      <AnimatePresence>
+        {showCouponModal && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-[60]" onClick={() => setShowCouponModal(false)} />
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="fixed left-6 right-6 top-[20%] bg-white rounded-2xl shadow-2xl z-[70] p-6 max-h-[60vh] overflow-y-auto">
+              <button onClick={() => setShowCouponModal(false)} className="absolute top-4 right-4 text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+              <p className="text-base font-bold text-center mb-4">クーポンを選ぶ</p>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer border border-gray-200 rounded-lg px-3 py-2.5">
+                  <input type="radio" name="ec-coupon" checked={!selectedCoupon}
+                    onChange={() => { setSelectedCoupon(null); setShowCouponModal(false); }}
+                    className="w-5 h-5 accent-[var(--ec-500,#f59e0b)]" />
+                  <span className="text-sm">利用しない</span>
+                </label>
+                {couponEligibility.map((c) => (
+                  <label key={c.deliveryId}
+                    className={`flex items-center gap-3 border rounded-lg px-3 py-2.5 ${c.eligible ? "cursor-pointer border-gray-200" : "opacity-50 border-gray-100"}`}>
+                    <input type="radio" name="ec-coupon" disabled={!c.eligible}
+                      checked={selectedCoupon?.deliveryId === c.deliveryId}
+                      onChange={() => { setSelectedCoupon(c); setShowCouponModal(false); }}
+                      className="w-5 h-5 accent-[var(--ec-500,#f59e0b)]" />
+                    <span className="text-sm flex-1">
+                      {c.title}
+                      <span className="block text-xs text-gray-500 mt-0.5">
+                        {c.eligible ? `-${previewCouponDiscount(c, subtotal).toLocaleString()}円` : c.reason}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
             </motion.div>
           </>
         )}

@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/anniversary-reminder",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/coupon-send",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

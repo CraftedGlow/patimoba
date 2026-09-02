@@ -13,6 +13,9 @@ interface CreateOrderInput {
   items: UICartItem[]
   subtotal: number
   discountAmount?: number
+  couponId?: string | null
+  couponDeliveryId?: string | null
+  couponDiscountAmount?: number
   pickupDate?: string | null
   pickupTime?: string | null
   notes?: string
@@ -21,6 +24,18 @@ interface CreateOrderInput {
   guestEmail?: string | null
   payjpChargeId?: string | null
   bag?: { name: string; unitPrice: number; quantity: number } | null
+}
+
+async function releaseCoupon(deliveryId: string) {
+  try {
+    await fetch("/api/coupons/release", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deliveryId }),
+    })
+  } catch {
+    // ベストエフォート。失敗しても注文エラーの主目的は達成済みなので無視する
+  }
 }
 
 function deriveOrderType(items: UICartItem[], fallback?: string): { type: string; error: string | null } {
@@ -41,10 +56,12 @@ interface CreateOrderResult {
 
 export function useOrderMutations() {
   const createOrder = async (input: CreateOrderInput): Promise<CreateOrderResult> => {
-    const totalAmount = input.subtotal - (input.discountAmount ?? 0)
+    const couponDiscountAmount = input.couponDeliveryId ? (input.couponDiscountAmount ?? 0) : 0
+    const totalAmount = Math.max(0, input.subtotal - (input.discountAmount ?? 0) - couponDiscountAmount)
 
     const derived = deriveOrderType(input.items, input.orderType)
     if (derived.error) {
+      if (input.couponDeliveryId) await releaseCoupon(input.couponDeliveryId)
       return { orderId: "", error: derived.error }
     }
 
@@ -55,6 +72,7 @@ export function useOrderMutations() {
       .eq("id", input.storeId)
       .maybeSingle()
     if (!isDevOnlyStoreVisible(storeRow?.is_dev_only)) {
+      if (input.couponDeliveryId) await releaseCoupon(input.couponDeliveryId)
       return { orderId: "", error: "この店舗では注文できません" }
     }
 
@@ -82,6 +100,8 @@ export function useOrderMutations() {
         payment_method: input.paymentMethod ?? null,
         subtotal: input.subtotal,
         discount_amount: input.discountAmount ?? 0,
+        coupon_id: input.couponDeliveryId ? (input.couponId ?? null) : null,
+        coupon_discount_amount: couponDiscountAmount,
         total_amount: totalAmount,
         pickup_date: input.pickupDate ?? null,
         pickup_time: input.pickupTime ?? null,
@@ -95,6 +115,7 @@ export function useOrderMutations() {
       .single()
 
     if (orderErr || !order) {
+      if (input.couponDeliveryId) await releaseCoupon(input.couponDeliveryId)
       return { orderId: "", error: orderErr?.message || "注文の作成に失敗しました" }
     }
 
@@ -252,10 +273,26 @@ export function useOrderMutations() {
         }
       }
 
+      if (input.couponDeliveryId) {
+        try {
+          // 注文をクーポン券に紐付けると同時に、サーバー側で計算・保存済みの正しい割引額へ
+          // coupon_discount_amount / total_amount を上書き訂正する（この insert 自体はクライアント
+          // 直接書き込みのため、ここで金額の正しさを最終的に担保する）
+          await fetch("/api/coupons/finalize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ deliveryId: input.couponDeliveryId, orderId: order.id }),
+          })
+        } catch {
+          // 失敗しても注文自体は成立させる（ベストエフォート）
+        }
+      }
+
       return { orderId: String(order.id), error: null }
     } catch (e: any) {
       await supabase.from("order_items").delete().eq("order_id", order.id)
       await supabase.from("orders").delete().eq("id", order.id)
+      if (input.couponDeliveryId) await releaseCoupon(input.couponDeliveryId)
       return { orderId: "", error: e?.message || "注文処理中にエラーが発生しました" }
     }
   }

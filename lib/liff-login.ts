@@ -5,7 +5,18 @@ interface LiffLoginResult {
   returnPath: string | null
 }
 
+function debugLog(page: string, note?: string, hasPendingCouponToken?: boolean) {
+  try {
+    fetch("/api/debug/liff-entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page, url: window.location.href, note, hasPendingCouponToken }),
+    }).catch(() => {})
+  } catch {}
+}
+
 export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
+  debugLog("liff-login.ts:entry")
   const idToken = liff.getIDToken()
   if (!idToken) throw new Error("IDトークンを取得できませんでした")
 
@@ -65,6 +76,7 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   sessionStorage.removeItem("liff_return_path")
 
   const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token")
+  debugLog("liff-login.ts:before-claim", `pendingCouponToken=${pendingCouponToken}`, !!pendingCouponToken)
   if (pendingCouponToken) {
     sessionStorage.removeItem("patimoba_pending_coupon_token")
     try {
@@ -73,20 +85,22 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: pendingCouponToken, userId: user.id }),
       })
-      if (claimRes.ok) {
-        const claimData = await claimRes.json()
-        if (claimData.coupon) {
-          sessionStorage.setItem(
-            "patimoba_claimed_coupon",
-            JSON.stringify({ title: claimData.coupon.title, discountLabel: claimData.coupon.discountLabel, nextPath: returnPath || "/customer/takeout" })
-          )
-          return { authUser, returnPath: "/customer/coupons/claimed" }
-        }
+      const claimData = await claimRes.json().catch(() => null)
+      debugLog("liff-login.ts:claim-response", `status=${claimRes.status} body=${JSON.stringify(claimData)}`)
+      if (claimRes.ok && claimData?.coupon) {
+        sessionStorage.setItem(
+          "patimoba_claimed_coupon",
+          JSON.stringify({ title: claimData.coupon.title, discountLabel: claimData.coupon.discountLabel, nextPath: returnPath || "/customer/takeout" })
+        )
+        debugLog("liff-login.ts:redirect-to-claimed")
+        return { authUser, returnPath: "/customer/coupons/claimed" }
       }
-    } catch {
+    } catch (claimErr: any) {
+      debugLog("liff-login.ts:claim-error", claimErr?.message || String(claimErr))
       // ベストエフォート。クーポン獲得に失敗してもログイン自体は成立させる
     }
   }
 
+  debugLog("liff-login.ts:return-normal", `returnPath=${returnPath}`)
   return { authUser, returnPath }
 }

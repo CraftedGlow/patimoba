@@ -9,11 +9,11 @@ import { MessagePlateTab } from "@/components/store/register/message-plate-tab";
 
 type TabId = "cake" | "ec" | "noshi" | "messagePlate";
 
-const tabs: { id: TabId; label: string }[] = [
-  { id: "cake", label: "テイクアウト" },
-  { id: "ec", label: "EC商品" },
-  { id: "noshi", label: "のし管理" },
-  { id: "messagePlate", label: "メッセージプレート管理" },
+const tabs: { id: TabId; label: string; shortLabel: string }[] = [
+  { id: "cake", label: "テイクアウト", shortLabel: "テイクアウト" },
+  { id: "ec", label: "EC商品", shortLabel: "EC" },
+  { id: "noshi", label: "のし管理", shortLabel: "のし" },
+  { id: "messagePlate", label: "メッセージプレート管理", shortLabel: "プレート" },
 ];
 
 export default function StoreRegisterPage() {
@@ -21,18 +21,19 @@ export default function StoreRegisterPage() {
 
   return (
     <div className="p-4 lg:p-6">
-      <div className="flex gap-1 mb-6 border-b border-gray-200">
+      <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-5 py-2.5 text-sm font-bold border-b-2 transition-colors -mb-px ${
+            className={`px-5 py-2.5 text-sm font-bold border-b-2 transition-colors -mb-px whitespace-nowrap shrink-0 ${
               activeTab === tab.id
                 ? "border-amber-400 text-amber-500"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tab.label}
+            <span className="sm:hidden">{tab.shortLabel}</span>
+            <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
       </div>

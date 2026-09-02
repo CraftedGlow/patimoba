@@ -77,7 +77,7 @@ export function StoreSidebar() {
       </AnimatePresence>
 
     <aside className={`
-      h-screen border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto
+      h-[100dvh] lg:h-screen border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto overscroll-contain
       fixed lg:sticky top-0 left-0 z-50
       w-[240px] lg:w-[200px]
       transition-transform duration-300

@@ -57,7 +57,9 @@ export default function LiffLoadingPage() {
         const { authUser, returnPath } = await completeLiffLogin(liff);
         setUser(authUser);
         try { sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString()); } catch {}
-        router.replace(returnPath || fallbackPath);
+        // liff.init() が window.location を直接書き換えるため、Next.jsのrouter.replace()だと
+        // 遷移が反映されないことがある。確実に遷移させるため window.location.replace() を使う。
+        window.location.replace(returnPath || fallbackPath);
       } catch {
         router.replace(loginUrl);
       }

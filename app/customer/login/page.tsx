@@ -94,7 +94,9 @@ export default function CustomerLoginPage() {
               "patimoba_claimed_coupon",
               JSON.stringify({ title: claimData.coupon.title, discountLabel: claimData.coupon.discountLabel, nextPath })
             );
-            router.push("/customer/coupons/claimed");
+            // liff.init() が window.location を直接書き換えている場合、Next.jsのrouter遷移が
+            // 反映されないことがあるため、確実に遷移させるため window.location.replace() を使う。
+            window.location.replace("/customer/coupons/claimed");
             return;
           }
         }

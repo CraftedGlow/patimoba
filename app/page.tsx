@@ -83,7 +83,10 @@ export default function Home() {
           const { authUser, returnPath } = await completeLiffLogin(liff);
           setUser(authUser);
           sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
-          router.replace(returnPath || redirectedPath);
+          // LIFF SDKが liff.init() 内で window.location を直接書き換えているため、
+          // Next.jsのrouter.replace()だとルーター内部状態とのズレで遷移が反映されないことがある。
+          // ここでの最終遷移は window.location.replace() で確実に行う。
+          window.location.replace(returnPath || redirectedPath);
         } else {
           // liff.login() をここで直接呼ぶとuseEffect起点のため一部端末・タイミングで
           // 不安定になることが確認できたため、ユーザー操作起点で確実に動く
@@ -98,7 +101,7 @@ export default function Home() {
         const { authUser, returnPath } = await completeLiffLogin(liff);
         setUser(authUser);
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
-        router.replace(returnPath || "/customer/takeout");
+        window.location.replace(returnPath || "/customer/takeout");
       } else {
         router.replace("/customer/login");
       }

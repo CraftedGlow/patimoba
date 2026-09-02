@@ -161,6 +161,15 @@ export default function Home() {
     window.addEventListener("unhandledrejection", onRejection);
     window.addEventListener("beforeunload", onUnload);
 
+    // LINE側が同じリンクを短時間に複数回リロードする挙動が確認されている。
+    // 先行の読み込みで既にクーポンを獲得済み（獲得画面がまだ未表示）なら、
+    // liff.init() からのログインをやり直さず即座に獲得画面へ遷移する。
+    // ここで早期に確定させることで、次のリロードに割り込まれる前に遷移を完了させる。
+    if (sessionStorage.getItem("patimoba_claimed_coupon")) {
+      window.location.replace("/customer/coupons/claimed");
+      return;
+    }
+
     const params = new URLSearchParams(window.location.search);
     fetch("/api/debug/liff-entry", {
       method: "POST",

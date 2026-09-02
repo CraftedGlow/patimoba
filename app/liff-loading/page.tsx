@@ -14,6 +14,14 @@ export default function LiffLoadingPage() {
   const { setUser } = useAuth();
 
   useEffect(() => {
+    // LINE側が同じリンクを短時間に複数回リロードする挙動が確認されている。
+    // 先行の読み込みで既にクーポンを獲得済み（獲得画面がまだ未表示）なら、
+    // ログインをやり直さず即座に獲得画面へ遷移する。
+    if (sessionStorage.getItem("patimoba_claimed_coupon")) {
+      window.location.replace("/customer/coupons/claimed");
+      return;
+    }
+
     (async () => {
       const storeId = parseLiffStateStoreId() ?? getLiffStoreInfo()?.storeId ?? null;
       const couponToken = parseLiffStateCouponToken();

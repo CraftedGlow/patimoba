@@ -43,6 +43,7 @@ export default function CustomerProfilePage() {
 
   const [loginDone, setLoginDone] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [storeLogoUrl, setStoreLogoUrl] = useState<string | null>(null);
   const liffStarted = useRef(false);
 
   const [loading, setLoading] = useState(true);
@@ -66,6 +67,22 @@ export default function CustomerProfilePage() {
   const [anniversaries, setAnniversaries] = useState<{ label: string; date: string }[]>([
     { label: ANNIVERSARY_TYPES[0], date: "" },
   ]);
+
+  // ログイン待ち画面に店舗ロゴを出すため、ログイン完了を待たずに取得
+  useEffect(() => {
+    if (!storeId) return;
+    ;(async () => {
+      try {
+        const { supabase } = await import("@/lib/supabase");
+        const { data } = await supabase
+          .from("stores")
+          .select("logo_url")
+          .eq("id", storeId)
+          .maybeSingle();
+        if (data?.logo_url) setStoreLogoUrl(data.logo_url);
+      } catch {}
+    })();
+  }, [storeId]);
 
   // 常にLINEログインを実行
   useEffect(() => {
@@ -219,21 +236,23 @@ export default function CustomerProfilePage() {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <div className="flex-1 relative flex items-center justify-center px-8">
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="absolute top-[30px] left-0 right-0 flex justify-center"
-          >
-            <NextImage
-              src="/patimoba-logo-new.png"
-              alt="パティモバ"
-              width={200}
-              height={57}
-              className="w-[200px] h-auto"
-              priority
-            />
-          </motion.div>
+          {storeLogoUrl && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="absolute top-[30px] left-0 right-0 flex justify-center"
+            >
+              <NextImage
+                src={storeLogoUrl}
+                alt="店舗ロゴ"
+                width={200}
+                height={57}
+                className="w-[200px] h-auto object-contain"
+                priority
+              />
+            </motion.div>
+          )}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

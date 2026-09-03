@@ -62,6 +62,7 @@ export function useDashboardStats(storeId?: string | string[]) {
         .select("total_amount")
         .gte("created_at", monthStart)
         .lt("created_at", monthEnd)
+        .not("order_status", "in", "(cancelled)")
       if (ids.length === 1) monthQuery = monthQuery.eq("store_id", ids[0])
       else if (ids.length > 1) monthQuery = monthQuery.in("store_id", ids)
 

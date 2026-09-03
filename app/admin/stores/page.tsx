@@ -339,6 +339,11 @@ export default function AdminStoresPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="font-bold text-base">{store.name ?? "未設定"}</h3>
+                        {store.is_master ? (
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            マスター
+                          </span>
+                        ) : null}
                         {store.is_dev_only ? (
                           <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
                             開発用

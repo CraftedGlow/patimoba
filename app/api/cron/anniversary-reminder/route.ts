@@ -12,11 +12,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // JST で「2週間後」の月・日を取得（cron は 0:00 UTC = 9:00 JST に実行）
-  const nowJst = new Date(Date.now() + 9 * 3600 * 1000);
-  const targetJst = new Date(nowJst.getTime() + 14 * 24 * 3600 * 1000);
-  const tomorrowMonth = targetJst.getUTCMonth() + 1;
-  const tomorrowDay = targetJst.getUTCDate();
+  const REMINDER_DAYS_BEFORE = 7;
+
+  // リマインドの基準となる実際の記念日の瞬間（現在時刻からN日後、実UTC時刻）。
+  // クーポンの前後◯日間の有効期間はこの値を起点に計算する。
+  const anniversaryDate = new Date(Date.now() + REMINDER_DAYS_BEFORE * 24 * 3600 * 1000);
+  // JST での月・日を取り出すためだけに9時間ずらした値を使う（cron は 0:00 UTC = 9:00 JST に実行）
+  const targetJst = new Date(anniversaryDate.getTime() + 9 * 3600 * 1000);
+  const targetMonth = targetJst.getUTCMonth() + 1;
+  const targetDay = targetJst.getUTCDate();
 
   const { data: enabledStores } = await supabaseAdmin
     .from("stores")
@@ -69,7 +73,7 @@ export async function GET(req: NextRequest) {
       .filter((a) => {
         const parts = a.date?.split("-");
         if (parts?.length !== 3) return false;
-        return Number(parts[1]) === tomorrowMonth && Number(parts[2]) === tomorrowDay;
+        return Number(parts[1]) === targetMonth && Number(parts[2]) === targetDay;
       })
       .map((a) => a.label);
 
@@ -91,7 +95,7 @@ export async function GET(req: NextRequest) {
 
       const name = user.name ? `${user.name} 様` : "お客様";
       const label = labels.join("・");
-      const message = `${name}\n\n2週間後に ${label} が近づいてきました🎉\n\n特別な日にぴったりなケーキをご用意しております。\nぜひお早めにご予約・ご注文をご検討ください🎂✨`;
+      const message = `${name}\n\n1週間後に ${label} が近づいてきました🎉\n\n特別な日にぴったりなケーキをご用意しております。\nぜひお早めにご予約・ご注文をご検討ください🎂✨`;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const messages: any[] = [{ type: "text", text: message }];
@@ -99,9 +103,15 @@ export async function GET(req: NextRequest) {
       const storeId = liffIdToStoreId.get(user.liff_id);
       const coupon = storeId ? storeIdToCoupon.get(storeId) : undefined;
       if (coupon && isWithinValidPeriod(coupon, new Date())) {
-        const status = await ensureCouponDeliveryForReminder(coupon.id, user.id, supabaseAdmin);
+        const { status, validFrom, expiresAt } = await ensureCouponDeliveryForReminder(coupon, user.id, anniversaryDate, supabaseAdmin);
         if (status !== "used") {
-          messages.push(buildCouponFlexMessage(coupon, user.liff_id, `${label}記念クーポン`));
+          messages.push(
+            buildCouponFlexMessage(
+              { ...coupon, valid_from: validFrom ?? coupon.valid_from, expires_at: expiresAt ?? coupon.expires_at },
+              user.liff_id,
+              `${label}記念クーポン`
+            )
+          );
         }
       }
 

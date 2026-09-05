@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from("coupon_deliveries")
-    .select("id, coupon:coupons!inner(id, title, discount_type, discount_value, valid_from, expires_at, min_order_amount, whole_cake_only, is_active, store_id)")
+    .select("id, valid_from, expires_at, coupon:coupons!inner(id, title, discount_type, discount_value, valid_from, expires_at, min_order_amount, whole_cake_only, is_active, store_id)")
     .eq("user_id", userId)
     .eq("coupon.store_id", storeId)
     .eq("coupon.is_active", true)
@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
       title: row.coupon.title,
       discountType: row.coupon.discount_type,
       discountValue: row.coupon.discount_value,
-      validFrom: row.coupon.valid_from,
-      expiresAt: row.coupon.expires_at,
+      // 「受け取りから◯日間」「記念日前後◯日間」設定のクーポンは delivery 側にその起算済みの日付を持つため優先する
+      validFrom: row.valid_from ?? row.coupon.valid_from,
+      expiresAt: row.expires_at ?? row.coupon.expires_at,
       minOrderAmount: row.coupon.min_order_amount,
       wholeCakeOnly: row.coupon.whole_cake_only,
     }));

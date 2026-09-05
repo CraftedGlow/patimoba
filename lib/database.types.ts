@@ -105,31 +105,37 @@ export type Database = {
           claim_method: string
           coupon_id: string
           discount_amount: number
+          expires_at: string | null
           id: string
           order_id: string | null
           sent_at: string
           used_at: string | null
           user_id: string
+          valid_from: string | null
         }
         Insert: {
           claim_method?: string
           coupon_id: string
           discount_amount?: number
+          expires_at?: string | null
           id?: string
           order_id?: string | null
           sent_at?: string
           used_at?: string | null
           user_id: string
+          valid_from?: string | null
         }
         Update: {
           claim_method?: string
           coupon_id?: string
           discount_amount?: number
+          expires_at?: string | null
           id?: string
           order_id?: string | null
           sent_at?: string
           used_at?: string | null
           user_id?: string
+          valid_from?: string | null
         }
         Relationships: [
           {
@@ -239,6 +245,8 @@ export type Database = {
       }
       coupons: {
         Row: {
+          anniversary_valid_days_after: number | null
+          anniversary_valid_days_before: number | null
           created_at: string
           discount_type: string
           discount_value: number
@@ -254,6 +262,8 @@ export type Database = {
           whole_cake_only: boolean
         }
         Insert: {
+          anniversary_valid_days_after?: number | null
+          anniversary_valid_days_before?: number | null
           created_at?: string
           discount_type: string
           discount_value: number
@@ -269,6 +279,8 @@ export type Database = {
           whole_cake_only?: boolean
         }
         Update: {
+          anniversary_valid_days_after?: number | null
+          anniversary_valid_days_before?: number | null
           created_at?: string
           discount_type?: string
           discount_value?: number

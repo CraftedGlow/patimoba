@@ -15,6 +15,9 @@ interface Coupon extends CouponBase {
 }
 
 function formatValidPeriod(c: Coupon) {
+  if (c.is_anniversary_coupon && (c.anniversary_valid_days_before || c.anniversary_valid_days_after)) {
+    return `記念日の${c.anniversary_valid_days_before ?? 0}日前〜${c.anniversary_valid_days_after ?? 0}日後`;
+  }
   const from = c.valid_from
     ? new Date(c.valid_from).toLocaleDateString("ja-JP", { month: "short", day: "numeric" })
     : null;
@@ -100,6 +103,15 @@ export default function StoreCouponsPage() {
       await supabase.from("coupons").update({ is_anniversary_coupon: false }).eq("store_id", storeId).eq("is_anniversary_coupon", true);
     }
     await supabase.from("coupons").update({ is_anniversary_coupon: !coupon.is_anniversary_coupon }).eq("id", coupon.id);
+    fetchCoupons();
+  };
+
+  const updateAnniversaryWindow = async (
+    couponId: string,
+    field: "anniversary_valid_days_before" | "anniversary_valid_days_after",
+    value: string
+  ) => {
+    await supabase.from("coupons").update({ [field]: value ? parseInt(value) : null }).eq("id", couponId);
     fetchCoupons();
   };
 
@@ -313,6 +325,29 @@ export default function StoreCouponsPage() {
                         {cond}
                       </span>
                     ))}
+                  </div>
+                )}
+                {coupon.is_anniversary_coupon && (
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[10px] text-gray-500">
+                    <span>記念日の</span>
+                    <input
+                      type="number"
+                      min={0}
+                      defaultValue={coupon.anniversary_valid_days_before ?? ""}
+                      onBlur={(e) => updateAnniversaryWindow(coupon.id, "anniversary_valid_days_before", e.target.value)}
+                      placeholder="0"
+                      className="w-12 border border-gray-300 rounded px-1 py-0.5 text-center text-xs focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    />
+                    <span>日前 〜</span>
+                    <input
+                      type="number"
+                      min={0}
+                      defaultValue={coupon.anniversary_valid_days_after ?? ""}
+                      onBlur={(e) => updateAnniversaryWindow(coupon.id, "anniversary_valid_days_after", e.target.value)}
+                      placeholder="0"
+                      className="w-12 border border-gray-300 rounded px-1 py-0.5 text-center text-xs focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    />
+                    <span>日後まで有効</span>
                   </div>
                 )}
               </div>

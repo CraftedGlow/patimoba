@@ -17,6 +17,26 @@ export interface Coupon {
   is_active: boolean;
   share_token: string;
   is_anniversary_coupon: boolean;
+  anniversary_valid_days_before: number | null;
+  anniversary_valid_days_after: number | null;
+}
+
+/**
+ * 記念日リマインダー用クーポンは配布タイミングではなく、各顧客の記念日そのものを起点に
+ * 前後◯日間で有効期間を計算する（受け取りから◯日間とは別の仕組み）。
+ * 前後どちらも未設定なら制限なし（null, null）を返す。
+ */
+function computeAnniversaryWindow(
+  coupon: Pick<Coupon, "anniversary_valid_days_before" | "anniversary_valid_days_after">,
+  anniversaryDate: Date
+): { validFrom: string | null; expiresAt: string | null } {
+  const validFrom = coupon.anniversary_valid_days_before
+    ? new Date(anniversaryDate.getTime() - coupon.anniversary_valid_days_before * 24 * 3600 * 1000).toISOString()
+    : null;
+  const expiresAt = coupon.anniversary_valid_days_after
+    ? new Date(anniversaryDate.getTime() + coupon.anniversary_valid_days_after * 24 * 3600 * 1000).toISOString()
+    : null;
+  return { validFrom, expiresAt };
 }
 
 export function formatDiscount(c: Pick<Coupon, "discount_type" | "discount_value">) {
@@ -30,12 +50,17 @@ export function formatDiscount(c: Pick<Coupon, "discount_type" | "discount_value
  * ボタンを押すとそのままLIFFの注文アプリに遷移し、クーポンが自動で紐付いた状態で注文に進める。
  */
 export function buildCouponFlexMessage(
-  coupon: Pick<Coupon, "title" | "discount_type" | "discount_value" | "expires_at" | "share_token" | "store_id">,
+  coupon: Pick<Coupon, "title" | "discount_type" | "discount_value" | "expires_at" | "share_token" | "store_id"> & {
+    valid_from?: string | null;
+  },
   liffId: string,
   heading = "クーポン"
 ) {
-  const expiryLabel = coupon.expires_at
-    ? `${new Date(coupon.expires_at).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}まで`
+  const formatDate = (d: string) => new Date(d).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
+  const expiryLabel = coupon.valid_from
+    ? `${formatDate(coupon.valid_from)}〜${coupon.expires_at ? formatDate(coupon.expires_at) : "無期限"}`
+    : coupon.expires_at
+    ? `${formatDate(coupon.expires_at)}まで`
     : "無期限";
   // miniapp.line.me のシンプルなクエリ形式で開く。liff.line.me に追加パスを
   // 付けた形式だと liff.state 経由の状態受け渡しが必要になり、LINE側が同じ
@@ -116,7 +141,7 @@ export async function reserveCoupon(
     supabaseAdmin.from("coupons").select("*").eq("id", input.couponId).eq("store_id", input.storeId).maybeSingle(),
     supabaseAdmin
       .from("coupon_deliveries")
-      .select("id, used_at")
+      .select("id, used_at, valid_from, expires_at")
       .eq("coupon_id", input.couponId)
       .eq("user_id", input.userId)
       .maybeSingle(),
@@ -124,7 +149,6 @@ export async function reserveCoupon(
 
   if (!coupon) return { ok: false, error: "coupon_not_found" };
   if (!coupon.is_active) return { ok: false, error: "coupon_inactive" };
-  if (!isWithinValidPeriod(coupon, new Date())) return { ok: false, error: "coupon_out_of_period" };
   if (coupon.min_order_amount && input.subtotal < coupon.min_order_amount) {
     return { ok: false, error: "coupon_min_order_amount_not_met" };
   }
@@ -145,6 +169,17 @@ export async function reserveCoupon(
 
   if (!delivery) return { ok: false, error: "coupon_not_held" };
   if (delivery.used_at) return { ok: false, error: "coupon_already_used" };
+
+  // delivery.valid_from/expires_at（受け取りから◯日間 or 記念日前後◯日間）が設定されて
+  // いればそちらを優先し、無ければ coupon 側の固定カレンダー日付で判定する。
+  const effectiveValidFrom = delivery.valid_from ?? coupon.valid_from;
+  const effectiveExpiresAt = delivery.expires_at ?? coupon.expires_at;
+  if (effectiveValidFrom && new Date() < new Date(effectiveValidFrom)) {
+    return { ok: false, error: "coupon_out_of_period" };
+  }
+  if (effectiveExpiresAt && new Date() > new Date(effectiveExpiresAt)) {
+    return { ok: false, error: "coupon_out_of_period" };
+  }
 
   const discountAmount = calcCouponDiscountAmount(coupon, input.subtotal);
 
@@ -216,43 +251,60 @@ export async function finalizeCouponDelivery(deliveryId: string, orderId: string
 
 export type EnsureCouponDeliveryStatus = "issued" | "held" | "used";
 
+export interface EnsureCouponDeliveryResult {
+  status: EnsureCouponDeliveryStatus;
+  validFrom: string | null;
+  expiresAt: string | null;
+}
+
 // 記念日リマインダーは毎年繰り返し送られるため、これより古い使用済みクーポンは
 // 「去年以前に使われたもの」とみなし、新しい年のぶんとして再付与する。
 const ANNIVERSARY_REISSUE_AFTER_DAYS = 300;
 
 /**
- * 記念日リマインダーなど、単発メッセージにクーポンを添えて配る場合の付与処理。
+ * 記念日リマインダー配信時のクーポン付与処理。
  * まだ持っていなければ新規付与し、既に持っていれば重複させず、
  * 直近で使用済みなら再度案内しないよう "used" を返す。
  * ただし十分古い（前年以前とみなせる）使用済みクーポンは、新しい年のぶんとして自動的に再付与する。
+ * 有効期間は「受け取りから◯日間」ではなく、その顧客の記念日（anniversaryDate）を起点に
+ * coupon.anniversary_valid_days_before/after で前後◯日間として計算する。
  */
 export async function ensureCouponDeliveryForReminder(
-  couponId: string,
+  coupon: Pick<Coupon, "id" | "anniversary_valid_days_before" | "anniversary_valid_days_after">,
   userId: string,
+  anniversaryDate: Date,
   supabaseAdmin: AdminClient
-): Promise<EnsureCouponDeliveryStatus> {
+): Promise<EnsureCouponDeliveryResult> {
   const { data: existing } = await supabaseAdmin
     .from("coupon_deliveries")
-    .select("id, used_at")
-    .eq("coupon_id", couponId)
+    .select("id, used_at, valid_from, expires_at")
+    .eq("coupon_id", coupon.id)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (existing) {
-    if (!existing.used_at) return "held";
+    if (!existing.used_at) {
+      return { status: "held", validFrom: existing.valid_from ?? null, expiresAt: existing.expires_at ?? null };
+    }
 
     const usedDaysAgo = (Date.now() - new Date(existing.used_at).getTime()) / (24 * 3600 * 1000);
-    if (usedDaysAgo < ANNIVERSARY_REISSUE_AFTER_DAYS) return "used";
+    if (usedDaysAgo < ANNIVERSARY_REISSUE_AFTER_DAYS) {
+      return { status: "used", validFrom: existing.valid_from ?? null, expiresAt: existing.expires_at ?? null };
+    }
 
+    const { validFrom, expiresAt } = computeAnniversaryWindow(coupon, anniversaryDate);
     await supabaseAdmin
       .from("coupon_deliveries")
-      .update({ used_at: null, order_id: null, discount_amount: 0 })
+      .update({ used_at: null, order_id: null, discount_amount: 0, valid_from: validFrom, expires_at: expiresAt })
       .eq("id", existing.id);
-    return "issued";
+    return { status: "issued", validFrom, expiresAt };
   }
 
-  await supabaseAdmin.from("coupon_deliveries").insert({ coupon_id: couponId, user_id: userId, claim_method: "push" });
-  return "issued";
+  const { validFrom, expiresAt } = computeAnniversaryWindow(coupon, anniversaryDate);
+  await supabaseAdmin
+    .from("coupon_deliveries")
+    .insert({ coupon_id: coupon.id, user_id: userId, claim_method: "push", valid_from: validFrom, expires_at: expiresAt });
+  return { status: "issued", validFrom, expiresAt };
 }
 
 export interface AudienceMember {

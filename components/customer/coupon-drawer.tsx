@@ -12,18 +12,19 @@ function formatDiscount(c: Pick<MyCoupon, "discountType" | "discountValue">) {
 
 function formatValidPeriod(c: Pick<MyCoupon, "validFrom" | "expiresAt">) {
   const now = new Date();
-  const fmt = (d: string) => new Date(d).toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
+  const fmt = (d: string) => new Date(d).toLocaleDateString("ja-JP", { year: "numeric", month: "short", day: "numeric" });
   if (c.validFrom && now < new Date(c.validFrom)) {
     return { notStarted: true, label: `${fmt(c.validFrom)}から利用可能` };
   }
   return { notStarted: false, label: c.expiresAt ? `${fmt(c.expiresAt)}まで有効` : "無期限" };
 }
 
-function conditionLabels(c: Pick<MyCoupon, "minOrderAmount" | "wholeCakeOnly">) {
+function conditionText(c: Pick<MyCoupon, "minOrderAmount" | "wholeCakeOnly">) {
   const parts: string[] = [];
   if (c.minOrderAmount) parts.push(`${c.minOrderAmount.toLocaleString()}円以上`);
-  if (c.wholeCakeOnly) parts.push("ホールケーキ限定");
-  return parts;
+  if (c.wholeCakeOnly) parts.push("ホールケーキ");
+  if (parts.length === 0) return null;
+  return `${parts.join("・")}ご注文の方`;
 }
 
 /**
@@ -84,7 +85,7 @@ export function CouponDrawer() {
           <div className="space-y-3">
             {coupons.map((c) => {
               const period = formatValidPeriod(c);
-              const conditions = conditionLabels(c);
+              const condition = conditionText(c);
               return (
                 <div key={c.deliveryId} className="border border-gray-200 rounded-xl p-3.5">
                   <p className="font-bold text-gray-900 text-sm">{c.title}</p>
@@ -96,14 +97,8 @@ export function CouponDrawer() {
                       {period.label}
                     </span>
                   </div>
-                  {conditions.length > 0 && (
-                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                      {conditions.map((cond) => (
-                        <span key={cond} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
-                          {cond}
-                        </span>
-                      ))}
-                    </div>
+                  {condition && (
+                    <p className="text-xs text-gray-500 mt-1.5">ご利用条件：{condition}</p>
                   )}
                 </div>
               );
@@ -135,7 +130,7 @@ export function CouponDrawer() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl shadow-2xl max-h-[85vh] w-full max-w-md flex flex-col overflow-hidden"
+                className="bg-white rounded-2xl shadow-2xl max-h-[85vh] min-h-[420px] w-full max-w-md flex flex-col overflow-hidden"
               >
                 {panelContent}
               </motion.div>
@@ -146,7 +141,7 @@ export function CouponDrawer() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-3xl max-h-[85vh] flex flex-col"
+              className="fixed inset-x-0 bottom-0 z-[70] bg-white rounded-t-3xl max-h-[85vh] min-h-[420px] flex flex-col"
             >
               {panelContent}
             </motion.div>

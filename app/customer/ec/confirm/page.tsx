@@ -20,6 +20,12 @@ function previewCouponDiscount(c: Pick<MyCouponEligibility, "discountType" | "di
   return calcCouponDiscountAmount({ discount_type: c.discountType, discount_value: c.discountValue }, subtotal);
 }
 
+function couponEligibleLabel(c: Pick<MyCouponEligibility, "discountType" | "discountValue">, subtotal: number) {
+  return c.discountType === "percentage"
+    ? `${c.discountValue}%オフ`
+    : `-${previewCouponDiscount(c, subtotal).toLocaleString()}円`;
+}
+
 async function releaseCoupon(deliveryId: string) {
   try {
     await fetch("/api/coupons/release", {
@@ -790,7 +796,7 @@ export default function ECConfirmPage() {
                     <span className="text-sm flex-1">
                       {c.title}
                       <span className="block text-xs text-gray-900 mt-0.5">
-                        {c.eligible ? `-${previewCouponDiscount(c, subtotal).toLocaleString()}円` : c.reason}
+                        {c.eligible ? couponEligibleLabel(c, subtotal) : c.reason}
                       </span>
                     </span>
                   </label>

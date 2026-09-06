@@ -44,6 +44,8 @@ export interface ProductRegistration {
   noshi_ids: string[]
   message_plate_enabled: boolean
   message_plate_ids: string[]
+  candle_enabled: boolean
+  candle_ids: string[]
   print_decoration_enabled: boolean
   tags: string[] | null
   minVariantPrice?: number
@@ -121,6 +123,8 @@ function mapRow(row: any): ProductRegistration {
     noshi_ids: Array.isArray(row.noshi_ids) ? row.noshi_ids : [],
     message_plate_enabled: row.message_plate_enabled ?? false,
     message_plate_ids: Array.isArray(row.message_plate_ids) ? row.message_plate_ids : [],
+    candle_enabled: row.candle_enabled ?? false,
+    candle_ids: Array.isArray(row.candle_ids) ? row.candle_ids : [],
     print_decoration_enabled: row.print_decoration_enabled ?? false,
     tags: Array.isArray(row.tags) ? row.tags : null,
     minVariantPrice,
@@ -258,6 +262,8 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.noshi_ids !== undefined) payload.noshi_ids = updates.noshi_ids
     if (updates.message_plate_enabled !== undefined) payload.message_plate_enabled = updates.message_plate_enabled
     if (updates.message_plate_ids !== undefined) payload.message_plate_ids = updates.message_plate_ids
+    if (updates.candle_enabled !== undefined) payload.candle_enabled = updates.candle_enabled
+    if (updates.candle_ids !== undefined) payload.candle_ids = updates.candle_ids
     if (updates.limited_from !== undefined) payload.limited_from = updates.limited_from
     if (updates.limited_until !== undefined) payload.limited_until = updates.limited_until
     if (updates.available_days_of_month !== undefined) assign("available_days_of_month", updates.available_days_of_month)

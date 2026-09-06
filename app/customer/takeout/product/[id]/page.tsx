@@ -13,6 +13,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
 import { fetchMessagePlatesByIds, MessagePlateItem } from "@/hooks/use-message-plates";
+import { fetchCandlesByIds, CandleItem } from "@/hooks/use-candles";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const DIGIT_OPTIONS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -32,10 +33,12 @@ export default function TakeoutProductDetailPage() {
   // カスタムオプション
   const [optionSelections, setOptionSelections] = useState<Record<number, string[]>>({});
   const [optionTexts, setOptionTexts] = useState<Record<number, string>>({});
-  // ナンバー型のろうそく: 種類（label）ごとに {digit, qty} の配列を持つ
+  // ろうそく（店舗共通カタログ）
+  const [candleItems, setCandleItems] = useState<CandleItem[]>([]);
+  // ナンバー型のろうそく: candle id ごとに {digit, qty} の配列を持つ
   const [numberCandleSelections, setNumberCandleSelections] = useState<Record<string, {digit: string; qty: number}[]>>({});
-  // ナンバーキャンドルの index（customOptions の何番目か）
-  const [numberCandleOptionIndex, setNumberCandleOptionIndex] = useState<number>(-1);
+  // ノーマル型のろうそく: 選択中の candle id
+  const [selectedNormalCandleIds, setSelectedNormalCandleIds] = useState<string[]>([]);
 
   // のし（3ステップ: デザイン選択 → 用途選択 → 名前入力）
   const [noshiItems, setNoshiItems] = useState<NoshiItem[]>([]);
@@ -66,15 +69,16 @@ export default function TakeoutProductDetailPage() {
 
   const selectedMessagePlateDesign = messagePlateItems.find((m) => m.id === selectedMessagePlateId) ?? null;
 
-  // ナンバーキャンドルのインデックスを特定
   useEffect(() => {
-    if (!product) return;
-    const opts = product.custom_options || [];
-    const idx = opts.findIndex(
-      (o) => o.values.some((v) => v.type === "number" || v.label === "ナンバーキャンドル")
-    );
-    setNumberCandleOptionIndex(idx);
-  }, [product?.id]);
+    if (product?.candle_enabled && product.candle_ids?.length) {
+      fetchCandlesByIds(product.candle_ids).then(setCandleItems);
+    } else {
+      setCandleItems([]);
+    }
+  }, [product?.id, product?.candle_enabled]);
+
+  const numberCandles = candleItems.filter((c) => c.type === "number");
+  const normalCandles = candleItems.filter((c) => c.type !== "number");
 
   const handleStepClick = (step: number) => {
     if (step === 1) router.push("/customer/takeout");
@@ -113,7 +117,6 @@ export default function TakeoutProductDetailPage() {
 
   // 必須項目チェック
   const missingRequired = customOptions.some((opt, i) => {
-    if (i === numberCandleOptionIndex) return false; // ナンバーキャンドルは別管理
     if (!opt.required) return false;
     if (opt.type === "text") return !(optionTexts[i] || "").trim();
     return !(optionSelections[i] && optionSelections[i].length > 0);
@@ -123,15 +126,15 @@ export default function TakeoutProductDetailPage() {
   const noshiAdditional = (useNoshi && selectedNoshiDesign) ? selectedNoshiDesign.price : 0;
   const messagePlateAdditional = (useMessagePlate && selectedMessagePlateDesign) ? selectedMessagePlateDesign.price : 0;
 
+  const candleAdditional =
+    numberCandles.reduce((sum, c) => {
+      const count = (numberCandleSelections[c.id] ?? []).reduce((rs, r) => rs + r.qty, 0);
+      return sum + count * c.price;
+    }, 0) +
+    normalCandles.filter((c) => selectedNormalCandleIds.includes(c.id)).reduce((sum, c) => sum + c.price, 0);
+
   const optionsAdditional = customOptions.reduce((sum, opt, i) => {
     if (opt.type === "text") return sum;
-    if (i === numberCandleOptionIndex) {
-      const numberValues = opt.values.filter((v) => v.type === "number" || (!v.type && v.label === "ナンバーキャンドル"));
-      return sum + numberValues.reduce((s, v) => {
-        const count = (numberCandleSelections[v.label] ?? []).reduce((rs, r) => rs + r.qty, 0);
-        return s + count * v.additional_price;
-      }, 0);
-    }
     const selectedLabels = optionSelections[i] || [];
     return sum + opt.values.filter((v) => selectedLabels.includes(v.label)).reduce((s, v) => s + (v.additional_price || 0), 0);
   }, 0);
@@ -143,19 +146,6 @@ export default function TakeoutProductDetailPage() {
     }
 
     const cartCustomOptions = customOptions.flatMap((opt, i) => {
-      if (i === numberCandleOptionIndex) {
-        const numberValues = opt.values.filter((v) => v.type === "number" || (!v.type && v.label === "ナンバーキャンドル"));
-        return numberValues.flatMap((v) => {
-          const rows = numberCandleSelections[v.label] ?? [];
-          const digits = rows.flatMap((r) => Array(r.qty).fill(r.digit));
-          if (digits.length === 0) return [];
-          return [{
-            name: v.label,
-            values: digits,
-            additionalPrice: digits.length * v.additional_price,
-          }];
-        });
-      }
       if (opt.type === "text") {
         const v = (optionTexts[i] || "").trim();
         return v ? [{ name: opt.name, values: [v], additionalPrice: 0 }] : [];
@@ -165,6 +155,19 @@ export default function TakeoutProductDetailPage() {
       const additionalPrice = opt.values.filter((v) => selectedLabels.includes(v.label)).reduce((s, v) => s + (v.additional_price || 0), 0);
       return [{ name: opt.name, values: selectedLabels, additionalPrice }];
     });
+
+    const candleCartOptions = [
+      ...numberCandles.flatMap((c) => {
+        const rows = numberCandleSelections[c.id] ?? [];
+        const digits = rows.flatMap((r) => Array(r.qty).fill(r.digit));
+        if (digits.length === 0) return [];
+        return [{ name: c.name, values: digits, additionalPrice: digits.length * c.price }];
+      }),
+      ...normalCandles
+        .filter((c) => selectedNormalCandleIds.includes(c.id))
+        .map((c) => ({ name: c.name, values: [c.name], additionalPrice: c.price })),
+    ];
+    cartCustomOptions.push(...candleCartOptions);
 
     const res = addItem({
       productId: product.id,
@@ -278,120 +281,6 @@ export default function TakeoutProductDetailPage() {
           {customOptions.length > 0 && (
             <div className="mt-6 space-y-5">
               {customOptions.map((opt, i) => {
-                // ろうそく専用UI（ナンバー型は数字+本数の追加式、ノーマル型はチェックボックス）
-                if (i === numberCandleOptionIndex) {
-                  const numberValues = opt.values.filter((v) => v.type === "number" || (!v.type && v.label === "ナンバーキャンドル"));
-                  const otherValues = opt.values.filter((v) => !(v.type === "number" || (!v.type && v.label === "ナンバーキャンドル")));
-                  return (
-                    <div key={i} className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-gray-900">{opt.name}</h3>
-                        <span className="text-[10px] font-medium text-gray-500">任意</span>
-                      </div>
-
-                      {/* ナンバー型のろうそく（種類ごとに数字・本数を選んで追加） */}
-                      {numberValues.map((v) => {
-                        const rows = numberCandleSelections[v.label] ?? [];
-                        const subtotal = rows.reduce((s, r) => s + r.qty, 0);
-                        return (
-                          <div key={v.label} className="border border-gray-200 rounded-xl p-3 space-y-3">
-                            <div className="flex items-center gap-2">
-                              {v.image_url && (
-                                <img src={v.image_url} alt={v.label} className="w-8 h-8 rounded-lg object-cover shrink-0" />
-                              )}
-                              <div>
-                                <p className="text-xs font-bold text-gray-700">
-                                  {v.label}
-                                  {v.additional_price > 0 && <span className="ml-1 font-normal text-gray-500">（¥{v.additional_price}/本）</span>}
-                                </p>
-                                <p className="text-xs text-gray-500 mt-0.5">数字と本数を選んで追加してください</p>
-                              </div>
-                            </div>
-
-                            {rows.length > 0 && (
-                              <div className="space-y-2">
-                                {rows.map((row, ri) => (
-                                  <div key={ri} className="flex items-center gap-2">
-                                    <select
-                                      value={row.digit}
-                                      onChange={(e) => setNumberCandleSelections((prev) => ({ ...prev, [v.label]: rows.map((r, j) => j === ri ? { ...r, digit: e.target.value } : r) }))}
-                                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
-                                    >
-                                      {DIGIT_OPTIONS.map((d) => (
-                                        <option key={d} value={d}>{d}</option>
-                                      ))}
-                                    </select>
-                                    <select
-                                      value={row.qty}
-                                      onChange={(e) => setNumberCandleSelections((prev) => ({ ...prev, [v.label]: rows.map((r, j) => j === ri ? { ...r, qty: Number(e.target.value) } : r) }))}
-                                      className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
-                                    >
-                                      {QTY_OPTIONS.map((q) => (
-                                        <option key={q} value={q}>{q}本</option>
-                                      ))}
-                                    </select>
-                                    <button
-                                      type="button"
-                                      onClick={() => setNumberCandleSelections((prev) => ({ ...prev, [v.label]: rows.filter((_, j) => j !== ri) }))}
-                                      className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors text-lg leading-none"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => setNumberCandleSelections((prev) => ({ ...prev, [v.label]: [...rows, { digit: "0", qty: 1 }] }))}
-                              className="w-full border border-dashed border-amber-300 rounded-lg py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors"
-                            >
-                              ＋ 追加
-                            </button>
-
-                            {subtotal > 0 && (
-                              <p className="text-xs text-gray-500">合計 {subtotal}本</p>
-                            )}
-                          </div>
-                        );
-                      })}
-
-                      {/* ノーマル型のろうそく */}
-                      {otherValues.length > 0 && (
-                        <div className="space-y-1.5">
-                          {otherValues.map((v) => {
-                            const active = (optionSelections[i] || []).includes(v.label);
-                            return (
-                              <button
-                                key={v.label}
-                                type="button"
-                                onClick={() => setOptionSelections((prev) => {
-                                  const cur = prev[i] || [];
-                                  return { ...prev, [i]: active ? cur.filter((x) => x !== v.label) : [...cur, v.label] };
-                                })}
-                                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
-                              >
-                                <span className="flex items-center gap-2">
-                                  <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${active ? "border-amber-500 bg-amber-500 text-white" : "border-gray-300"}`}>
-                                    {active && <span className="text-[10px] leading-none">✓</span>}
-                                  </span>
-                                  {v.image_url && (
-                                    <img src={v.image_url} alt="" className="w-6 h-6 rounded object-cover" />
-                                  )}
-                                  {v.label}
-                                </span>
-                                {v.additional_price > 0 && <span className="text-xs text-gray-600">+¥{v.additional_price.toLocaleString()}</span>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                // 通常オプション
                 return (
                   <div key={i} className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -467,6 +356,111 @@ export default function TakeoutProductDetailPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* ろうそく（店舗共通カタログ） */}
+          {product.candle_enabled && candleItems.length > 0 && (
+            <div className="mt-6 space-y-3">
+              <h3 className="text-sm font-bold text-gray-900">ろうそく</h3>
+
+              {/* ナンバー型（種類ごとに数字・本数を選んで追加） */}
+              {numberCandles.map((c) => {
+                const rows = numberCandleSelections[c.id] ?? [];
+                const subtotal = rows.reduce((s, r) => s + r.qty, 0);
+                return (
+                  <div key={c.id} className="border border-gray-200 rounded-xl p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      {c.imageUrl && (
+                        <img src={c.imageUrl} alt={c.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                      )}
+                      <div>
+                        <p className="text-xs font-bold text-gray-700">
+                          {c.name}
+                          {c.price > 0 && <span className="ml-1 font-normal text-gray-500">（¥{c.price}/本）</span>}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">数字と本数を選んで追加してください</p>
+                      </div>
+                    </div>
+
+                    {rows.length > 0 && (
+                      <div className="space-y-2">
+                        {rows.map((row, ri) => (
+                          <div key={ri} className="flex items-center gap-2">
+                            <select
+                              value={row.digit}
+                              onChange={(e) => setNumberCandleSelections((prev) => ({ ...prev, [c.id]: rows.map((r, j) => j === ri ? { ...r, digit: e.target.value } : r) }))}
+                              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                            >
+                              {DIGIT_OPTIONS.map((d) => (
+                                <option key={d} value={d}>{d}</option>
+                              ))}
+                            </select>
+                            <select
+                              value={row.qty}
+                              onChange={(e) => setNumberCandleSelections((prev) => ({ ...prev, [c.id]: rows.map((r, j) => j === ri ? { ...r, qty: Number(e.target.value) } : r) }))}
+                              className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                            >
+                              {QTY_OPTIONS.map((q) => (
+                                <option key={q} value={q}>{q}本</option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => setNumberCandleSelections((prev) => ({ ...prev, [c.id]: rows.filter((_, j) => j !== ri) }))}
+                              className="w-8 h-8 flex items-center justify-center rounded-full text-gray-600 hover:text-red-500 hover:bg-red-50 transition-colors text-lg leading-none"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setNumberCandleSelections((prev) => ({ ...prev, [c.id]: [...rows, { digit: "0", qty: 1 }] }))}
+                      className="w-full border border-dashed border-amber-300 rounded-lg py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors"
+                    >
+                      ＋ 追加
+                    </button>
+
+                    {subtotal > 0 && (
+                      <p className="text-xs text-gray-500">合計 {subtotal}本</p>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* ノーマル型 */}
+              {normalCandles.length > 0 && (
+                <div className="space-y-1.5">
+                  {normalCandles.map((c) => {
+                    const active = selectedNormalCandleIds.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setSelectedNormalCandleIds((prev) =>
+                          active ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                        )}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${active ? "border-amber-400 bg-amber-50 text-gray-900" : "border-gray-200 bg-white text-gray-700 hover:border-amber-300"}`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className={`w-4 h-4 rounded border-2 flex items-center justify-center ${active ? "border-amber-500 bg-amber-500 text-white" : "border-gray-300"}`}>
+                            {active && <span className="text-[10px] leading-none">✓</span>}
+                          </span>
+                          {c.imageUrl && (
+                            <img src={c.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
+                          )}
+                          {c.name}
+                        </span>
+                        {c.price > 0 && <span className="text-xs text-gray-600">+¥{c.price.toLocaleString()}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -665,13 +659,13 @@ export default function TakeoutProductDetailPage() {
                 <>
                   <p className="flex items-baseline gap-0.5">
                     <span className="text-3xl font-bold text-gray-900 tabular-nums">
-                      {((product.base_price + optionsAdditional + noshiAdditional + messagePlateAdditional) * quantity).toLocaleString()}
+                      {((product.base_price + optionsAdditional + noshiAdditional + messagePlateAdditional + candleAdditional) * quantity).toLocaleString()}
                     </span>
                     <span className="text-lg font-bold text-gray-900">円</span>
                   </p>
                   {quantity > 1 && (
                     <p className="text-xs text-gray-500">
-                      ¥{(product.base_price + optionsAdditional + noshiAdditional + messagePlateAdditional).toLocaleString()} × {quantity}
+                      ¥{(product.base_price + optionsAdditional + noshiAdditional + messagePlateAdditional + candleAdditional).toLocaleString()} × {quantity}
                     </p>
                   )}
                 </>

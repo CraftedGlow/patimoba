@@ -94,10 +94,8 @@ export function WholeCakeBasicStep({
     );
   };
 
-  const isNumberCandle = (candleOptionId: string) => {
-    const opt = candleOptions.find((o) => o.id === candleOptionId);
-    return opt?.type === "number" || (!opt?.type && opt?.name === "ナンバーキャンドル");
-  };
+  const isNumberCandle = (candleOptionId: string) =>
+    candleOptions.find((o) => o.id === candleOptionId)?.type === "number";
 
   const showForm = !isPrintMode || !!selectedCakeIdForPrint;
 

@@ -630,6 +630,47 @@ export type Database = {
           },
         ]
       }
+      candles: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          store_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          name: string
+          price?: number
+          store_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          store_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candles_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_plates: {
         Row: {
           created_at: string | null
@@ -1235,6 +1276,8 @@ export type Database = {
           available_days_of_month: number[] | null
           base_price: number
           best_before_days: number | null
+          candle_enabled: boolean
+          candle_ids: string[]
           category_name: string | null
           content_quantity: string | null
           created_at: string
@@ -1282,6 +1325,8 @@ export type Database = {
           available_days_of_month?: number[] | null
           base_price?: number
           best_before_days?: number | null
+          candle_enabled?: boolean
+          candle_ids?: string[]
           category_name?: string | null
           content_quantity?: string | null
           created_at?: string
@@ -1329,6 +1374,8 @@ export type Database = {
           available_days_of_month?: number[] | null
           base_price?: number
           best_before_days?: number | null
+          candle_enabled?: boolean
+          candle_ids?: string[]
           category_name?: string | null
           content_quantity?: string | null
           created_at?: string

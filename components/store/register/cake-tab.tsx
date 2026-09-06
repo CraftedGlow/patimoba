@@ -9,11 +9,11 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
 import { useProductTypes } from "@/hooks/use-product-types";
-import { uploadProductImage, deleteProductImage, uploadCandleImage } from "@/lib/upload-image";
+import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
 import { useNoshi } from "@/hooks/use-noshi";
 import { useMessagePlates } from "@/hooks/use-message-plates";
-import { CANDLE_OPTIONS } from "@/lib/constants/product-master";
+import { useCandles } from "@/hooks/use-candles";
 import { toLocalDateString } from "@/lib/date-utils";
 import { getStoreIdsWithParent, upsertProductStoreOverride, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
 import Link from "next/link";
@@ -47,6 +47,8 @@ interface ProductRow {
   noshi_ids: string[] | null;
   message_plate_enabled: boolean | null;
   message_plate_ids: string[] | null;
+  candle_enabled: boolean | null;
+  candle_ids: string[] | null;
   tags: string[] | null;
   isMasterProduct?: boolean;
 }
@@ -87,7 +89,6 @@ export function CakeTab() {
   const [crossImage, setCrossImage] = useState<string | null>(null);
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingCross, setUploadingCross] = useState(false);
-  const [uploadingCandleIndex, setUploadingCandleIndex] = useState<number | null>(null);
 
   const mainInputRef = useRef<HTMLInputElement>(null);
   const crossInputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +104,8 @@ export function CakeTab() {
   const [noshiIds, setNoshiIds] = useState<string[]>([]);
   const [messagePlateEnabled, setMessagePlateEnabled] = useState(false);
   const [messagePlateIds, setMessagePlateIds] = useState<string[]>([]);
+  const [candleEnabled, setCandleEnabled] = useState(false);
+  const [candleIds, setCandleIds] = useState<string[]>([]);
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(false);
   // ホール用サイズ (product_variants)
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
@@ -130,6 +133,7 @@ export function CakeTab() {
   const { groups: allDecorationGroups } = useDecorationGroups(storeId ?? undefined);
   const { noshiList } = useNoshi(storeId ?? undefined);
   const { messagePlateList } = useMessagePlates(storeId ?? undefined);
+  const { candleList } = useCandles(storeId ?? undefined);
 
   useEffect(() => {
     if (selectedId) return;
@@ -137,12 +141,6 @@ export function CakeTab() {
       setCustomOptions((prev) => {
         if (prev.length > 0) return prev;
         return [
-          {
-            name: "ろうそく",
-            type: "multiple",
-            required: false,
-            values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price, type: c.type, image_url: null })),
-          },
           {
             name: "メッセージプレート",
             type: "text",
@@ -223,6 +221,8 @@ export function CakeTab() {
     setNoshiIds([]);
     setMessagePlateEnabled(false);
     setMessagePlateIds([]);
+    setCandleEnabled(false);
+    setCandleIds([]);
     setPrintDecorationEnabled(false);
     setSelectedTags([]);
     setSizes([]);
@@ -262,6 +262,8 @@ export function CakeTab() {
       setNoshiIds(Array.isArray(p.noshi_ids) ? p.noshi_ids : []);
       setMessagePlateEnabled(p.message_plate_enabled ?? false);
       setMessagePlateIds(Array.isArray(p.message_plate_ids) ? p.message_plate_ids : []);
+      setCandleEnabled(p.candle_enabled ?? false);
+      setCandleIds(Array.isArray(p.candle_ids) ? p.candle_ids : []);
       setPrintDecorationEnabled((p as any).print_decoration_enabled ?? false);
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
@@ -366,6 +368,8 @@ export function CakeTab() {
         noshi_ids: noshiEnabled ? noshiIds : [],
         message_plate_enabled: !isHole && messagePlateEnabled,
         message_plate_ids: !isHole && messagePlateEnabled ? messagePlateIds : [],
+        candle_enabled: candleEnabled,
+        candle_ids: candleEnabled ? candleIds : [],
         print_decoration_enabled: isHole ? printDecorationEnabled : false,
         tags: selectedTags.length > 0 ? selectedTags : null,
       };
@@ -811,47 +815,11 @@ export function CakeTab() {
           </div>
         )}
 
-        {/* ろうそく・メッセージプレート設定（ホールのみ） */}
+        {/* メッセージプレート設定（ホールのみ） */}
         {isHole && (() => {
-          const candleOpt = customOptions.find((o) => o.name === "ろうそく");
-          const hasCandles = !!candleOpt;
-          const candleValues = candleOpt?.values ?? [];
           const msgOpt = customOptions.find((o) => o.name === "メッセージプレート");
           const hasMessagePlate = !!msgOpt;
           const msgRequired = msgOpt?.required ?? false;
-
-          const toggleCandles = (enabled: boolean) => {
-            if (enabled) {
-              setCustomOptions((prev) => {
-                if (prev.some((o) => o.name === "ろうそく")) return prev;
-                return [...prev, { name: "ろうそく", type: "multiple", required: false, values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price, type: c.type, image_url: null })) }];
-              });
-            } else {
-              setCustomOptions((prev) => prev.filter((o) => o.name !== "ろうそく"));
-            }
-          };
-
-          const updateCandleValues = (values: ProductCustomOptionValue[]) => {
-            setCustomOptions((prev) => prev.map((o) => o.name === "ろうそく" ? { ...o, values } : o));
-          };
-
-          const handleCandleImageUpload = async (vi: number, file: File) => {
-            if (!storeId) return;
-            setUploadingCandleIndex(vi);
-            const { url, error: err } = await uploadCandleImage(file, storeId);
-            setUploadingCandleIndex(null);
-            if (err) {
-              setError(`画像アップロード失敗: ${err}`);
-              return;
-            }
-            updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, image_url: url } : vv));
-          };
-
-          const handleCandleImageRemove = async (vi: number) => {
-            const url = candleValues[vi]?.image_url;
-            if (url) await deleteProductImage(url);
-            updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, image_url: null } : vv));
-          };
 
           const msgValues = msgOpt?.values ?? [];
 
@@ -877,111 +845,6 @@ export function CakeTab() {
           return (
             <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-4">
               <span className="text-base font-bold text-amber-800">オプション設定</span>
-
-              {/* ろうそく */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasCandles}
-                    onChange={(e) => toggleCandles(e.target.checked)}
-                    className="w-4 h-4 accent-amber-500"
-                  />
-                  ろうそくを使用する
-                </label>
-                {hasCandles && (
-                  <div className="pl-6 space-y-3">
-                    <p className="text-xs text-gray-500">種類・タイプ・追加料金を設定してください</p>
-                    {candleValues.map((v, vi) => (
-                      <div key={vi} className="border border-gray-200 rounded-lg p-2.5 space-y-2 bg-white">
-                        <div className="flex items-center gap-2">
-                          <label className="shrink-0 w-12 h-12 rounded-lg border border-dashed border-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-gray-50">
-                            {uploadingCandleIndex === vi ? (
-                              <LineSpinner size={16} />
-                            ) : v.image_url ? (
-                              <img src={v.image_url} alt={v.label} className="w-full h-full object-cover" />
-                            ) : (
-                              <ImagePlus className="w-4 h-4 text-gray-400" />
-                            )}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleCandleImageUpload(vi, file);
-                                e.target.value = "";
-                              }}
-                            />
-                          </label>
-                          {v.image_url && (
-                            <button
-                              type="button"
-                              onClick={() => handleCandleImageRemove(vi)}
-                              className="text-[10px] text-gray-400 hover:text-red-500 shrink-0"
-                            >
-                              画像削除
-                            </button>
-                          )}
-                          <input
-                            type="text"
-                            value={v.label}
-                            onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, label: e.target.value } : vv))}
-                            placeholder="ろうそく名"
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
-                          />
-                          <span className="text-xs text-gray-500 shrink-0">+¥</span>
-                          <input
-                            type="number"
-                            value={v.additional_price}
-                            onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 } : vv))}
-                            placeholder="0"
-                            className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-amber-300"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => updateCandleValues(candleValues.filter((_, j) => j !== vi))}
-                            className="text-red-400 hover:text-red-600 shrink-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-4 pl-1">
-                          <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
-                            <input
-                              type="radio"
-                              name={`candle-type-${vi}`}
-                              checked={!(v.type === "number" || (!v.type && v.label === "ナンバーキャンドル"))}
-                              onChange={() => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, type: "normal" } : vv))}
-                              className="accent-amber-500"
-                            />
-                            ノーマル型
-                          </label>
-                          <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
-                            <input
-                              type="radio"
-                              name={`candle-type-${vi}`}
-                              checked={v.type === "number" || (!v.type && v.label === "ナンバーキャンドル")}
-                              onChange={() => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, type: "number" } : vv))}
-                              className="accent-amber-500"
-                            />
-                            ナンバー型
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => updateCandleValues([...candleValues, { label: "", additional_price: 0, type: "normal", image_url: null }])}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-amber-400 text-sm text-amber-700 hover:bg-amber-50"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      ろうそく種類を追加
-                    </button>
-                    <p className="text-xs text-gray-600">※「ナンバー型」に設定した種類は、顧客画面で数字（0〜9）を指定できます</p>
-                  </div>
-                )}
-              </div>
 
               {/* メッセージプレート */}
               <div className="space-y-2">
@@ -1289,6 +1152,62 @@ export function CakeTab() {
                       <span>{n.name}</span>
                       {n.price > 0 && (
                         <span className="text-xs text-gray-600">+¥{n.price.toLocaleString()}</span>
+                      )}
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+
+        {/* ろうそく設定 */}
+        <div className="space-y-2 pt-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={candleEnabled}
+                onChange={(e) => {
+                  setCandleEnabled(e.target.checked);
+                  if (!e.target.checked) setCandleIds([]);
+                }}
+                className="w-4 h-4 accent-amber-500"
+              />
+              ろうそくを使用する
+            </label>
+            {candleEnabled && (
+              <div className="pl-6 space-y-1.5">
+                {candleList.length === 0 ? (
+                  <p className="text-xs text-gray-600">
+                    ろうそくが未登録です。{" "}
+                    <Link href="/store/register" className="text-amber-600 underline">
+                      ろうそく管理
+                    </Link>
+                    タブから登録してください。
+                  </p>
+                ) : (
+                  candleList.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={candleIds.includes(c.id)}
+                        onChange={(e) => {
+                          setCandleIds((prev) =>
+                            e.target.checked ? [...prev, c.id] : prev.filter((id) => id !== c.id)
+                          );
+                        }}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      {c.imageUrl ? (
+                        <img src={c.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
+                      ) : (
+                        <img src="/candle-icon.png" alt="" className="w-6 h-6 opacity-50" />
+                      )}
+                      <span>{c.name}</span>
+                      <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                        {c.type === "number" ? "ナンバー型" : "ノーマル型"}
+                      </span>
+                      {c.price > 0 && (
+                        <span className="text-xs text-gray-600">+¥{c.price.toLocaleString()}</span>
                       )}
                     </label>
                   ))

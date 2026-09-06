@@ -6,14 +6,16 @@ import { CakeTab } from "@/components/store/register/cake-tab";
 import { EcTab } from "@/components/store/register/ec-tab";
 import { NoshiTab } from "@/components/store/register/noshi-tab";
 import { MessagePlateTab } from "@/components/store/register/message-plate-tab";
+import { CandleTab } from "@/components/store/register/candle-tab";
 
-type TabId = "cake" | "ec" | "noshi" | "messagePlate";
+type TabId = "cake" | "ec" | "noshi" | "messagePlate" | "candle";
 
 const tabs: { id: TabId; label: string; shortLabel: string }[] = [
   { id: "cake", label: "テイクアウト", shortLabel: "テイクアウト" },
   { id: "ec", label: "EC商品", shortLabel: "EC" },
   { id: "noshi", label: "のし管理", shortLabel: "のし" },
   { id: "messagePlate", label: "メッセージプレート管理", shortLabel: "プレート" },
+  { id: "candle", label: "ろうそく管理", shortLabel: "ろうそく" },
 ];
 
 export default function StoreRegisterPage() {
@@ -46,7 +48,7 @@ export default function StoreRegisterPage() {
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.15 }}
         >
-          {activeTab === "cake" ? <CakeTab /> : activeTab === "ec" ? <EcTab /> : activeTab === "noshi" ? <NoshiTab /> : <MessagePlateTab />}
+          {activeTab === "cake" ? <CakeTab /> : activeTab === "ec" ? <EcTab /> : activeTab === "noshi" ? <NoshiTab /> : activeTab === "messagePlate" ? <MessagePlateTab /> : <CandleTab />}
         </motion.div>
       </AnimatePresence>
     </div>

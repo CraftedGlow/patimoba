@@ -106,7 +106,7 @@ export function WholeCakeConfirmStep({
                 const opt = candleOptions.find((o) => o.id === c.candleOptionId);
                 if (!opt) return null;
                 const qty = Number(c.quantity);
-                const isNumber = opt.type === "number" || (!opt.type && opt.name === "ナンバーキャンドル");
+                const isNumber = opt.type === "number";
                 const label = isNumber && c.digit ? `${opt.name}(${c.digit})` : opt.name;
                 return (
                   <div key={c.id} className="flex justify-between items-center">

@@ -152,6 +152,8 @@ export interface WholeCakeProduct {
   sameDayOrderAllowed?: boolean
   customOptions: ProductCustomOption[]
   tags: string[]
+  candleEnabled: boolean
+  candleIds: string[]
 }
 
 export interface CartCandleEntry {

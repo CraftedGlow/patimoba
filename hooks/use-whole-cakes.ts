@@ -71,6 +71,8 @@ export function useWholeCakes(storeId?: string) {
           sameDayOrderAllowed: product.same_day_order_allowed ?? false,
           customOptions: Array.isArray(product.custom_options) ? product.custom_options : [],
           tags: Array.isArray(product.tags) ? product.tags : [],
+          candleEnabled: product.candle_enabled ?? false,
+          candleIds: Array.isArray(product.candle_ids) ? product.candle_ids : [],
         }))
 
       setWholeCakes(cakes)

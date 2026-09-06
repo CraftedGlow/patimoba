@@ -20,6 +20,7 @@ import { uploadPrintPhoto } from "@/lib/upload-image";
 import { supabase } from "@/lib/supabase";
 import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
+import { fetchCandlesByIds } from "@/hooks/use-candles";
 import type {
   UICartItem,
   CartCandleEntry,
@@ -108,17 +109,15 @@ export default function WholeCakePage() {
     return wholeCakes[0] ?? null;
   }, [isPrintMode, selectedCakeIdForPrint, wholeCakes, cakeIdParam]);
 
-  // 選択中ケーキの custom_options からろうそく・プレート設定を導出
-  const candleCustomOption = selectedCake?.customOptions?.find((o) => o.name === "ろうそく");
-  const candleOptions: CandleOption[] = (candleCustomOption?.values ?? []).map((v, i) => ({
-    id: String(i),
-    name: v.label,
-    price: v.additional_price,
-    storeId: selectedStoreId ?? "",
-    type: v.type,
-    imageUrl: v.image_url,
-  }));
-  const hasCandles = !!candleCustomOption;
+  // 選択中ケーキの共通ろうそくカタログ選択を解決
+  const [candleOptions, setCandleOptions] = useState<CandleOption[]>([]);
+  useEffect(() => {
+    if (!selectedCake?.candleEnabled || !selectedCake.candleIds.length) { setCandleOptions([]); return; }
+    fetchCandlesByIds(selectedCake.candleIds).then((items) =>
+      setCandleOptions(items.map((c) => ({ id: c.id, name: c.name, price: c.price, storeId: c.storeId, type: c.type, imageUrl: c.imageUrl })))
+    );
+  }, [selectedCake?.id, selectedCake?.candleEnabled, selectedCake?.candleIds]);
+  const hasCandles = !!selectedCake?.candleEnabled && candleOptions.length > 0;
 
   const messagePlateOption = selectedCake?.customOptions?.find((o) => o.name === "メッセージプレート");
   const hasMessagePlate = !!messagePlateOption;
@@ -221,7 +220,7 @@ export default function WholeCakePage() {
       .filter((c) => c.candleOptionId && Number(c.quantity) > 0)
       .map((c) => {
         const opt = candleOptions.find((o) => o.id === c.candleOptionId);
-        const isNumber = opt?.type === "number" || (!opt?.type && opt?.name === "ナンバーキャンドル");
+        const isNumber = opt?.type === "number";
         const name = isNumber && c.digit ? `${opt?.name}(${c.digit})` : opt?.name || "";
         return {
           candleOptionId: c.candleOptionId,

@@ -39,6 +39,15 @@ function computeAnniversaryWindow(
   return { validFrom, expiresAt };
 }
 
+/**
+ * クーポンはマスター店舗と子店舗で共有されるため（商品・デコレーション等と同様）、
+ * 子店舗のstoreIdで検証する場合は親（マスター）店舗のIDも対象に含める。
+ */
+export async function resolveStoreIdsWithParent(storeId: string, supabaseAdmin: AdminClient): Promise<string[]> {
+  const { data } = await supabaseAdmin.from("stores").select("parent_store_id").eq("id", storeId).maybeSingle();
+  return data?.parent_store_id ? [storeId, data.parent_store_id] : [storeId];
+}
+
 export function formatDiscount(c: Pick<Coupon, "discount_type" | "discount_value">) {
   return c.discount_type === "percentage"
     ? `${c.discount_value}% OFF`
@@ -137,8 +146,10 @@ export async function reserveCoupon(
   input: ReserveCouponInput,
   supabaseAdmin: AdminClient
 ): Promise<ReserveCouponResult> {
+  const storeIds = await resolveStoreIdsWithParent(input.storeId, supabaseAdmin);
+
   const [{ data: coupon }, { data: delivery }] = await Promise.all([
-    supabaseAdmin.from("coupons").select("*").eq("id", input.couponId).eq("store_id", input.storeId).maybeSingle(),
+    supabaseAdmin.from("coupons").select("*").eq("id", input.couponId).in("store_id", storeIds).maybeSingle(),
     supabaseAdmin
       .from("coupon_deliveries")
       .select("id, used_at, valid_from, expires_at")
@@ -160,7 +171,7 @@ export async function reserveCoupon(
       .from("products")
       .select("id")
       .in("id", productIds)
-      .eq("store_id", input.storeId)
+      .in("store_id", storeIds)
       .eq("is_preorder_required", true);
     if (!wholeCakeProducts || wholeCakeProducts.length === 0) {
       return { ok: false, error: "coupon_whole_cake_only" };

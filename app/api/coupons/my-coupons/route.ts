@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resolveStoreIdsWithParent } from "@/lib/coupons";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,11 +14,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "userId and storeId required" }, { status: 400 });
   }
 
+  // クーポンはマスター店舗と子店舗で共有されるため、子店舗のstoreIdで見ている場合も
+  // マスター店舗が発行したクーポンを対象に含める
+  const storeIds = await resolveStoreIdsWithParent(storeId, supabaseAdmin);
+
   const { data, error } = await supabaseAdmin
     .from("coupon_deliveries")
     .select("id, valid_from, expires_at, coupon:coupons!inner(id, title, discount_type, discount_value, valid_from, expires_at, min_order_amount, whole_cake_only, is_active, store_id)")
     .eq("user_id", userId)
-    .eq("coupon.store_id", storeId)
+    .in("coupon.store_id", storeIds)
     .eq("coupon.is_active", true)
     .is("used_at", null);
 

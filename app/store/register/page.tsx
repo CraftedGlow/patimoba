@@ -23,21 +23,25 @@ export default function StoreRegisterPage() {
 
   return (
     <div className="p-4 lg:p-6">
-      <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-5 py-2.5 text-sm font-bold border-b-2 transition-colors -mb-px whitespace-nowrap shrink-0 ${
-              activeTab === tab.id
-                ? "border-amber-400 text-amber-500"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <span className="sm:hidden">{tab.shortLabel}</span>
-            <span className="hidden sm:inline">{tab.label}</span>
-          </button>
-        ))}
+      <div className="relative mb-6">
+        <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-5 py-2.5 text-sm font-bold border-b-2 transition-colors -mb-px whitespace-nowrap shrink-0 ${
+                activeTab === tab.id
+                  ? "border-amber-400 text-amber-500"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <span className="sm:hidden">{tab.shortLabel}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+        {/* スマホ幅で右にスクロールできることが分かるようフェードを表示 */}
+        <div className="pointer-events-none absolute right-0 top-0 bottom-px w-8 bg-gradient-to-l from-white to-transparent sm:hidden" />
       </div>
 
       <AnimatePresence mode="wait">

@@ -94,8 +94,10 @@ export function WholeCakeBasicStep({
     );
   };
 
-  const isNumberCandle = (candleOptionId: string) =>
-    candleOptions.find((o) => o.id === candleOptionId)?.name === "ナンバーキャンドル";
+  const isNumberCandle = (candleOptionId: string) => {
+    const opt = candleOptions.find((o) => o.id === candleOptionId);
+    return opt?.type === "number" || (!opt?.type && opt?.name === "ナンバーキャンドル");
+  };
 
   const showForm = !isPrintMode || !!selectedCakeIdForPrint;
 
@@ -193,27 +195,49 @@ export function WholeCakeBasicStep({
                   <span className="text-xs text-gray-400">複数選択可能です</span>
                 </div>
 
-                {candles.map((candle) => (
-                  <div key={candle.id} className="mb-3">
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={candle.candleOptionId}
-                        onChange={(e) => updateCandle(candle.id, "candleOptionId", e.target.value)}
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                      >
-                        <option value="">種類を選択</option>
-                        {candleOptions.map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.name} &yen;{opt.price.toLocaleString()}
-                          </option>
-                        ))}
-                      </select>
+                {candles.map((candle) => {
+                  return (
+                  <div key={candle.id} className="mb-4 border border-gray-200 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-medium text-gray-500">種類を選択</p>
                       <button
                         onClick={() => removeCandle(candle.id)}
                         className="shrink-0 text-gray-400 hover:text-gray-600 p-1"
                       >
                         <X className="w-5 h-5" />
                       </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {candleOptions.map((opt) => {
+                        const isSelected = candle.candleOptionId === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => updateCandle(candle.id, "candleOptionId", opt.id)}
+                            className={`relative rounded-xl overflow-hidden border-2 transition-colors text-left ${
+                              isSelected ? "border-amber-400" : "border-gray-200 hover:border-amber-200"
+                            }`}
+                          >
+                            <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                              {opt.imageUrl ? (
+                                <img src={opt.imageUrl} alt={opt.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <img src="/candle-icon.png" alt="" className="w-7 h-7 opacity-50" />
+                              )}
+                            </div>
+                            {isSelected && (
+                              <div className="absolute top-1 right-1 w-4 h-4 bg-amber-400 rounded-full flex items-center justify-center">
+                                <Check className="w-2.5 h-2.5 text-white" />
+                              </div>
+                            )}
+                            <div className="p-1.5">
+                              <p className="text-[10px] leading-tight line-clamp-2">{opt.name}</p>
+                              <p className="text-[10px] text-amber-600 font-bold">&yen;{opt.price.toLocaleString()}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                     {candle.candleOptionId && (
                       <div className="flex items-center gap-2 mt-2">
@@ -243,7 +267,8 @@ export function WholeCakeBasicStep({
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
 
                 <div className="flex justify-center">
                   <motion.button

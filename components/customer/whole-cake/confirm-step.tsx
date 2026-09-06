@@ -106,11 +106,12 @@ export function WholeCakeConfirmStep({
                 const opt = candleOptions.find((o) => o.id === c.candleOptionId);
                 if (!opt) return null;
                 const qty = Number(c.quantity);
-                const isNumber = opt.name === "ナンバーキャンドル";
+                const isNumber = opt.type === "number" || (!opt.type && opt.name === "ナンバーキャンドル");
                 const label = isNumber && c.digit ? `${opt.name}(${c.digit})` : opt.name;
                 return (
                   <div key={c.id} className="flex justify-between items-center">
-                    <span className="text-sm">
+                    <span className="text-sm flex items-center gap-1.5">
+                      {opt.imageUrl && <img src={opt.imageUrl} alt="" className="w-5 h-5 rounded object-cover" />}
                       {label} x{qty}本
                     </span>
                     <span className="text-sm">&yen;{(opt.price * qty).toLocaleString()}</span>

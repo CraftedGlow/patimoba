@@ -15,6 +15,7 @@ export interface CandleOptionConst {
   name: string
   price: number
   sortOrder: number
+  type: "number" | "normal"
 }
 
 export interface ProductCategoryConst {
@@ -36,9 +37,9 @@ export const PRODUCT_TYPES: ProductTypeConst[] = [
 
 /** ろうそくオプション (旧 candle_options テーブル) */
 export const CANDLE_OPTIONS: CandleOptionConst[] = [
-  { id: "1", name: "ナンバーキャンドル", price: 150, sortOrder: 1 },
-  { id: "2", name: "ノーマルキャンドル(大)", price: 0, sortOrder: 2 },
-  { id: "3", name: "ノーマルキャンドル(小)", price: 0, sortOrder: 3 },
+  { id: "1", name: "ナンバーキャンドル", price: 150, sortOrder: 1, type: "number" },
+  { id: "2", name: "ノーマルキャンドル(大)", price: 0, sortOrder: 2, type: "normal" },
+  { id: "3", name: "ノーマルキャンドル(小)", price: 0, sortOrder: 3, type: "normal" },
 ]
 
 /** 商品カテゴリ (旧 product_categories テーブル) */

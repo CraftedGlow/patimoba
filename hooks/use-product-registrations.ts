@@ -8,6 +8,8 @@ export interface ProductCustomOptionValue {
   label: string
   additional_price: number
   print_short_name?: string
+  type?: "number" | "normal"
+  image_url?: string | null
 }
 
 export interface ProductCustomOption {
@@ -80,6 +82,8 @@ function normalizeCustomOptions(raw: unknown): ProductCustomOption[] {
             .map((v: any) => ({
               label: String(v.label ?? ""),
               additional_price: Number(v.additional_price) || 0,
+              ...(v.type === "number" || v.type === "normal" ? { type: v.type } : {}),
+              ...(v.image_url ? { image_url: String(v.image_url) } : {}),
             }))
         : [],
     }))

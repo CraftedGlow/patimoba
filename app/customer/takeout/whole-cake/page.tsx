@@ -115,6 +115,8 @@ export default function WholeCakePage() {
     name: v.label,
     price: v.additional_price,
     storeId: selectedStoreId ?? "",
+    type: v.type,
+    imageUrl: v.image_url,
   }));
   const hasCandles = !!candleCustomOption;
 
@@ -219,7 +221,7 @@ export default function WholeCakePage() {
       .filter((c) => c.candleOptionId && Number(c.quantity) > 0)
       .map((c) => {
         const opt = candleOptions.find((o) => o.id === c.candleOptionId);
-        const isNumber = opt?.name === "ナンバーキャンドル";
+        const isNumber = opt?.type === "number" || (!opt?.type && opt?.name === "ナンバーキャンドル");
         const name = isNumber && c.digit ? `${opt?.name}(${c.digit})` : opt?.name || "";
         return {
           candleOptionId: c.candleOptionId,

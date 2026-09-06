@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
 import { useProductTypes } from "@/hooks/use-product-types";
-import { uploadProductImage, deleteProductImage } from "@/lib/upload-image";
+import { uploadProductImage, deleteProductImage, uploadCandleImage } from "@/lib/upload-image";
 import { useDecorationGroups, setProductDecorationGroups, getProductGroupIds } from "@/hooks/use-decoration-groups";
 import { useNoshi } from "@/hooks/use-noshi";
 import { useMessagePlates } from "@/hooks/use-message-plates";
@@ -87,6 +87,7 @@ export function CakeTab() {
   const [crossImage, setCrossImage] = useState<string | null>(null);
   const [uploadingMain, setUploadingMain] = useState(false);
   const [uploadingCross, setUploadingCross] = useState(false);
+  const [uploadingCandleIndex, setUploadingCandleIndex] = useState<number | null>(null);
 
   const mainInputRef = useRef<HTMLInputElement>(null);
   const crossInputRef = useRef<HTMLInputElement>(null);
@@ -140,7 +141,7 @@ export function CakeTab() {
             name: "ろうそく",
             type: "multiple",
             required: false,
-            values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price })),
+            values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price, type: c.type, image_url: null })),
           },
           {
             name: "メッセージプレート",
@@ -823,7 +824,7 @@ export function CakeTab() {
             if (enabled) {
               setCustomOptions((prev) => {
                 if (prev.some((o) => o.name === "ろうそく")) return prev;
-                return [...prev, { name: "ろうそく", type: "multiple", required: false, values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price })) }];
+                return [...prev, { name: "ろうそく", type: "multiple", required: false, values: CANDLE_OPTIONS.map((c) => ({ label: c.name, additional_price: c.price, type: c.type, image_url: null })) }];
               });
             } else {
               setCustomOptions((prev) => prev.filter((o) => o.name !== "ろうそく"));
@@ -832,6 +833,24 @@ export function CakeTab() {
 
           const updateCandleValues = (values: ProductCustomOptionValue[]) => {
             setCustomOptions((prev) => prev.map((o) => o.name === "ろうそく" ? { ...o, values } : o));
+          };
+
+          const handleCandleImageUpload = async (vi: number, file: File) => {
+            if (!storeId) return;
+            setUploadingCandleIndex(vi);
+            const { url, error: err } = await uploadCandleImage(file, storeId);
+            setUploadingCandleIndex(null);
+            if (err) {
+              setError(`画像アップロード失敗: ${err}`);
+              return;
+            }
+            updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, image_url: url } : vv));
+          };
+
+          const handleCandleImageRemove = async (vi: number) => {
+            const url = candleValues[vi]?.image_url;
+            if (url) await deleteProductImage(url);
+            updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, image_url: null } : vv));
           };
 
           const msgValues = msgOpt?.values ?? [];
@@ -871,43 +890,95 @@ export function CakeTab() {
                   ろうそくを使用する
                 </label>
                 {hasCandles && (
-                  <div className="pl-6 space-y-2">
-                    <p className="text-xs text-gray-500">種類と追加料金を設定してください</p>
+                  <div className="pl-6 space-y-3">
+                    <p className="text-xs text-gray-500">種類・タイプ・追加料金を設定してください</p>
                     {candleValues.map((v, vi) => (
-                      <div key={vi} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={v.label}
-                          onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, label: e.target.value } : vv))}
-                          placeholder="ろうそく名"
-                          className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
-                        />
-                        <span className="text-xs text-gray-500 shrink-0">+¥</span>
-                        <input
-                          type="number"
-                          value={v.additional_price}
-                          onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 } : vv))}
-                          placeholder="0"
-                          className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-amber-300"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateCandleValues(candleValues.filter((_, j) => j !== vi))}
-                          className="text-red-400 hover:text-red-600 shrink-0"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                      <div key={vi} className="border border-gray-200 rounded-lg p-2.5 space-y-2 bg-white">
+                        <div className="flex items-center gap-2">
+                          <label className="shrink-0 w-12 h-12 rounded-lg border border-dashed border-gray-300 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-gray-50">
+                            {uploadingCandleIndex === vi ? (
+                              <LineSpinner size={16} />
+                            ) : v.image_url ? (
+                              <img src={v.image_url} alt={v.label} className="w-full h-full object-cover" />
+                            ) : (
+                              <ImagePlus className="w-4 h-4 text-gray-400" />
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleCandleImageUpload(vi, file);
+                                e.target.value = "";
+                              }}
+                            />
+                          </label>
+                          {v.image_url && (
+                            <button
+                              type="button"
+                              onClick={() => handleCandleImageRemove(vi)}
+                              className="text-[10px] text-gray-400 hover:text-red-500 shrink-0"
+                            >
+                              画像削除
+                            </button>
+                          )}
+                          <input
+                            type="text"
+                            value={v.label}
+                            onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, label: e.target.value } : vv))}
+                            placeholder="ろうそく名"
+                            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
+                          />
+                          <span className="text-xs text-gray-500 shrink-0">+¥</span>
+                          <input
+                            type="number"
+                            value={v.additional_price}
+                            onChange={(e) => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, additional_price: parseInt(e.target.value, 10) || 0 } : vv))}
+                            placeholder="0"
+                            className="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right focus:ring-2 focus:ring-amber-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateCandleValues(candleValues.filter((_, j) => j !== vi))}
+                            className="text-red-400 hover:text-red-600 shrink-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-4 pl-1">
+                          <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`candle-type-${vi}`}
+                              checked={!(v.type === "number" || (!v.type && v.label === "ナンバーキャンドル"))}
+                              onChange={() => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, type: "normal" } : vv))}
+                              className="accent-amber-500"
+                            />
+                            ノーマル型
+                          </label>
+                          <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`candle-type-${vi}`}
+                              checked={v.type === "number" || (!v.type && v.label === "ナンバーキャンドル")}
+                              onChange={() => updateCandleValues(candleValues.map((vv, j) => j === vi ? { ...vv, type: "number" } : vv))}
+                              className="accent-amber-500"
+                            />
+                            ナンバー型
+                          </label>
+                        </div>
                       </div>
                     ))}
                     <button
                       type="button"
-                      onClick={() => updateCandleValues([...candleValues, { label: "", additional_price: 0 }])}
+                      onClick={() => updateCandleValues([...candleValues, { label: "", additional_price: 0, type: "normal", image_url: null }])}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-amber-400 text-sm text-amber-700 hover:bg-amber-50"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       ろうそく種類を追加
                     </button>
-                    <p className="text-xs text-gray-600">※「ナンバーキャンドル」という名前の種類は、顧客画面で数字（0〜9）を指定できます</p>
+                    <p className="text-xs text-gray-600">※「ナンバー型」に設定した種類は、顧客画面で数字（0〜9）を指定できます</p>
                   </div>
                 )}
               </div>

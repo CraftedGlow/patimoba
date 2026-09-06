@@ -3,7 +3,6 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import Image from "next/image"
 import type { Database } from "@/lib/database.types"
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"]
@@ -56,14 +55,6 @@ export function LineCallbackClient({
         transition={{ duration: 0.45 }}
         className="flex flex-col items-center gap-8"
       >
-        <Image
-          src="/パティモバ　ロゴ.png"
-          alt="パティモバ"
-          width={280}
-          height={93}
-          className="h-14 w-auto"
-          priority
-        />
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-[#06C755] border-t-transparent rounded-full animate-spin" />
           <p className="text-base font-bold text-gray-900">ログイン中...</p>

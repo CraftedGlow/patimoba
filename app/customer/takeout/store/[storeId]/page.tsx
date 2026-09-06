@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarDays, MapPin, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
-import Image from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { getLiffId, getLiffStoreInfo } from "@/lib/get-liff-id";
@@ -397,29 +396,20 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <div className="flex-1 relative flex items-center justify-center px-8">
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="absolute top-10 left-0 right-0 flex justify-center"
-          >
-            {store?.logoUrl ? (
+          {store?.logoUrl && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="absolute top-10 left-0 right-0 flex justify-center"
+            >
               <img
                 src={store.logoUrl}
                 alt={store.name}
                 className="w-[200px] h-auto max-h-24 object-contain"
               />
-            ) : (
-              <Image
-                src="/パティモバ　ロゴ.png"
-                alt="パティモバ"
-                width={200}
-                height={57}
-                className="w-[200px] h-auto"
-                priority
-              />
-            )}
-          </motion.div>
+            </motion.div>
+          )}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

@@ -789,7 +789,7 @@ export default function ECConfirmPage() {
                       className="w-5 h-5 accent-[var(--ec-500,#f59e0b)]" />
                     <span className="text-sm flex-1">
                       {c.title}
-                      <span className="block text-xs text-gray-500 mt-0.5">
+                      <span className="block text-xs text-gray-900 mt-0.5">
                         {c.eligible ? `-${previewCouponDiscount(c, subtotal).toLocaleString()}円` : c.reason}
                       </span>
                     </span>

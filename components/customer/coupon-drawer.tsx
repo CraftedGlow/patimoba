@@ -82,6 +82,7 @@ export function CouponDrawer() {
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto px-6 py-4">
+          <p className="text-sm text-gray-900 mb-3">ご利用の際は、注文確認ページでお選びいただけます</p>
           <div className="space-y-3">
             {coupons.map((c) => {
               const period = formatValidPeriod(c);

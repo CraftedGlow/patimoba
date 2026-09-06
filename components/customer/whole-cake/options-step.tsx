@@ -191,7 +191,7 @@ export function WholeCakeOptionsStep({
                           }`}
                         >
                           {/* 画像 */}
-                          <div className="w-full aspect-[1/0.98] bg-gray-100 flex items-center justify-center overflow-hidden">
+                          <div className={`w-full aspect-[1/0.98] flex items-center justify-center overflow-hidden ${(deco.imageUrl || deco.category === "print") ? "bg-gray-100" : "bg-white"}`}>
                             {deco.imageUrl ? (
                               <img
                                 src={deco.imageUrl}

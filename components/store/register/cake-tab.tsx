@@ -1160,7 +1160,8 @@ export function CakeTab() {
             )}
           </div>
 
-        {/* ろうそく設定 */}
+        {/* ろうそく設定（ホールのみ） */}
+        {isHole && (
         <div className="space-y-2 pt-2">
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
               <input
@@ -1200,7 +1201,7 @@ export function CakeTab() {
                       {c.imageUrl ? (
                         <img src={c.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
                       ) : (
-                        <img src="/candle-icon.png" alt="" className="w-6 h-6 opacity-50" />
+                        <img src="/candle-icon.png" alt="" className="w-6 h-6" />
                       )}
                       <span>{c.name}</span>
                       <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
@@ -1215,6 +1216,7 @@ export function CakeTab() {
               </div>
             )}
           </div>
+        )}
 
         {/* メッセージプレート設定（ホール以外） */}
         {!isHole && (

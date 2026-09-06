@@ -217,11 +217,11 @@ export function WholeCakeBasicStep({
                               isSelected ? "border-amber-400" : "border-gray-200 hover:border-amber-200"
                             }`}
                           >
-                            <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                            <div className={`aspect-square flex items-center justify-center ${opt.imageUrl ? "bg-gray-100" : "bg-white"}`}>
                               {opt.imageUrl ? (
                                 <img src={opt.imageUrl} alt={opt.name} className="w-full h-full object-cover" />
                               ) : (
-                                <img src="/candle-icon.png" alt="" className="w-7 h-7 opacity-50" />
+                                <img src="/candle-icon.png" alt="" className="w-8 h-8" />
                               )}
                             </div>
                             {isSelected && (

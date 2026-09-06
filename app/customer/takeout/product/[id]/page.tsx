@@ -69,13 +69,14 @@ export default function TakeoutProductDetailPage() {
 
   const selectedMessagePlateDesign = messagePlateItems.find((m) => m.id === selectedMessagePlateId) ?? null;
 
+  // ホールケーキの「ろうそく」は次のカスタマイズフロー（whole-cake/page.tsx）側で選ぶため、詳細ページでは取得しない
   useEffect(() => {
-    if (product?.candle_enabled && product.candle_ids?.length) {
+    if (!product?.is_preorder_required && product?.candle_enabled && product.candle_ids?.length) {
       fetchCandlesByIds(product.candle_ids).then(setCandleItems);
     } else {
       setCandleItems([]);
     }
-  }, [product?.id, product?.candle_enabled]);
+  }, [product?.id, product?.candle_enabled, product?.is_preorder_required]);
 
   const numberCandles = candleItems.filter((c) => c.type === "number");
   const normalCandles = candleItems.filter((c) => c.type !== "number");

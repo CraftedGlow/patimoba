@@ -228,11 +228,11 @@ export function CandleTab() {
                         : "bg-gray-50 border-transparent"
                     }`}
                   >
-                    <div className="w-9 h-9 rounded bg-gray-100 flex-shrink-0 mt-0.5 overflow-hidden flex items-center justify-center">
+                    <div className={`w-9 h-9 rounded flex-shrink-0 mt-0.5 overflow-hidden flex items-center justify-center ${item.imageUrl ? "bg-gray-100" : ""}`}>
                       {item.imageUrl ? (
                         <img src={item.imageUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <img src="/candle-icon.png" alt="" className="w-5 h-5 opacity-50" />
+                        <img src="/candle-icon.png" alt="" className="w-6 h-6" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

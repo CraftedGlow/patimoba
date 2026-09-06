@@ -274,6 +274,14 @@ export default function TakeoutConfirmPage() {
   const couponDiscountAmount = selectedCoupon ? previewCouponDiscount(selectedCoupon, subtotal) : 0;
   const total = Math.max(0, subtotal - usedPoints - couponDiscountAmount);
 
+  // 金額条件だけが未達のクーポンのうち、一番あと少しで使えるようになるものを表示する
+  const nearMissCoupon = couponEligibility
+    .filter((c) => c.failureReason === "min_order_amount" && c.minOrderAmount != null)
+    .reduce<MyCouponEligibility | null>((best, c) => {
+      if (!best) return c;
+      return c.minOrderAmount! - subtotal < best.minOrderAmount! - subtotal ? c : best;
+    }, null);
+
   const productIdsKey = cartItems.map((i) => i.productId).filter(Boolean).sort().join(",");
   useEffect(() => {
     const productIds = productIdsKey ? productIdsKey.split(",") : [];
@@ -769,6 +777,11 @@ export default function TakeoutConfirmPage() {
             {hasOmakaseItem && (
               <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
                 おまかせ商品が含まれているため、上記の金額は目安です。実際の金額は内容に応じて店頭にて確定いたします。
+              </p>
+            )}
+            {nearMissCoupon && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                あと{(nearMissCoupon.minOrderAmount! - subtotal).toLocaleString()}円のご注文で「{nearMissCoupon.title}」が使えます
               </p>
             )}
             <div className="flex justify-between items-start">

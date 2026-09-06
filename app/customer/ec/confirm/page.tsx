@@ -233,6 +233,14 @@ export default function ECConfirmPage() {
   const total = Math.max(0, subtotal - usedPoints - couponDiscountAmount) + shippingFee;
   const earnedPoints = Math.floor((subtotal - usedPoints) / 200); // 100円 = 0.5pt。送料分にはポイントを付与しない
 
+  // 金額条件だけが未達のクーポンのうち、一番あと少しで使えるようになるものを表示する
+  const nearMissCoupon = couponEligibility
+    .filter((c) => c.failureReason === "min_order_amount" && c.minOrderAmount != null)
+    .reduce<MyCouponEligibility | null>((best, c) => {
+      if (!best) return c;
+      return c.minOrderAmount! - subtotal < best.minOrderAmount! - subtotal ? c : best;
+    }, null);
+
   const productIdsKey = cartItems.map((i) => i.productId).filter(Boolean).sort().join(",");
   useEffect(() => {
     const productIds = productIdsKey ? productIdsKey.split(",") : [];
@@ -668,6 +676,11 @@ export default function ECConfirmPage() {
                 <span className="text-base ml-0.5">円</span>
               </div>
             </div>
+            {nearMissCoupon && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                あと{(nearMissCoupon.minOrderAmount! - subtotal).toLocaleString()}円のご注文で「{nearMissCoupon.title}」が使えます
+              </p>
+            )}
             <div className="flex justify-between items-start">
               <span className="text-sm font-bold">獲得予定ポイント</span>
               <div className="text-right">

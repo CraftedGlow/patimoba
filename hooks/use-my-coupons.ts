@@ -15,9 +15,12 @@ export interface MyCoupon {
   wholeCakeOnly: boolean
 }
 
+export type CouponFailureReason = "not_started" | "expired" | "min_order_amount" | "whole_cake_only" | null
+
 export interface MyCouponEligibility extends MyCoupon {
   eligible: boolean
   reason: string | null
+  failureReason: CouponFailureReason
 }
 
 interface UseMyCouponsOptions {
@@ -66,18 +69,18 @@ export function useMyCoupons({ userId, storeId }: UseMyCouponsOptions) {
       const now = new Date()
       return coupons.map((c) => {
         if (c.validFrom && now < new Date(c.validFrom)) {
-          return { ...c, eligible: false, reason: "まだ利用開始前です" }
+          return { ...c, eligible: false, reason: "まだ利用開始前です", failureReason: "not_started" as const }
         }
         if (c.expiresAt && now > new Date(c.expiresAt)) {
-          return { ...c, eligible: false, reason: "有効期限が切れています" }
+          return { ...c, eligible: false, reason: "有効期限が切れています", failureReason: "expired" as const }
         }
         if (c.minOrderAmount && subtotal < c.minOrderAmount) {
-          return { ...c, eligible: false, reason: `${c.minOrderAmount.toLocaleString()}円以上のご注文で利用可能です` }
+          return { ...c, eligible: false, reason: `${c.minOrderAmount.toLocaleString()}円以上のご注文で利用可能です`, failureReason: "min_order_amount" as const }
         }
         if (c.wholeCakeOnly && !hasWholeCakeProduct) {
-          return { ...c, eligible: false, reason: "ホールケーキのご注文で利用可能です" }
+          return { ...c, eligible: false, reason: "ホールケーキのご注文で利用可能です", failureReason: "whole_cake_only" as const }
         }
-        return { ...c, eligible: true, reason: null }
+        return { ...c, eligible: true, reason: null, failureReason: null }
       })
     },
     [coupons]

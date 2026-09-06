@@ -1,8 +1,9 @@
 "use client";
 
-import { User, ShoppingCart, ArrowLeft } from "lucide-react";
+import { User, ShoppingCart, ArrowLeft, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/cart-context";
+import { useOptionalCouponBadge } from "@/lib/coupon-badge-context";
 import { useRouter } from "next/navigation";
 
 interface CustomerHeaderProps {
@@ -29,6 +30,7 @@ export function CustomerHeader({
   backHref,
 }: CustomerHeaderProps) {
   const { itemCount } = useCart();
+  const couponBadge = useOptionalCouponBadge();
   const router = useRouter();
 
   const handleBack = () => {
@@ -76,6 +78,19 @@ export function CustomerHeader({
             <span className="font-bold text-[var(--ec-header-text,#111827)] text-sm tracking-wide">
               {points.toLocaleString()}PT
             </span>
+          )}
+          {couponBadge && couponBadge.count > 0 && (
+            <button onClick={couponBadge.openDrawer} className="relative">
+              <Ticket className="w-6 h-6 text-[var(--ec-header-text,#111827)]" />
+              <motion.span
+                key={couponBadge.count}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold min-w-[18px] min-h-[18px] rounded-full flex items-center justify-center leading-none px-1"
+              >
+                {couponBadge.count > 99 ? "99+" : couponBadge.count}
+              </motion.span>
+            </button>
           )}
           {showCart && (
             <button onClick={onCartClick} className="relative">

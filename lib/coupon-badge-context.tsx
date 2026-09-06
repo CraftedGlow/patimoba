@@ -28,10 +28,18 @@ export function CouponBadgeProvider({ children }: { children: ReactNode }) {
   })
   const [open, setOpen] = useState(false)
 
-  // 保有していても期限切れのものはバッジ・ドロワーどちらからも除外する（開始日前のものは「持っている」ので含める）
+  // 保有していても期限切れのものはバッジ・ドロワーどちらからも除外する（開始日前のものは「持っている」ので含める）。
+  // 期限が近いものほど上に表示し、無期限のものは一番後ろに回す。
   const activeCoupons = useMemo(() => {
     const now = new Date()
-    return coupons.filter((c) => !c.expiresAt || now <= new Date(c.expiresAt))
+    return coupons
+      .filter((c) => !c.expiresAt || now <= new Date(c.expiresAt))
+      .sort((a, b) => {
+        if (!a.expiresAt && !b.expiresAt) return 0
+        if (!a.expiresAt) return 1
+        if (!b.expiresAt) return -1
+        return new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()
+      })
   }, [coupons])
 
   return (

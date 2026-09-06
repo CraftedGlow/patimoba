@@ -128,6 +128,7 @@ export default function CouponClaimedPage() {
               <p className="text-sm text-gray-900">ご利用条件：{conditionText(claimed)}</p>
             )}
             <p className="text-sm text-gray-900">有効期限：{validPeriodText(claimed)}</p>
+            <p className="text-sm text-gray-900">店頭でのご注文ではご利用いただけません</p>
           </div>
         </div>
 

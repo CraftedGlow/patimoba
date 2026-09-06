@@ -76,17 +76,37 @@ export async function POST(request: NextRequest) {
   // クーポントークンが同梱されている場合はここで獲得まで済ませる
   // （クライアント側の別リクエストを待たず、往復を1回減らして LINE 側の
   // リロード競合に負けにくくする）
-  let coupon: { title: string; discountLabel: string; storeId: string } | undefined
+  let coupon:
+    | {
+        title: string
+        discountLabel: string
+        storeId: string
+        minOrderAmount: number | null
+        wholeCakeOnly: boolean
+        validFrom: string | null
+        expiresAt: string | null
+      }
+    | undefined
   let couponAlreadyUsed: { title: string; storeId: string } | undefined
   const couponToken: string | undefined = body?.couponToken
   if (couponToken) {
     const { data: couponRow } = await supabase
       .from("coupons")
-      .select("id, store_id, title, discount_type, discount_value, is_active, valid_from, expires_at")
+      .select("id, store_id, title, discount_type, discount_value, is_active, valid_from, expires_at, min_order_amount, whole_cake_only")
       .eq("share_token", couponToken)
       .maybeSingle()
 
     if (couponRow && couponRow.is_active && isWithinValidPeriod(couponRow, new Date())) {
+      const buildCoupon = () => ({
+        title: couponRow.title,
+        discountLabel: formatDiscount(couponRow as any),
+        storeId: couponRow.store_id,
+        minOrderAmount: couponRow.min_order_amount,
+        wholeCakeOnly: couponRow.whole_cake_only,
+        validFrom: couponRow.valid_from,
+        expiresAt: couponRow.expires_at,
+      })
+
       // 既にこのクーポンを保持している場合は先に確認する。使用済み（used_at あり）なら
       // 再獲得させず「使用済み」を返す。未使用ならそのまま保持中として扱う。
       const { data: existingDelivery } = await supabase
@@ -99,14 +119,14 @@ export async function POST(request: NextRequest) {
       if (existingDelivery?.used_at) {
         couponAlreadyUsed = { title: couponRow.title, storeId: couponRow.store_id }
       } else if (existingDelivery) {
-        coupon = { title: couponRow.title, discountLabel: formatDiscount(couponRow as any), storeId: couponRow.store_id }
+        coupon = buildCoupon()
       } else {
         const { error: claimError } = await supabase
           .from("coupon_deliveries")
           .insert({ coupon_id: couponRow.id, user_id: user.id, claim_method: "link" })
 
         if (!claimError || claimError.code === "23505") {
-          coupon = { title: couponRow.title, discountLabel: formatDiscount(couponRow as any), storeId: couponRow.store_id }
+          coupon = buildCoupon()
         } else {
           console.error("[LIFF Login] クーポン獲得失敗:", claimError)
         }

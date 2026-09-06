@@ -678,7 +678,7 @@ export default function ECConfirmPage() {
             </div>
             {nearMissCoupon && (
               <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-                あと{(nearMissCoupon.minOrderAmount! - subtotal).toLocaleString()}円のご注文で「{nearMissCoupon.title}」が使えます
+                あと{(nearMissCoupon.minOrderAmount! - subtotal).toLocaleString()}円でご利用可能なクーポンがあります
               </p>
             )}
             <div className="flex justify-between items-start">

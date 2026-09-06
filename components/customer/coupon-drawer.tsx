@@ -61,7 +61,7 @@ export function CouponDrawer() {
           <h2 className="text-lg font-bold text-gray-900">
             クーポン
             {coupons.length > 0 && (
-              <span className="ml-1.5 text-sm font-medium text-gray-500">({coupons.length}枚)</span>
+              <span className="ml-1.5 text-sm font-medium text-gray-900">({coupons.length}枚)</span>
             )}
           </h2>
         </div>
@@ -90,15 +90,15 @@ export function CouponDrawer() {
                 <div key={c.deliveryId} className="border border-gray-200 rounded-xl p-3.5">
                   <p className="font-bold text-gray-900 text-sm">{c.title}</p>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full">
+                    <span className="text-sm bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full">
                       {formatDiscount(c)}
                     </span>
-                    <span className={`text-xs ${period.notStarted ? "text-blue-600 font-bold" : "text-gray-400"}`}>
+                    <span className={`text-xs ${period.notStarted ? "text-blue-600 font-bold" : "text-gray-600"}`}>
                       {period.label}
                     </span>
                   </div>
                   {condition && (
-                    <p className="text-xs text-gray-500 mt-1.5">ご利用条件：{condition}</p>
+                    <p className="text-xs text-gray-900 mt-1.5">ご利用条件：{condition}</p>
                   )}
                 </div>
               );

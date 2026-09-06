@@ -83,7 +83,15 @@ export default function CustomerLoginPage() {
       const couponNextPath = returnPath || (coupon.storeId ? `/customer/takeout/store/${coupon.storeId}` : "/customer/takeout");
       sessionStorage.setItem(
         "patimoba_claimed_coupon",
-        JSON.stringify({ title: coupon.title, discountLabel: coupon.discountLabel, nextPath: couponNextPath })
+        JSON.stringify({
+          title: coupon.title,
+          discountLabel: coupon.discountLabel,
+          minOrderAmount: coupon.minOrderAmount,
+          wholeCakeOnly: coupon.wholeCakeOnly,
+          validFrom: coupon.validFrom,
+          expiresAt: coupon.expiresAt,
+          nextPath: couponNextPath,
+        })
       );
       // liff.init() が window.location を直接書き換えている場合、Next.jsのrouter遷移が
       // 反映されないことがあるため、確実に遷移させるため window.location.replace() を使う。

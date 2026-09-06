@@ -81,7 +81,15 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
     const nextPath = returnPath || (coupon.storeId ? `/customer/takeout/store/${coupon.storeId}` : "/customer/takeout")
     sessionStorage.setItem(
       "patimoba_claimed_coupon",
-      JSON.stringify({ title: coupon.title, discountLabel: coupon.discountLabel, nextPath })
+      JSON.stringify({
+        title: coupon.title,
+        discountLabel: coupon.discountLabel,
+        minOrderAmount: coupon.minOrderAmount,
+        wholeCakeOnly: coupon.wholeCakeOnly,
+        validFrom: coupon.validFrom,
+        expiresAt: coupon.expiresAt,
+        nextPath,
+      })
     )
     return { authUser, returnPath: "/customer/coupons/claimed" }
   }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Send, Ticket, X, Link as LinkIcon, Check, Cake } from "lucide-react";
+import { Plus, Send, Ticket, X, Link as LinkIcon, Check, Cake, Pencil } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useStoreContext } from "@/lib/store-context";
 import { useCouponAudience } from "@/hooks/use-coupon-audience";
@@ -43,6 +43,7 @@ export default function StoreCouponsPage() {
   const [loading, setLoading] = useState(true);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
   const [discountType, setDiscountType] = useState<"percentage" | "fixed">("percentage");
@@ -149,11 +150,33 @@ export default function StoreCouponsPage() {
 
   useEffect(() => { fetchCoupons(); }, [fetchCoupons]);
 
-  const handleCreate = async () => {
+  const resetForm = () => {
+    setShowCreate(false);
+    setEditingCoupon(null);
+    setTitle("");
+    setDiscountType("percentage");
+    setDiscountValue("");
+    setValidFrom("");
+    setExpiresAt("");
+    setMinOrderAmount("");
+    setWholeCakeOnly(false);
+  };
+
+  const openEdit = (coupon: Coupon) => {
+    setEditingCoupon(coupon);
+    setTitle(coupon.title);
+    setDiscountType(coupon.discount_type);
+    setDiscountValue(String(coupon.discount_value));
+    setValidFrom(coupon.valid_from ? coupon.valid_from.slice(0, 10) : "");
+    setExpiresAt(coupon.expires_at ? coupon.expires_at.slice(0, 10) : "");
+    setMinOrderAmount(coupon.min_order_amount ? String(coupon.min_order_amount) : "");
+    setWholeCakeOnly(coupon.whole_cake_only);
+  };
+
+  const handleSave = async () => {
     if (!title.trim() || !discountValue) return;
     setCreating(true);
-    await supabase.from("coupons").insert({
-      store_id: storeId,
+    const payload = {
       title: title.trim(),
       discount_type: discountType,
       discount_value: parseInt(discountValue),
@@ -161,15 +184,14 @@ export default function StoreCouponsPage() {
       expires_at: expiresAt || null,
       min_order_amount: minOrderAmount ? parseInt(minOrderAmount) : null,
       whole_cake_only: wholeCakeOnly,
-    });
+    };
+    if (editingCoupon) {
+      await supabase.from("coupons").update(payload).eq("id", editingCoupon.id);
+    } else {
+      await supabase.from("coupons").insert({ store_id: storeId, ...payload });
+    }
     setCreating(false);
-    setShowCreate(false);
-    setTitle("");
-    setDiscountValue("");
-    setValidFrom("");
-    setExpiresAt("");
-    setMinOrderAmount("");
-    setWholeCakeOnly(false);
+    resetForm();
     fetchCoupons();
   };
 
@@ -354,6 +376,14 @@ export default function StoreCouponsPage() {
               <div className="flex flex-col gap-1.5 shrink-0">
                 <motion.button
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => openEdit(coupon)}
+                  className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold px-3 py-2 rounded-lg transition-colors"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  編集
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => openSend(coupon)}
                   className="flex items-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition-colors"
                 >
@@ -390,15 +420,15 @@ export default function StoreCouponsPage() {
         </div>
       )}
 
-      {/* 新規作成モーダル */}
+      {/* 新規作成・編集モーダル */}
       <AnimatePresence>
-        {showCreate && (
+        {(showCreate || editingCoupon) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-            onClick={() => setShowCreate(false)}
+            onClick={resetForm}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -408,8 +438,10 @@ export default function StoreCouponsPage() {
               className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
             >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="text-base font-bold text-gray-900">クーポンを作成</h2>
-                <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600">
+                <h2 className="text-base font-bold text-gray-900">
+                  {editingCoupon ? "クーポンを編集" : "クーポンを作成"}
+                </h2>
+                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -508,11 +540,11 @@ export default function StoreCouponsPage() {
 
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={handleCreate}
+                onClick={handleSave}
                 disabled={creating || !title.trim() || !discountValue}
                 className="mt-6 w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl transition-colors text-sm"
               >
-                {creating ? "作成中..." : "作成する"}
+                {creating ? "保存中..." : editingCoupon ? "更新する" : "作成する"}
               </motion.button>
             </motion.div>
           </motion.div>

@@ -250,7 +250,18 @@ export default function ECConfirmPage() {
   const productIdsKey = cartItems.map((i) => i.productId).filter(Boolean).sort().join(",");
   useEffect(() => {
     const productIds = productIdsKey ? productIdsKey.split(",") : [];
-    evaluateEligibility(subtotal, productIds).then(setCouponEligibility);
+    evaluateEligibility(subtotal, productIds).then((list) => {
+      setCouponEligibility(list);
+      // カード登録ページへの遷移で state が消えた場合、選択していたクーポンを復元する
+      setSelectedCoupon((prev) => {
+        if (prev) return prev;
+        try {
+          const savedId = sessionStorage.getItem("ec_selected_coupon_delivery_id");
+          if (!savedId) return prev;
+          return list.find((c) => c.deliveryId === savedId && c.eligible) ?? prev;
+        } catch { return prev; }
+      });
+    });
   }, [subtotal, productIdsKey, evaluateEligibility]);
 
   useEffect(() => {
@@ -258,6 +269,14 @@ export default function ECConfirmPage() {
     const stillEligible = couponEligibility.find((c) => c.deliveryId === selectedCoupon.deliveryId)?.eligible;
     if (stillEligible === false) setSelectedCoupon(null);
   }, [couponEligibility, selectedCoupon]);
+
+  // 選択中のクーポンをsessionStorageに保存（カード入力ページ遷移後も維持）
+  useEffect(() => {
+    try {
+      if (selectedCoupon) sessionStorage.setItem("ec_selected_coupon_delivery_id", selectedCoupon.deliveryId);
+      else sessionStorage.removeItem("ec_selected_coupon_delivery_id");
+    } catch { /* ignore */ }
+  }, [selectedCoupon]);
 
   const handleConfirmOrder = async () => {
     console.log("[ec-confirm] 注文を確定するボタン clicked, total:", total, "userId:", userId);
@@ -398,6 +417,7 @@ export default function ECConfirmPage() {
     sessionStorage.removeItem("ec_customer_first_name");
     sessionStorage.removeItem("ec_customer_phone");
     sessionStorage.removeItem("ec_customer_email");
+    sessionStorage.removeItem("ec_selected_coupon_delivery_id");
     // 決済専用に作成したゲストユーザーは注文完了後に破棄し、次回訪問時は新規ゲスト扱いに戻す
     try {
       if (sessionStorage.getItem("patimoba_guest_user_id") === userId) {

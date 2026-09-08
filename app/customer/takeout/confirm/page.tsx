@@ -76,17 +76,17 @@ export default function TakeoutConfirmPage() {
   const { createOrder } = useOrderMutations();
   const { evaluateEligibility } = useMyCoupons({ userId, storeId: selectedStoreId || cartStoreId });
   const [couponEligibility, setCouponEligibility] = useState<MyCouponEligibility[]>([]);
-  const [lastName, setLastName] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [lastName, setLastName] = useState(() => { try { return sessionStorage.getItem("patimoba_takeout_last_name") ?? "" } catch { return "" } });
+  const [firstName, setFirstName] = useState(() => { try { return sessionStorage.getItem("patimoba_takeout_first_name") ?? "" } catch { return "" } });
+  const [phone, setPhone] = useState(() => { try { return sessionStorage.getItem("patimoba_takeout_phone") ?? "" } catch { return "" } });
   const [showPointModal, setShowPointModal] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [pointOption, setPointOption] = useState<PointOption>("none");
+  const [pointOption, setPointOption] = useState<PointOption>(() => { try { return (sessionStorage.getItem("patimoba_takeout_point_option") as PointOption | null) ?? "none" } catch { return "none" } });
   const [tempPointOption, setTempPointOption] = useState<PointOption>("none");
-  const [partialPoints, setPartialPoints] = useState("");
+  const [partialPoints, setPartialPoints] = useState(() => { try { return sessionStorage.getItem("patimoba_takeout_partial_points") ?? "" } catch { return "" } });
   const [showCouponModal, setShowCouponModal] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<MyCouponEligibility | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => { try { return (sessionStorage.getItem("patimoba_takeout_payment_method") as PaymentMethod | null) ?? "credit" } catch { return "credit" } });
   const [showOrderComplete, setShowOrderComplete] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -291,7 +291,18 @@ export default function TakeoutConfirmPage() {
   const productIdsKey = cartItems.map((i) => i.productId).filter(Boolean).sort().join(",");
   useEffect(() => {
     const productIds = productIdsKey ? productIdsKey.split(",") : [];
-    evaluateEligibility(subtotal, productIds).then(setCouponEligibility);
+    evaluateEligibility(subtotal, productIds).then((list) => {
+      setCouponEligibility(list);
+      // カード登録ページへの遷移で state が消えた場合、選択していたクーポンを復元する
+      setSelectedCoupon((prev) => {
+        if (prev) return prev;
+        try {
+          const savedId = sessionStorage.getItem("patimoba_takeout_coupon_delivery_id");
+          if (!savedId) return prev;
+          return list.find((c) => c.deliveryId === savedId && c.eligible) ?? prev;
+        } catch { return prev; }
+      });
+    });
   }, [subtotal, productIdsKey, evaluateEligibility]);
 
   // カート内容が変わって選択中のクーポンが利用条件を満たさなくなったら選択を解除する
@@ -300,6 +311,27 @@ export default function TakeoutConfirmPage() {
     const stillEligible = couponEligibility.find((c) => c.deliveryId === selectedCoupon.deliveryId)?.eligible;
     if (stillEligible === false) setSelectedCoupon(null);
   }, [couponEligibility, selectedCoupon]);
+
+  // 選択中のクーポンをsessionStorageに保存（カード入力ページ遷移後も維持）
+  useEffect(() => {
+    try {
+      if (selectedCoupon) sessionStorage.setItem("patimoba_takeout_coupon_delivery_id", selectedCoupon.deliveryId);
+      else sessionStorage.removeItem("patimoba_takeout_coupon_delivery_id");
+    } catch { /* ignore */ }
+  }, [selectedCoupon]);
+
+  // 名前・電話番号・ポイント利用・支払い方法をsessionStorageに保存（カード入力ページ遷移後も維持）
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("patimoba_takeout_last_name", lastName);
+      sessionStorage.setItem("patimoba_takeout_first_name", firstName);
+      sessionStorage.setItem("patimoba_takeout_phone", phone);
+      sessionStorage.setItem("patimoba_takeout_point_option", pointOption);
+      sessionStorage.setItem("patimoba_takeout_partial_points", partialPoints);
+      sessionStorage.setItem("patimoba_takeout_payment_method", paymentMethod);
+    } catch { /* ignore */ }
+  }, [lastName, firstName, phone, pointOption, partialPoints, paymentMethod]);
+
   const earnedPoints = Math.floor(total / 200); // 100円 = 0.5pt
 
   const handleConfirmOrder = async () => {
@@ -486,6 +518,13 @@ export default function TakeoutConfirmPage() {
     sessionStorage.removeItem("patimoba_pickup_time");
     sessionStorage.removeItem("patimoba_order_type");
     sessionStorage.removeItem("patimoba_selected_bag");
+    sessionStorage.removeItem("patimoba_takeout_last_name");
+    sessionStorage.removeItem("patimoba_takeout_first_name");
+    sessionStorage.removeItem("patimoba_takeout_phone");
+    sessionStorage.removeItem("patimoba_takeout_point_option");
+    sessionStorage.removeItem("patimoba_takeout_partial_points");
+    sessionStorage.removeItem("patimoba_takeout_payment_method");
+    sessionStorage.removeItem("patimoba_takeout_coupon_delivery_id");
     setShowOrderComplete(true);
     setCountdown(5);
     countdownRef.current = setInterval(() => {

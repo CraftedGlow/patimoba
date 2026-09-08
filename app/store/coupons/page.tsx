@@ -337,8 +337,8 @@ export default function StoreCouponsPage() {
                   <span className="text-xs bg-amber-50 text-amber-700 font-bold px-2 py-0.5 rounded-full">
                     {formatDiscount(coupon)}
                   </span>
-                  <span className="text-xs text-gray-400">{formatValidPeriod(coupon)}</span>
-                  <span className="text-xs text-gray-400">送信済 {coupon.delivery_count ?? 0}件</span>
+                  <span className="text-xs text-gray-900">{formatValidPeriod(coupon)}</span>
+                  <span className="text-xs text-gray-900">送信済 {coupon.delivery_count ?? 0}件</span>
                 </div>
                 {formatConditions(coupon).length > 0 && (
                   <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
@@ -350,7 +350,7 @@ export default function StoreCouponsPage() {
                   </div>
                 )}
                 {coupon.is_anniversary_coupon && (
-                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[10px] text-gray-500">
+                  <div className="flex items-center gap-1.5 mt-1.5 flex-wrap text-[10px] text-gray-900">
                     <span>記念日の</span>
                     <input
                       type="number"

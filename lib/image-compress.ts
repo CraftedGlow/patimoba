@@ -1,13 +1,26 @@
 import { convertHeicIfNeeded } from "./heic-convert"
 
-/** HEIC変換後、Canvasでリサイズ・JPEG圧縮してBlobを返す */
+export interface CompressedImage {
+  blob: Blob
+  contentType: string
+  extension: string
+}
+
+/**
+ * HEIC変換後、Canvasでリサイズして返す。
+ * PNG/WebPは透過を持ちうるため、常にJPEGへ変換すると透過部分が黒く塗りつぶされてしまう。
+ * そのため元がPNG/WebPの場合はPNGのまま出力し、それ以外（写真系）はJPEGに圧縮する。
+ */
 export async function compressImage(
   file: File,
   maxWidth: number,
   maxHeight: number,
   quality = 0.85
-): Promise<Blob> {
+): Promise<CompressedImage> {
   const source = await convertHeicIfNeeded(file)
+  const preserveTransparency = source.type === "image/png" || source.type === "image/webp"
+  const contentType = preserveTransparency ? "image/png" : "image/jpeg"
+  const extension = preserveTransparency ? "png" : "jpg"
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
@@ -20,9 +33,9 @@ export async function compressImage(
       const ctx = canvas.getContext("2d")!
       ctx.drawImage(img, 0, 0, w, h)
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("compression failed"))),
-        "image/jpeg",
-        quality
+        (blob) => (blob ? resolve({ blob, contentType, extension }) : reject(new Error("compression failed"))),
+        contentType,
+        preserveTransparency ? undefined : quality
       )
     }
     img.onerror = reject

@@ -124,12 +124,12 @@ export async function fetchCustomers() {
 const LOGO_BUCKET = "store-logos";
 
 export async function uploadStoreLogo(file: File, storeId?: string): Promise<string> {
-  const compressed = await compressImage(file, 600, 600, 0.88);
-  const path = `${storeId ?? "new"}-${Date.now()}.jpg`;
+  const { blob, contentType, extension } = await compressImage(file, 600, 600, 0.88);
+  const path = `${storeId ?? "new"}-${Date.now()}.${extension}`;
 
   const { error } = await supabase.storage
     .from(LOGO_BUCKET)
-    .upload(path, compressed, { cacheControl: "3600", upsert: false, contentType: "image/jpeg" });
+    .upload(path, blob, { cacheControl: "3600", upsert: false, contentType });
   if (error) throw error;
 
   const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
@@ -137,12 +137,12 @@ export async function uploadStoreLogo(file: File, storeId?: string): Promise<str
 }
 
 export async function uploadStoreImage(file: File, storeId: string): Promise<string> {
-  const compressed = await compressImage(file, 1600, 1200, 0.85);
-  const path = `${storeId}/exterior-${Date.now()}.jpg`;
+  const { blob, contentType, extension } = await compressImage(file, 1600, 1200, 0.85);
+  const path = `${storeId}/exterior-${Date.now()}.${extension}`;
 
   const { error } = await supabase.storage
     .from(LOGO_BUCKET)
-    .upload(path, compressed, { cacheControl: "3600", upsert: false, contentType: "image/jpeg" });
+    .upload(path, blob, { cacheControl: "3600", upsert: false, contentType });
   if (error) throw error;
 
   const { data } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);

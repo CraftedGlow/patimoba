@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase"
-import { compressImage } from "@/lib/image-compress"
+import { compressImage, type CompressedImage } from "@/lib/image-compress"
 
 const BUCKET = "product-images"
 
@@ -8,11 +8,11 @@ async function compressOrError(
   maxWidth: number,
   maxHeight: number,
   quality: number
-): Promise<{ blob: Blob | null; error: string | null }> {
+): Promise<{ result: CompressedImage | null; error: string | null }> {
   try {
-    return { blob: await compressImage(file, maxWidth, maxHeight, quality), error: null }
+    return { result: await compressImage(file, maxWidth, maxHeight, quality), error: null }
   } catch (e) {
-    return { blob: null, error: e instanceof Error ? e.message : "画像の変換に失敗しました" }
+    return { result: null, error: e instanceof Error ? e.message : "画像の変換に失敗しました" }
   }
 }
 
@@ -21,14 +21,14 @@ export async function uploadProductImage(
   storeId: string,
   prefix = "product"
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 1600, 1200, 0.85)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/${prefix}-${Date.now()}.jpg`
+  const { result, error: compressError } = await compressOrError(file, 1600, 1200, 0.85)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/${prefix}-${Date.now()}.${result.extension}`
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { error } = await supabase.storage.from(BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
 
   if (error) return { url: null, error: error.message }
@@ -51,14 +51,14 @@ export async function uploadDecorationImage(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/decoration-${Date.now()}.jpg`
+  const { result, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/decoration-${Date.now()}.${result.extension}`
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { error } = await supabase.storage.from(BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
 
   if (error) return { url: null, error: error.message }
@@ -71,13 +71,13 @@ export async function uploadCandleImage(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/candle-${Date.now()}.jpg`
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { result, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/candle-${Date.now()}.${result.extension}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
   if (error) return { url: null, error: error.message }
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
@@ -88,13 +88,13 @@ export async function uploadNoshiImage(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/noshi-${Date.now()}.jpg`
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { result, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/noshi-${Date.now()}.${result.extension}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
   if (error) return { url: null, error: error.message }
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
@@ -105,13 +105,13 @@ export async function uploadMessagePlateImage(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/message-plate-${Date.now()}.jpg`
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { result, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/message-plate-${Date.now()}.${result.extension}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
   if (error) return { url: null, error: error.message }
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
@@ -122,13 +122,13 @@ export async function uploadBagImage(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/bag-${Date.now()}.jpg`
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { result, error: compressError } = await compressOrError(file, 1000, 1000, 0.85)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/bag-${Date.now()}.${result.extension}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
   if (error) return { url: null, error: error.message }
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
@@ -140,13 +140,13 @@ export async function uploadPrintPhoto(
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
   // ケーキに印刷するため、他の画像より高い解像度・画質を維持する
-  const { blob, error: compressError } = await compressOrError(file, 2400, 2400, 0.9)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/print-${Date.now()}.jpg`
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  const { result, error: compressError } = await compressOrError(file, 2400, 2400, 0.9)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/print-${Date.now()}.${result.extension}`
+  const { error } = await supabase.storage.from(BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
   if (error) return { url: null, error: error.message }
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path)
@@ -159,14 +159,14 @@ export async function uploadStoreImage(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 1600, 1200, 0.85)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/exterior-${Date.now()}.jpg`
+  const { result, error: compressError } = await compressOrError(file, 1600, 1200, 0.85)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/exterior-${Date.now()}.${result.extension}`
 
-  const { error } = await supabase.storage.from(LOGO_BUCKET).upload(path, blob, {
+  const { error } = await supabase.storage.from(LOGO_BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
 
   if (error) return { url: null, error: error.message }
@@ -179,14 +179,14 @@ export async function uploadStoreLogo(
   file: File,
   storeId: string
 ): Promise<{ url: string | null; error: string | null }> {
-  const { blob, error: compressError } = await compressOrError(file, 600, 600, 0.88)
-  if (!blob) return { url: null, error: compressError }
-  const path = `${storeId}/logo-${Date.now()}.jpg`
+  const { result, error: compressError } = await compressOrError(file, 600, 600, 0.88)
+  if (!result) return { url: null, error: compressError }
+  const path = `${storeId}/logo-${Date.now()}.${result.extension}`
 
-  const { error } = await supabase.storage.from(LOGO_BUCKET).upload(path, blob, {
+  const { error } = await supabase.storage.from(LOGO_BUCKET).upload(path, result.blob, {
     cacheControl: "3600",
     upsert: false,
-    contentType: "image/jpeg",
+    contentType: result.contentType,
   })
 
   if (error) return { url: null, error: error.message }

@@ -200,6 +200,7 @@ export interface DecorationGroupWithItems {
   required: boolean
   displayOrder: number
   items: DecorationItem[]
+  isMasterItem?: boolean
 }
 
 export interface UICartItem {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy"
 import type { DecorationGroupWithItems, DecorationItem } from "@/lib/types"
 
 function toDecorationItem(row: any): DecorationItem {
@@ -23,7 +24,7 @@ function toDecorationItem(row: any): DecorationItem {
   }
 }
 
-function toGroupWithItems(row: any, filterActive = false): DecorationGroupWithItems {
+function toGroupWithItems(row: any, filterActive = false, parentStoreId: string | null = null): DecorationGroupWithItems {
   const items: DecorationItem[] = (row.decoration_group_items ?? [])
     .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
     .map((gi: any) => gi.decorations ? toDecorationItem(gi.decorations) : null)
@@ -38,6 +39,7 @@ function toGroupWithItems(row: any, filterActive = false): DecorationGroupWithIt
     required: Boolean(row.required),
     displayOrder: Number(row.display_order) || 0,
     items,
+    isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
   }
 }
 
@@ -56,12 +58,13 @@ export function useDecorationGroups(storeId?: string) {
   const fetchGroups = useCallback(async () => {
     if (!storeId) { setLoading(false); return }
     setLoading(true)
+    const { storeIds, parentStoreId } = await getStoreIdsWithParent(storeId)
     const { data } = await supabase
       .from("decoration_groups")
       .select(GROUP_SELECT)
-      .eq("store_id", storeId)
+      .in("store_id", storeIds)
       .order("display_order", { ascending: true })
-    setGroups((data ?? []).map((r: any) => toGroupWithItems(r, false)))
+    setGroups((data ?? []).map((r: any) => toGroupWithItems(r, false, parentStoreId)))
     setLoading(false)
   }, [storeId])
 

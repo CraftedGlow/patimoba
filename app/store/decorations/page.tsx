@@ -591,15 +591,21 @@ export default function DecorationsPage() {
             <div className="space-y-3">
               {groups.map((group) => {
                 const expanded = expandedGroupIds.has(group.id)
+                const isMasterGroup = group.isMasterItem ?? false
                 return (
-                  <div key={group.id} className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+                  <div key={group.id} className={`border rounded-xl bg-white overflow-hidden ${isMasterGroup ? "border-blue-100 bg-blue-50/40" : "border-gray-200"}`}>
                     <div className="flex items-center gap-3 px-4 py-3">
                       <button type="button" onClick={() => toggleExpand(group.id)}
                         className="p-1 text-gray-600 hover:text-gray-600 transition-colors">
                         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
                       <div className="flex-1">
-                        <p className="text-sm font-bold">{group.name}</p>
+                        <p className="text-sm font-bold flex items-center gap-2">
+                          {group.name}
+                          {isMasterGroup && (
+                            <span className="text-[10px] font-medium bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded shrink-0">共有</span>
+                          )}
+                        </p>
                           <p className="text-xs text-gray-500 mt-0.5">
                           {group.selectionType === "single" ? "単一選択" : `複数選択${group.maxSelections ? `（最大${group.maxSelections}個）` : ""}`}
                           {group.required ? " / 必須" : " / 任意"}

@@ -24,6 +24,8 @@ export interface ReceiptData {
   items: ReceiptItem[]
   subtotal: number
   discountAmount?: number | null
+  couponDiscountAmount?: number | null
+  couponTitle?: string | null
   totalAmount: number
 }
 
@@ -140,6 +142,10 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   push(`小計: ¥${data.subtotal.toLocaleString()}`)
   if (data.discountAmount && data.discountAmount > 0) {
     push(`値引き: -¥${data.discountAmount.toLocaleString()}`)
+  }
+  if (data.couponDiscountAmount && data.couponDiscountAmount > 0) {
+    const label = data.couponTitle ? `クーポン（${data.couponTitle}）` : "クーポン"
+    push(`${label}: -¥${data.couponDiscountAmount.toLocaleString()}`)
   }
   push(SEP)
 

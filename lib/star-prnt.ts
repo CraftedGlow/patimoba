@@ -188,6 +188,10 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
   if (data.discountAmount && data.discountAmount > 0) {
     parts.push(line(`値引き: -¥${data.discountAmount.toLocaleString()}`))
   }
+  if (data.couponDiscountAmount && data.couponDiscountAmount > 0) {
+    const label = data.couponTitle ? `クーポン（${data.couponTitle}）` : "クーポン"
+    parts.push(line(`${label}: -¥${data.couponDiscountAmount.toLocaleString()}`))
+  }
   parts.push(line(SEP))
 
   const amountStr = `¥${data.totalAmount.toLocaleString()}`

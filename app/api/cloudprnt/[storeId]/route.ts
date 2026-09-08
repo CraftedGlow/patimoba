@@ -122,7 +122,7 @@ export async function GET(
     .from("orders")
     .select(`
       id, order_no, store_id, customer_name_snapshot,
-      subtotal, discount_amount, total_amount,
+      subtotal, discount_amount, coupon_discount_amount, total_amount,
       pickup_date, pickup_time, payment_status, created_at,
       users:users!orders_customer_id_fkey(line_name, phone),
       order_items (
@@ -136,7 +136,8 @@ export async function GET(
           quantity
         )
       ),
-      stores ( name )
+      stores ( name ),
+      coupons ( title )
     `)
     .eq("id", job.order_id)
     .single()
@@ -178,6 +179,8 @@ export async function GET(
     })),
     subtotal: order.subtotal,
     discountAmount: order.discount_amount,
+    couponDiscountAmount: order.coupon_discount_amount,
+    couponTitle: (order.coupons as any)?.title ?? null,
     totalAmount: order.total_amount,
   }
 

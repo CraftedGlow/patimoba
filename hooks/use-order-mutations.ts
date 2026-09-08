@@ -218,6 +218,7 @@ export function useOrderMutations() {
             option_group_name_snapshot: op.groupName ?? "デコレーション",
             option_item_name_snapshot: op.name,
             option_item_short_name_snapshot: decorationShortNameMap.get(op.wholeCakeOptionId) ?? null,
+            decoration_id: op.wholeCakeOptionId,
             price_delta: op.price,
           })
           if (op.message) {
@@ -272,6 +273,7 @@ export function useOrderMutations() {
             option_group_name_snapshot: co.name,
             option_item_name_snapshot: co.values.join("、"),
             option_item_short_name_snapshot: shortNameJoined,
+            product_id: item.productId,
             price_delta: co.additionalPrice || 0,
           })
         }

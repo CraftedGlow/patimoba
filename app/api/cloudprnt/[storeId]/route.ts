@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { buildStarPRNTReceipt } from "@/lib/star-prnt"
 import { formatPaymentStatus } from "@/lib/types"
+import { resolveOptionPrintName } from "@/lib/receipt-short-names"
 
 export const dynamic = "force-dynamic"
 
@@ -126,12 +127,14 @@ export async function GET(
       pickup_date, pickup_time, payment_status, created_at,
       users:users!orders_customer_id_fkey(line_name, phone),
       order_items (
-        product_name_snapshot, product_short_name_snapshot, quantity, unit_price, subtotal,
+        product_id, product_name_snapshot, product_short_name_snapshot, quantity, unit_price, subtotal,
         variant_name_snapshot,
         order_item_options (
           option_group_name_snapshot,
           option_item_name_snapshot,
           option_item_short_name_snapshot,
+          decoration_id,
+          product_id,
           price_delta,
           quantity
         )
@@ -146,6 +149,29 @@ export async function GET(
     log("GET", params.storeId, "→ 404 order not found")
     return new NextResponse("Order not found", { status: 404 })
   }
+
+  // 注文後に印刷用短縮名が追加/変更された場合にも反映されるよう、
+  // スナップショットではなく商品/デコレーションの現在値を優先して使う
+  const orderItemsRaw = (order.order_items as any[]) ?? []
+  const productIds = Array.from(
+    new Set([
+      ...orderItemsRaw.map((it) => it.product_id),
+      ...orderItemsRaw.flatMap((it) => (it.order_item_options ?? []).map((o: any) => o.product_id)),
+    ].filter(Boolean))
+  )
+  const { data: currentProducts } = productIds.length
+    ? await supabaseAdmin.from("products").select("id, print_short_name, custom_options").in("id", productIds)
+    : { data: [] as any[] }
+  const currentShortNameMap = new Map((currentProducts ?? []).map((p: any) => [p.id, p.print_short_name]))
+  const productCustomOptionsMap = new Map((currentProducts ?? []).map((p: any) => [p.id, p.custom_options]))
+
+  const decorationIds = Array.from(
+    new Set(orderItemsRaw.flatMap((it) => (it.order_item_options ?? []).map((o: any) => o.decoration_id)).filter(Boolean))
+  )
+  const { data: currentDecorations } = decorationIds.length
+    ? await supabaseAdmin.from("decorations").select("id, print_short_name").in("id", decorationIds)
+    : { data: [] as any[] }
+  const decorationShortNameMap = new Map((currentDecorations ?? []).map((d: any) => [d.id, d.print_short_name]))
 
   const users = (order.users as any) ?? {}
   const orderDateFmt = order.created_at
@@ -165,14 +191,14 @@ export async function GET(
     phone: users.phone ?? null,
     orderDate: orderDateFmt,
     paymentStatus: formatPaymentStatus(order.payment_status),
-    items: ((order.order_items as any[]) ?? []).map((item) => ({
-      name: item.product_short_name_snapshot || item.product_name_snapshot,
+    items: orderItemsRaw.map((item) => ({
+      name: (item.product_id && currentShortNameMap.get(item.product_id)) || item.product_short_name_snapshot || item.product_name_snapshot,
       quantity: item.quantity,
       subtotal: item.subtotal,
       variantName: item.variant_name_snapshot,
       options: (item.order_item_options ?? []).map((opt: any) => ({
         groupName: opt.option_group_name_snapshot,
-        itemName: opt.option_item_short_name_snapshot || opt.option_item_name_snapshot,
+        itemName: resolveOptionPrintName(opt, decorationShortNameMap, productCustomOptionsMap),
         priceDelta: opt.price_delta,
         quantity: opt.quantity,
       })),

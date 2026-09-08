@@ -131,9 +131,10 @@ function calcItemSubtotal(item: CartItem): number {
   if (!c) return item.price * item.quantity;
   const candleSum = (c.candles || []).reduce((s, cd) => s + cd.price * cd.quantity, 0);
   const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0);
+  const customOptionSum = (c.customOptions || []).reduce((s, op) => s + (op.additionalPrice || 0), 0);
   const noshiPrice = c.noshi?.price ?? 0;
   const messagePlatePrice = c.messagePlateOption?.price ?? 0;
-  return (item.price * item.quantity) + ((c.sizePrice ?? 0) + candleSum + optionSum + noshiPrice + messagePlatePrice) * item.quantity;
+  return (item.price * item.quantity) + ((c.sizePrice ?? 0) + candleSum + optionSum + customOptionSum + noshiPrice + messagePlatePrice) * item.quantity;
 }
 
 export async function POST(req: NextRequest) {
@@ -261,9 +262,10 @@ export async function POST(req: NextRequest) {
     // レシート印字用の短縮名を注文作成時にスナップショットする
     const productIds = Array.from(new Set(items.map((i) => i.productId).filter(Boolean))) as string[];
     const { data: printShortNameProducts } = productIds.length
-      ? await supabaseAdmin.from("products").select("id, print_short_name").in("id", productIds)
+      ? await supabaseAdmin.from("products").select("id, print_short_name, custom_options").in("id", productIds)
       : { data: [] as any[] };
     const productShortNameMap = new Map((printShortNameProducts ?? []).map((p: any) => [p.id, p.print_short_name]));
+    const productCustomOptionsMap = new Map((printShortNameProducts ?? []).map((p: any) => [p.id, p.custom_options]));
 
     const decorationIds = Array.from(
       new Set(items.flatMap((i) => (i.customization?.options ?? []).map((o) => o.wholeCakeOptionId)).filter(Boolean))
@@ -331,6 +333,7 @@ export async function POST(req: NextRequest) {
             option_group_name_snapshot: op.groupName ?? "デコレーション",
             option_item_name_snapshot: op.name,
             option_item_short_name_snapshot: decorationShortNameMap.get(op.wholeCakeOptionId) ?? null,
+            decoration_id: op.wholeCakeOptionId,
             price_delta: op.price,
           });
         }
@@ -342,6 +345,31 @@ export async function POST(req: NextRequest) {
             price_delta: 0,
           });
         }
+      }
+
+      // カスタムオプションも商品種別を問わず対象
+      for (const co of c.customOptions || []) {
+        if (!co.values?.length) continue;
+        const productCustomOptions = productCustomOptionsMap.get(item.productId) as
+          | { name: string; values: { label: string; print_short_name?: string }[] }[]
+          | undefined;
+        const matchingGroup = productCustomOptions?.find((g) => g.name === co.name);
+        const hasShortNames = co.values.some((label) =>
+          matchingGroup?.values.find((v) => v.label === label)?.print_short_name
+        );
+        const shortNameJoined = hasShortNames
+          ? co.values
+              .map((label) => matchingGroup?.values.find((v) => v.label === label)?.print_short_name || label)
+              .join("、")
+          : null;
+        options.push({
+          order_item_id: insertedId,
+          option_group_name_snapshot: co.name,
+          option_item_name_snapshot: co.values.join("、"),
+          option_item_short_name_snapshot: shortNameJoined,
+          product_id: item.productId,
+          price_delta: co.additionalPrice || 0,
+        });
       }
 
       // のしは商品種別を問わず対象（customer/orders 詳細ページが同じ option_group_name_snapshot を参照する）

@@ -50,6 +50,7 @@ interface ProductRow {
   candle_enabled: boolean | null;
   candle_ids: string[] | null;
   tags: string[] | null;
+  print_short_name: string | null;
   isMasterProduct?: boolean;
 }
 
@@ -73,6 +74,7 @@ export function CakeTab() {
 
   const [category, setCategory] = useState("");
   const [productName, setProductName] = useState("");
+  const [printShortName, setPrintShortName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [isLimited, setIsLimited] = useState(false);
@@ -206,6 +208,7 @@ export function CakeTab() {
     setSelectedId(null);
     setCategory("");
     setProductName("");
+    setPrintShortName("");
     setDescription("");
     setPrice("");
     setIsLimited(false);
@@ -248,6 +251,7 @@ export function CakeTab() {
       setSelectedId(p.id);
       setCategory(p.category_name ?? "");
       setProductName(p.name ?? "");
+      setPrintShortName(p.print_short_name ?? "");
       setDescription(p.description ?? "");
       setPrice(p.base_price != null ? `¥${p.base_price.toLocaleString()}` : "");
       setIsLimited(p.limited_until != null || p.limited_from != null);
@@ -348,6 +352,7 @@ export function CakeTab() {
       const payload: any = {
         store_id: storeId,
         name: productName.trim(),
+        print_short_name: printShortName.trim() || null,
         description: description.trim(),
         base_price: isHole ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
         category_name: category || null,
@@ -612,6 +617,19 @@ export function CakeTab() {
           />
         </div>
 
+        {/* 印刷用の短い名前 */}
+        <div>
+          <label className="text-sm font-bold block mb-1">印刷用の短い名前（任意）</label>
+          <input
+            type="text"
+            value={printShortName}
+            onChange={(e) => setPrintShortName(e.target.value)}
+            placeholder="レシート印字が折り返す場合に設定"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
+          />
+          <p className="text-xs text-gray-400 mt-1">未設定の場合は商品名がそのまま印字されます</p>
+        </div>
+
         {/* 画像アップロード */}
         <div className="flex gap-3">
           <input
@@ -868,6 +886,13 @@ export function CakeTab() {
                           onChange={(e) => updateMessagePlateValues(msgValues.map((vv, j) => j === vi ? { ...vv, label: e.target.value } : vv))}
                           placeholder="プレート名"
                           className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
+                        />
+                        <input
+                          type="text"
+                          value={v.print_short_name ?? ""}
+                          onChange={(e) => updateMessagePlateValues(msgValues.map((vv, j) => j === vi ? { ...vv, print_short_name: e.target.value || undefined } : vv))}
+                          placeholder="印字用（任意）"
+                          className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-300"
                         />
                         <button
                           type="button"

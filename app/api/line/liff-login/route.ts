@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/database.types"
 import { findOrCreateLineUser } from "@/lib/line-user"
-import { isWithinValidPeriod, formatDiscount } from "@/lib/coupons"
+import { formatDiscount } from "@/lib/coupons"
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
@@ -88,6 +88,9 @@ export async function POST(request: NextRequest) {
       }
     | undefined
   let couponAlreadyUsed: { title: string; storeId: string } | undefined
+  // クーポンが獲得できなかった場合（無効・期間外など）でも、リンクが指す店舗自体は
+  // 判明しているので、店舗選択画面に落とさずその店舗へ誘導するためのフォールバック
+  let couponStoreId: string | undefined
   const couponToken: string | undefined = body?.couponToken
   if (couponToken) {
     const { data: couponRow } = await supabase
@@ -96,7 +99,13 @@ export async function POST(request: NextRequest) {
       .eq("share_token", couponToken)
       .maybeSingle()
 
-    if (couponRow && couponRow.is_active && isWithinValidPeriod(couponRow, new Date())) {
+    if (couponRow) couponStoreId = couponRow.store_id
+
+    // 利用開始日前でも獲得自体はできるようにする（先行配布に対応）。実際に使える
+    // かどうかは会計時の reserveCoupon 側で改めて検証する。ただし期限切れ後の
+    // 獲得は無意味なので、expires_at を過ぎている場合は従来通り獲得不可のままにする。
+    const notExpiredYet = !couponRow?.expires_at || new Date() <= new Date(couponRow.expires_at)
+    if (couponRow && couponRow.is_active && notExpiredYet) {
       const buildCoupon = () => ({
         title: couponRow.title,
         discountLabel: formatDiscount(couponRow as any),
@@ -139,5 +148,6 @@ export async function POST(request: NextRequest) {
     otp: { email: authUserData.user.email, token: linkData.properties.email_otp },
     coupon,
     couponAlreadyUsed,
+    couponStoreId,
   })
 }

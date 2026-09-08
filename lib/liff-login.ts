@@ -47,7 +47,7 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   }
 
   const result = await res.json()
-  const { user, otp, coupon, couponAlreadyUsed } = result
+  const { user, otp, coupon, couponAlreadyUsed, couponStoreId } = result
 
   if (otp) {
     const { supabase } = await import("@/lib/supabase")
@@ -110,6 +110,12 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   // window.location.replace() で先行の遷移を上書きしてしまう。
   if (sessionStorage.getItem("patimoba_claimed_coupon")) {
     return { authUser, returnPath: "/customer/coupons/claimed" }
+  }
+
+  // クーポンを獲得できなかった場合（期間外・無効化済みなど）も、リンクが指す
+  // 店舗自体は判明しているので、店舗選択の一覧画面に落とさずその店舗へ誘導する
+  if (!returnPath && couponStoreId) {
+    return { authUser, returnPath: `/customer/takeout/store/${couponStoreId}` }
   }
 
   return { authUser, returnPath }

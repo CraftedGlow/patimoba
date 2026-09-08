@@ -286,6 +286,16 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                 </span>
               </div>
             )}
+            {order.couponDiscountAmount > 0 && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">
+                  クーポン{order.couponTitle ? `（${order.couponTitle}）` : ""}
+                </span>
+                <span className="font-bold text-amber-600">
+                  -¥{order.couponDiscountAmount.toLocaleString()}
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between border-t border-gray-200 pt-2 mt-1">
               <span className="text-sm text-gray-600">お支払金額</span>
               <span className="text-2xl font-bold">¥{order.totalAmount.toLocaleString()}</span>

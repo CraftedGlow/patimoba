@@ -85,6 +85,8 @@ export interface Order {
   hasWholeCake: boolean
   subtotal: number
   discountAmount: number
+  couponDiscountAmount: number
+  couponTitle: string | null
   totalAmount: number
   paymentStatus: string
   orderStatus: OrderStatus
@@ -397,6 +399,8 @@ export function toUIOrder(row: any): Order {
     hasWholeCake: (row.order_items || []).some((it: any) => !!it.variant_name_snapshot || (it.order_item_options?.length ?? 0) > 0),
     subtotal: Number(row.subtotal) || 0,
     discountAmount: Number(row.discount_amount) || 0,
+    couponDiscountAmount: Number(row.coupon_discount_amount) || 0,
+    couponTitle: row.coupons?.title ?? null,
     totalAmount: Number(row.total_amount) || 0,
     paymentStatus: formatPaymentStatus(row.payment_status),
     orderStatus,

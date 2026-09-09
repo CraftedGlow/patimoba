@@ -121,6 +121,20 @@ export default function StoreReportPage() {
     const prevM = new Date(year, month - 1, 1);
     const prevStart = `${prevM.getFullYear()}-${String(prevM.getMonth() + 1).padStart(2, "0")}-01`;
 
+    // 表示中の月が「今月」（=まだ月の途中）の場合、前月比較は前月まるごとではなく、
+    // 今日と同じ日までに絞る（例: 今月が9日まで進んでいるなら前月も1〜9日で比較する）。
+    // そうしないと「今月の途中経過」と「前月の1ヶ月丸ごと」を比べてしまい、必ず今月が
+    // 少なく見えてしまう。
+    const now = new Date();
+    const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+    let prevEnd = start;
+    if (isCurrentMonth) {
+      const daysInPrevMonth = new Date(prevM.getFullYear(), prevM.getMonth() + 1, 0).getDate();
+      const cutoffDay = Math.min(now.getDate(), daysInPrevMonth);
+      const prevEndDate = new Date(prevM.getFullYear(), prevM.getMonth(), cutoffDay + 1);
+      prevEnd = `${prevEndDate.getFullYear()}-${String(prevEndDate.getMonth() + 1).padStart(2, "0")}-${String(prevEndDate.getDate()).padStart(2, "0")}`;
+    }
+
     (async () => {
       const [{ data, error }, { data: prevData }, { data: bhRows }] = await Promise.all([
         supabase
@@ -135,7 +149,7 @@ export default function StoreReportPage() {
           .select("total_amount, customer_id")
           .eq("store_id", storeId)
           .gte("created_at", prevStart)
-          .lt("created_at", start),
+          .lt("created_at", prevEnd),
         supabase
           .from("store_business_hours")
           .select("day_of_week, is_closed, open_time, close_time")

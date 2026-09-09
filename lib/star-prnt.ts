@@ -1,4 +1,5 @@
 import type { ReceiptData } from "./star-markup"
+import { formatSizeForPrint } from "./star-markup"
 import iconv from "iconv-lite"
 
 const ESC = 0x1b
@@ -157,7 +158,7 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
     parts.push(line(itemLine(item.name, item.quantity)))
 
     // バリアント（ホールサイズ等）
-    if (item.variantName) parts.push(line(item.variantName))
+    if (item.variantName) parts.push(line(formatSizeForPrint(item.variantName)))
 
     // メッセージをサイズの直下に出力
     for (const opt of item.options ?? []) {

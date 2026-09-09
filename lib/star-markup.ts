@@ -32,6 +32,13 @@ export interface ReceiptData {
 const SEP = "------------------------"
 const MARKUP_COLS = 22
 
+// ホールケーキのサイズは「号」だとお客様がピンとこないため、印字上は号数×3cmに変換する（5号→15cm）
+export function formatSizeForPrint(variantName: string): string {
+  const match = variantName.trim().match(/^(\d+)号$/)
+  if (!match) return variantName
+  return `${Number(match[1]) * 3}cm`
+}
+
 function charW(c: string): number {
   return c.charCodeAt(0) > 0x7f ? 2 : 1
 }
@@ -108,7 +115,7 @@ export function buildReceiptMarkup(data: ReceiptData): string {
     // 商品名と個数
     push(itemLine(item.name, item.quantity))
     // バリアント（ホールサイズ等）
-    if (item.variantName) push(`  ${item.variantName}`)
+    if (item.variantName) push(`  ${formatSizeForPrint(item.variantName)}`)
     // メッセージをサイズの直下に出力
     for (const opt of item.options ?? []) {
       if (!opt.itemName || opt.groupName !== "メッセージ") continue

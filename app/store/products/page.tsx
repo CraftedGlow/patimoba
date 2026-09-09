@@ -89,8 +89,9 @@ export default function StoreProductsPage() {
 
   const filtered = useMemo(() => {
     let list = tab === "ec" ? products.filter((p) => p.is_ec) : products.filter((p) => p.is_takeout);
-    if (!search.trim()) return list;
-    return list.filter((p) => p.name.includes(search));
+    if (search.trim()) list = list.filter((p) => p.name.includes(search));
+    // 受付状況がオフの商品は一覧の下に固定する（当日状況は並び替えに影響させない）
+    return [...list].sort((a, b) => (a.is_active === false ? 1 : 0) - (b.is_active === false ? 1 : 0));
   }, [products, search, tab]);
 
   const handleToggleAccept = async (p: ProductRegistration) => {

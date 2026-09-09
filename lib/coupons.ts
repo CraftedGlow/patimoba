@@ -295,6 +295,19 @@ export async function ensureCouponDeliveryForReminder(
 
   if (existing) {
     if (!existing.used_at) {
+      // すでに保持中の場合でも、リンク直接獲得や手動配信など記念日以外の経路で
+      // 獲得済み（valid_from/expires_at が未設定）なことがあるため、
+      // 記念日を起点にした有効期間を都度計算し直して補完する。
+      if (existing.valid_from == null && existing.expires_at == null) {
+        const { validFrom, expiresAt } = computeAnniversaryWindow(coupon, anniversaryDate);
+        if (validFrom || expiresAt) {
+          await supabaseAdmin
+            .from("coupon_deliveries")
+            .update({ valid_from: validFrom, expires_at: expiresAt })
+            .eq("id", existing.id);
+        }
+        return { status: "held", validFrom, expiresAt };
+      }
       return { status: "held", validFrom: existing.valid_from ?? null, expiresAt: existing.expires_at ?? null };
     }
 

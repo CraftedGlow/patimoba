@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Wallet, CreditCard, Undo2 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
-import { fetchStores, fetchOrders, type Store, type Order } from "@/lib/admin-api";
+import { supabase } from "@/lib/supabase";
+import { fetchStores, type Store } from "@/lib/admin-api";
 
 // JST = UTC+9。日本固定アプリなので JST で月の境界を計算する
 function jstMonthBoundaries(year: number, month: number) {
@@ -12,6 +13,32 @@ function jstMonthBoundaries(year: number, month: number) {
   const start = new Date(Date.UTC(year, month, 1) - JST_OFFSET_MS).toISOString();
   const end = new Date(Date.UTC(year, month + 1, 1) - JST_OFFSET_MS).toISOString();
   return { start, end };
+}
+
+interface PaymentOrderRow {
+  store_id: string | null;
+  payment_status: string;
+  total_amount: number | null;
+}
+
+// お金が実際に動いた日を月の基準にする:
+// カード決済は注文時に即時課金されるので created_at、店頭(現金)支払いは
+// 受け渡し時に現金を受け取るので fulfilled_at（受渡済みにした日時）で判定する。
+// まだ受け渡していない店頭支払い注文はこの時点で入金されていないため対象外。
+async function fetchPaymentBreakdownOrders(start: string, end: string): Promise<PaymentOrderRow[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("store_id, payment_status, total_amount")
+    .not("order_status", "in", "(cancelled)")
+    .or(
+      [
+        `and(payment_status.eq.paid,created_at.gte.${start},created_at.lt.${end})`,
+        `and(payment_status.eq.unpaid,fulfillment_status.eq.fulfilled,fulfilled_at.gte.${start},fulfilled_at.lt.${end})`,
+        `and(payment_status.eq.refunded,created_at.gte.${start},created_at.lt.${end})`,
+      ].join(",")
+    );
+  if (error) throw error;
+  return data ?? [];
 }
 
 interface StoreBreakdown {
@@ -27,7 +54,7 @@ interface StoreBreakdown {
 
 export default function AdminPaymentsPage() {
   const [stores, setStores] = useState<Store[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<PaymentOrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -40,7 +67,7 @@ export default function AdminPaymentsPage() {
     setLoading(true);
     try {
       const { start, end } = jstMonthBoundaries(selYear, selMonth - 1);
-      const [s, o] = await Promise.all([fetchStores(), fetchOrders(start, end)]);
+      const [s, o] = await Promise.all([fetchStores(), fetchPaymentBreakdownOrders(start, end)]);
       setStores(s);
       setOrders(o);
     } catch {
@@ -61,7 +88,6 @@ export default function AdminPaymentsPage() {
     const byStore = new Map<string, StoreBreakdown>();
 
     for (const o of orders) {
-      if (o.order_status === "cancelled") continue;
       const storeId = o.store_id;
       if (!storeId || !storeNameById.has(storeId)) continue;
 
@@ -126,7 +152,9 @@ export default function AdminPaymentsPage() {
       <header className="bg-[#FFF9C4] px-4 sm:px-6 py-4 border-b border-yellow-200 flex items-center justify-between">
         <div>
           <h1 className="text-base sm:text-lg font-bold text-gray-900">支払い方法別集計</h1>
-          <p className="text-xs text-gray-600">{dateLabel}・店舗ごとの店頭支払い/カード決済内訳</p>
+          <p className="text-xs text-gray-600">
+            {dateLabel}・店舗ごとの店頭支払い/カード決済内訳（カードは注文日、店頭支払いは受渡日基準）
+          </p>
         </div>
         <input
           type="month"

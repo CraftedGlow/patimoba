@@ -56,13 +56,14 @@ export default function AdminPaymentsPage() {
   }, [load]);
 
   const breakdown = useMemo<StoreBreakdown[]>(() => {
-    const storeNameById = new Map(stores.map((s) => [s.id, s.name]));
+    const liveStores = stores.filter((s) => !s.is_dev_only);
+    const storeNameById = new Map(liveStores.map((s) => [s.id, s.name]));
     const byStore = new Map<string, StoreBreakdown>();
 
     for (const o of orders) {
       if (o.order_status === "cancelled") continue;
       const storeId = o.store_id;
-      if (!storeId) continue;
+      if (!storeId || !storeNameById.has(storeId)) continue;
 
       let row = byStore.get(storeId);
       if (!row) {

@@ -12,6 +12,7 @@ import { OrderDetailModal } from "@/components/store/order-detail-modal";
 import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
 import { DatePickerPopup } from "@/components/store/date-picker-popup";
 import { supabase } from "@/lib/supabase";
+import { getChildStoreBadgeColor } from "@/lib/child-store-badge-color";
 import type { FulfillmentStatus, Order } from "@/lib/types";
 
 const channelTabs: { label: string; value: "" | OrderChannel }[] = [
@@ -656,7 +657,7 @@ export default function StoreOrdersPage() {
                           {order.customerName || order.lineName || "-"}
                         </div>
                         {isMaster && selectedChildId === null && (
-                          <span className="inline-block mt-0.5 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                          <span className={`inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                             {childStoreMap[order.storeId]}
                           </span>
                         )}
@@ -785,7 +786,7 @@ export default function StoreOrdersPage() {
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
                     {isMaster && selectedChildId === null && (
-                      <div className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block">
+                      <div className={`text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                         {childStoreMap[order.storeId]}
                       </div>
                     )}
@@ -958,7 +959,7 @@ export default function StoreOrdersPage() {
                           {order.customerName || order.lineName || "-"}
                         </div>
                         {isMaster && selectedChildId === null && (
-                          <span className="inline-block mt-0.5 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                          <span className={`inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                             {childStoreMap[order.storeId]}
                           </span>
                         )}
@@ -1067,7 +1068,7 @@ export default function StoreOrdersPage() {
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
                     {isMaster && selectedChildId === null && (
-                      <div className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block">
+                      <div className={`text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                         {childStoreMap[order.storeId]}
                       </div>
                     )}

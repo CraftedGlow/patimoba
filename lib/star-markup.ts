@@ -12,7 +12,7 @@ export interface ReceiptItem {
 }
 
 export interface ReceiptData {
-  storeName: string
+  storeName?: string | null
   orderNo?: string | null
   pickupDate?: string | null
   pickupTime?: string | null
@@ -98,6 +98,11 @@ export function buildReceiptMarkup(data: ReceiptData): string {
   push("[font: name b]")
 
   push("[align: left]")
+
+  if (data.storeName) {
+    push(data.storeName)
+    push(SEP)
+  }
 
   if (data.customerName) push(`名前: ${data.customerName}様`)
   if (data.lineName) push(`LINE: ${data.lineName}`)

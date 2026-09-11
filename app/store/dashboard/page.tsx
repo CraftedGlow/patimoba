@@ -17,6 +17,7 @@ import { useStoreContext } from "@/lib/store-context";
 import { DatePickerPopup } from "@/components/store/date-picker-popup";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { supabase } from "@/lib/supabase";
+import { getChildStoreBadgeColor } from "@/lib/child-store-badge-color";
 
 const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
 const INACTIVITY_MS = 3 * 60 * 1000; // 3分
@@ -347,7 +348,7 @@ export default function StoreDashboardPage() {
                           {order.customerName || order.lineName || "-"}
                         </p>
                         {orderStoreName && (
-                          <span className="shrink-0 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                          <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded font-medium ${getChildStoreBadgeColor(orderStoreName)}`}>
                             {orderStoreName}
                           </span>
                         )}
@@ -417,7 +418,7 @@ export default function StoreDashboardPage() {
                   <div>
                     <span className="text-xs text-gray-900">{order.customerName || order.lineName || "-"}</span>
                     {orderStoreName && (
-                      <div className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block">
+                      <div className={`text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block ${getChildStoreBadgeColor(orderStoreName)}`}>
                         {orderStoreName}
                       </div>
                     )}

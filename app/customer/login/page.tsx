@@ -35,7 +35,7 @@ export default function CustomerLoginPage() {
     const res = await fetch("/api/line/liff-login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, couponToken: pendingCouponToken || undefined }),
+      body: JSON.stringify({ idToken, liffId: liff.id, couponToken: pendingCouponToken || undefined }),
     });
 
     if (!res.ok) {

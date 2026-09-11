@@ -651,12 +651,12 @@ export default function StoreOrdersPage() {
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                        <span className="text-sm font-bold text-gray-800 leading-tight">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-bold text-gray-800 leading-tight truncate">
                           {order.customerName || order.lineName || "-"}
-                        </span>
+                        </div>
                         {isMaster && selectedChildId === null && (
-                          <span className="shrink-0 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                          <span className="inline-block mt-0.5 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
                             {childStoreMap[order.storeId]}
                           </span>
                         )}
@@ -953,12 +953,12 @@ export default function StoreOrdersPage() {
                   <div className="px-3 py-3">
                     {/* 上段: 顧客名 + 受取日時 + バッジ */}
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                        <span className="text-sm font-bold text-gray-800 leading-tight">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-bold text-gray-800 leading-tight truncate">
                           {order.customerName || order.lineName || "-"}
-                        </span>
+                        </div>
                         {isMaster && selectedChildId === null && (
-                          <span className="shrink-0 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
+                          <span className="inline-block mt-0.5 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-medium">
                             {childStoreMap[order.storeId]}
                           </span>
                         )}

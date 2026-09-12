@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Plus, X, ImagePlus, Pencil, Trash2, Check, ChevronDown, ChevronUp, Cherry, LayoutGrid, Sparkles, Droplets, Tag, Printer, type LucideIcon } from "lucide-react"
 import { LineSpinner } from "@/components/ui/line-spinner"
 import { useAuth } from "@/lib/auth-context"
+import { useStoreContext } from "@/lib/store-context"
 import { useDecorations } from "@/hooks/use-decorations"
 import { useDecorationGroups } from "@/hooks/use-decoration-groups"
 import { uploadDecorationImage, deleteProductImage } from "@/lib/upload-image"
@@ -403,7 +404,10 @@ function GroupForm({ initial, onSave, onClose }: GroupFormProps) {
 // ────────────────────────────────────────────
 export default function DecorationsPage() {
   const { user } = useAuth()
-  const storeId = user?.storeId ?? ""
+  const { isMaster, childStores } = useStoreContext()
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
+  const ownStoreId = user?.storeId ?? ""
+  const storeId = isMaster ? (selectedChildId ?? ownStoreId) : ownStoreId
 
   const { decorations, loading: decoLoading, createDecoration, updateDecoration, deleteDecoration } = useDecorations(storeId)
   const { groups, loading: groupLoading, createGroup, updateGroup, deleteGroup, addItemToGroup, removeItemFromGroup } = useDecorationGroups(storeId)
@@ -426,6 +430,13 @@ export default function DecorationsPage() {
   // Add-decoration-to-group modal
   const [addToGroupId, setAddToGroupId] = useState<string | null>(null)
   const addingGroup = groups.find((g) => g.id === addToGroupId)
+
+  // マスターが対象店舗を切り替えたら開いているパネルを閉じる
+  useEffect(() => {
+    setDecoPanel("closed")
+    setGroupPanel("closed")
+    setAddToGroupId(null)
+  }, [storeId])
 
   // Expand state for groups
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set())
@@ -454,6 +465,36 @@ export default function DecorationsPage() {
   return (
     <div className="p-6 max-w-3xl">
       <h1 className="text-xl font-bold mb-6">デコレーション管理</h1>
+
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => setSelectedChildId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              selectedChildId === null
+                ? "bg-amber-400 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            全店舗（共有）
+          </button>
+          {childStores.map((s) => (
+            <button
+              type="button"
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Tab */}
       <div className="flex border-b border-gray-200 mb-6">

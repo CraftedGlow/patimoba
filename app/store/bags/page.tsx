@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Plus, X, ImagePlus, Pencil, Trash2, ShoppingBag } from "lucide-react"
 import { LineSpinner } from "@/components/ui/line-spinner"
 import { useAuth } from "@/lib/auth-context"
+import { useStoreContext } from "@/lib/store-context"
 import { useBags, type BagItem } from "@/hooks/use-bags"
 import { useProductRegistrations } from "@/hooks/use-product-registrations"
 import { uploadBagImage, deleteProductImage } from "@/lib/upload-image"
@@ -198,7 +199,10 @@ function BagForm({ storeId, initial, products, onSave, onClose }: BagFormProps) 
 // ────────────────────────────────────────────
 export default function BagsPage() {
   const { user } = useAuth()
-  const storeId = user?.storeId ?? ""
+  const { isMaster, childStores } = useStoreContext()
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
+  const ownStoreId = user?.storeId ?? ""
+  const storeId = isMaster ? (selectedChildId ?? ownStoreId) : ownStoreId
 
   const { bags, loading: bagsLoading, addBag, updateBag, deleteBag } = useBags(storeId)
   const { products, loading: productsLoading } = useProductRegistrations({ storeId })
@@ -212,6 +216,12 @@ export default function BagsPage() {
 
   const [deleteBagId, setDeleteBagId] = useState<string | null>(null)
 
+  // マスターが対象店舗を切り替えたら開いているパネルを閉じる
+  useEffect(() => {
+    setPanel("closed")
+    setDeleteBagId(null)
+  }, [storeId])
+
   if (bagsLoading || productsLoading) {
     return (
       <div className="p-6 flex items-center justify-center">
@@ -222,6 +232,35 @@ export default function BagsPage() {
 
   return (
     <div className="p-6 max-w-3xl">
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setSelectedChildId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              selectedChildId === null
+                ? "bg-amber-400 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            全店舗（共有）
+          </button>
+          {childStores.map((s) => (
+            <button
+              type="button"
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold">袋管理</h1>
         <motion.button

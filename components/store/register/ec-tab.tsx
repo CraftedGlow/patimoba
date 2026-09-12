@@ -215,7 +215,6 @@ export function EcTab() {
     setSaving(true);
     try {
       const payload = {
-        store_id: storeId,
         name: productName.trim(),
         description: description.trim(),
         base_price: parsePriceValue(price),
@@ -254,10 +253,12 @@ export function EcTab() {
 
       let savedProductId = selectedId;
       if (selectedId) {
+        // 既存商品の更新では store_id を送らない。共有商品を子店舗の文脈で編集した際に
+        // 所有店舗が書き換わってしまうのを防ぐため。
         const { error: err } = await supabase.from("products").update(payload).eq("id", selectedId);
         if (err) throw err;
       } else {
-        const { data: newProduct, error: err } = await supabase.from("products").insert(payload).select("id").single();
+        const { data: newProduct, error: err } = await supabase.from("products").insert({ ...payload, store_id: storeId }).select("id").single();
         if (err) throw err;
         savedProductId = newProduct?.id ?? null;
       }

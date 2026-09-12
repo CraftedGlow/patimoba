@@ -350,7 +350,6 @@ export function CakeTab() {
     setSaving(true);
     try {
       const payload: any = {
-        store_id: storeId,
         name: productName.trim(),
         print_short_name: printShortName.trim() || null,
         description: description.trim(),
@@ -398,6 +397,8 @@ export function CakeTab() {
 
       let savedProductId = selectedId
       if (selectedId) {
+        // 既存商品の更新では store_id を送らない。共有商品を子店舗の文脈で編集した際に
+        // 所有店舗が書き換わってしまうのを防ぐため。
         const { error: err } = await supabase
           .from("products")
           .update(payload)
@@ -406,7 +407,7 @@ export function CakeTab() {
       } else {
         const { data: newProduct, error: err } = await supabase
           .from("products")
-          .insert(payload)
+          .insert({ ...payload, store_id: storeId })
           .select("id")
           .single();
         if (err) throw err;

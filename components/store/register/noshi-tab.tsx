@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Trash2, Check, ImagePlus, Pencil, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth } from "@/lib/auth-context";
+import { useStoreContext } from "@/lib/store-context";
 import { useNoshi, NoshiItem } from "@/hooks/use-noshi";
 import { uploadNoshiImage } from "@/lib/upload-image";
 
@@ -11,7 +12,10 @@ const NOSHI_PRESETS = ["御祝", "内祝", "御礼", "御中元", "御歳暮", "
 
 export function NoshiTab() {
   const { user } = useAuth();
-  const storeId = user?.storeId ?? undefined;
+  const { isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const ownStoreId = user?.storeId ?? undefined;
+  const storeId = isMaster ? (selectedChildId ?? ownStoreId) : ownStoreId;
   const { noshiList, loading, addNoshi, updateNoshi, deleteNoshi } = useNoshi(storeId);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,6 +41,11 @@ export function NoshiTab() {
     setNameInputEnabled(false);
     setError(null);
   };
+
+  // マスターが対象店舗を切り替えたら編集中フォームをリセット
+  useEffect(() => {
+    clearForm();
+  }, [storeId]);
 
   const startEdit = (item: NoshiItem) => {
     setEditingId(item.id);
@@ -98,6 +107,35 @@ export function NoshiTab() {
 
   return (
     <>
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            type="button"
+            onClick={() => setSelectedChildId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              selectedChildId === null
+                ? "bg-amber-400 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            全店舗（共有）
+          </button>
+          {childStores.map((s) => (
+            <button
+              type="button"
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-col gap-6 [@media(min-width:650px)]:flex-row">
 
         {/* フォーム - LEFT */}

@@ -1811,6 +1811,7 @@ export type Database = {
           logo_url: string | null
           name: string
           parent_store_id: string | null
+          payment_method_restriction: string | null
           phone: string | null
           plan: string
           plan_options: Json | null
@@ -1855,6 +1856,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           parent_store_id?: string | null
+          payment_method_restriction?: string | null
           phone?: string | null
           plan?: string
           plan_options?: Json | null
@@ -1899,6 +1901,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           parent_store_id?: string | null
+          payment_method_restriction?: string | null
           phone?: string | null
           plan?: string
           plan_options?: Json | null

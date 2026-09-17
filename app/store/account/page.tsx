@@ -39,7 +39,9 @@ const WEEKDAYS = [
   { label: "土", value: 6 },
 ];
 
-type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "max_future_days" | "holidays" | "blackout_add" | "walkin_confirm" | "saved" | null;
+type ModalKind = "hours" | "cutoff" | "prep_time" | "min_future_days" | "max_future_days" | "holidays" | "blackout_add" | "walkin_confirm" | "payment_restriction_confirm" | "saved" | null;
+
+type PaymentMethodRestriction = "" | "card_only" | "store_only";
 
 interface BlackoutPeriod {
   id: string;
@@ -104,6 +106,8 @@ export default function StoreAccountPage() {
   const [minFutureDays, setMinFutureDays] = useState("2");
   const [maxFutureDays, setMaxFutureDays] = useState("30");
   const [acceptsWalkin, setAcceptsWalkin] = useState(true);
+  const [paymentMethodRestriction, setPaymentMethodRestriction] = useState<PaymentMethodRestriction>("");
+  const [pendingPaymentRestriction, setPendingPaymentRestriction] = useState<PaymentMethodRestriction>("");
   const [pendingWalkin, setPendingWalkin] = useState(true);
 
   const [modalHours, setModalHours] = useState<StoreHoursInput>(hours);
@@ -170,6 +174,7 @@ export default function StoreAccountPage() {
         }
 
         setAcceptsWalkin(store.accepts_walkin ?? true);
+        setPaymentMethodRestriction((store.payment_method_restriction as PaymentMethodRestriction) ?? "");
 
         // 平日・休日(土日)・祝日の3区分で営業時間を取得
         const storeHours = await fetchStoreHours(store.id);
@@ -350,6 +355,32 @@ export default function StoreAccountPage() {
       setSaving(false);
     }
   }, [storeId, pendingWalkin]);
+
+  const openPaymentRestrictionConfirm = useCallback((newValue: PaymentMethodRestriction) => {
+    setPendingPaymentRestriction(newValue);
+    setModal("payment_restriction_confirm");
+  }, []);
+
+  const handlePaymentCheckboxChange = useCallback((kind: "card" | "store", checked: boolean) => {
+    const allowCard = kind === "card" ? checked : paymentMethodRestriction !== "store_only";
+    const allowStore = kind === "store" ? checked : paymentMethodRestriction !== "card_only";
+    if (!allowCard && !allowStore) return; // 両方offにはできない
+    const nextValue: PaymentMethodRestriction = allowCard && allowStore ? "" : allowCard ? "card_only" : "store_only";
+    openPaymentRestrictionConfirm(nextValue);
+  }, [paymentMethodRestriction, openPaymentRestrictionConfirm]);
+
+  const savePaymentMethodRestriction = useCallback(async () => {
+    if (!storeId) return;
+    setSaving(true);
+    try {
+      await supabase.from("stores").update({ payment_method_restriction: pendingPaymentRestriction || null }).eq("id", storeId);
+      setPaymentMethodRestriction(pendingPaymentRestriction);
+      setModal("saved");
+      setTimeout(() => setModal(null), 1500);
+    } finally {
+      setSaving(false);
+    }
+  }, [storeId, pendingPaymentRestriction]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -840,6 +871,31 @@ export default function StoreAccountPage() {
                 {acceptsWalkin ? "ON（当日受付あり）" : "OFF（予約のみ）"}
               </span>
             </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500 mb-2">決済方法</p>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={paymentMethodRestriction !== "store_only"}
+                  onChange={(e) => handlePaymentCheckboxChange("card", e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                カード決済を受け付ける
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={paymentMethodRestriction !== "card_only"}
+                  onChange={(e) => handlePaymentCheckboxChange("store", e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                店頭決済を受け付ける
+              </label>
+            </div>
+            <p className="text-xs text-gray-600 mt-1">お客様の注文確認画面に表示される支払い方法の選択肢を制限します（両方のチェックを外すことはできません）</p>
           </div>
 
           <div>
@@ -1368,6 +1424,41 @@ export default function StoreAccountPage() {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={saveAcceptsWalkin}
+                disabled={saving}
+                className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {saving && <LineSpinner size={16} />}
+                はい
+              </motion.button>
+            </div>
+          </Modal>
+        )}
+
+        {modal === "payment_restriction_confirm" && (
+          <Modal key="payment_restriction_confirm" onClose={() => setModal(null)}>
+            <h2 className="text-lg font-bold text-center mb-4">決済方法設定の変更</h2>
+            <p className="text-sm text-gray-600 text-center mb-6">
+              {pendingPaymentRestriction === "card_only"
+                ? "決済方法を「カード決済のみ」に変更しますか？\n顧客の注文確認画面から店頭支払いの選択肢が非表示になります。"
+                : pendingPaymentRestriction === "store_only"
+                ? "決済方法を「店頭決済のみ」に変更しますか？\n顧客の注文確認画面からクレジットカードの選択肢が非表示になります。"
+                : "決済方法を「両方」に変更しますか？\n顧客の注文確認画面でカード決済・店頭支払いの両方が選択できるようになります。"}
+            </p>
+            <div className="flex gap-3 justify-center">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setModal(null)}
+                className="px-6 py-2 rounded-md border border-gray-300 text-gray-700 font-bold text-sm hover:bg-gray-50 transition-colors"
+              >
+                キャンセル
+              </motion.button>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={savePaymentMethodRestriction}
                 disabled={saving}
                 className="px-6 py-2 rounded-md bg-amber-400 text-white font-bold text-sm hover:bg-amber-500 transition-colors disabled:opacity-50 flex items-center gap-2"
               >

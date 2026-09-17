@@ -106,35 +106,56 @@ export default function TakeoutConfirmPage() {
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
   const [selectedBag, setSelectedBag] = useState<{ id: string; name: string; price: number; quantity: number } | null>(null);
-  // カート内に「店頭決済のみ」の商品が含まれるか
+  // カート内に「店頭決済のみ」の商品が含まれる、または店舗が店頭決済のみに設定している
   const [paymentRestricted, setPaymentRestricted] = useState(false);
+  // 店舗が「カード決済のみ」に設定している（商品側の店頭決済限定が優先されるため両立時はfalse）
+  const [cardOnlyRestricted, setCardOnlyRestricted] = useState(false);
   // カート内に「おまかせ（金額の幅あり）」の商品が含まれるか
   const [hasOmakaseItem, setHasOmakaseItem] = useState(false);
 
   useEffect(() => {
     const sid = selectedStoreId || cartStoreId;
     const productIds = cartItems.map((i) => i.productId).filter(Boolean);
-    if (!sid || productIds.length === 0) { setPaymentRestricted(false); setHasOmakaseItem(false); return; }
+    if (!sid) { setPaymentRestricted(false); setCardOnlyRestricted(false); setHasOmakaseItem(false); return; }
     let cancelled = false;
     (async () => {
-      const { data: rows } = await supabase
-        .from("products")
-        .select("id, store_id, payment_method_restriction, price_min, price_max")
-        .in("id", productIds);
-      if (cancelled || !rows) return;
-      const { parentStoreId } = await getStoreIdsWithParent(sid);
-      const overrides = await fetchProductStoreOverrides(sid, parentStoreId);
-      const merged = rows.map((row: any) => applyProductStoreOverride(row, row.id, parentStoreId, overrides));
-      const restricted = merged.some((r: any) => r.payment_method_restriction === "store_only");
-      const hasOmakase = merged.some((r: any) => r.price_min != null && r.price_max != null);
-      if (!cancelled) { setPaymentRestricted(restricted); setHasOmakaseItem(hasOmakase); }
+      const { data: storeRow } = await supabase
+        .from("stores")
+        .select("payment_method_restriction")
+        .eq("id", sid)
+        .maybeSingle();
+      if (cancelled) return;
+      const storeRestriction = storeRow?.payment_method_restriction ?? null;
+
+      let productRestricted = false;
+      let hasOmakase = false;
+      if (productIds.length > 0) {
+        const { data: rows } = await supabase
+          .from("products")
+          .select("id, store_id, payment_method_restriction, price_min, price_max")
+          .in("id", productIds);
+        if (cancelled) return;
+        if (rows) {
+          const { parentStoreId } = await getStoreIdsWithParent(sid);
+          const overrides = await fetchProductStoreOverrides(sid, parentStoreId);
+          const merged = rows.map((row: any) => applyProductStoreOverride(row, row.id, parentStoreId, overrides));
+          productRestricted = merged.some((r: any) => r.payment_method_restriction === "store_only");
+          hasOmakase = merged.some((r: any) => r.price_min != null && r.price_max != null);
+        }
+      }
+      if (cancelled) return;
+      const storeOnly = productRestricted || storeRestriction === "store_only";
+      setPaymentRestricted(storeOnly);
+      setCardOnlyRestricted(!storeOnly && storeRestriction === "card_only");
+      setHasOmakaseItem(hasOmakase);
     })();
     return () => { cancelled = true; };
   }, [selectedStoreId, cartStoreId, cartItems]);
 
   useEffect(() => {
     if (paymentRestricted) setPaymentMethod("store");
-  }, [paymentRestricted]);
+    else if (cardOnlyRestricted) setPaymentMethod("credit");
+  }, [paymentRestricted, cardOnlyRestricted]);
 
   useEffect(() => {
     if (!showTokushoModal) return;
@@ -343,6 +364,7 @@ export default function TakeoutConfirmPage() {
     if (!storeIdForOrder) { submittingRef.current = false; setSubmitError("店舗が選択されていません"); return; }
     if (cartItems.length === 0) { submittingRef.current = false; setSubmitError("カートに商品がありません"); return; }
     if (paymentRestricted && paymentMethod === "credit") { submittingRef.current = false; setSubmitError("この注文は店頭決済のみご利用いただけます"); return; }
+    if (cardOnlyRestricted && paymentMethod === "store") { submittingRef.current = false; setSubmitError("この注文はカード決済のみご利用いただけます"); return; }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -693,20 +715,27 @@ export default function TakeoutConfirmPage() {
                 <span className="text-sm">クレジットカード</span>
               </label>
             )}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="payment"
-                checked={paymentMethod === "store"}
-                onChange={() => setPaymentMethod("store")}
-                className="w-4 h-4 accent-green-500"
-              />
-              <span className="text-sm">店頭支払い</span>
-            </label>
+            {!cardOnlyRestricted && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="payment"
+                  checked={paymentMethod === "store"}
+                  onChange={() => setPaymentMethod("store")}
+                  className="w-4 h-4 accent-green-500"
+                />
+                <span className="text-sm">店頭支払い</span>
+              </label>
+            )}
           </div>
           {paymentRestricted && (
             <p className="text-xs text-amber-600 mt-2">
               店頭決済のみご利用いただける商品が含まれているため、店頭支払いのみとなります
+            </p>
+          )}
+          {cardOnlyRestricted && (
+            <p className="text-xs text-amber-600 mt-2">
+              この店舗はカード決済のみご利用いただけます
             </p>
           )}
         </div>

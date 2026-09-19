@@ -240,10 +240,10 @@ export function CandleTab() {
                   min={0}
                   className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
                 />
-                <span className="text-sm text-gray-500">個まで無料</span>
+                <span className="text-sm text-gray-500">つまで無料</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                例：1を設定すると1個目が無料になり、2個目から通常料金がかかります
+                例：1を設定すると1つ目が無料になり、2つ目から通常料金がかかります
               </p>
             </div>
 
@@ -321,7 +321,7 @@ export function CandleTab() {
                         <span className="text-xs text-gray-600">¥{item.price.toLocaleString()}</span>
                         {item.freeQuantity > 0 && (
                           <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
-                            {item.freeQuantity}個まで無料
+                            {item.freeQuantity}つまで無料
                           </span>
                         )}
                       </div>

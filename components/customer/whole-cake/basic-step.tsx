@@ -236,7 +236,7 @@ export function WholeCakeBasicStep({
                               <p className="text-[10px] leading-tight line-clamp-2">{opt.name}</p>
                               <p className="text-[10px] text-amber-600 font-bold">&yen;{opt.price.toLocaleString()}</p>
                               {!!opt.freeQuantity && opt.freeQuantity > 0 && (
-                                <p className="text-[9px] text-green-600 font-bold leading-tight">{opt.freeQuantity}{opt.type === "bag" ? "袋" : "本"}まで無料</p>
+                                <p className="text-[9px] text-green-600 font-bold leading-tight">{opt.freeQuantity}つまで無料</p>
                               )}
                             </div>
                           </button>

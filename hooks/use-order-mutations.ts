@@ -3,6 +3,7 @@
 import { supabase } from "@/lib/supabase"
 import type { OrderStatus, UICartItem } from "@/lib/types"
 import { isDevOnlyStoreVisible } from "@/lib/store-visibility"
+import { calcCandleTotal, allocateCandleFreeQuantity } from "@/lib/candle-pricing"
 
 interface CreateOrderInput {
   storeId: string
@@ -123,10 +124,7 @@ export function useOrderMutations() {
       const calcItemSubtotal = (item: UICartItem) => {
         const c = item.customization
         if (!c) return item.price * item.quantity
-        const candleSum = (c.candles || []).reduce(
-          (s, cd) => s + cd.price * cd.quantity,
-          0
-        )
+        const candleSum = calcCandleTotal(c.candles || [])
         const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0)
         const customOptionSum = (c.customOptions || []).reduce((s, op) => s + (op.additionalPrice || 0), 0)
         const noshiPrice = c.noshi?.price ?? 0
@@ -201,7 +199,7 @@ export function useOrderMutations() {
             price_delta: c.sizePrice ?? 0,
           })
         }
-        for (const cd of c.candles || []) {
+        for (const cd of allocateCandleFreeQuantity(c.candles || [])) {
           if (!cd.candleOptionId || cd.quantity <= 0) continue
           options.push({
             order_item_id: insertedId,
@@ -209,6 +207,7 @@ export function useOrderMutations() {
             option_item_name_snapshot: cd.name,
             price_delta: cd.price,
             quantity: cd.quantity,
+            free_quantity: cd.usedFree,
           })
         }
         for (const op of c.options || []) {

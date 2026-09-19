@@ -23,7 +23,7 @@ export async function GET(
       customer_name_snapshot, order_status, payment_status,
       cancel_deadline_at, payjp_charge_id, customer_id,
       stores(name, address, phone, invoice_num),
-      order_items(id, product_name_snapshot, quantity, unit_price, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity)),
+      order_items(id, product_name_snapshot, quantity, unit_price, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity, free_quantity)),
       coupons(title)
     `)
     .eq("id", orderId)

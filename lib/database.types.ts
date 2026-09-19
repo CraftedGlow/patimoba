@@ -634,6 +634,7 @@ export type Database = {
         Row: {
           created_at: string | null
           display_order: number
+          free_quantity: number
           id: string
           image_url: string | null
           name: string
@@ -644,6 +645,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           display_order?: number
+          free_quantity?: number
           id?: string
           image_url?: string | null
           name: string
@@ -654,6 +656,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           display_order?: number
+          free_quantity?: number
           id?: string
           image_url?: string | null
           name?: string
@@ -756,6 +759,7 @@ export type Database = {
       order_item_options: {
         Row: {
           created_at: string
+          free_quantity: number | null
           id: string
           option_group_name_snapshot: string | null
           option_item_name_snapshot: string | null
@@ -767,6 +771,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          free_quantity?: number | null
           id?: string
           option_group_name_snapshot?: string | null
           option_item_name_snapshot?: string | null
@@ -778,6 +783,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          free_quantity?: number | null
           id?: string
           option_group_name_snapshot?: string | null
           option_item_name_snapshot?: string | null

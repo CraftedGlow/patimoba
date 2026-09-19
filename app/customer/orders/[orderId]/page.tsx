@@ -10,6 +10,7 @@ type OrderItemOption = {
   option_item_name_snapshot: string | null;
   price_delta: number | null;
   quantity: number | null;
+  free_quantity: number | null;
 };
 
 type OrderItem = {
@@ -60,7 +61,8 @@ function formatPickupDateTime(date: string | null, time: string | null): string 
 function getOptionPrice(opt: OrderItemOption): number {
   const price = opt.price_delta ?? 0;
   const qty = opt.quantity ?? 1;
-  return opt.option_group_name_snapshot === "ろうそく" ? price * qty : price;
+  const chargeableQty = Math.max(0, qty - (opt.free_quantity ?? 0));
+  return opt.option_group_name_snapshot === "ろうそく" ? price * chargeableQty : price;
 }
 
 function getOptionLabel(opt: OrderItemOption): string {

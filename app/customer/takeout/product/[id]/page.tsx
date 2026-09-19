@@ -130,9 +130,11 @@ export default function TakeoutProductDetailPage() {
   const candleAdditional =
     numberCandles.reduce((sum, c) => {
       const count = (numberCandleSelections[c.id] ?? []).reduce((rs, r) => rs + r.qty, 0);
-      return sum + count * c.price;
+      return sum + Math.max(0, count - (c.freeQuantity ?? 0)) * c.price;
     }, 0) +
-    normalCandles.filter((c) => selectedNormalCandleIds.includes(c.id)).reduce((sum, c) => sum + c.price, 0);
+    normalCandles
+      .filter((c) => selectedNormalCandleIds.includes(c.id))
+      .reduce((sum, c) => sum + Math.max(0, 1 - (c.freeQuantity ?? 0)) * c.price, 0);
 
   const optionsAdditional = customOptions.reduce((sum, opt, i) => {
     if (opt.type === "text") return sum;
@@ -162,11 +164,12 @@ export default function TakeoutProductDetailPage() {
         const rows = numberCandleSelections[c.id] ?? [];
         const digits = rows.flatMap((r) => Array(r.qty).fill(r.digit));
         if (digits.length === 0) return [];
-        return [{ name: c.name, values: digits, additionalPrice: digits.length * c.price }];
+        const chargeableCount = Math.max(0, digits.length - (c.freeQuantity ?? 0));
+        return [{ name: c.name, values: digits, additionalPrice: chargeableCount * c.price }];
       }),
       ...normalCandles
         .filter((c) => selectedNormalCandleIds.includes(c.id))
-        .map((c) => ({ name: c.name, values: [c.name], additionalPrice: c.price })),
+        .map((c) => ({ name: c.name, values: [c.name], additionalPrice: Math.max(0, 1 - (c.freeQuantity ?? 0)) * c.price })),
     ];
     cartCustomOptions.push(...candleCartOptions);
 
@@ -379,6 +382,9 @@ export default function TakeoutProductDetailPage() {
                         <p className="text-xs font-bold text-gray-700">
                           {c.name}
                           {c.price > 0 && <span className="ml-1 font-normal text-gray-500">（¥{c.price}/本）</span>}
+                          {!!c.freeQuantity && c.freeQuantity > 0 && (
+                            <span className="ml-1 font-bold text-green-600">{c.freeQuantity}本まで無料</span>
+                          )}
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5">数字と本数を選んで追加してください</p>
                       </div>
@@ -427,7 +433,12 @@ export default function TakeoutProductDetailPage() {
                     </button>
 
                     {subtotal > 0 && (
-                      <p className="text-xs text-gray-500">合計 {subtotal}本</p>
+                      <p className="text-xs text-gray-500">
+                        合計 {subtotal}本
+                        <span className="font-bold text-gray-700">
+                          ¥{(Math.max(0, subtotal - (c.freeQuantity ?? 0)) * c.price).toLocaleString()}
+                        </span>
+                      </p>
                     )}
                   </div>
                 );

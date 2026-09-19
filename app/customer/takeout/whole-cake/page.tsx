@@ -21,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
 import { fetchCandlesByIds } from "@/hooks/use-candles";
+import { calcCandleTotal } from "@/lib/candle-pricing";
 import type {
   UICartItem,
   CartCandleEntry,
@@ -114,7 +115,7 @@ export default function WholeCakePage() {
   useEffect(() => {
     if (!selectedCake?.candleEnabled || !selectedCake.candleIds.length) { setCandleOptions([]); return; }
     fetchCandlesByIds(selectedCake.candleIds).then((items) =>
-      setCandleOptions(items.map((c) => ({ id: c.id, name: c.name, price: c.price, storeId: c.storeId, type: c.type, imageUrl: c.imageUrl })))
+      setCandleOptions(items.map((c) => ({ id: c.id, name: c.name, price: c.price, storeId: c.storeId, type: c.type, imageUrl: c.imageUrl, freeQuantity: c.freeQuantity })))
     );
   }, [selectedCake?.id, selectedCake?.candleEnabled, selectedCake?.candleIds]);
   const hasCandles = !!selectedCake?.candleEnabled && candleOptions.length > 0;
@@ -188,11 +189,19 @@ export default function WholeCakePage() {
   const selectedSize = selectedCake?.sizes.find((s) => s.id === selectedSizeId);
   const sizePrice = selectedSize?.price ?? 0;
 
-  const candleTotal = candles.reduce((sum, c) => {
-    const opt = candleOptions.find((o) => o.id === c.candleOptionId);
-    const qty = Number(c.quantity) || 0;
-    return sum + (opt?.price ?? 0) * qty;
-  }, 0);
+  const candleTotal = calcCandleTotal(
+    candles
+      .filter((c) => c.candleOptionId)
+      .map((c) => {
+        const opt = candleOptions.find((o) => o.id === c.candleOptionId);
+        return {
+          candleOptionId: c.candleOptionId,
+          price: opt?.price ?? 0,
+          quantity: Number(c.quantity) || 0,
+          freeQuantity: opt?.freeQuantity ?? 0,
+        };
+      })
+  );
 
   const decorationTotal = decorationGroups.reduce((sum, group) => {
     const ids = selectedDecorations[group.id] ?? [];
@@ -227,6 +236,7 @@ export default function WholeCakePage() {
           name,
           price: Number(opt?.price) || 0,
           quantity: Number(c.quantity) || 0,
+          freeQuantity: opt?.freeQuantity ?? 0,
         };
       });
 

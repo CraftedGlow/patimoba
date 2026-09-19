@@ -163,6 +163,7 @@ export interface CartCandleEntry {
   name: string
   price: number
   quantity: number
+  freeQuantity?: number
 }
 
 export interface CartCakeOptionEntry {

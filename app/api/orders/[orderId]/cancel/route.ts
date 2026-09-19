@@ -48,7 +48,7 @@ export async function POST(
       created_at, guest_email, customer_name_snapshot,
       stores(name, address, phone),
       users!orders_customer_id_fkey(name, email),
-      order_items(product_name_snapshot, quantity, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity))
+      order_items(product_name_snapshot, quantity, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity, free_quantity))
     `)
     .eq("id", orderId)
     .maybeSingle() as any
@@ -248,7 +248,8 @@ async function sendCancelNotification(orderId: string, order: any): Promise<bool
       const name = opt.option_item_name_snapshot ?? ""
       const price = opt.price_delta ?? 0
       const qty = opt.quantity ?? 1
-      const totalPrice = group === "ろうそく" ? price * qty : price
+      const chargeableQty = Math.max(0, qty - (opt.free_quantity ?? 0))
+      const totalPrice = group === "ろうそく" ? price * chargeableQty : price
       let label: string
       if (group === "サイズ") label = `  サイズ：${name}`
       else if (group === "ろうそく") label = `  ろうそく：${name}${qty > 1 ? `×${qty}` : ""}`

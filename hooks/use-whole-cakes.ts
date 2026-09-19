@@ -15,6 +15,7 @@ export interface CandleOption {
   storeId: string
   type?: "number" | "normal"
   imageUrl?: string | null
+  freeQuantity?: number
 }
 
 export function useWholeCakes(storeId?: string) {

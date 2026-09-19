@@ -14,6 +14,7 @@ export interface CandleItem {
   price: number;
   type: "number" | "normal";
   displayOrder: number;
+  freeQuantity: number;
   isMasterItem?: boolean;
 }
 
@@ -26,6 +27,7 @@ function toCandle(row: any, parentStoreId: string | null): CandleItem {
     price: row.price ?? 0,
     type: row.type === "number" ? "number" : "normal",
     displayOrder: row.display_order ?? 0,
+    freeQuantity: row.free_quantity ?? 0,
     isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
   };
 }
@@ -49,7 +51,7 @@ export function useCandles(storeId: string | undefined) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const addCandle = async (payload: { name: string; imageUrl: string | null; price: number; type: "number" | "normal" }) => {
+  const addCandle = async (payload: { name: string; imageUrl: string | null; price: number; type: "number" | "normal"; freeQuantity: number }) => {
     if (!storeId) return { error: "storeId missing" };
     const { error } = await db.from("candles").insert({
       store_id: storeId,
@@ -57,18 +59,20 @@ export function useCandles(storeId: string | undefined) {
       image_url: payload.imageUrl,
       price: payload.price,
       type: payload.type,
+      free_quantity: payload.freeQuantity,
       display_order: candleList.length,
     });
     if (!error) await fetch();
     return { error: error?.message ?? null };
   };
 
-  const updateCandle = async (id: string, payload: { name: string; imageUrl: string | null; price: number; type: "number" | "normal" }) => {
+  const updateCandle = async (id: string, payload: { name: string; imageUrl: string | null; price: number; type: "number" | "normal"; freeQuantity: number }) => {
     const { error } = await db.from("candles").update({
       name: payload.name,
       image_url: payload.imageUrl,
       price: payload.price,
       type: payload.type,
+      free_quantity: payload.freeQuantity,
     }).eq("id", id);
     if (!error) await fetch();
     return { error: error?.message ?? null };

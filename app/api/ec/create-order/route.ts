@@ -4,6 +4,7 @@ import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTING
 import { regionForPrefecture } from "@/lib/constants/regions";
 import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
 import { releaseCouponReservation, finalizeCouponDelivery } from "@/lib/coupons";
+import { calcCandleTotal, allocateCandleFreeQuantity } from "@/lib/candle-pricing";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -116,7 +117,7 @@ interface CartItem {
     sizeId?: string;
     sizeLabel?: string;
     sizePrice?: number;
-    candles?: { candleOptionId: string; name: string; price: number; quantity: number }[];
+    candles?: { candleOptionId: string; name: string; price: number; quantity: number; freeQuantity?: number }[];
     options?: { wholeCakeOptionId: string; name: string; price: number; groupName?: string }[];
     messagePlate?: string;
     allergyNote?: string;
@@ -129,7 +130,7 @@ interface CartItem {
 function calcItemSubtotal(item: CartItem): number {
   const c = item.customization;
   if (!c) return item.price * item.quantity;
-  const candleSum = (c.candles || []).reduce((s, cd) => s + cd.price * cd.quantity, 0);
+  const candleSum = calcCandleTotal(c.candles || []);
   const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0);
   const customOptionSum = (c.customOptions || []).reduce((s, op) => s + (op.additionalPrice || 0), 0);
   const noshiPrice = c.noshi?.price ?? 0;
@@ -316,7 +317,7 @@ export async function POST(req: NextRequest) {
             price_delta: c.sizePrice ?? 0,
           });
         }
-        for (const cd of c.candles || []) {
+        for (const cd of allocateCandleFreeQuantity(c.candles || [])) {
           if (!cd.candleOptionId || cd.quantity <= 0) continue;
           options.push({
             order_item_id: insertedId,
@@ -324,6 +325,7 @@ export async function POST(req: NextRequest) {
             option_item_name_snapshot: cd.name,
             price_delta: cd.price,
             quantity: cd.quantity,
+            free_quantity: cd.usedFree,
           });
         }
         for (const op of c.options || []) {

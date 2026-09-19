@@ -13,7 +13,7 @@ export interface CandleOption {
   name: string
   price: number
   storeId: string
-  type?: "number" | "normal"
+  type?: "number" | "normal" | "bag"
   imageUrl?: string | null
   freeQuantity?: number
 }

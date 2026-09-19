@@ -237,6 +237,7 @@ export default function WholeCakePage() {
           price: Number(opt?.price) || 0,
           quantity: Number(c.quantity) || 0,
           freeQuantity: opt?.freeQuantity ?? 0,
+          type: opt?.type,
         };
       });
 
@@ -342,9 +343,15 @@ export default function WholeCakePage() {
   const messagePlateOk = !hasMessagePlate || !messagePlateRequired || (
     messagePlateSizes.length > 0 ? selectedMessagePlateIdx !== "" : messageText.trim() !== ""
   );
+  // ナンバー型のろうそくを選んだ場合、数字を選択するまで次に進めない
+  const candlesOk = candles.every((c) => {
+    if (!c.candleOptionId) return true;
+    const opt = candleOptions.find((o) => o.id === c.candleOptionId);
+    return opt?.type !== "number" || !!c.digit;
+  });
   const canProceedStep1 = isPrintMode
-    ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messagePlateOk && !!printPhotoUrl)
-    : (selectedSizeId !== "" && messagePlateOk);
+    ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messagePlateOk && candlesOk && !!printPhotoUrl)
+    : (selectedSizeId !== "" && messagePlateOk && candlesOk);
 
   const isPageLoading = loading || (isPrintMode && printGroupLoading);
 

@@ -6,13 +6,15 @@ import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 
 const db = supabase as any;
 
+export type CandleType = "number" | "normal" | "bag";
+
 export interface CandleItem {
   id: string;
   storeId: string;
   name: string;
   imageUrl: string | null;
   price: number;
-  type: "number" | "normal";
+  type: CandleType;
   displayOrder: number;
   freeQuantity: number;
   isMasterItem?: boolean;
@@ -25,7 +27,7 @@ function toCandle(row: any, parentStoreId: string | null): CandleItem {
     name: row.name,
     imageUrl: row.image_url ?? null,
     price: row.price ?? 0,
-    type: row.type === "number" ? "number" : "normal",
+    type: row.type === "number" ? "number" : row.type === "bag" ? "bag" : "normal",
     displayOrder: row.display_order ?? 0,
     freeQuantity: row.free_quantity ?? 0,
     isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
@@ -51,7 +53,7 @@ export function useCandles(storeId: string | undefined) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const addCandle = async (payload: { name: string; imageUrl: string | null; price: number; type: "number" | "normal"; freeQuantity: number }) => {
+  const addCandle = async (payload: { name: string; imageUrl: string | null; price: number; type: CandleType; freeQuantity: number }) => {
     if (!storeId) return { error: "storeId missing" };
     const { error } = await db.from("candles").insert({
       store_id: storeId,
@@ -66,7 +68,7 @@ export function useCandles(storeId: string | undefined) {
     return { error: error?.message ?? null };
   };
 
-  const updateCandle = async (id: string, payload: { name: string; imageUrl: string | null; price: number; type: "number" | "normal"; freeQuantity: number }) => {
+  const updateCandle = async (id: string, payload: { name: string; imageUrl: string | null; price: number; type: CandleType; freeQuantity: number }) => {
     const { error } = await db.from("candles").update({
       name: payload.name,
       image_url: payload.imageUrl,

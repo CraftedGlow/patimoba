@@ -97,6 +97,9 @@ export function WholeCakeBasicStep({
   const isNumberCandle = (candleOptionId: string) =>
     candleOptions.find((o) => o.id === candleOptionId)?.type === "number";
 
+  const isBagCandle = (candleOptionId: string) =>
+    candleOptions.find((o) => o.id === candleOptionId)?.type === "bag";
+
   const showForm = !isPrintMode || !!selectedCakeIdForPrint;
 
   return (
@@ -241,31 +244,38 @@ export function WholeCakeBasicStep({
                       })}
                     </div>
                     {candle.candleOptionId && (
-                      <div className="flex items-center gap-2 mt-2">
-                        {isNumberCandle(candle.candleOptionId) && (
+                      <>
+                        <div className="flex items-center gap-2 mt-2">
+                          {isNumberCandle(candle.candleOptionId) && (
+                            <select
+                              value={candle.digit ?? ""}
+                              onChange={(e) => updateCandle(candle.id, "digit", e.target.value)}
+                              className={`flex-1 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent ${
+                                candle.digit ? "border-gray-300" : "border-red-300"
+                              }`}
+                            >
+                              <option value="">数字を選択</option>
+                              {["0","1","2","3","4","5","6","7","8","9"].map((d) => (
+                                <option key={d} value={d}>{d}</option>
+                              ))}
+                            </select>
+                          )}
                           <select
-                            value={candle.digit ?? ""}
-                            onChange={(e) => updateCandle(candle.id, "digit", e.target.value)}
+                            value={candle.quantity}
+                            onChange={(e) => updateCandle(candle.id, "quantity", e.target.value)}
                             className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                           >
-                            <option value="">数字を選択</option>
-                            {["0","1","2","3","4","5","6","7","8","9"].map((d) => (
-                              <option key={d} value={d}>{d}</option>
+                            <option value="">{isBagCandle(candle.candleOptionId) ? "袋の数を選択" : "本数を選択"}</option>
+                            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                              <option key={n} value={String(n)}>{n}</option>
                             ))}
                           </select>
+                          <span className="text-sm font-medium shrink-0">{isBagCandle(candle.candleOptionId) ? "袋" : "本"}</span>
+                        </div>
+                        {isNumberCandle(candle.candleOptionId) && !candle.digit && (
+                          <p className="text-[11px] text-red-500 mt-1">数字を選択してください</p>
                         )}
-                        <select
-                          value={candle.quantity}
-                          onChange={(e) => updateCandle(candle.id, "quantity", e.target.value)}
-                          className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-                        >
-                          <option value="">本数を選択</option>
-                          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                            <option key={n} value={String(n)}>{n}</option>
-                          ))}
-                        </select>
-                        <span className="text-sm font-medium shrink-0">本</span>
-                      </div>
+                      </>
                     )}
                   </div>
                   );

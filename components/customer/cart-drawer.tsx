@@ -175,7 +175,7 @@ export function CartDrawer({
                                 )}
                                 {(c.candles || []).map((cd, i) => (
                                   <p key={`cd-${i}`} className="text-xs text-gray-500">
-                                    ろうそく: {cd.name} ×{cd.quantity}本
+                                    ろうそく: {cd.name} ×{cd.quantity}{cd.type === "bag" ? "袋" : "本"}
                                   </p>
                                 ))}
                                 {(c.options || []).map((op, i) => (

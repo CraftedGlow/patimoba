@@ -112,7 +112,7 @@ export function WholeCakeConfirmStep({
                   <div key={c.id} className="flex justify-between items-center">
                     <span className="text-sm flex items-center gap-1.5">
                       {opt.imageUrl && <img src={opt.imageUrl} alt="" className="w-5 h-5 rounded object-cover" />}
-                      {label} x{qty}本
+                      {label} x{qty}{opt.type === "bag" ? "袋" : "本"}
                     </span>
                     <span className="text-sm">&yen;{(opt.price * qty).toLocaleString()}</span>
                   </div>

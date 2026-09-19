@@ -1231,7 +1231,7 @@ export function CakeTab() {
                       )}
                       <span>{c.name}</span>
                       <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
-                        {c.type === "number" ? "ナンバー型" : "ノーマル型"}
+                        {c.type === "number" ? "ナンバー型" : c.type === "bag" ? "袋型" : "ノーマル型"}
                       </span>
                       {c.price > 0 && (
                         <span className="text-xs text-gray-600">+¥{c.price.toLocaleString()}</span>

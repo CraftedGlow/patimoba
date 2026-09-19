@@ -5,7 +5,7 @@ import { Trash2, Check, ImagePlus, Pencil, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
-import { useCandles, CandleItem } from "@/hooks/use-candles";
+import { useCandles, CandleItem, CandleType } from "@/hooks/use-candles";
 import { uploadCandleImage } from "@/lib/upload-image";
 
 export function CandleTab() {
@@ -20,7 +20,7 @@ export function CandleTab() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [freeQuantity, setFreeQuantity] = useState("0");
-  const [type, setType] = useState<"number" | "normal">("normal");
+  const [type, setType] = useState<CandleType>("normal");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -197,8 +197,19 @@ export function CandleTab() {
                   />
                   ナンバー型
                 </label>
+                <label className="flex items-center gap-1.5 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="candle-type"
+                    checked={type === "bag"}
+                    onChange={() => setType("bag")}
+                    className="accent-amber-500"
+                  />
+                  袋型
+                </label>
               </div>
               <p className="text-xs text-gray-500 mt-1">ナンバー型に設定すると、顧客画面で数字（0〜9）を指定できます</p>
+              <p className="text-xs text-gray-500">袋型に設定すると、顧客画面で数量の単位が「袋」になります</p>
             </div>
 
             {/* Price */}
@@ -305,7 +316,7 @@ export function CandleTab() {
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
-                          {item.type === "number" ? "ナンバー型" : "ノーマル型"}
+                          {item.type === "number" ? "ナンバー型" : item.type === "bag" ? "袋型" : "ノーマル型"}
                         </span>
                         <span className="text-xs text-gray-600">¥{item.price.toLocaleString()}</span>
                         {item.freeQuantity > 0 && (

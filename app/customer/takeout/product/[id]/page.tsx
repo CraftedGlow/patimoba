@@ -383,7 +383,7 @@ export default function TakeoutProductDetailPage() {
                           {c.name}
                           {c.price > 0 && <span className="ml-1 font-normal text-gray-500">（¥{c.price}/本）</span>}
                           {!!c.freeQuantity && c.freeQuantity > 0 && (
-                            <span className="ml-1 font-bold text-green-600">{c.freeQuantity}本まで無料</span>
+                            <span className="ml-1 font-bold text-green-600">{c.freeQuantity}{c.type === "bag" ? "袋" : "本"}まで無料</span>
                           )}
                         </p>
                         <p className="text-xs text-gray-500 mt-0.5">数字と本数を選んで追加してください</p>

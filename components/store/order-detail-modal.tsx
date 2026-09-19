@@ -216,7 +216,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                     {/* ろうそく */}
                     {item.options.filter(opt => opt.groupName === "ろうそく").map((opt, j) => (
                       <div key={`candle-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
-                        ろうそく：{opt.itemName}{opt.quantity != null && `×${opt.quantity}本`}
+                        ろうそく：{opt.itemName}{opt.quantity != null && `×${opt.quantity}`}
                         {opt.priceDelta > 0 && <span className="text-gray-600 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
                       </div>
                     ))}

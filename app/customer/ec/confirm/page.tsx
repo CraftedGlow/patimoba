@@ -658,10 +658,14 @@ export default function ECConfirmPage() {
                     {c?.messagePlateOption && (
                       <p className="text-xs text-gray-500">
                         メッセージプレート：{c.messagePlateOption.name}{c.messagePlate && `「${c.messagePlate}」`}
+                        {c.messagePlateOption.price > 0 && `（+¥${(c.messagePlateOption.price * item.quantity).toLocaleString()}）`}
                       </p>
                     )}
                   </div>
                   <div className="text-right shrink-0">
+                    {c?.messagePlateOption && c.messagePlateOption.price > 0 && (
+                      <p className="text-xs text-gray-500">商品 ¥{(item.price * item.quantity).toLocaleString()}</p>
+                    )}
                     <p className="text-sm font-bold">¥{lineTotal.toLocaleString()}</p>
                     {item.quantity > 1 && <p className="text-xs text-gray-600">×{item.quantity}</p>}
                   </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import type { UICartItem } from "@/lib/types"
+import { calcItemSubtotal } from "@/lib/cart-pricing"
 
 interface PrintReceiptProps {
   customerName: string
@@ -35,13 +36,7 @@ export function PrintReceipt({
 
   const enrichedItems = items.map((item) => {
     const c = item.customization
-    const optSum = [
-      c?.sizePrice ?? 0,
-      ...(c?.candles ?? []).map((cd) => cd.price * cd.quantity),
-      ...(c?.options ?? []).map((op) => op.price),
-      ...(c?.customOptions ?? []).map((o) => o.additionalPrice || 0),
-    ].reduce((s, v) => s + v, 0)
-    const lineTotal = (item.price + optSum) * item.quantity
+    const lineTotal = calcItemSubtotal(item)
     const optionLines: string[] = []
     if (c?.sizeLabel) optionLines.push(c.sizeLabel)
     ;(c?.candles ?? []).forEach((cd) => {
@@ -51,6 +46,12 @@ export function PrintReceipt({
     ;(c?.customOptions ?? []).forEach((co) => {
       if (co.values.length > 0) optionLines.push(`${co.name}: ${co.values.join("、")}`)
     })
+    if (c?.noshi) {
+      optionLines.push(`のし：${c.noshi.name}${c.noshi.purpose ? `（${c.noshi.purpose}）` : ""}${c.noshi.displayName ? `「${c.noshi.displayName}」` : ""}`)
+    }
+    if (c?.messagePlateOption) {
+      optionLines.push(`メッセージプレート：${c.messagePlateOption.name}${c.messagePlate ? `「${c.messagePlate}」` : ""}`)
+    }
     return { ...item, lineTotal, optionLines }
   })
 

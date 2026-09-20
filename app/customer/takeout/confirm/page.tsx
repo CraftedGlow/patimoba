@@ -10,6 +10,7 @@ import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
+import { calcItemSubtotal } from "@/lib/cart-pricing";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { useMyCoupons, type MyCouponEligibility } from "@/hooks/use-my-coupons";
 import { calcCouponDiscountAmount } from "@/lib/coupons";
@@ -769,15 +770,7 @@ export default function TakeoutConfirmPage() {
           <div className="divide-y divide-gray-100">
             {cartItems.map((item, idx) => {
               const c = item.customization;
-              const optSum = [
-                (c?.sizePrice ?? 0),
-                ...(c?.candles ?? []).map((cd) => cd.price * cd.quantity),
-                ...(c?.options ?? []).map((op) => op.price),
-                ...(c?.customOptions ?? []).map((o) => o.additionalPrice || 0),
-                c?.noshi?.price ?? 0,
-                c?.messagePlateOption?.price ?? 0,
-              ].reduce((s, v) => s + v, 0);
-              const lineTotal = (item.price + optSum) * item.quantity;
+              const lineTotal = calcItemSubtotal(item);
               return (
                 <div key={idx} className="flex items-center gap-3 px-4 py-3">
                   {item.image ? (

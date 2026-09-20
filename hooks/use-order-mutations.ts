@@ -3,7 +3,8 @@
 import { supabase } from "@/lib/supabase"
 import type { OrderStatus, UICartItem } from "@/lib/types"
 import { isDevOnlyStoreVisible } from "@/lib/store-visibility"
-import { calcCandleTotal, allocateCandleFreeQuantity } from "@/lib/candle-pricing"
+import { allocateCandleFreeQuantity } from "@/lib/candle-pricing"
+import { calcItemSubtotal } from "@/lib/cart-pricing"
 
 interface CreateOrderInput {
   storeId: string
@@ -121,20 +122,6 @@ export function useOrderMutations() {
     }
 
     try {
-      const calcItemSubtotal = (item: UICartItem) => {
-        const c = item.customization
-        if (!c) return item.price * item.quantity
-        const candleSum = calcCandleTotal(c.candles || [])
-        const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0)
-        const customOptionSum = (c.customOptions || []).reduce((s, op) => s + (op.additionalPrice || 0), 0)
-        const noshiPrice = c.noshi?.price ?? 0
-        const messagePlatePrice = c.messagePlateOption?.price ?? 0
-        return (
-          item.price * item.quantity +
-          ((c.sizePrice ?? 0) + candleSum + optionSum + customOptionSum + noshiPrice + messagePlatePrice) * item.quantity
-        )
-      }
-
       // レシート印字用の短縮名を解決するため、商品のカスタムオプション定義と
       // デコレーション選択肢の短縮名をまとめて取得しておく（注文作成時にスナップショット）
       const productIds = Array.from(new Set(input.items.map((i) => i.productId).filter(Boolean))) as string[]

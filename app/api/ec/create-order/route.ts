@@ -4,7 +4,8 @@ import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTING
 import { regionForPrefecture } from "@/lib/constants/regions";
 import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
 import { releaseCouponReservation, finalizeCouponDelivery } from "@/lib/coupons";
-import { calcCandleTotal, allocateCandleFreeQuantity } from "@/lib/candle-pricing";
+import { allocateCandleFreeQuantity } from "@/lib/candle-pricing";
+import { calcItemSubtotal } from "@/lib/cart-pricing";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -125,17 +126,6 @@ interface CartItem {
     noshi?: { id: string; name: string; purpose?: string; displayName?: string; price: number };
     messagePlateOption?: { id: string; name: string; price: number };
   };
-}
-
-function calcItemSubtotal(item: CartItem): number {
-  const c = item.customization;
-  if (!c) return item.price * item.quantity;
-  const candleSum = calcCandleTotal(c.candles || []);
-  const optionSum = (c.options || []).reduce((s, op) => s + op.price, 0);
-  const customOptionSum = (c.customOptions || []).reduce((s, op) => s + (op.additionalPrice || 0), 0);
-  const noshiPrice = c.noshi?.price ?? 0;
-  const messagePlatePrice = c.messagePlateOption?.price ?? 0;
-  return (item.price * item.quantity) + ((c.sizePrice ?? 0) + candleSum + optionSum + customOptionSum + noshiPrice + messagePlatePrice) * item.quantity;
 }
 
 export async function POST(req: NextRequest) {

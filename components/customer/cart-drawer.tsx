@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
+import { calcItemSubtotal } from "@/lib/cart-pricing";
 import type { UICartItem } from "@/lib/types";
 import { useRouter } from "next/navigation";
 
@@ -119,23 +120,7 @@ export function CartDrawer({
                   <div className="space-y-0">
                     {items.map((item, index) => {
                       const c = item.customization;
-                      const candleSum = (c?.candles || []).reduce(
-                        (s, cd) => s + cd.price * cd.quantity,
-                        0
-                      );
-                      const optionSum = (c?.options || []).reduce(
-                        (s, op) => s + op.price,
-                        0
-                      );
-                      const customOptSum = (c?.customOptions || []).reduce(
-                        (s, o) => s + (o.additionalPrice || 0),
-                        0
-                      );
-                      const noshiPrice = c?.noshi?.price ?? 0;
-                      const messagePlatePrice = c?.messagePlateOption?.price ?? 0;
-                      const itemTotal =
-                        item.price * item.quantity +
-                        ((c?.sizePrice || 0) + candleSum + optionSum + customOptSum + noshiPrice + messagePlatePrice) * item.quantity;
+                      const itemTotal = calcItemSubtotal(item);
                       const key = itemCartKey(item);
 
                       return (

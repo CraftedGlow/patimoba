@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react"
 import type { UICartItem } from "./types"
 import { useOptionalCustomerContext } from "./customer-context"
-import { calcCandleTotal } from "./candle-pricing"
+import { calcItemSubtotal } from "./cart-pricing"
 
 interface DeliveryAddress {
   postalCode: string
@@ -190,22 +190,7 @@ export function CartProvider({ children, storageKey = DEFAULT_STORAGE_KEY }: { c
     }
   }, [loaded, selectedStoreId, storeId, clear])
 
-  const total = items.reduce((sum, item) => {
-    let itemTotal = item.price * item.quantity
-    if (item.customization) {
-      const c = item.customization
-      itemTotal += (c.sizePrice || 0) * item.quantity
-      const candleTotal = calcCandleTotal(c.candles || [])
-      const optionTotal = (c.options || []).reduce((s, op) => s + op.price, 0)
-      const customOptTotal = (c.customOptions || []).reduce(
-        (s, o) => s + (o.additionalPrice || 0),
-        0
-      )
-      const noshiTotal = c.noshi?.price ?? 0
-      itemTotal += (candleTotal + optionTotal + customOptTotal + noshiTotal) * item.quantity
-    }
-    return sum + itemTotal
-  }, 0)
+  const total = items.reduce((sum, item) => sum + calcItemSubtotal(item), 0)
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 

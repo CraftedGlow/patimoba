@@ -82,19 +82,26 @@ export default function ECProductsPage() {
           <div className="h-1 w-20 bg-[var(--ec-400,#fbbf24)] rounded mt-1" />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:justify-center">
-          {filtered.map((product, i) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={`${lgCardWidthClass} lg:shrink-0`}
-            >
-              <ProductCard product={product} basePath="/customer/ec" />
-            </motion.div>
-          ))}
-        </div>
+        {filtered.length === 0 ? (
+          <div className="text-center py-20 text-gray-600 text-sm">
+            <p>焼き菓子/ギフトのオンラインショップはただいま準備中です。</p>
+            <p>しばらくお待ちください。</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:justify-center">
+            {filtered.map((product, i) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className={`${lgCardWidthClass} lg:shrink-0`}
+              >
+                <ProductCard product={product} basePath="/customer/ec" />
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 下部固定バー */}

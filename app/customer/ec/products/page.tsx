@@ -83,7 +83,7 @@ export default function ECProductsPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="text-center py-20 text-gray-600 text-sm">
+          <div className="text-center py-20 text-black text-[18px] sm:text-[22px]">
             <p>焼き菓子/ギフトのオンラインショップはただいま準備中です。</p>
             <p>しばらくお待ちください。</p>
           </div>

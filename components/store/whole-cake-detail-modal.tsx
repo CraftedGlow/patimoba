@@ -31,20 +31,24 @@ export function WholeCakeDetailModal({ order, onClose }: Props) {
       setLoading(true);
       const { data: itemRows } = await supabase
         .from("order_items")
-        .select("id, variant_name_snapshot, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity)")
+        .select("id, variant_name_snapshot, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity, free_quantity)")
         .eq("order_id", order.id);
 
       const opts: WholeCakeOption[] = [];
       for (const row of itemRows ?? []) {
+        const rowOptions = row.order_item_options ?? [];
         if (row.variant_name_snapshot) {
-          opts.push({ group: "サイズ", item: row.variant_name_snapshot, price: 0, quantity: null });
+          const sizeOpt = rowOptions.find((o: any) => o.option_group_name_snapshot === "サイズ");
+          opts.push({ group: "サイズ", item: row.variant_name_snapshot, price: sizeOpt?.price_delta ?? 0, quantity: null });
         }
-        for (const o of row.order_item_options ?? []) {
+        for (const o of rowOptions) {
           if (o.option_group_name_snapshot === "サイズ") continue;
+          const isCandle = o.option_group_name_snapshot === "ろうそく";
+          const chargeableQty = Math.max(0, (o.quantity ?? 0) - (o.free_quantity ?? 0));
           opts.push({
             group: o.option_group_name_snapshot ?? "",
             item: o.option_item_name_snapshot ?? "",
-            price: o.price_delta ?? 0,
+            price: isCandle ? (o.price_delta ?? 0) * chargeableQty : (o.price_delta ?? 0),
             quantity: o.quantity ?? null,
           });
         }

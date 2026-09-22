@@ -18,6 +18,7 @@ interface OrderItemWithOptions {
     itemName: string;
     priceDelta: number;
     quantity: number | null;
+    freeQuantity: number | null;
   }[];
 }
 
@@ -52,7 +53,8 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
             option_group_name_snapshot,
             option_item_name_snapshot,
             price_delta,
-            quantity
+            quantity,
+            free_quantity
           )
         `)
         .eq("order_id", order.id)
@@ -73,6 +75,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
               itemName: opt.option_item_name_snapshot ?? "",
               priceDelta: opt.price_delta ?? 0,
               quantity: opt.quantity ?? null,
+              freeQuantity: opt.free_quantity ?? null,
             })),
           }))
         );
@@ -207,19 +210,29 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                     </div>
 
                     {/* サイズ（バリアント） */}
-                    {item.variantName && (
-                      <div className="text-xs text-gray-500 mt-0.5 ml-2">
-                        サイズ：{item.variantName}
-                      </div>
-                    )}
+                    {item.variantName && (() => {
+                      const sizeOpt = item.options.find(opt => opt.groupName === "サイズ");
+                      return (
+                        <div className="text-xs text-gray-500 mt-0.5 ml-2">
+                          サイズ：{item.variantName}
+                          {!!sizeOpt && sizeOpt.priceDelta > 0 && (
+                            <span className="text-gray-600 ml-1">+¥{sizeOpt.priceDelta.toLocaleString()}</span>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* ろうそく */}
-                    {item.options.filter(opt => opt.groupName === "ろうそく").map((opt, j) => (
-                      <div key={`candle-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
-                        ろうそく：{opt.itemName}{opt.quantity != null && `×${opt.quantity}`}
-                        {opt.priceDelta > 0 && <span className="text-gray-600 ml-1">+¥{opt.priceDelta.toLocaleString()}</span>}
-                      </div>
-                    ))}
+                    {item.options.filter(opt => opt.groupName === "ろうそく").map((opt, j) => {
+                      const chargeableQty = Math.max(0, (opt.quantity ?? 0) - (opt.freeQuantity ?? 0));
+                      const lineTotal = opt.priceDelta * chargeableQty;
+                      return (
+                        <div key={`candle-${j}`} className="text-xs text-gray-500 mt-0.5 ml-2">
+                          ろうそく：{opt.itemName}{opt.quantity != null && `×${opt.quantity}`}
+                          {lineTotal > 0 && <span className="text-gray-600 ml-1">+¥{lineTotal.toLocaleString()}</span>}
+                        </div>
+                      );
+                    })}
 
                     {/* メッセージプレート種類 + メッセージ（1行表示） */}
                     {(() => {

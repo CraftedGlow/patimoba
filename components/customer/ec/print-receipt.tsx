@@ -40,7 +40,10 @@ export function PrintReceipt({
     const optionLines: string[] = []
     if (c?.sizeLabel) optionLines.push(c.sizeLabel)
     ;(c?.candles ?? []).forEach((cd) => {
-      if (cd.quantity > 0) optionLines.push(`${cd.name} ×${cd.quantity}`)
+      if (cd.quantity <= 0) return
+      const unit = cd.type === "bag" ? "袋" : "本"
+      const bagNote = cd.type === "bag" && cd.bagQuantity ? `（${cd.quantity * cd.bagQuantity}本）` : ""
+      optionLines.push(`${cd.name} ×${cd.quantity}${unit}${bagNote}`)
     })
     ;(c?.options ?? []).forEach((op) => optionLines.push(op.name))
     ;(c?.customOptions ?? []).forEach((co) => {

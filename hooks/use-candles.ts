@@ -17,6 +17,7 @@ export interface CandleItem {
   type: CandleType;
   displayOrder: number;
   freeQuantity: number;
+  bagQuantity: number;
   isMasterItem?: boolean;
 }
 
@@ -30,6 +31,7 @@ function toCandle(row: any, parentStoreId: string | null): CandleItem {
     type: row.type === "number" ? "number" : row.type === "bag" ? "bag" : "normal",
     displayOrder: row.display_order ?? 0,
     freeQuantity: row.free_quantity ?? 0,
+    bagQuantity: row.bag_quantity ?? 1,
     isMasterItem: parentStoreId !== null && row.store_id === parentStoreId,
   };
 }
@@ -53,7 +55,7 @@ export function useCandles(storeId: string | undefined) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const addCandle = async (payload: { name: string; imageUrl: string | null; price: number; type: CandleType; freeQuantity: number }) => {
+  const addCandle = async (payload: { name: string; imageUrl: string | null; price: number; type: CandleType; freeQuantity: number; bagQuantity: number }) => {
     if (!storeId) return { error: "storeId missing" };
     const { error } = await db.from("candles").insert({
       store_id: storeId,
@@ -62,19 +64,21 @@ export function useCandles(storeId: string | undefined) {
       price: payload.price,
       type: payload.type,
       free_quantity: payload.freeQuantity,
+      bag_quantity: payload.bagQuantity,
       display_order: candleList.length,
     });
     if (!error) await fetch();
     return { error: error?.message ?? null };
   };
 
-  const updateCandle = async (id: string, payload: { name: string; imageUrl: string | null; price: number; type: CandleType; freeQuantity: number }) => {
+  const updateCandle = async (id: string, payload: { name: string; imageUrl: string | null; price: number; type: CandleType; freeQuantity: number; bagQuantity: number }) => {
     const { error } = await db.from("candles").update({
       name: payload.name,
       image_url: payload.imageUrl,
       price: payload.price,
       type: payload.type,
       free_quantity: payload.freeQuantity,
+      bag_quantity: payload.bagQuantity,
     }).eq("id", id);
     if (!error) await fetch();
     return { error: error?.message ?? null };

@@ -16,6 +16,7 @@ export interface CandleOption {
   type?: "number" | "normal" | "bag"
   imageUrl?: string | null
   freeQuantity?: number
+  bagQuantity?: number
 }
 
 export function useWholeCakes(storeId?: string) {

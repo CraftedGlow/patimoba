@@ -20,6 +20,7 @@ export function CandleTab() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [freeQuantity, setFreeQuantity] = useState("0");
+  const [bagQuantity, setBagQuantity] = useState("1");
   const [type, setType] = useState<CandleType>("normal");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -35,6 +36,7 @@ export function CandleTab() {
     setName("");
     setPrice("");
     setFreeQuantity("0");
+    setBagQuantity("1");
     setType("normal");
     setImageUrl(null);
     setError(null);
@@ -50,6 +52,7 @@ export function CandleTab() {
     setName(item.name);
     setPrice(String(item.price));
     setFreeQuantity(String(item.freeQuantity ?? 0));
+    setBagQuantity(String(item.bagQuantity ?? 1));
     setType(item.type);
     setImageUrl(item.imageUrl);
     setError(null);
@@ -71,9 +74,10 @@ export function CandleTab() {
     if (!name.trim()) { setError("種類名を入力してください"); return; }
     const priceNum = parseInt(price) || 0;
     const freeQuantityNum = Math.max(0, parseInt(freeQuantity) || 0);
+    const bagQuantityNum = Math.max(1, parseInt(bagQuantity) || 1);
     setSaving(true);
     setError(null);
-    const payload = { name: name.trim(), imageUrl, price: priceNum, type, freeQuantity: freeQuantityNum };
+    const payload = { name: name.trim(), imageUrl, price: priceNum, type, freeQuantity: freeQuantityNum, bagQuantity: bagQuantityNum };
     const result = editingId
       ? await updateCandle(editingId, payload)
       : await addCandle(payload);
@@ -247,6 +251,27 @@ export function CandleTab() {
               </p>
             </div>
 
+            {/* Bag quantity (only for bag type) */}
+            {type === "bag" && (
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1.5">1袋あたりの本数</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={bagQuantity}
+                    onChange={(e) => setBagQuantity(e.target.value)}
+                    placeholder="1"
+                    min={1}
+                    className="w-32 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400"
+                  />
+                  <span className="text-sm text-gray-500">本入り</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  種類名に「〇本入り」と書かなくても、ここで設定した本数が顧客画面・確認画面で自動的に表示されます
+                </p>
+              </div>
+            )}
+
             {error && <p className="text-xs text-red-500">{error}</p>}
 
             <div className="flex items-center gap-3 pt-2">
@@ -319,6 +344,11 @@ export function CandleTab() {
                           {item.type === "number" ? "ナンバー型" : item.type === "bag" ? "袋型" : "ノーマル型"}
                         </span>
                         <span className="text-xs text-gray-600">¥{item.price.toLocaleString()}</span>
+                        {item.type === "bag" && (
+                          <span className="text-[10px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded-full">
+                            1袋{item.bagQuantity}本入り
+                          </span>
+                        )}
                         {item.freeQuantity > 0 && (
                           <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
                             {item.freeQuantity}つまで無料

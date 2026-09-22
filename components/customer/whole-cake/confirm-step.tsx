@@ -107,12 +107,16 @@ export function WholeCakeConfirmStep({
                 if (!opt) return null;
                 const qty = Number(c.quantity);
                 const isNumber = opt.type === "number";
+                const isBag = opt.type === "bag";
                 const label = isNumber && c.digit ? `${opt.name}(${c.digit})` : opt.name;
                 return (
                   <div key={c.id} className="flex justify-between items-center">
                     <span className="text-sm flex items-center gap-1.5">
                       {opt.imageUrl && <img src={opt.imageUrl} alt="" className="w-5 h-5 rounded object-cover" />}
-                      {label} x{qty}{opt.type === "bag" ? "袋" : "本"}
+                      {label} x{qty}{isBag ? "袋" : "本"}
+                      {isBag && !!opt.bagQuantity && (
+                        <span className="text-xs text-sky-600">（{qty * opt.bagQuantity}本）</span>
+                      )}
                     </span>
                     <span className="text-sm">&yen;{(opt.price * qty).toLocaleString()}</span>
                   </div>

@@ -165,6 +165,7 @@ export interface CartCandleEntry {
   quantity: number
   freeQuantity?: number
   type?: "number" | "normal" | "bag"
+  bagQuantity?: number
 }
 
 export interface CartCakeOptionEntry {

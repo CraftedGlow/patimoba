@@ -235,6 +235,9 @@ export function WholeCakeBasicStep({
                             <div className="p-1.5">
                               <p className="text-[10px] leading-tight line-clamp-2">{opt.name}</p>
                               <p className="text-[10px] text-amber-600 font-bold">&yen;{opt.price.toLocaleString()}</p>
+                              {opt.type === "bag" && !!opt.bagQuantity && (
+                                <p className="text-[9px] text-sky-600 font-bold leading-tight">1袋{opt.bagQuantity}本入り</p>
+                              )}
                               {!!opt.freeQuantity && opt.freeQuantity > 0 && (
                                 <p className="text-[9px] text-green-600 font-bold leading-tight">{opt.freeQuantity}つまで無料</p>
                               )}
@@ -275,6 +278,14 @@ export function WholeCakeBasicStep({
                         {isNumberCandle(candle.candleOptionId) && !candle.digit && (
                           <p className="text-[11px] text-red-500 mt-1">数字を選択してください</p>
                         )}
+                        {isBagCandle(candle.candleOptionId) && !!candle.quantity && (() => {
+                          const bagQty = candleOptions.find((o) => o.id === candle.candleOptionId)?.bagQuantity ?? 1;
+                          return (
+                            <p className="text-[11px] text-sky-600 font-bold mt-1">
+                              合計 {Number(candle.quantity) * bagQty}本
+                            </p>
+                          );
+                        })()}
                       </>
                     )}
                   </div>

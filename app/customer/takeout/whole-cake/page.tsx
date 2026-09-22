@@ -115,7 +115,7 @@ export default function WholeCakePage() {
   useEffect(() => {
     if (!selectedCake?.candleEnabled || !selectedCake.candleIds.length) { setCandleOptions([]); return; }
     fetchCandlesByIds(selectedCake.candleIds).then((items) =>
-      setCandleOptions(items.map((c) => ({ id: c.id, name: c.name, price: c.price, storeId: c.storeId, type: c.type, imageUrl: c.imageUrl, freeQuantity: c.freeQuantity })))
+      setCandleOptions(items.map((c) => ({ id: c.id, name: c.name, price: c.price, storeId: c.storeId, type: c.type, imageUrl: c.imageUrl, freeQuantity: c.freeQuantity, bagQuantity: c.bagQuantity })))
     );
   }, [selectedCake?.id, selectedCake?.candleEnabled, selectedCake?.candleIds]);
   const hasCandles = !!selectedCake?.candleEnabled && candleOptions.length > 0;
@@ -238,6 +238,7 @@ export default function WholeCakePage() {
           quantity: Number(c.quantity) || 0,
           freeQuantity: opt?.freeQuantity ?? 0,
           type: opt?.type,
+          bagQuantity: opt?.bagQuantity,
         };
       });
 

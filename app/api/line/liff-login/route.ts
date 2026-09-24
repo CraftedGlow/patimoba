@@ -37,22 +37,18 @@ export async function POST(request: NextRequest) {
   }
 
   const lineUserId: string = verified.sub
-  // liff.getProfile() の値だけが「確実に最新」。IDトークンの name/picture
-  // クレームはトークン発行時点でキャッシュされている場合があり、これで
-  // 既存ユーザーを更新すると、既に最新化済みのDBの値を古い情報に
-  // 戻してしまう（例: LINEでアイコンを変更したのに反映されない/戻る）ため、
-  // 更新には使わず、新規ユーザー作成時の初期値としてのみ使う
-  const lineName: string = body?.lineName || ""
-  const avatarUrl: string | null = body?.avatarUrl || null
   const liffId: string | null = body?.liffId ? String(body.liffId) : null
-  console.log(`[LIFF Login] 受信プロフィール: lineUserId=${lineUserId}, liffId=${liffId ?? "(none)"}, body.lineName=${body?.lineName ?? "(none)"}, verified.name=${verified.name ?? "(none)"}, resolved lineName=${lineName}`)
+  console.log(`[LIFF Login] ログイン試行: lineUserId=${lineUserId}, liffId=${liffId ?? "(none)"}`)
 
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey
   )
 
-  const { user, error: findOrCreateError } = await findOrCreateLineUser(lineUserId, liffId, lineName, avatarUrl, supabase, {
+  // 表示名・アイコンの最新化はログイン後にクライアント側が liff.getProfile()
+  // で直接反映するので、ここではIDトークンのクレームを新規ユーザー作成時の
+  // 初期値としてのみ使う
+  const { user, error: findOrCreateError } = await findOrCreateLineUser(lineUserId, liffId, supabase, {
     lineName: verified.name || "",
     avatarUrl: verified.picture || null,
   })

@@ -9,20 +9,6 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
   const idToken = liff.getIDToken()
   if (!idToken) throw new Error("IDトークンを取得できませんでした")
 
-  // liff.getProfile() で最新のLINE表示名・アイコンを取得するが、LINE側が同じ
-  // リンクを短時間に複数回リロードする挙動があり、ここで待ちすぎると次の
-  // リロードに割り込まれてしまうため、一定時間で諦めてIDトークンにフォールバックする
-  let lineProfile: { displayName?: string; pictureUrl?: string } = {}
-  try {
-    const p: any = await Promise.race([
-      liff.getProfile(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("getProfile_timeout")), 1500)),
-    ])
-    lineProfile = { displayName: p.displayName, pictureUrl: p.pictureUrl }
-  } catch (profileErr) {
-    console.warn("[LIFF] getProfile 失敗/タイムアウト（IDトークンにフォールバック）:", profileErr)
-  }
-
   // クーポン獲得も同じリクエストにまとめて往復回数を減らす
   const pendingCouponToken = sessionStorage.getItem("patimoba_pending_coupon_token")
   if (pendingCouponToken) {
@@ -35,8 +21,6 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
     body: JSON.stringify({
       idToken,
       liffId: liff.id,
-      lineName: lineProfile.displayName,
-      avatarUrl: lineProfile.pictureUrl,
       couponToken: pendingCouponToken || undefined,
     }),
   })
@@ -56,6 +40,24 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
       token: otp.token,
       type: "magiclink",
     })
+
+    // ログイン中の本人の「今の」LINE表示名・アイコンをそのまま反映する。
+    // ログイン自体はIDトークンだけで完了させ、この同期は結果を待たずに
+    // バックグラウンドで行うので、取得が遅れてもログインや画面遷移は止まらない
+    liff.getProfile()
+      .then((p: { displayName?: string; pictureUrl?: string }) => {
+        if (!p.displayName && !p.pictureUrl) return
+        return supabase
+          .from("users")
+          .update({
+            ...(p.displayName ? { line_name: p.displayName } : {}),
+            ...(p.pictureUrl ? { avatar_url: p.pictureUrl } : {}),
+          })
+          .eq("id", user.id)
+      })
+      .catch((profileErr: unknown) => {
+        console.warn("[LIFF] プロフィール同期に失敗:", profileErr)
+      })
   }
 
   const nameParts = (user.line_name || user.name || "").split(" ")

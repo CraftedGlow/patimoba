@@ -9,19 +9,14 @@ export interface FindOrCreateLineUserResult {
 
 /**
  * line_user_id (+ liff_id) からユーザーを特定し、存在しなければ Supabase auth + users レコードを
- * 自動作成する。app/api/line/liff-login/route.ts のログイン処理と LINE Webhook の
- * follow イベント処理の両方から使う共通ロジック。
+ * 自動作成する。app/api/line/liff-login/route.ts のログイン処理から使う。
+ * 表示名・アイコンの最新化はログイン後にクライアント側（lib/liff-login.ts）が
+ * liff.getProfile() の結果で直接更新するので、ここでは新規作成時の初期値としてのみ使う。
  */
 export async function findOrCreateLineUser(
   lineUserId: string,
   liffId: string | null,
-  lineName: string,
-  avatarUrl: string | null,
   supabaseAdmin: AdminClient,
-  // 新規ユーザー作成時のみに使うフォールバック値（IDトークンのクレーム等）。
-  // liff.getProfile() が失敗/タイムアウトした場合 lineName/avatarUrl は
-  // 確実な最新値ではないため、既存ユーザーの更新には使わない
-  // （キャッシュされた古い情報でDBの最新値を上書きしてしまうため）。
   fallback?: { lineName?: string; avatarUrl?: string | null }
 ): Promise<FindOrCreateLineUserResult> {
   let { data: user } = liffId
@@ -76,8 +71,8 @@ export async function findOrCreateLineUser(
       .insert({
         line_user_id: lineUserId,
         liff_id: liffId,
-        line_name: lineName || fallback?.lineName || "",
-        avatar_url: avatarUrl ?? fallback?.avatarUrl ?? null,
+        line_name: fallback?.lineName || "",
+        avatar_url: fallback?.avatarUrl ?? null,
         user_type: "customer",
         auth_user_id: authUserId,
       })
@@ -89,14 +84,6 @@ export async function findOrCreateLineUser(
     }
 
     user = newUser;
-  }
-
-  const profileUpdates: Record<string, string> = {};
-  if (lineName && user.line_name !== lineName) profileUpdates.line_name = lineName;
-  if (avatarUrl && user.avatar_url !== avatarUrl) profileUpdates.avatar_url = avatarUrl;
-  if (Object.keys(profileUpdates).length > 0) {
-    await supabaseAdmin.from("users").update(profileUpdates).eq("id", user.id);
-    user = { ...user, ...profileUpdates };
   }
 
   if (!user.auth_user_id) {

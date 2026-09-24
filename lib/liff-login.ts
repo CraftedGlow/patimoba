@@ -42,22 +42,26 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
     })
 
     // ログイン中の本人の「今の」LINE表示名・アイコンをそのまま反映する。
-    // ログイン自体はIDトークンだけで完了させ、この同期は結果を待たずに
-    // バックグラウンドで行うので、取得が遅れてもログインや画面遷移は止まらない
-    liff.getProfile()
-      .then((p: { displayName?: string; pictureUrl?: string }) => {
-        if (!p.displayName && !p.pictureUrl) return
-        return supabase
+    // アカウント確定（IDトークン検証・OTPログイン）は既に終わっているので、
+    // ここで待っても LINE の複数回リロードで壊れる心配はない。むしろ
+    // 更新が完了する前に画面側がDBを読みに行ってしまうと反映が一回遅れて
+    // しまうため、ここで待ってから次に進む。
+    try {
+      const p: { displayName?: string; pictureUrl?: string } = await liff.getProfile()
+      if (p.displayName || p.pictureUrl) {
+        await supabase
           .from("users")
           .update({
             ...(p.displayName ? { line_name: p.displayName } : {}),
             ...(p.pictureUrl ? { avatar_url: p.pictureUrl } : {}),
           })
           .eq("id", user.id)
-      })
-      .catch((profileErr: unknown) => {
-        console.warn("[LIFF] プロフィール同期に失敗:", profileErr)
-      })
+        if (p.displayName) user.line_name = p.displayName
+        if (p.pictureUrl) user.avatar_url = p.pictureUrl
+      }
+    } catch (profileErr) {
+      console.warn("[LIFF] プロフィール同期に失敗:", profileErr)
+    }
   }
 
   const nameParts = (user.line_name || user.name || "").split(" ")

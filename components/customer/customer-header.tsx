@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { User, ShoppingCart, ArrowLeft, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/cart-context";
@@ -32,6 +33,7 @@ export function CustomerHeader({
   const { itemCount } = useCart();
   const couponBadge = useOptionalCouponBadge();
   const router = useRouter();
+  const [erroredAvatarUrl, setErroredAvatarUrl] = useState<string | null>(null);
 
   const handleBack = () => {
     if (backHref) router.push(backHref);
@@ -54,10 +56,11 @@ export function CustomerHeader({
                 alt={shopName || "店舗ロゴ"}
                 className="h-9 max-w-[120px] object-contain"
               />
-            ) : avatarUrl ? (
+            ) : avatarUrl && avatarUrl !== erroredAvatarUrl ? (
               <img
                 src={avatarUrl}
                 alt="avatar"
+                onError={() => setErroredAvatarUrl(avatarUrl)}
                 className="w-9 h-9 rounded-full object-cover border-2 border-white"
               />
             ) : (

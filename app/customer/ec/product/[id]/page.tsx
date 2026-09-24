@@ -133,6 +133,8 @@ export default function ECProductDetailPage() {
     if (opt.type === "text") return !(optionTexts[i] || "").trim();
     return !(optionSelections[i] && optionSelections[i].length > 0);
   });
+  // メッセージプレートをONにした場合はデザインとメッセージ内容の入力が必須
+  const missingMessagePlate = useMessagePlate && (!selectedMessagePlateId || !messagePlateText.trim());
 
   const optionsAdditional = customOptions.reduce((sum, opt, i) => {
     if (opt.type === "text") return sum;
@@ -164,6 +166,11 @@ export default function ECProductDetailPage() {
   const handleAddToCart = () => {
     if (missingRequired) {
       setErrorMsg("必須のオプションを選択してください");
+      setTimeout(() => setErrorMsg(null), 2500);
+      return;
+    }
+    if (missingMessagePlate) {
+      setErrorMsg("メッセージプレートのデザインとメッセージ内容を入力してください");
       setTimeout(() => setErrorMsg(null), 2500);
       return;
     }

@@ -122,6 +122,8 @@ export default function TakeoutProductDetailPage() {
     if (opt.type === "text") return !(optionTexts[i] || "").trim();
     return !(optionSelections[i] && optionSelections[i].length > 0);
   });
+  // メッセージプレートをONにした場合はデザインとメッセージ内容の入力が必須
+  const missingMessagePlate = useMessagePlate && (!selectedMessagePlateId || !messagePlateText.trim());
 
   // 合計追加金額
   const noshiAdditional = (useNoshi && selectedNoshiDesign) ? selectedNoshiDesign.price : 0;
@@ -145,6 +147,10 @@ export default function TakeoutProductDetailPage() {
   const handleAddToCart = () => {
     if (missingRequired) {
       alert("必須のオプションを選択してください");
+      return;
+    }
+    if (missingMessagePlate) {
+      alert("メッセージプレートのデザインとメッセージ内容を入力してください");
       return;
     }
 

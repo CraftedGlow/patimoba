@@ -266,7 +266,9 @@ export function WholeCakeBasicStep({
                           <select
                             value={candle.quantity}
                             onChange={(e) => updateCandle(candle.id, "quantity", e.target.value)}
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
+                            className={`flex-1 border rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent ${
+                              candle.quantity ? "border-gray-300" : "border-red-300"
+                            }`}
                           >
                             <option value="">{isBagCandle(candle.candleOptionId) ? "袋の数を選択" : "本数を選択"}</option>
                             {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -277,6 +279,9 @@ export function WholeCakeBasicStep({
                         </div>
                         {isNumberCandle(candle.candleOptionId) && !candle.digit && (
                           <p className="text-[11px] text-red-500 mt-1">数字を選択してください</p>
+                        )}
+                        {!candle.quantity && (
+                          <p className="text-[11px] text-red-500 mt-1">{isBagCandle(candle.candleOptionId) ? "袋の数を選択してください" : "本数を選択してください"}</p>
                         )}
                         {isBagCandle(candle.candleOptionId) && !!candle.quantity && (() => {
                           const bagQty = candleOptions.find((o) => o.id === candle.candleOptionId)?.bagQuantity ?? 1;

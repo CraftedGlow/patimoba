@@ -124,6 +124,8 @@ export default function TakeoutProductDetailPage() {
   });
   // メッセージプレートをONにした場合はデザインとメッセージ内容の入力が必須
   const missingMessagePlate = useMessagePlate && (!selectedMessagePlateId || !messagePlateText.trim());
+  // のしをONにした場合はデザインの選択が必須（用途・名前は任意）
+  const missingNoshi = useNoshi && !selectedNoshiId;
 
   // 合計追加金額
   const noshiAdditional = (useNoshi && selectedNoshiDesign) ? selectedNoshiDesign.price : 0;
@@ -151,6 +153,10 @@ export default function TakeoutProductDetailPage() {
     }
     if (missingMessagePlate) {
       alert("メッセージプレートのデザインとメッセージ内容を入力してください");
+      return;
+    }
+    if (missingNoshi) {
+      alert("のしのデザインを選択してください");
       return;
     }
 
@@ -221,6 +227,10 @@ export default function TakeoutProductDetailPage() {
   };
 
   const handleProceedToWholeCake = () => {
+    if (missingNoshi) {
+      alert("のしのデザインを選択してください");
+      return;
+    }
     const params = new URLSearchParams();
     params.set("cakeId", product.id);
     if (useNoshi && selectedNoshiDesign) {

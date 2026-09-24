@@ -332,8 +332,10 @@ export default function WholeCakePage() {
     router.push("/customer/takeout/pickup");
   };
 
-  // デコレーションは任意なので常にfalse
-  const hasRequiredUnfilled = false;
+  // 必須指定のデコレーショングループが1つも選択されていない場合は次に進めない
+  const hasRequiredUnfilled = decorationGroups.some(
+    (g) => g.required && (selectedDecorations[g.id] ?? []).length === 0
+  );
 
   // Non-print regular decoration check for confirm step upload
   const hasPrintDecorationFromRegularMode = !isPrintMode && decorationGroups.some(
@@ -342,11 +344,12 @@ export default function WholeCakePage() {
 
   // Step 1 can proceed
   const messagePlateOk = !hasMessagePlate || !messagePlateRequired || (
-    messagePlateSizes.length > 0 ? selectedMessagePlateIdx !== "" : messageText.trim() !== ""
+    (messagePlateSizes.length === 0 || selectedMessagePlateIdx !== "") && messageText.trim() !== ""
   );
-  // ナンバー型のろうそくを選んだ場合、数字を選択するまで次に進めない
+  // ろうそくの種類を選んだ場合、本数（ナンバー型はさらに数字）を選ぶまで次に進めない
   const candlesOk = candles.every((c) => {
     if (!c.candleOptionId) return true;
+    if (!Number(c.quantity)) return false;
     const opt = candleOptions.find((o) => o.id === c.candleOptionId);
     return opt?.type !== "number" || !!c.digit;
   });

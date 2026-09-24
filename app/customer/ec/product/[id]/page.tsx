@@ -135,6 +135,8 @@ export default function ECProductDetailPage() {
   });
   // メッセージプレートをONにした場合はデザインとメッセージ内容の入力が必須
   const missingMessagePlate = useMessagePlate && (!selectedMessagePlateId || !messagePlateText.trim());
+  // のしをONにした場合はデザインの選択が必須（用途・名前は任意）
+  const missingNoshi = useNoshi && !selectedNoshiId;
 
   const optionsAdditional = customOptions.reduce((sum, opt, i) => {
     if (opt.type === "text") return sum;
@@ -171,6 +173,11 @@ export default function ECProductDetailPage() {
     }
     if (missingMessagePlate) {
       setErrorMsg("メッセージプレートのデザインとメッセージ内容を入力してください");
+      setTimeout(() => setErrorMsg(null), 2500);
+      return;
+    }
+    if (missingNoshi) {
+      setErrorMsg("のしのデザインを選択してください");
       setTimeout(() => setErrorMsg(null), 2500);
       return;
     }

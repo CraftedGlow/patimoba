@@ -26,6 +26,26 @@ function baseUrl(req: NextRequest): string {
   return `${proto}://${host}`
 }
 
+// マスター店舗のプリンターは自店舗分に加えて配下の子店舗の印刷ジョブも
+// 受け取る（複数店舗の注文が1台のプリンターに混在するため、レシートには
+// 別途店舗名を印字して区別する）。マスターでなければ自店舗IDのみ。
+async function resolvePollableStoreIds(storeId: string): Promise<string[]> {
+  const { data: store } = await supabaseAdmin
+    .from("stores")
+    .select("is_master")
+    .eq("id", storeId)
+    .maybeSingle()
+
+  if (!store?.is_master) return [storeId]
+
+  const { data: children } = await supabaseAdmin
+    .from("stores")
+    .select("id")
+    .eq("parent_store_id", storeId)
+
+  return [storeId, ...(children ?? []).map((c) => c.id)]
+}
+
 // ポーリング
 export async function POST(
   req: NextRequest,
@@ -38,10 +58,12 @@ export async function POST(
     userAgent: req.headers.get("user-agent"),
   })
 
+  const storeIds = await resolvePollableStoreIds(params.storeId)
+
   const { data: job } = await supabaseAdmin
     .from("print_jobs")
     .select("id, delete_token")
-    .eq("store_id", params.storeId)
+    .in("store_id", storeIds)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
     .limit(1)
@@ -78,20 +100,22 @@ export async function GET(
     mac: url.searchParams.get("mac"),
   })
 
+  const storeIds = await resolvePollableStoreIds(params.storeId)
+
   // jobToken に埋め込んだ delete_token でジョブを特定
   const { data: job } = await (
     deleteToken
       ? supabaseAdmin
           .from("print_jobs")
           .select("id, markup, store_id, order_id")
-          .eq("store_id", params.storeId)
+          .in("store_id", storeIds)
           .eq("status", "pending")
           .eq("delete_token", deleteToken)
           .maybeSingle()
       : supabaseAdmin
           .from("print_jobs")
           .select("id, markup, store_id, order_id")
-          .eq("store_id", params.storeId)
+          .in("store_id", storeIds)
           .eq("status", "pending")
           .order("created_at", { ascending: true })
           .limit(1)
@@ -247,6 +271,8 @@ export async function DELETE(
     deleteToken,
   })
 
+  const storeIds = await resolvePollableStoreIds(params.storeId)
+
   if (deleteToken) {
     await supabaseAdmin
       .from("print_jobs")
@@ -254,7 +280,7 @@ export async function DELETE(
         status: isSuccess ? "done" : "error",
         updated_at: new Date().toISOString(),
       })
-      .eq("store_id", params.storeId)
+      .in("store_id", storeIds)
       .eq("delete_token", deleteToken)
 
     log("DELETE", params.storeId, `→ job marked ${isSuccess ? "done" : "error"} by deleteToken`)
@@ -263,7 +289,7 @@ export async function DELETE(
     const { data: job } = await supabaseAdmin
       .from("print_jobs")
       .select("id")
-      .eq("store_id", params.storeId)
+      .in("store_id", storeIds)
       .eq("status", "printing")
       .order("created_at", { ascending: true })
       .limit(1)

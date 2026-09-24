@@ -17,7 +17,12 @@ export async function findOrCreateLineUser(
   liffId: string | null,
   lineName: string,
   avatarUrl: string | null,
-  supabaseAdmin: AdminClient
+  supabaseAdmin: AdminClient,
+  // 新規ユーザー作成時のみに使うフォールバック値（IDトークンのクレーム等）。
+  // liff.getProfile() が失敗/タイムアウトした場合 lineName/avatarUrl は
+  // 確実な最新値ではないため、既存ユーザーの更新には使わない
+  // （キャッシュされた古い情報でDBの最新値を上書きしてしまうため）。
+  fallback?: { lineName?: string; avatarUrl?: string | null }
 ): Promise<FindOrCreateLineUserResult> {
   let { data: user } = liffId
     ? await supabaseAdmin.from("users").select("*").eq("line_user_id", lineUserId).eq("liff_id", liffId).maybeSingle()
@@ -71,8 +76,8 @@ export async function findOrCreateLineUser(
       .insert({
         line_user_id: lineUserId,
         liff_id: liffId,
-        line_name: lineName,
-        avatar_url: avatarUrl,
+        line_name: lineName || fallback?.lineName || "",
+        avatar_url: avatarUrl ?? fallback?.avatarUrl ?? null,
         user_type: "customer",
         auth_user_id: authUserId,
       })

@@ -11,6 +11,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 import { PREFECTURES, regionForPrefecture } from "@/lib/constants/regions";
 import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTINGS, type RegionRate, type ShippingSettings } from "@/lib/shipping-fee";
 
@@ -58,22 +59,34 @@ export default function ECShippingPage() {
   const [shippingSettings, setShippingSettings] = useState<ShippingSettings>(DEFAULT_SHIPPING_SETTINGS);
   const [regionRates, setRegionRates] = useState<RegionRate[]>([]);
 
+  // 配送設定は店舗グループ内で共有されているため、子店舗の場合は本部（マスター）の設定を参照する
+  const [shippingStoreId, setShippingStoreId] = useState<string | null>(null);
   useEffect(() => {
-    if (!storeId) return;
+    if (!storeId) { setShippingStoreId(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { parentStoreId } = await getStoreIdsWithParent(storeId);
+      if (!cancelled) setShippingStoreId(parentStoreId ?? storeId);
+    })();
+    return () => { cancelled = true; };
+  }, [storeId]);
+
+  useEffect(() => {
+    if (!shippingStoreId) return;
     (async () => {
       const { data } = await supabase
         .from("store_shipping_settings")
         .select("mode, flat_fee, origin_region, free_shipping_enabled, free_shipping_threshold, free_shipping_excludes_special_regions, remote_surcharge")
-        .eq("store_id", storeId)
+        .eq("store_id", shippingStoreId)
         .maybeSingle();
       if (data) setShippingSettings(shippingSettingsFromRow(data));
     })();
-  }, [storeId]);
+  }, [shippingStoreId]);
 
   // 地域別モードの場合、届け先都道府県が決まってから該当する地域の送料を取得する
   // （店舗が個別に金額を上書きしていればそれを優先し、なければ運営管理の目安表を使う）
   useEffect(() => {
-    if (shippingSettings.mode !== "region" || !storeId || !prefecture) {
+    if (shippingSettings.mode !== "region" || !shippingStoreId || !prefecture) {
       setRegionRates([]);
       return;
     }
@@ -83,7 +96,7 @@ export default function ECShippingPage() {
       const { data: overrideRow } = await supabase
         .from("store_shipping_rate_overrides")
         .select("fee")
-        .eq("store_id", storeId)
+        .eq("store_id", shippingStoreId)
         .eq("destination_region", destinationRegion)
         .maybeSingle();
       if (overrideRow) {
@@ -99,7 +112,7 @@ export default function ECShippingPage() {
         .maybeSingle();
       setRegionRates(masterRow ? [{ destinationRegion, fee: masterRow.fee }] : []);
     })();
-  }, [shippingSettings.mode, shippingSettings.originRegion, storeId, prefecture]);
+  }, [shippingSettings.mode, shippingSettings.originRegion, shippingStoreId, prefecture]);
 
   // 郵便番号が7桁になったら自動で都道府県・市区町村を補完する
   useEffect(() => {

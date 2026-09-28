@@ -66,8 +66,16 @@ async function ensureShippingSettings(storeId: string) {
   return existing;
 }
 
-async function resolveShippingFee(storeId: string, prefecture: string | undefined, subtotal: number): Promise<number> {
+async function resolveShippingFee(orderStoreId: string, prefecture: string | undefined, subtotal: number): Promise<number> {
   if (!prefecture) return 0;
+
+  // 配送設定は店舗グループ内で共有されているため、子店舗の注文は本部（マスター）の設定を使う
+  const { data: orderStore } = await supabaseAdmin
+    .from("stores")
+    .select("parent_store_id")
+    .eq("id", orderStoreId)
+    .maybeSingle();
+  const storeId = orderStore?.parent_store_id ?? orderStoreId;
 
   let settingsRow = (await supabaseAdmin
     .from("store_shipping_settings")

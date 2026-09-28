@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Truck } from "lucide-react";
+import { Check, Truck, Users } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { useStoreContext } from "@/lib/store-context";
+import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 import { REGION_BLOCKS, regionForPrefecture } from "@/lib/constants/regions";
 import { FALLBACK_FLAT_FEE } from "@/lib/shipping-fee";
 
@@ -33,8 +34,23 @@ const DEFAULTS: ShippingSettingsRow = {
 export default function StoreShippingPage() {
   const { user } = useAuth();
   const { isMaster, childStores } = useStoreContext();
-  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
-  const storeId = isMaster ? (selectedChildId ?? childStores[0]?.id ?? "") : (user?.storeId ?? "");
+
+  // 配送設定は店舗グループ内で1つだけ共有する。子店舗は本部（マスター）の設定をそのまま参照・編集する。
+  const [parentStoreId, setParentStoreId] = useState<string | null>(null);
+  const [storeId, setStoreId] = useState<string>("");
+
+  useEffect(() => {
+    const ownStoreId = user?.storeId;
+    if (!ownStoreId) return;
+    let cancelled = false;
+    (async () => {
+      const { parentStoreId: parent } = await getStoreIdsWithParent(ownStoreId);
+      if (cancelled) return;
+      setParentStoreId(parent);
+      setStoreId(parent ?? ownStoreId);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.storeId]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -171,14 +187,6 @@ export default function StoreShippingPage() {
     }
   }, [storeId, settings, originRegion, regionFees, masterFees]);
 
-  if (isMaster && childStores.length === 0) {
-    return (
-      <div className="p-6 text-center text-sm text-gray-600">
-        子店舗が登録されていません。
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -196,20 +204,19 @@ export default function StoreShippingPage() {
       <p className="text-sm text-gray-600 mb-8">EC（配送）注文の送料の決め方を設定します。テイクアウトの注文には影響しません。</p>
 
       {isMaster && childStores.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          {childStores.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setSelectedChildId(s.id)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                storeId === s.id
-                  ? "bg-amber-400 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              {s.name}
-            </button>
-          ))}
+        <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-6">
+          <Users className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+          <p className="text-xs text-blue-700">
+            この設定は子店舗（{childStores.map((s) => s.name).join("、")}）と共有されます。ここで変更するとすべての店舗の配送設定が変わります。
+          </p>
+        </div>
+      )}
+      {!isMaster && parentStoreId && (
+        <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 mb-6">
+          <Users className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+          <p className="text-xs text-blue-700">
+            この配送設定は本部（マスター店舗）と共有されています。変更内容は本部・他の店舗にも反映されます。
+          </p>
         </div>
       )}
 

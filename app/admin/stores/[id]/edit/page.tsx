@@ -62,6 +62,7 @@ export default function AdminStoreEditPage() {
   const [phone, setPhone] = useState("");
   const [mail, setMail] = useState("");
   const [addressUrl, setAddressUrl] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [weekdayOpen, setWeekdayOpen] = useState("10:00");
   const [weekdayClose, setWeekdayClose] = useState("19:00");
   const [sameWeekend, setSameWeekend] = useState(true);
@@ -100,6 +101,7 @@ export default function AdminStoreEditPage() {
       setPhone(store.phone ?? "");
       setMail(store.email ?? "");
       setAddressUrl(store.address ?? "");
+      setPostalCode(store.postal_code ?? "");
       if (store.logo_url) setLogoPreview(store.logo_url);
       if ((store as any).image) setImagePreview((store as any).image);
       setSelectedPlan(normalizeStorePlan((store as { plan?: string | null }).plan));
@@ -196,6 +198,7 @@ export default function AdminStoreEditPage() {
         email: mail || "",
         phone: phone || "",
         address: addressUrl || "",
+        postal_code: postalCode || "",
         plan: selectedPlan,
         plan_options: selectedAddons.length > 0 ? selectedAddons : null,
         invoice_num: invoiceNum || null,
@@ -368,6 +371,16 @@ export default function AdminStoreEditPage() {
               placeholder="東京都渋谷区神宮前1-2-3"
               className="form-input"
             />
+          </Field>
+          <Field label="郵便番号">
+            <input
+              type="text"
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+              placeholder="150-0001"
+              className="form-input"
+            />
+            <p className="text-xs text-gray-500 mt-1">配送設定の地域別料金で、発送元地域の自動判定に使われます</p>
           </Field>
 
           <Field label="店舗ロゴ">

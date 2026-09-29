@@ -25,7 +25,7 @@ function StoreCard({
   return (
     <div
       onClick={onSelect}
-      className="rounded-2xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
+      className="rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
     >
       <div className="aspect-[4/3] w-full bg-gray-50 overflow-hidden">
         {store.image ? (
@@ -55,6 +55,11 @@ export default function ECStorePage() {
     points } = useCustomerContext();
   const { storeLogoUrl } = useEcContext();
   const { clear: clearCart } = useCart();
+
+  // 店舗選択画面では前回選んだ店舗のロゴ・テーマを引きずらないようにリセットする
+  useEffect(() => {
+    setSelectedStoreId(null);
+  }, []);
 
   // ゲストがリンクから入り直したときはカートをリセット
   useEffect(() => {

@@ -34,7 +34,7 @@ function StoreCard({
   return (
     <div
       onClick={!stopped ? onSelect : undefined}
-      className={`rounded-2xl border overflow-hidden bg-white transition-all duration-200 ${
+      className={`rounded-lg border overflow-hidden bg-white transition-all duration-200 ${
         stopped
           ? "border-gray-100 opacity-60 cursor-default"
           : "border-gray-200 shadow-sm hover:shadow-md active:scale-[0.98] cursor-pointer"

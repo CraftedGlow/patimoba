@@ -25,7 +25,7 @@ function StoreCard({
   return (
     <div
       onClick={onSelect}
-      className="rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
+      className="h-full flex flex-col rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
     >
       <div className="aspect-[4/3] w-full bg-gray-50 overflow-hidden">
         {store.image ? (
@@ -40,7 +40,7 @@ function StoreCard({
           </div>
         )}
       </div>
-      <div className="p-3">
+      <div className="p-3 flex-1">
         <p className="font-bold text-sm text-gray-900">{store.name}</p>
         <p className="text-xs text-gray-500 truncate mt-0.5">{store.address}</p>
       </div>
@@ -126,6 +126,7 @@ export default function ECStorePage() {
             {filteredStores.map((store, i) => (
               <motion.div
                 key={store.id}
+                className="h-full"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}

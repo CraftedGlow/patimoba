@@ -34,7 +34,7 @@ function StoreCard({
   return (
     <div
       onClick={!stopped ? onSelect : undefined}
-      className={`rounded-lg border overflow-hidden bg-white transition-all duration-200 ${
+      className={`h-full flex flex-col rounded-lg border overflow-hidden bg-white transition-all duration-200 ${
         stopped
           ? "border-gray-100 opacity-60 cursor-default"
           : "border-gray-200 shadow-sm hover:shadow-md active:scale-[0.98] cursor-pointer"
@@ -53,7 +53,7 @@ function StoreCard({
           </div>
         )}
       </div>
-      <div className="p-3 flex items-start justify-between gap-2">
+      <div className="p-3 flex-1 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className={`font-bold text-sm ${stopped ? "text-gray-400" : "text-gray-900"}`}>
             {store.name}
@@ -244,6 +244,7 @@ export default function TakeoutStorePage() {
                   {filteredStores.map((store, i) => (
                     <motion.div
                       key={store.id}
+                      className="h-full"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.06 }}
@@ -294,6 +295,7 @@ export default function TakeoutStorePage() {
                   {favoriteStores.map((store, i) => (
                     <motion.div
                       key={store.id}
+                      className="h-full"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.06 }}
@@ -336,6 +338,7 @@ export default function TakeoutStorePage() {
                   {viewedStores.map((store, i) => (
                     <motion.div
                       key={store.id}
+                      className="h-full"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.06 }}

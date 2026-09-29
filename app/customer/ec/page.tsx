@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useStores } from "@/hooks/use-stores";
@@ -15,10 +15,44 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 
 const ecSteps = ["店舗選択", "商品選択", "お届け先", "注文確認"];
 
+function StoreCard({
+  store,
+  onSelect,
+}: {
+  store: Store;
+  onSelect: () => void;
+}) {
+  return (
+    <div
+      onClick={onSelect}
+      className="rounded-2xl border border-gray-200 overflow-hidden bg-white shadow-sm hover:shadow-md active:scale-[0.98] transition-all duration-200 cursor-pointer"
+    >
+      <div className="aspect-[4/3] w-full bg-gray-50 overflow-hidden">
+        {store.image ? (
+          <img
+            src={store.image}
+            alt={store.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-medium">
+            {store.name.slice(0, 4)}
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <p className="font-bold text-sm text-gray-900 truncate">{store.name}</p>
+        <p className="text-xs text-gray-500 truncate mt-0.5">{store.address}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function ECStorePage() {
+  const router = useRouter();
   const { stores, loading } = useStores();
   const { setSelectedStoreId, setSelectedStoreName, profile, userId,
-    points, } = useCustomerContext();
+    points } = useCustomerContext();
   const { storeLogoUrl } = useEcContext();
   const { clear: clearCart } = useCart();
 
@@ -45,6 +79,7 @@ export default function ECStorePage() {
   const handleStoreClick = (store: Store) => {
     setSelectedStoreId(store.id);
     setSelectedStoreName(store.name);
+    router.push(`/customer/ec/products?store=${store.id}`);
   };
 
   return (
@@ -82,7 +117,7 @@ export default function ECStorePage() {
             店舗が見つかりませんでした
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
             {filteredStores.map((store, i) => (
               <motion.div
                 key={store.id}
@@ -90,29 +125,10 @@ export default function ECStorePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
               >
-                <Link
-                  href={`/customer/ec/products?store=${store.id}`}
-                  onClick={() => handleStoreClick(store)}
-                >
-                  <div className="border border-gray-200 rounded-xl p-4 flex items-center gap-4 hover:shadow-md transition-all duration-200 active:scale-[0.98]">
-                    <div className={`w-14 h-14 rounded-lg border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${store.logoUrl || store.image ? "" : "bg-gray-50"}`}>
-                      {store.logoUrl || store.image ? (
-                        <img
-                          src={store.logoUrl || store.image}
-                          alt={store.name}
-                          className="w-full h-full object-contain p-1"
-                        />
-                      ) : (
-                        <span className="text-[10px] text-gray-600 font-medium text-center leading-tight px-1">
-                          {store.name.slice(0, 4)}
-                        </span>
-                      )}
-                    </div>
-                    <span className="flex-1 font-bold text-base text-gray-900 truncate">
-                      {store.name}
-                    </span>
-                  </div>
-                </Link>
+                <StoreCard
+                  store={store}
+                  onSelect={() => handleStoreClick(store)}
+                />
               </motion.div>
             ))}
           </div>

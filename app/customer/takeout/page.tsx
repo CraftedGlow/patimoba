@@ -32,47 +32,51 @@ function StoreCard({
 }) {
   const stopped = !store.isPublished;
   return (
-    <div className={`border rounded-xl p-4 flex items-center gap-4 transition-all duration-200 ${stopped ? "border-gray-100 bg-gray-50" : "border-gray-200 hover:shadow-md active:scale-[0.98]"}`}>
-      <div
-        onClick={!stopped ? onSelect : undefined}
-        className={`flex items-center gap-4 flex-1 min-w-0 text-left ${!stopped ? "cursor-pointer" : "cursor-default"}`}
-      >
-        <div className={`w-14 h-14 rounded-lg border border-gray-100 overflow-hidden flex-shrink-0 flex items-center justify-center ${store.logoUrl || store.image ? "" : "bg-gray-50"} ${stopped ? "opacity-40" : ""}`}>
-          {store.logoUrl || store.image ? (
-            <img
-              src={store.logoUrl || store.image}
-              alt={store.name}
-              className="w-full h-full object-contain p-1"
-            />
-          ) : (
-            <span className="text-[10px] text-gray-600 font-medium text-center leading-tight px-1">
-              {store.name.slice(0, 4)}
-            </span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <span className={`block font-bold text-base truncate ${stopped ? "text-gray-400" : "text-gray-900"}`}>
-            {store.name}
-          </span>
-          {stopped && (
-            <span className="text-xs text-gray-400 mt-0.5 block">注文受付を停止しています</span>
-          )}
-        </div>
+    <div
+      onClick={!stopped ? onSelect : undefined}
+      className={`rounded-2xl border overflow-hidden bg-white transition-all duration-200 ${
+        stopped
+          ? "border-gray-100 opacity-60 cursor-default"
+          : "border-gray-200 shadow-sm hover:shadow-md active:scale-[0.98] cursor-pointer"
+      }`}
+    >
+      <div className="aspect-[4/3] w-full bg-gray-50 overflow-hidden">
+        {store.image ? (
+          <img
+            src={store.image}
+            alt={store.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs font-medium">
+            {store.name.slice(0, 4)}
+          </div>
+        )}
       </div>
-      <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleFavorite();
-        }}
-        whileTap={{ scale: 0.8 }}
-        className="flex-shrink-0 p-1"
-      >
-        <Heart
-          className={`w-5 h-5 transition-colors duration-200 ${
-            isFavorite ? "text-red-500 fill-red-500" : "text-gray-300"
-          }`}
-        />
-      </motion.button>
+      <div className="p-3 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className={`font-bold text-sm truncate ${stopped ? "text-gray-400" : "text-gray-900"}`}>
+            {store.name}
+          </p>
+          <p className="text-xs text-gray-500 truncate mt-0.5">
+            {stopped ? "注文受付を停止しています" : store.address}
+          </p>
+        </div>
+        <motion.button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite();
+          }}
+          whileTap={{ scale: 0.8 }}
+          className="flex-shrink-0 p-1"
+        >
+          <Heart
+            className={`w-5 h-5 transition-colors duration-200 ${
+              isFavorite ? "text-red-500 fill-red-500" : "text-gray-300"
+            }`}
+          />
+        </motion.button>
+      </div>
     </div>
   );
 }
@@ -236,7 +240,7 @@ export default function TakeoutStorePage() {
                   店舗が見つかりませんでした
                 </div>
               ) : (
-                <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
                   {filteredStores.map((store, i) => (
                     <motion.div
                       key={store.id}
@@ -286,7 +290,7 @@ export default function TakeoutStorePage() {
                   </p>
                 </motion.div>
               ) : (
-                <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
                   {favoriteStores.map((store, i) => (
                     <motion.div
                       key={store.id}
@@ -328,7 +332,7 @@ export default function TakeoutStorePage() {
                   </p>
                 </motion.div>
               ) : (
-                <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4">
                   {viewedStores.map((store, i) => (
                     <motion.div
                       key={store.id}

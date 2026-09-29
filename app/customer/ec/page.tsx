@@ -41,7 +41,7 @@ function StoreCard({
         )}
       </div>
       <div className="p-3">
-        <p className="font-bold text-sm text-gray-900 truncate">{store.name}</p>
+        <p className="font-bold text-sm text-gray-900">{store.name}</p>
         <p className="text-xs text-gray-500 truncate mt-0.5">{store.address}</p>
       </div>
     </div>

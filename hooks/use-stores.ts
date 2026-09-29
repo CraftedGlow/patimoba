@@ -18,6 +18,7 @@ export function useStores() {
       .select("*")
       .eq("is_active", true)
       .eq("is_master", false)
+      .order("created_at", { ascending: true })
     if (err) {
       setError(err.message)
     } else {

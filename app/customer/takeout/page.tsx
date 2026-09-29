@@ -55,7 +55,7 @@ function StoreCard({
       </div>
       <div className="p-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className={`font-bold text-sm truncate ${stopped ? "text-gray-400" : "text-gray-900"}`}>
+          <p className={`font-bold text-sm ${stopped ? "text-gray-400" : "text-gray-900"}`}>
             {store.name}
           </p>
           <p className="text-xs text-gray-500 truncate mt-0.5">

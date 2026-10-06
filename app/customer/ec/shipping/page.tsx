@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { MapPin, Clock, Truck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/customer-header";
-import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
@@ -14,8 +13,6 @@ import { supabase } from "@/lib/supabase";
 import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
 import { PREFECTURES, regionForPrefecture } from "@/lib/constants/regions";
 import { calculateShippingFee, shippingSettingsFromRow, DEFAULT_SHIPPING_SETTINGS, type RegionRate, type ShippingSettings } from "@/lib/shipping-fee";
-
-const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
 const deliveryTimeSlots = [
   "午前（9:00〜12:00）",
@@ -154,9 +151,7 @@ export default function ECShippingPage() {
         onCartClick={() => setCartOpen(true)}
       />
 
-      <StepProgress currentStep={3} steps={ecSteps} maxWidthClassName="max-w-[800px] mx-auto" />
-
-      <div className="px-4 pb-8 max-w-[800px] mx-auto">
+      <div className="px-4 pt-4 pb-8 max-w-[800px] mx-auto">
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
           <MapPin className="w-5 h-5 text-[var(--ec-500,#f59e0b)]" />
           配送先住所

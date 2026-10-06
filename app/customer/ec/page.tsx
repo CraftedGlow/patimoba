@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CustomerHeader } from "@/components/customer/customer-header";
-import { StepProgress } from "@/components/customer/step-progress";
 import { useStores } from "@/hooks/use-stores";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
@@ -12,8 +11,6 @@ import { useCart } from "@/lib/cart-context";
 import { Store } from "@/lib/types";
 import { Search } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
-
-const ecSteps = ["店舗選択", "商品選択", "お届け先", "注文確認"];
 
 function StoreCard({
   store,
@@ -96,9 +93,7 @@ export default function ECStorePage() {
         points={points}
         showCart
       />
-      <StepProgress currentStep={1} steps={ecSteps} />
-
-      <div className="px-4 pb-8 flex-1">
+      <div className="px-4 pb-8 pt-4 flex-1">
         <div className="flex gap-2 mb-4">
           <input
             type="text"

@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { CustomerHeader } from "@/components/customer/customer-header";
-import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { useProduct } from "@/hooks/use-products";
 import { useProductRegistration } from "@/hooks/use-product-registrations";
@@ -15,8 +14,6 @@ import { fetchMessagePlatesByIds, MessagePlateItem } from "@/hooks/use-message-p
 import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
-
-const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
 // アレルゲン定義（表示名 + 検索キーワード）
 const ALLERGEN_DEFS: { display: string; keywords: string[] }[] = [
@@ -251,9 +248,7 @@ export default function ECProductDetailPage() {
         largeBackButtonOnDesktop
       />
 
-      <StepProgress currentStep={2} steps={ecSteps} maxWidthClassName="max-w-5xl mx-auto" />
-
-      <div className="px-4 pb-8 lg:px-8 lg:mt-1 max-w-5xl mx-auto">
+      <div className="px-4 pt-4 pb-8 lg:px-8 max-w-5xl mx-auto">
         <div className="lg:flex lg:gap-10 lg:items-start">
           <div className="flex justify-center mb-6 lg:mb-0 lg:w-[42%] lg:shrink-0 lg:sticky lg:top-24">
             <motion.div

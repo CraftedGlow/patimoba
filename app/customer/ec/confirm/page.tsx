@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, X, ShoppingBag, PartyPopper } from "lucide-react";
 import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
-import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
@@ -38,8 +37,6 @@ async function releaseCoupon(deliveryId: string) {
     // ベストエフォート。失敗しても呼び出し元のエラー表示自体は成立させる
   }
 }
-
-const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
 const deliveryTimeSlots = [
   "午前（9:00〜12:00）",
@@ -487,8 +484,6 @@ export default function ECConfirmPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
       </div>
-
-      <StepProgress currentStep={4} steps={ecSteps} maxWidthClassName="md:max-w-2xl md:mx-auto" />
 
       <div className="px-4 md:px-8 pb-10 md:max-w-2xl md:mx-auto">
         <div className="text-center mb-5">

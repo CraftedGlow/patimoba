@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ShoppingCart } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { CustomerHeader } from "@/components/customer/customer-header";
-import { StepProgress } from "@/components/customer/step-progress";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { ProductCard } from "@/components/customer/product-card";
 import { useProducts } from "@/hooks/use-products";
@@ -14,8 +13,6 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
-
-const ecSteps = ["店舗選択", "商品選択", "配送先", "注文確認"];
 
 export default function ECProductsPage() {
   const searchParams = useSearchParams();
@@ -75,9 +72,7 @@ export default function ECProductsPage() {
         largeBackButtonOnDesktop
       />
 
-      <StepProgress currentStep={2} steps={ecSteps} maxWidthClassName="max-w-5xl mx-auto" />
-
-      <div className={`px-4 max-w-5xl mx-auto ${itemCount > 0 ? "pb-28" : "pb-8"}`}>
+      <div className={`px-4 pt-4 max-w-5xl mx-auto ${itemCount > 0 ? "pb-28" : "pb-8"}`}>
         <div className="mb-4">
           <h2 className="text-lg font-bold">EC商品一覧</h2>
           <div className="h-1 w-20 bg-[var(--ec-400,#fbbf24)] rounded mt-1" />

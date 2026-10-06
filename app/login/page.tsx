@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   X,
 } from "lucide-react";
-import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, type UserType } from "@/lib/auth-context";
 import { PasswordInput } from "@/components/ui/password-input";
 import { supabase } from "@/lib/supabase";
@@ -275,11 +274,22 @@ export default function LoginPage() {
                 whileTap={{ scale: 0.97 }}
                 onClick={() => handleLogin()}
                 disabled={submitting}
-                className="px-12 py-2.5 rounded-full border-2 border-amber-400 text-amber-500 font-bold text-sm hover:bg-amber-400 hover:text-white transition-all duration-200 mb-3 disabled:opacity-50 flex items-center gap-2"
+                className="px-12 py-2.5 rounded-full border-2 border-amber-400 text-amber-500 font-bold text-sm hover:bg-amber-400 hover:text-white transition-all duration-200 disabled:opacity-50"
               >
-                {submitting && <LineSpinner size={16} />}
                 ログイン
               </motion.button>
+
+              <div
+                className={`w-32 h-1 rounded-full bg-amber-100 overflow-hidden mt-2 mb-3 transition-opacity duration-200 ${
+                  submitting ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <motion.div
+                  className="h-full w-1/3 rounded-full bg-amber-400"
+                  animate={{ x: ["-100%", "250%"] }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                />
+              </div>
 
               <motion.button
                 type="button"

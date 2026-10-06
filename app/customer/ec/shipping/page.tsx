@@ -148,6 +148,7 @@ export default function ECShippingPage() {
       <CustomerHeader
         showCart
         showBack
+        largeBackButtonOnDesktop
         backHref="/customer/ec/products"
         logoUrl={storeLogoUrl}
         onCartClick={() => setCartOpen(true)}

@@ -248,6 +248,7 @@ export default function ECProductDetailPage() {
         points={points}
         onCartClick={() => setCartOpen(true)}
         showBack
+        largeBackButtonOnDesktop
       />
 
       <StepProgress currentStep={2} steps={ecSteps} maxWidthClassName="max-w-5xl mx-auto" />

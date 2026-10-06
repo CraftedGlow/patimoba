@@ -17,6 +17,7 @@ interface CustomerHeaderProps {
   onCartClick?: () => void;
   showBack?: boolean;
   backHref?: string;
+  largeBackButtonOnDesktop?: boolean;
 }
 
 export function CustomerHeader({
@@ -29,6 +30,7 @@ export function CustomerHeader({
   onCartClick,
   showBack = false,
   backHref,
+  largeBackButtonOnDesktop = false,
 }: CustomerHeaderProps) {
   const { itemCount } = useCart();
   const couponBadge = useOptionalCouponBadge();
@@ -115,12 +117,12 @@ export function CustomerHeader({
 
       {/* 戻るボタン: ヘッダーの外・左下 */}
       {showBack && (
-        <div className="px-3 pt-1 pb-0">
+        <div className={`px-3 pt-1 pb-0 ${largeBackButtonOnDesktop ? "lg:pt-2 lg:pb-2" : ""}`}>
           <button
             onClick={handleBack}
             className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
+            <ArrowLeft className={`w-5 h-5 text-gray-700 ${largeBackButtonOnDesktop ? "lg:w-6 lg:h-6" : ""}`} />
           </button>
         </div>
       )}

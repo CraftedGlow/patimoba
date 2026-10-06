@@ -88,7 +88,7 @@ export default function ECProductsPage() {
             <p>しばらくお待ちください。</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:justify-center lg:gap-4">
+          <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:justify-start lg:gap-5">
             {filtered.map((product, i) => (
               <motion.div
                 key={product.id}

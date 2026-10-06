@@ -719,7 +719,7 @@ export default function ECConfirmPage() {
 
         <div className="flex gap-3 mb-8">
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            onClick={() => { console.log("[ec-confirm] 買い物を続けるボタン clicked"); router.back(); }}
+            onClick={() => router.push(selectedStoreId ? `/customer/ec/products?store=${selectedStoreId}` : "/customer/ec")}
             className="flex-1 border-2 border-[var(--ec-400,#fbbf24)] text-[var(--ec-500,#f59e0b)] font-bold py-3 rounded-md text-sm hover:bg-[var(--ec-50,#fffbeb)] transition-colors">
             買い物を続ける
           </motion.button>

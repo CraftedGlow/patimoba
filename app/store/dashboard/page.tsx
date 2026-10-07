@@ -282,7 +282,7 @@ export default function StoreDashboardPage() {
 
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         {/* デスクトップ用ヘッダー */}
-        <div className="hidden lg:grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] bg-[#FFF176] px-3 py-2.5 text-xs font-bold text-gray-700 items-center">
+        <div className="hidden lg:grid grid-cols-[160px_150px_minmax(0,1fr)_100px_64px] bg-[#FFF176] px-3 py-2.5 text-xs font-bold text-gray-700 items-center">
           <span>顧客名</span>
           <span>来店/発送</span>
           <span className="pl-3">注文内容</span>
@@ -409,7 +409,7 @@ export default function StoreDashboardPage() {
 
                 {/* デスクトップ用グリッド行 */}
                 <div
-                  className={`hidden lg:grid grid-cols-[130px_140px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
+                  className={`hidden lg:grid grid-cols-[160px_150px_minmax(0,1fr)_100px_64px] px-3 py-3 items-center border-t border-gray-100 ${
                     isEc
                       ? "bg-amber-50 hover:bg-amber-100"
                       : "bg-white hover:bg-gray-50"

@@ -311,7 +311,7 @@ export default function StoreProductsPage() {
                 const isSelected = selectedProduct?.id === product.id;
                 const isInactive = !product.is_active;
                 const isMaster = product.isMasterProduct ?? false;
-                const price = product.is_preorder_required && product.minVariantPrice != null
+                const price = product.minVariantPrice != null
                   ? `¥${product.minVariantPrice.toLocaleString()}~`
                   : product.base_price > 0
                   ? `¥${product.base_price.toLocaleString()}`
@@ -477,7 +477,7 @@ export default function StoreProductsPage() {
 
                       </span>
                       <span className="text-sm">
-                        {product.is_preorder_required && product.minVariantPrice != null
+                        {product.minVariantPrice != null
                           ? `¥${product.minVariantPrice.toLocaleString()}~`
                           : product.base_price > 0
                           ? `¥${product.base_price.toLocaleString()}`
@@ -533,7 +533,7 @@ export default function StoreProductsPage() {
                         {product.description}
                       </span>
                       <span className="text-sm">
-                        {product.is_preorder_required && product.minVariantPrice != null
+                        {product.minVariantPrice != null
                           ? `¥${product.minVariantPrice.toLocaleString()}~`
                           : product.base_price > 0
                           ? `¥${product.base_price.toLocaleString()}`

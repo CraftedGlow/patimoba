@@ -163,7 +163,7 @@ export async function GET(
           quantity
         )
       ),
-      stores ( name ),
+      stores ( name, is_master, parent_store_id ),
       coupons ( title )
     `)
     .eq("id", job.order_id)
@@ -205,8 +205,13 @@ export async function GET(
       })()
     : null
 
+  // 単独店舗では自明なので印字しない。マスター店舗/子店舗の場合のみ、
+  // どの店舗の注文かを区別できるよう店舗名を印字する
+  const store = order.stores as any
+  const isMultiStore = !!store?.is_master || !!store?.parent_store_id
+
   const receiptData = {
-    storeName: (order.stores as any)?.name ?? "PATIMOBA",
+    storeName: isMultiStore ? (store?.name ?? null) : null,
     orderNo: order.order_no,
     pickupDate: order.pickup_date,
     pickupTime: order.pickup_time,

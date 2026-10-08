@@ -141,6 +141,12 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
     cmd(ESC, 0x61, 0x00),  // 左揃え
   ]
 
+  // 複数店舗（マスター/子店舗）でプリンターを共有している場合、どの店舗の受け取りか分かるようにする
+  if (data.storeName) {
+    parts.push(line(data.storeName))
+    parts.push(line(SEP))
+  }
+
   // 顧客情報（モーダルと同じ順序）
   if (data.customerName) parts.push(line(`名前: ${data.customerName}様`))
   if (data.lineName)     parts.push(line(`LINE: ${data.lineName}`))

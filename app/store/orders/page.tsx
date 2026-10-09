@@ -683,7 +683,7 @@ export default function StoreOrdersPage() {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isEc ? (
-                          <div className="text-right text-xs text-gray-500 leading-tight line-clamp-1">
+                          <div className="text-right text-xs text-gray-800 leading-tight line-clamp-1">
                             {order.notes?.split("　配送時間")[0] || "-"}
                           </div>
                         ) : (
@@ -812,7 +812,7 @@ export default function StoreOrdersPage() {
                   </div>
                   <div className="text-sm text-gray-700">
                     {isEc ? (
-                      <div className="text-xs text-gray-500 leading-tight line-clamp-2">
+                      <div className="text-xs text-gray-800 leading-tight line-clamp-2">
                         {order.notes?.split("　配送時間")[0] || "-"}
                       </div>
                     ) : (
@@ -985,7 +985,7 @@ export default function StoreOrdersPage() {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {isEc ? (
-                          <div className="text-right text-xs text-gray-500 leading-tight line-clamp-1">
+                          <div className="text-right text-xs text-gray-800 leading-tight line-clamp-1">
                             {order.notes?.split("　配送時間")[0] || "-"}
                           </div>
                         ) : (
@@ -1100,7 +1100,7 @@ export default function StoreOrdersPage() {
                   </div>
                   <div className="text-sm text-gray-700">
                     {isEc ? (
-                      <div className="text-xs text-gray-500 leading-tight line-clamp-2">
+                      <div className="text-xs text-gray-800 leading-tight line-clamp-2">
                         {order.notes?.split("　配送時間")[0] || "-"}
                       </div>
                     ) : (

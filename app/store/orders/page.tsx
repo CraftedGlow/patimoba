@@ -984,10 +984,16 @@ export default function StoreOrdersPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="text-right">
-                          {order.pickupDate && <div className="text-sm font-medium text-gray-700">{order.pickupDate}</div>}
-                          {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
-                        </div>
+                        {isEc ? (
+                          <div className="text-right text-xs text-gray-500 leading-tight line-clamp-1">
+                            {order.notes?.split("　配送時間")[0] || "-"}
+                          </div>
+                        ) : (
+                          <div className="text-right">
+                            {order.pickupDate && <div className="text-sm font-medium text-gray-700">{order.pickupDate}</div>}
+                            {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
+                          </div>
+                        )}
                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isEc ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}`}>
                           {isEc ? "EC" : "テイクアウト"}
                         </span>
@@ -1093,8 +1099,16 @@ export default function StoreOrdersPage() {
                     )}
                   </div>
                   <div className="text-sm text-gray-700">
-                    {order.pickupDate && <div className="font-medium">{order.pickupDate}</div>}
-                    {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
+                    {isEc ? (
+                      <div className="text-xs text-gray-500 leading-tight line-clamp-2">
+                        {order.notes?.split("　配送時間")[0] || "-"}
+                      </div>
+                    ) : (
+                      <>
+                        {order.pickupDate && <div className="font-medium">{order.pickupDate}</div>}
+                        {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
+                      </>
+                    )}
                   </div>
                   <div className="text-sm leading-relaxed">
                     {order.items.map((item, j) => (

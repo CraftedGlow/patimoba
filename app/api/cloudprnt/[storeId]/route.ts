@@ -148,7 +148,7 @@ export async function GET(
     .select(`
       id, order_no, store_id, customer_name_snapshot,
       subtotal, discount_amount, coupon_discount_amount, total_amount,
-      pickup_date, pickup_time, payment_status, created_at,
+      pickup_date, pickup_time, order_type, notes, payment_status, created_at,
       users:users!orders_customer_id_fkey(line_name, phone),
       order_items (
         product_id, product_name_snapshot, product_short_name_snapshot, quantity, unit_price, subtotal,
@@ -210,11 +210,18 @@ export async function GET(
   const store = order.stores as any
   const isMultiStore = !!store?.is_master || !!store?.parent_store_id
 
+  const isEc = order.order_type === "ec"
+  const notesStr = order.notes ?? ""
+  const shippingAddress = isEc ? (notesStr.split("　配送時間:")[0]?.trim() || null) : null
+  const deliveryTimeSlot = isEc ? (notesStr.split("　配送時間:")[1]?.trim() || null) : null
+
   const receiptData = {
     storeName: isMultiStore ? (store?.name ?? null) : null,
     orderNo: order.order_no,
     pickupDate: order.pickup_date,
     pickupTime: order.pickup_time,
+    shippingAddress,
+    deliveryTimeSlot,
     customerName: order.customer_name_snapshot,
     lineName: users.line_name ?? null,
     phone: users.phone ?? null,

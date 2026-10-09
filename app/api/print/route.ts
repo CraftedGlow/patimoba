@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       .select(`
         id, order_no, store_id, customer_name_snapshot,
         subtotal, discount_amount, coupon_discount_amount, total_amount,
-        pickup_date, pickup_time,
+        pickup_date, pickup_time, order_type, notes,
         order_items (
           product_id, product_name_snapshot, product_short_name_snapshot, quantity, unit_price, subtotal,
           variant_name_snapshot,
@@ -78,11 +78,18 @@ export async function POST(req: NextRequest) {
     const store = order.stores as any
     const isMultiStore = !!store?.is_master || !!store?.parent_store_id
 
+    const isEc = order.order_type === "ec"
+    const notesStr = order.notes ?? ""
+    const shippingAddress = isEc ? (notesStr.split("　配送時間:")[0]?.trim() || null) : null
+    const deliveryTimeSlot = isEc ? (notesStr.split("　配送時間:")[1]?.trim() || null) : null
+
     const markup = buildReceiptMarkup({
       storeName: isMultiStore ? (store?.name ?? null) : null,
       orderNo: order.order_no,
       pickupDate: order.pickup_date,
       pickupTime: order.pickup_time,
+      shippingAddress,
+      deliveryTimeSlot,
       customerName: order.customer_name_snapshot,
       lineName: lineName ?? null,
       phone: phone ?? null,

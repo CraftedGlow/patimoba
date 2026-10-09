@@ -155,6 +155,8 @@ export function buildStarPRNTReceipt(data: ReceiptData): Buffer {
 
   const dt = fmtDate(data.pickupDate, data.pickupTime)
   if (dt) parts.push(line(`受取日時: ${dt}`))
+  if (data.shippingAddress) parts.push(line(`お届け先: ${data.shippingAddress}`))
+  if (data.deliveryTimeSlot) parts.push(line(`配送時間帯: ${data.deliveryTimeSlot}`))
 
   if (data.paymentStatus) parts.push(line(`お支払い: ${data.paymentStatus}`))
 

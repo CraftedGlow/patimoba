@@ -125,6 +125,9 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
       ? `${order.pickupDate}${order.pickupTime ? " " + String(order.pickupTime).slice(0, 5) : ""}`
       : "-";
 
+  const isEc = order.orderType === "ec";
+  const [ecAddress, ecTimeSlot] = isEc ? (order.notes ?? "").split("　配送時間:") : ["", ""];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -181,7 +184,14 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
             {order.lineName && <InfoRow label="LINE" value={order.lineName} />}
             {order.phone && <InfoRow label="電話番号" value={order.phone} />}
             <InfoRow label="注文日時" value={order.orderDate} />
-            <InfoRow label="受取日時" value={pickupDisplay} bold />
+            {isEc ? (
+              <>
+                <InfoRow label="お届け先" value={ecAddress.trim() || "-"} />
+                <InfoRow label="配送時間帯" value={ecTimeSlot?.trim() || "未指定"} bold />
+              </>
+            ) : (
+              <InfoRow label="受取日時" value={pickupDisplay} bold />
+            )}
             <InfoRow label="お支払い" value={order.paymentStatus} />
           </div>
 

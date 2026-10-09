@@ -16,6 +16,8 @@ export interface ReceiptData {
   orderNo?: string | null
   pickupDate?: string | null
   pickupTime?: string | null
+  shippingAddress?: string | null
+  deliveryTimeSlot?: string | null
   customerName?: string | null
   lineName?: string | null
   phone?: string | null
@@ -111,6 +113,8 @@ export function buildReceiptMarkup(data: ReceiptData): string {
 
   const dt = fmtDate(data.pickupDate, data.pickupTime)
   if (dt) push(`受取日時: ${dt}`)
+  if (data.shippingAddress) push(`お届け先: ${data.shippingAddress}`)
+  if (data.deliveryTimeSlot) push(`配送時間帯: ${data.deliveryTimeSlot}`)
 
   if (data.paymentStatus) push(`お支払い: ${data.paymentStatus}`)
 

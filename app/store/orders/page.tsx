@@ -344,15 +344,34 @@ export default function StoreOrdersPage() {
   const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
   const [csvExporting, setCsvExporting] = useState(false);
 
-  const { orders: historyOrders, loading: historyLoading } = useOrders({
+  // テイクアウト注文（pickup_date基準、今日以前）
+  const { orders: historyTakeoutOrders, loading: historyTakeoutLoading } = useOrders({
     storeId: activeStoreId,
     storeIds: activeStoreIds,
+    channel: "takeout",
     pickupDateTo: todayStr,
-    channel: historyChannel || undefined,
     fulfillmentStatus: historyFulfillment || undefined,
     sortBy: "pickup_date",
     sortAsc: false,
   });
+
+  // EC注文（pickup_dateがないため日付フィルターなし、created_at基準）
+  const { orders: historyEcOrders, loading: historyEcLoading } = useOrders({
+    storeId: activeStoreId,
+    storeIds: activeStoreIds,
+    channel: "ec",
+    fulfillmentStatus: historyFulfillment || undefined,
+    sortBy: "created_at",
+    sortAsc: false,
+  });
+
+  const historyLoading = historyTakeoutLoading || historyEcLoading;
+
+  const historyOrders = (() => {
+    if (historyChannel === "takeout") return historyTakeoutOrders;
+    if (historyChannel === "ec") return historyEcOrders;
+    return [...historyEcOrders, ...historyTakeoutOrders];
+  })();
 
   const { updateFulfillmentStatus } = useOrderMutations();
 

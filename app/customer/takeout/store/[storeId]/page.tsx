@@ -295,16 +295,11 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const sameDayStatus = useSameDayAvailability(loginDone ? store : null);
   const sameDayOk = sameDayStatus.available;
 
-  // 常にLINEログインを実行（前回セッションキャッシュを無視）
+  // 店舗固有チャネルへのログインを実行する。一覧LIFF(公開アカウント)のセッションを
+  // 使い回すと、この店舗が自前の公式LINEを持つ場合に別アカウント宛てに通知を
+  // 送ろうとして届かなくなるため、時間ではなくチャネルの一致判定でスキップ可否を決める。
   useEffect(() => {
     if (authLoading) return;
-
-    // 直前にroot pageでLIFFログイン済みなら再実行不要
-    const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
-    if (ts && Date.now() - Number(ts) < 15000 && user) {
-      setLoginDone(true);
-      return;
-    }
 
     (async () => {
       try {
@@ -314,11 +309,18 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           return;
         }
 
+        // 直前に同じチャネルで既にログイン済みなら再ログイン不要
+        const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
+        const cachedLiffId = (() => { try { return sessionStorage.getItem("patimoba_order_liff_id"); } catch { return null; } })();
+        if (ts && Date.now() - Number(ts) < 15000 && user && cachedLiffId === liffId) {
+          setLoginDone(true);
+          return;
+        }
+
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
-        // 一覧LIFFからの15秒ガード失効後にこの店舗固有liffIdで再初期化した場合、
-        // サービスメッセージ送信時に参照する patimoba_order_liff_id が古いまま残ると
-        // 実際にアクティブなLIFFチャネルと送信先チャネルがずれて通知が届かなくなるため更新する
+        // サービスメッセージ送信時に参照する patimoba_order_liff_id を、実際に
+        // アクティブなこの店舗のチャネルと常に一致させておく
         try { sessionStorage.setItem("patimoba_order_liff_id", liffId); } catch {}
 
         if (!liff.isInClient()) {

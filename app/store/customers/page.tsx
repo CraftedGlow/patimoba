@@ -131,6 +131,8 @@ export default function StoreCustomersPage() {
         setSendError(
           data.error === "no_line_user_id"
             ? "この顧客はLINE連携されていないため送信できません"
+            : data.error === "not_friend"
+            ? "この顧客は公式LINEを友だち追加していない、またはブロックしているため送信できません"
             : "送信に失敗しました。時間をおいて再度お試しください"
         );
         return;

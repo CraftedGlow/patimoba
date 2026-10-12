@@ -40,7 +40,9 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       const body = await res.text();
       console.error(`[send-customer-message] failed: customerId=${customerId} status=${res.status} body=${body}`);
-      return NextResponse.json({ error: "send_failed" }, { status: 500 });
+      // 友だち未追加/ブロック済みの場合、LINE側がこのメッセージを含むエラーを返す
+      const isNotFriend = /added.*friend|blocked the bot/i.test(body);
+      return NextResponse.json({ error: isNotFriend ? "not_friend" : "send_failed" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       .from("orders")
       .select(`
         id, store_id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
-        service_notification_token,
+        service_notification_token, source_liff_id,
         stores(name, address),
         users!orders_customer_id_fkey(name),
         order_items(product_name_snapshot, quantity, subtotal, order_item_options(option_group_name_snapshot, option_item_name_snapshot, price_delta, quantity, free_quantity))
@@ -204,11 +204,16 @@ export async function POST(req: NextRequest) {
 
     const resData = await msgRes.json();
 
-    // ドキュメント仕様: 送信ごとにトークン値が更新されるため保存する
-    if (resData.notificationToken) {
+    // ドキュメント仕様: 送信ごとにトークン値が更新されるため保存する。
+    // 3DS決済経路では注文作成前にtoken発行するためsource_liff_idが未保存のことがあり、
+    // ここで補完しておかないとキャンセル通知時に異なるチャネルを参照してしまう。
+    const updatePayload: Record<string, string> = {};
+    if (resData.notificationToken) updatePayload.service_notification_token = resData.notificationToken;
+    if (liffId && !order.source_liff_id) updatePayload.source_liff_id = liffId;
+    if (Object.keys(updatePayload).length > 0) {
       await supabaseAdmin
         .from("orders")
-        .update({ service_notification_token: resData.notificationToken })
+        .update(updatePayload)
         .eq("id", orderId);
     }
 

@@ -316,6 +316,10 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
         const liff = (await import("@line/liff")).default;
         await liff.init({ liffId });
+        // 一覧LIFFからの15秒ガード失効後にこの店舗固有liffIdで再初期化した場合、
+        // サービスメッセージ送信時に参照する patimoba_order_liff_id が古いまま残ると
+        // 実際にアクティブなLIFFチャネルと送信先チャネルがずれて通知が届かなくなるため更新する
+        try { sessionStorage.setItem("patimoba_order_liff_id", liffId); } catch {}
 
         if (!liff.isInClient()) {
           if (user) { setLoginDone(true); return; }

@@ -194,10 +194,12 @@ async function sendCancelNotification(orderId: string, order: any): Promise<bool
   const sourceLiffId: string | null = order.source_liff_id ?? null
   let resolvedByLiff = sourceLiffId ? await resolveChannelByLiffId(sourceLiffId, supabaseAdmin) : null
   if (!resolvedByLiff && sourceLiffId && sourceLiffId === process.env.NEXT_PUBLIC_LIFF_ID) {
+    // patimoba 公開LIFFはLINE Loginチャネル配下のためstatelessトークン不可。
+    // Messaging APIチャネルのアクセストークンを直接使用する。
     resolvedByLiff = {
       liffId: sourceLiffId,
-      channelAccessToken: null,
-      channelSecret: process.env.LINE_CHANNEL_SECRET ?? null,
+      channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN ?? null,
+      channelSecret: null,
     }
   }
   const lineConfig = resolvedByLiff ?? await resolveStoreLineConfig(order.store_id, supabaseAdmin)

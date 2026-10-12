@@ -39,13 +39,9 @@ export function StoreSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuth();
-  const { storeName, storeLogo, isMaster } = useStoreContext();
+  const { storeName, storeLogo } = useStoreContext();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const visibleMenuItems = isMaster
-    ? menuItems.filter((item) => item.href !== "/store/customers")
-    : menuItems;
 
   const handleLogout = () => {
     logout();
@@ -112,7 +108,7 @@ export function StoreSidebar() {
 
       <nav className="flex flex-col flex-1">
         <div className="flex flex-col">
-          {visibleMenuItems.map((item) => {
+          {menuItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/") || (item.children?.some((c) => pathname === c.href));
             return (
               <div key={item.href}>

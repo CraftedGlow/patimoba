@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, User, X } from "lucide-react";
+import { Users, User, X, MessageCircle, Send, CheckCircle2 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 
 import { useCustomers } from "@/hooks/use-customers";
@@ -31,6 +31,11 @@ export default function StoreCustomersPage() {
   const { customers, loading } = useCustomers({ storeId });
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [messageTarget, setMessageTarget] = useState<Customer | null>(null);
+  const [messageText, setMessageText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sentCustomer, setSentCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     if (isMaster) router.replace("/store/dashboard");
@@ -100,6 +105,46 @@ export default function StoreCustomersPage() {
     }
   };
 
+  const openMessageModal = (e: React.MouseEvent, customer: Customer) => {
+    e.stopPropagation();
+    setSendError(null);
+    setMessageText("");
+    setMessageTarget(customer);
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageTarget || !messageText.trim() || !storeId) return;
+    setSending(true);
+    setSendError(null);
+    try {
+      const res = await fetch("/api/line/send-customer-message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeId,
+          customerId: messageTarget.id,
+          message: messageText.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSendError(
+          data.error === "no_line_user_id"
+            ? "この顧客はLINE連携されていないため送信できません"
+            : "送信に失敗しました。時間をおいて再度お試しください"
+        );
+        return;
+      }
+      setSentCustomer(messageTarget);
+      setMessageTarget(null);
+      setMessageText("");
+    } catch {
+      setSendError("送信に失敗しました。時間をおいて再度お試しください");
+    } finally {
+      setSending(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6 flex items-center justify-center">
@@ -147,6 +192,13 @@ export default function StoreCustomersPage() {
                 <p className="text-xs text-gray-600 truncate">{customer.email}</p>
               )}
             </div>
+            <button
+              onClick={(e) => openMessageModal(e, customer)}
+              className="shrink-0 w-9 h-9 rounded-full bg-[#06C755] flex items-center justify-center hover:bg-[#05b34c] transition-colors"
+              aria-label="LINEメッセージを送信"
+            >
+              <MessageCircle className="w-4 h-4 text-white" />
+            </button>
           </motion.div>
         ))}
         {customers.length === 0 && (
@@ -158,11 +210,12 @@ export default function StoreCustomersPage() {
 
       {/* デスクトップグリッド表示 */}
       <div className="hidden lg:block overflow-x-auto">
-      <div className="min-w-[480px] border border-gray-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-[2fr_1.3fr_1.5fr] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
+      <div className="min-w-[560px] border border-gray-200 rounded-lg overflow-hidden">
+        <div className="grid grid-cols-[2fr_1.3fr_1.5fr_auto] bg-[#FFF176] px-4 py-2.5 text-xs font-bold text-gray-700">
           <span>LINEアカウント名</span>
           <span>電話番号</span>
           <span>メール</span>
+          <span></span>
         </div>
 
         {customers.map((customer, i) => (
@@ -172,7 +225,7 @@ export default function StoreCustomersPage() {
             animate={{ opacity: 1 }}
             transition={{ delay: i * 0.03 }}
             onClick={() => handleRowClick(customer)}
-            className="grid grid-cols-[2fr_1.3fr_1.5fr] px-4 py-3 items-center border-t border-gray-100 hover:bg-amber-50 transition-colors cursor-pointer"
+            className="grid grid-cols-[2fr_1.3fr_1.5fr_auto] px-4 py-3 items-center border-t border-gray-100 hover:bg-amber-50 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2">
               {customer.avatarUrl ? (
@@ -186,6 +239,13 @@ export default function StoreCustomersPage() {
             </div>
             <span className="text-sm text-gray-600">{customer.phone}</span>
             <span className="text-sm text-gray-600">{customer.email}</span>
+            <button
+              onClick={(e) => openMessageModal(e, customer)}
+              className="justify-self-end flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#06C755] text-white text-xs font-bold hover:bg-[#05b34c] transition-colors"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              LINE送信
+            </button>
           </motion.div>
         ))}
 
@@ -344,6 +404,117 @@ export default function StoreCustomersPage() {
                   </div>
                 </div>
               ) : null}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* LINEメッセージ作成モーダル */}
+      <AnimatePresence>
+        {messageTarget && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-40"
+              onClick={() => !sending && setMessageTarget(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-[#06C755] flex items-center justify-center shrink-0">
+                      <MessageCircle className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-gray-900">LINEメッセージ送信</h2>
+                      <p className="text-xs text-gray-500">
+                        {messageTarget.lineName || messageTarget.name || "お客様"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => !sending && setMessageTarget(null)}
+                    className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
+                  >
+                    <X className="w-4 h-4 text-gray-500" />
+                  </button>
+                </div>
+
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="メッセージを入力してください"
+                  maxLength={1000}
+                  rows={5}
+                  disabled={sending}
+                  className="w-full border border-gray-200 rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#06C755] disabled:bg-gray-50"
+                />
+
+                {sendError && (
+                  <p className="text-xs text-red-500 mt-2">{sendError}</p>
+                )}
+
+                <button
+                  onClick={handleSendMessage}
+                  disabled={sending || !messageText.trim()}
+                  className="w-full mt-4 flex items-center justify-center gap-2 bg-[#06C755] text-white font-bold py-2.5 rounded-lg hover:bg-[#05b34c] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {sending ? (
+                    <LineSpinner size={18} />
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      送信する
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* 送信完了モーダル */}
+      <AnimatePresence>
+        {sentCustomer && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black z-40"
+              onClick={() => setSentCustomer(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+                <div className="w-14 h-14 rounded-full bg-[#06C755] flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-base font-bold text-gray-900 mb-1">送信完了</h2>
+                <p className="text-sm text-gray-600 mb-5">
+                  {sentCustomer.lineName || sentCustomer.name || "お客様"}へメッセージを送信しました
+                </p>
+                <button
+                  onClick={() => setSentCustomer(null)}
+                  className="w-full bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  閉じる
+                </button>
+              </div>
             </motion.div>
           </>
         )}

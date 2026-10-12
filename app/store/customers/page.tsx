@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, User, X, MessageCircle, Send, CheckCircle2 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -26,9 +25,13 @@ interface CustomerDetail {
 }
 
 export default function StoreCustomersPage() {
-  const router = useRouter();
-  const { storeId, isMaster } = useStoreContext();
-  const { customers, loading } = useCustomers({ storeId });
+  const { storeId, isMaster, childStores } = useStoreContext();
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const activeStoreId = isMaster ? selectedChildId ?? undefined : storeId;
+  const activeStoreIds = isMaster && selectedChildId === null
+    ? childStores.map((s) => s.id)
+    : undefined;
+  const { customers, customerStoreMap, loading } = useCustomers({ storeId: activeStoreId, storeIds: activeStoreIds });
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [messageTarget, setMessageTarget] = useState<Customer | null>(null);
@@ -36,12 +39,6 @@ export default function StoreCustomersPage() {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sentCustomer, setSentCustomer] = useState<Customer | null>(null);
-
-  useEffect(() => {
-    if (isMaster) router.replace("/store/dashboard");
-  }, [isMaster, router]);
-
-  if (isMaster) return null;
 
   const handleRowClick = async (customer: Customer) => {
     setDetailLoading(true);
@@ -113,7 +110,9 @@ export default function StoreCustomersPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!messageTarget || !messageText.trim() || !storeId) return;
+    // 顧客が実際に注文した店舗のLINEチャネルから送信する(マスターの「全店舗」表示では店舗ごとに公式LINEが異なるため)
+    const targetStoreId = (messageTarget && customerStoreMap[messageTarget.id]) || storeId;
+    if (!messageTarget || !messageText.trim() || !targetStoreId) return;
     setSending(true);
     setSendError(null);
     try {
@@ -121,7 +120,7 @@ export default function StoreCustomersPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          storeId,
+          storeId: targetStoreId,
           customerId: messageTarget.id,
           message: messageText.trim(),
         }),
@@ -157,6 +156,39 @@ export default function StoreCustomersPage() {
 
   return (
     <div className="p-4 lg:p-6">
+      {/* マスター店舗: 全店舗／子店舗ごとの切り替え */}
+      {isMaster && childStores.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          <button
+            onClick={() => setSelectedChildId(null)}
+            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              selectedChildId === null
+                ? "bg-amber-400 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            全店舗
+          </button>
+          {childStores.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedChildId(s.id)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                selectedChildId === s.id
+                  ? "bg-amber-400 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isMaster && childStores.length === 0 ? (
+        <div className="py-10 text-center text-sm text-gray-600">子店舗がありません</div>
+      ) : (
+      <>
       <div className="flex items-center gap-3 mb-6 bg-[#FFF9C4] rounded-xl p-4">
         <div className="w-12 h-12 bg-amber-400 rounded-full flex items-center justify-center">
           <Users className="w-6 h-6 text-white" />
@@ -410,6 +442,8 @@ export default function StoreCustomersPage() {
           </>
         )}
       </AnimatePresence>
+      </>
+      )}
 
       {/* LINEメッセージ作成モーダル */}
       <AnimatePresence>

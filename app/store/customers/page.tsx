@@ -217,7 +217,7 @@ export default function StoreCustomersPage() {
                 <User className="w-5 h-5 text-white" />
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-gray-900 truncate">{customer.lineName || customer.name || "-"}</p>
               {customer.phone && (
                 <p className="text-xs text-gray-600 truncate">{customer.phone}</p>

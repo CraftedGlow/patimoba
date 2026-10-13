@@ -675,6 +675,11 @@ export default function StoreOrdersPage() {
                         <div className="text-sm font-bold text-gray-800 leading-tight truncate">
                           {order.customerName || order.lineName || "-"}
                         </div>
+                        {isEc && (
+                          <div className="text-xs text-gray-800 leading-tight line-clamp-2 mt-0.5">
+                            {order.notes?.split("　配送時間")[0] || "-"}
+                          </div>
+                        )}
                         {isMaster && selectedChildId === null && (
                           <span className={`inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                             {childStoreMap[order.storeId]}
@@ -682,11 +687,7 @@ export default function StoreOrdersPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {isEc ? (
-                          <div className="text-right text-xs text-gray-800 leading-tight line-clamp-1">
-                            {order.notes?.split("　配送時間")[0] || "-"}
-                          </div>
-                        ) : (
+                        {!isEc && (
                           <div className="text-right">
                             {order.pickupTime && <div className="text-sm font-medium text-gray-700">{order.pickupTime.slice(0, 5)}</div>}
                             {order.pickupDate && <div className="text-xs text-gray-500">{order.pickupDate}</div>}
@@ -977,6 +978,11 @@ export default function StoreOrdersPage() {
                         <div className="text-sm font-bold text-gray-800 leading-tight truncate">
                           {order.customerName || order.lineName || "-"}
                         </div>
+                        {isEc && (
+                          <div className="text-xs text-gray-800 leading-tight line-clamp-2 mt-0.5">
+                            {order.notes?.split("　配送時間")[0] || "-"}
+                          </div>
+                        )}
                         {isMaster && selectedChildId === null && (
                           <span className={`inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded font-medium ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                             {childStoreMap[order.storeId]}
@@ -984,11 +990,7 @@ export default function StoreOrdersPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {isEc ? (
-                          <div className="text-right text-xs text-gray-800 leading-tight line-clamp-1">
-                            {order.notes?.split("　配送時間")[0] || "-"}
-                          </div>
-                        ) : (
+                        {!isEc && (
                           <div className="text-right">
                             {order.pickupDate && <div className="text-sm font-medium text-gray-700">{order.pickupDate}</div>}
                             {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}

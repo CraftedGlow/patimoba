@@ -218,6 +218,7 @@ export interface UICartItem {
   isCustomCake?: boolean
   isEc?: boolean
   isTakeout?: boolean
+  isChristmas?: boolean
   uid?: string
   customization?: {
     sizeId?: string

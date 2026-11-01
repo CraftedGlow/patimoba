@@ -46,6 +46,11 @@ interface BasicStepProps {
   uploadingPrintPhoto?: boolean;
   onPrintPhotoUpload?: (file: File) => Promise<void>;
   onPrintPhotoRemove?: () => void;
+  // Christmas mode
+  isChristmasMode?: boolean;
+  christmasCakes?: WholeCakeProduct[];
+  selectedCakeIdForChristmas?: string | null;
+  onCakeSelectForChristmas?: (id: string) => void;
 }
 
 export function WholeCakeBasicStep({
@@ -74,6 +79,10 @@ export function WholeCakeBasicStep({
   uploadingPrintPhoto,
   onPrintPhotoUpload,
   onPrintPhotoRemove,
+  isChristmasMode,
+  christmasCakes,
+  selectedCakeIdForChristmas,
+  onCakeSelectForChristmas,
 }: BasicStepProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -100,7 +109,9 @@ export function WholeCakeBasicStep({
   const isBagCandle = (candleOptionId: string) =>
     candleOptions.find((o) => o.id === candleOptionId)?.type === "bag";
 
-  const showForm = !isPrintMode || !!selectedCakeIdForPrint;
+  const showForm = isChristmasMode
+    ? !!selectedCakeIdForChristmas
+    : !isPrintMode || !!selectedCakeIdForPrint;
 
   return (
     <div className="px-4 pb-8">
@@ -115,7 +126,7 @@ export function WholeCakeBasicStep({
 
       <div className="border-t border-gray-200 pt-4">
         {/* 通常モード: ケーキ画像+名前 */}
-        {!isPrintMode && cake && (
+        {!isPrintMode && !isChristmasMode && cake && (
           <div className="flex items-center gap-3 mb-5">
             <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0">
               <img src={cake.image} alt={cake.name} className="w-full h-full object-cover" />
@@ -139,6 +150,52 @@ export function WholeCakeBasicStep({
                     key={c.id}
                     type="button"
                     onClick={() => onCakeSelectForPrint?.(c.id)}
+                    className={`relative rounded-xl overflow-hidden border-2 transition-colors text-left ${
+                      isSelected ? "border-amber-400" : "border-gray-200 hover:border-amber-200"
+                    }`}
+                  >
+                    <div className="aspect-square bg-gray-100">
+                      {c.image ? (
+                        <img src={c.image} alt={c.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full" />
+                      )}
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                    <div className="p-2">
+                      <p className="text-xs font-medium leading-tight line-clamp-2">{c.name}</p>
+                      {fromPrice > 0 && (
+                        <p className="text-xs text-amber-600 font-bold mt-0.5">
+                          ¥{fromPrice.toLocaleString()}〜
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* クリスマスモード: ケーキ種類の選択グリッド */}
+        {isChristmasMode && (
+          <div className="mb-6">
+            <p className="text-sm font-medium text-gray-700 mb-3">クリスマスケーキを選択</p>
+            <div className="grid grid-cols-2 gap-3">
+              {(christmasCakes ?? []).map((c) => {
+                const isSelected = selectedCakeIdForChristmas === c.id;
+                const fromPrice = c.sizes.length
+                  ? Math.min(...c.sizes.map((s) => Number(s.price) || 0))
+                  : 0;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => onCakeSelectForChristmas?.(c.id)}
                     className={`relative rounded-xl overflow-hidden border-2 transition-colors text-left ${
                       isSelected ? "border-amber-400" : "border-gray-200 hover:border-amber-200"
                     }`}

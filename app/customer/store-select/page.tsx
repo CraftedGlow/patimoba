@@ -22,6 +22,7 @@ export default function StoreSelectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const masterStoreId = searchParams.get("master");
+  const modeParam = searchParams.get("mode");
   const { user } = useAuth();
 
   const [stores, setStores] = useState<ChildStore[]>([]);
@@ -74,7 +75,9 @@ export default function StoreSelectPage() {
   }, [masterStoreId, user]);
 
   const handleSelect = (storeId: string) => {
-    router.push(`/customer/takeout/store/${storeId}`);
+    // マスター店舗経由のクリスマス予約深いリンクでも、子店舗を選んだ先でmodeを
+    // 引き継いでクリスマス専用フローへ進めるようにする
+    router.push(`/customer/takeout/store/${storeId}${modeParam ? `?mode=${modeParam}` : ""}`);
   };
 
   if (loading) {

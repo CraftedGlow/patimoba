@@ -128,6 +128,24 @@ export function CartProvider({ children, storageKey = DEFAULT_STORAGE_KEY }: { c
       }
     }
 
+    // クリスマスケーキのご予約は、割引やカート混在による受取日時のズレを避けるため
+    // 他の商品と同じカートに入れられないようにする（双方向）
+    const incomingIsChristmas = !!item.isChristmas
+    const hasChristmas = items.some((it) => it.isChristmas)
+    const hasNonChristmas = items.some((it) => !it.isChristmas)
+    if (sameStore && incomingIsChristmas && hasNonChristmas) {
+      return {
+        ok: false,
+        error: "クリスマスケーキのご予約は、他の商品と一緒にカートに入れることができません。先にカートを空にしてください。",
+      }
+    }
+    if (sameStore && !incomingIsChristmas && hasChristmas) {
+      return {
+        ok: false,
+        error: "カート内にクリスマスケーキのご予約が入っているため、他の商品を追加できません。",
+      }
+    }
+
     setItems((prev) => {
       if (storeId != null && storeId !== item.storeId) {
         setStoreId(item.storeId)

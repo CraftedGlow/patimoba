@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock, CalendarDays, MapPin, X } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -253,6 +253,8 @@ function formatHoursLine(hours: BusinessHour[]): string {
 
 export default function StorePage({ params }: { params: { storeId: string } }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isChristmasEntry = searchParams.get("mode") === "christmas";
   const { user, loading: authLoading, setUser } = useAuth();
   const { setSelectedStoreId, setSelectedStoreName, addViewedStore } = useCustomerContext();
 
@@ -260,6 +262,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [store, setStore] = useState<Store | null>(null);
+  const [storeFetchDone, setStoreFetchDone] = useState(false);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
 
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -344,7 +347,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
         const storeInfo = getLiffStoreInfo();
         if (storeInfo?.isMaster) {
-          router.replace(`/customer/store-select?master=${params.storeId}`);
+          router.replace(`/customer/store-select?master=${params.storeId}${isChristmasEntry ? "&mode=christmas" : ""}`);
           return;
         }
         setLoginDone(true);
@@ -369,7 +372,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       ]);
       if (storeRow) {
         if (storeRow.is_master) {
-          router.replace(`/customer/store-select?master=${params.storeId}`);
+          router.replace(`/customer/store-select?master=${params.storeId}${isChristmasEntry ? "&mode=christmas" : ""}`);
           return;
         }
         if (!isDevOnlyStoreVisible(storeRow.is_dev_only)) {
@@ -383,9 +386,19 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         addViewedStore(uiStore.id);
       }
       setBusinessHours(hours || []);
+      setStoreFetchDone(true);
     };
     fetchData();
-  }, [params.storeId]);
+  }, [params.storeId, isChristmasEntry]);
+
+  // リッチメニュー等からの深いリンク（?mode=christmas）は、当日/予約の選択画面を
+  // 経由させずクリスマスケーキ専用の予約フローへ直接飛ばす。
+  // LIFFログインが完了する(loginDone)前に遷移すると、takeout/layout.tsxの認証ガードが
+  // mode パラメータを引き継がずに店舗ページへ戻してしまうため、ログイン完了後にのみ行う。
+  useEffect(() => {
+    if (!loginDone || !isChristmasEntry || !store) return;
+    router.replace(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`);
+  }, [loginDone, isChristmasEntry, store, params.storeId]);
 
   const handleSameDay = () => {
     try { sessionStorage.setItem("patimoba_order_type_selection", "sameday"); } catch {}
@@ -397,8 +410,10 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
     router.push(`/customer/takeout/products?store=${params.storeId}&type=reservation`);
   };
 
-  // LINEログイン中画面
-  if (!loginDone) {
+  // LINEログイン中画面（クリスマス予約への深いリンクはリダイレクトが終わるまで同じ画面で待たせ、
+  // 通常の当日/予約選択ボタンが一瞬表示されるのを防ぐ。但し店舗情報の取得自体が終われば
+  // （storeIdが無効等でリダイレクトが発生しなかった場合も含め）スピナーで固まらないようにする）
+  if (!loginDone || (isChristmasEntry && !storeFetchDone)) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <div className="flex-1 relative flex items-center justify-center px-8">

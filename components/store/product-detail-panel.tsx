@@ -64,6 +64,7 @@ export function ProductDetailPanel({
   const [crossImage, setCrossImage] = useState(product.cross_section_image ?? "");
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(product.print_decoration_enabled);
+  const [couponExcluded, setCouponExcluded] = useState(product.coupon_excluded);
 
   // 期間限定
   const [isLimited, setIsLimited] = useState(!!(product.limited_from || product.limited_until));
@@ -152,6 +153,7 @@ export function ProductDetailPanel({
     setImage(product.image ?? "");
     setCrossImage(product.cross_section_image ?? "");
     setPrintDecorationEnabled(product.print_decoration_enabled);
+    setCouponExcluded(product.coupon_excluded);
     setIsLimited(!!(product.limited_from || product.limited_until));
     setLimitedFrom(product.limited_from ?? "");
     setLimitedUntil(product.limited_until ?? "");
@@ -222,6 +224,7 @@ export function ProductDetailPanel({
         same_day_order_allowed: sameDayOrderAllowed,
         custom_options: customOptions as any,
         print_decoration_enabled: isHole ? printDecorationEnabled : false,
+        coupon_excluded: couponExcluded,
         limited_from: isLimited && limitedFrom ? limitedFrom : null,
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
         available_days_of_month: isDayRestricted && availableDays.length > 0 ? [...availableDays].sort((a, b) => a - b) : null,
@@ -591,6 +594,19 @@ export function ProductDetailPanel({
             {paymentMethodRestriction === "store_only" && (
               <p className="text-[11px] text-amber-600 mt-1">
                 この商品がカートに含まれる注文は、クレジットカード決済を選べなくなります
+              </p>
+            )}
+          </div>
+
+          {/* クーポン除外設定 */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+              <input type="checkbox" checked={couponExcluded} onChange={(e) => setCouponExcluded(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+              この商品にクーポンを使用不可にする
+            </label>
+            {couponExcluded && (
+              <p className="text-[11px] text-amber-600 mt-1">
+                この商品がカートに含まれる注文は、どのクーポンも使用できなくなります
               </p>
             )}
           </div>

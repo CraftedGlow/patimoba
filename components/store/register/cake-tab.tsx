@@ -51,6 +51,7 @@ interface ProductRow {
   candle_ids: string[] | null;
   tags: string[] | null;
   print_short_name: string | null;
+  coupon_excluded: boolean | null;
   isMasterProduct?: boolean;
 }
 
@@ -109,6 +110,7 @@ export function CakeTab() {
   const [candleEnabled, setCandleEnabled] = useState(false);
   const [candleIds, setCandleIds] = useState<string[]>([]);
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(false);
+  const [couponExcluded, setCouponExcluded] = useState(false);
   // ホール用サイズ (product_variants)
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
 
@@ -227,6 +229,7 @@ export function CakeTab() {
     setCandleEnabled(false);
     setCandleIds([]);
     setPrintDecorationEnabled(false);
+    setCouponExcluded(false);
     setSelectedTags([]);
     setSizes([]);
     setMainImage(null);
@@ -269,6 +272,7 @@ export function CakeTab() {
       setCandleEnabled(p.candle_enabled ?? false);
       setCandleIds(Array.isArray(p.candle_ids) ? p.candle_ids : []);
       setPrintDecorationEnabled((p as any).print_decoration_enabled ?? false);
+      setCouponExcluded(p.coupon_excluded ?? false);
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
@@ -375,6 +379,7 @@ export function CakeTab() {
         candle_enabled: candleEnabled,
         candle_ids: candleEnabled ? candleIds : [],
         print_decoration_enabled: isHole ? printDecorationEnabled : false,
+        coupon_excluded: couponExcluded,
         tags: selectedTags.length > 0 ? selectedTags : null,
       };
 
@@ -1019,6 +1024,21 @@ export function CakeTab() {
               店頭決済のみ
             </label>
           </div>
+        </div>
+
+        {/* クーポン除外設定 */}
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={couponExcluded}
+              onChange={(e) => setCouponExcluded(e.target.checked)}
+              className="w-4 h-4 accent-amber-500" />
+            この商品にクーポンを使用不可にする
+          </label>
+          {couponExcluded && (
+            <p className="text-xs text-amber-600 pl-6">
+              この商品がカートに含まれる注文は、どのクーポンも使用できなくなります
+            </p>
+          )}
         </div>
 
         {/* 毎月の受け取り可能日 */}

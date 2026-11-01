@@ -1286,6 +1286,7 @@ export type Database = {
           candle_ids: string[]
           category_name: string | null
           content_quantity: string | null
+          coupon_excluded: boolean
           created_at: string
           cross_section_image: string | null
           custom_options: Json
@@ -1335,6 +1336,7 @@ export type Database = {
           candle_ids?: string[]
           category_name?: string | null
           content_quantity?: string | null
+          coupon_excluded?: boolean
           created_at?: string
           cross_section_image?: string | null
           custom_options?: Json
@@ -1384,6 +1386,7 @@ export type Database = {
           candle_ids?: string[]
           category_name?: string | null
           content_quantity?: string | null
+          coupon_excluded?: boolean
           created_at?: string
           cross_section_image?: string | null
           custom_options?: Json

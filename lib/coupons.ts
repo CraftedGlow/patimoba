@@ -164,16 +164,30 @@ export async function reserveCoupon(
     return { ok: false, error: "coupon_min_order_amount_not_met" };
   }
 
-  if (coupon.whole_cake_only) {
-    const productIds = input.productIds.filter(Boolean);
-    if (productIds.length === 0) return { ok: false, error: "coupon_whole_cake_only" };
-    const { data: wholeCakeProducts } = await supabaseAdmin
+  // カート内商品の情報は「クーポン対象外」判定・「ホールケーキ限定」判定の両方で使うため、
+  // 一度のクエリでまとめて取得する
+  const cartProductIds = input.productIds.filter(Boolean);
+  let cartProducts: { id: string; store_id: string; coupon_excluded: boolean | null; is_preorder_required: boolean | null }[] = [];
+  if (cartProductIds.length > 0) {
+    const { data } = await supabaseAdmin
       .from("products")
-      .select("id")
-      .in("id", productIds)
-      .in("store_id", storeIds)
-      .eq("is_preorder_required", true);
-    if (!wholeCakeProducts || wholeCakeProducts.length === 0) {
+      .select("id, store_id, coupon_excluded, is_preorder_required")
+      .in("id", cartProductIds);
+    cartProducts = data ?? [];
+  }
+
+  // 商品ごとに「クーポン対象外」設定がされている場合、その商品がカートに含まれる注文には
+  // どのクーポンも適用できない（割引は注文単位でしか計算できないため）。
+  if (cartProducts.some((p) => p.coupon_excluded)) {
+    return { ok: false, error: "coupon_excluded_product" };
+  }
+
+  if (coupon.whole_cake_only) {
+    if (cartProductIds.length === 0) return { ok: false, error: "coupon_whole_cake_only" };
+    const hasWholeCakeProduct = cartProducts.some(
+      (p) => p.is_preorder_required && storeIds.includes(p.store_id)
+    );
+    if (!hasWholeCakeProduct) {
       return { ok: false, error: "coupon_whole_cake_only" };
     }
   }

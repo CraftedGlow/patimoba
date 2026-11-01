@@ -15,7 +15,7 @@ export interface MyCoupon {
   wholeCakeOnly: boolean
 }
 
-export type CouponFailureReason = "not_started" | "expired" | "min_order_amount" | "whole_cake_only" | null
+export type CouponFailureReason = "not_started" | "expired" | "min_order_amount" | "whole_cake_only" | "excluded_product" | null
 
 export interface MyCouponEligibility extends MyCoupon {
   eligible: boolean
@@ -57,13 +57,16 @@ export function useMyCoupons({ userId, storeId }: UseMyCouponsOptions) {
     async (subtotal: number, productIds: string[]): Promise<MyCouponEligibility[]> => {
       const needsWholeCakeCheck = coupons.some((c) => c.wholeCakeOnly)
       let hasWholeCakeProduct = false
-      if (needsWholeCakeCheck && productIds.length > 0) {
+      let hasExcludedProduct = false
+      if (productIds.length > 0) {
         const { data } = await supabase
           .from("products")
-          .select("id")
+          .select("id, is_preorder_required, coupon_excluded")
           .in("id", productIds)
-          .eq("is_preorder_required", true)
-        hasWholeCakeProduct = (data ?? []).length > 0
+        hasWholeCakeProduct = needsWholeCakeCheck
+          ? (data ?? []).some((p) => p.is_preorder_required)
+          : false
+        hasExcludedProduct = (data ?? []).some((p) => p.coupon_excluded)
       }
 
       const now = new Date()
@@ -76,6 +79,9 @@ export function useMyCoupons({ userId, storeId }: UseMyCouponsOptions) {
         }
         if (c.minOrderAmount && subtotal < c.minOrderAmount) {
           return { ...c, eligible: false, reason: `${c.minOrderAmount.toLocaleString()}円以上のご注文で利用可能です`, failureReason: "min_order_amount" as const }
+        }
+        if (hasExcludedProduct) {
+          return { ...c, eligible: false, reason: "クーポン対象外の商品が含まれています", failureReason: "excluded_product" as const }
         }
         if (c.wholeCakeOnly && !hasWholeCakeProduct) {
           return { ...c, eligible: false, reason: "ホールケーキのご注文で利用可能です", failureReason: "whole_cake_only" as const }

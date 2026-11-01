@@ -47,6 +47,7 @@ export interface ProductRegistration {
   candle_enabled: boolean
   candle_ids: string[]
   print_decoration_enabled: boolean
+  coupon_excluded: boolean
   tags: string[] | null
   minVariantPrice?: number
   shipping_method: string | null
@@ -126,6 +127,7 @@ function mapRow(row: any): ProductRegistration {
     candle_enabled: row.candle_enabled ?? false,
     candle_ids: Array.isArray(row.candle_ids) ? row.candle_ids : [],
     print_decoration_enabled: row.print_decoration_enabled ?? false,
+    coupon_excluded: row.coupon_excluded ?? false,
     tags: Array.isArray(row.tags) ? row.tags : null,
     minVariantPrice,
     shipping_method: row.shipping_method ?? null,
@@ -264,6 +266,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.message_plate_ids !== undefined) payload.message_plate_ids = updates.message_plate_ids
     if (updates.candle_enabled !== undefined) payload.candle_enabled = updates.candle_enabled
     if (updates.candle_ids !== undefined) payload.candle_ids = updates.candle_ids
+    if (updates.coupon_excluded !== undefined) payload.coupon_excluded = updates.coupon_excluded
     if (updates.limited_from !== undefined) payload.limited_from = updates.limited_from
     if (updates.limited_until !== undefined) payload.limited_until = updates.limited_until
     if (updates.available_days_of_month !== undefined) assign("available_days_of_month", updates.available_days_of_month)

@@ -34,6 +34,7 @@ interface EcProductRow {
   tags: string[] | null;
   available_days_of_month: number[] | null;
   payment_method_restriction: string | null;
+  coupon_excluded: boolean | null;
   isMasterProduct?: boolean;
 }
 
@@ -70,6 +71,7 @@ export function EcTab() {
   const [noshiIds, setNoshiIds] = useState<string[]>([]);
   const [messagePlateEnabled, setMessagePlateEnabled] = useState(false);
   const [messagePlateIds, setMessagePlateIds] = useState<string[]>([]);
+  const [couponExcluded, setCouponExcluded] = useState(false);
 
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [crossImage, setCrossImage] = useState<string | null>(null);
@@ -136,6 +138,7 @@ export function EcTab() {
     setNoshiIds([]);
     setMessagePlateEnabled(false);
     setMessagePlateIds([]);
+    setCouponExcluded(false);
     setSelectedTags([]);
     setMainImage(null);
     setCrossImage(null);
@@ -168,6 +171,7 @@ export function EcTab() {
       setNoshiIds(Array.isArray(p.noshi_ids) ? p.noshi_ids : []);
       setMessagePlateEnabled(p.message_plate_enabled ?? false);
       setMessagePlateIds(Array.isArray(p.message_plate_ids) ? p.message_plate_ids : []);
+      setCouponExcluded(p.coupon_excluded ?? false);
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
@@ -233,6 +237,7 @@ export function EcTab() {
         noshi_ids: noshiEnabled ? noshiIds : [],
         message_plate_enabled: messagePlateEnabled,
         message_plate_ids: messagePlateEnabled ? messagePlateIds : [],
+        coupon_excluded: couponExcluded,
         tags: selectedTags.length > 0 ? selectedTags : null,
       } as any;
 
@@ -658,6 +663,21 @@ export function EcTab() {
               店頭決済のみ
             </label>
           </div>
+        </div>
+
+        {/* クーポン除外設定 */}
+        <div className="space-y-1 pt-1">
+          <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={couponExcluded}
+              onChange={(e) => setCouponExcluded(e.target.checked)}
+              className="w-4 h-4 accent-amber-500" />
+            この商品にクーポンを使用不可にする
+          </label>
+          {couponExcluded && (
+            <p className="text-xs text-amber-600 pl-6">
+              この商品がカートに含まれる注文は、どのクーポンも使用できなくなります
+            </p>
+          )}
         </div>
 
         {/* 毎月の受け取り可能日 */}

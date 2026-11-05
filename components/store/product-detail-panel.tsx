@@ -66,8 +66,6 @@ export function ProductDetailPanel({
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(product.print_decoration_enabled);
   const [couponExcluded, setCouponExcluded] = useState(product.coupon_excluded);
   const [hiddenFromRegularOrder, setHiddenFromRegularOrder] = useState(product.hidden_from_regular_order);
-  // 「クリスマス限定」選択時、プリントデコレーションはデフォルトで選べないようにしている
-  const [showPrintDecoSettings, setShowPrintDecoSettings] = useState(product.print_decoration_enabled);
 
   // 期間限定
   const [isLimited, setIsLimited] = useState(!!(product.limited_from || product.limited_until));
@@ -105,7 +103,6 @@ export function ProductDetailPanel({
   const isOmakase = category === "おまかせ";
   const isChristmasLimited = category === "クリスマス限定";
   const isHoleLike = isHole || isChristmasLimited;
-  const canUsePrintDeco = isHole || (isChristmasLimited && showPrintDecoSettings);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -161,7 +158,6 @@ export function ProductDetailPanel({
     setPrintDecorationEnabled(product.print_decoration_enabled);
     setCouponExcluded(product.coupon_excluded);
     setHiddenFromRegularOrder(product.hidden_from_regular_order);
-    setShowPrintDecoSettings(product.print_decoration_enabled);
     setIsLimited(!!(product.limited_from || product.limited_until));
     setLimitedFrom(product.limited_from ?? "");
     setLimitedUntil(product.limited_until ?? "");
@@ -232,7 +228,7 @@ export function ProductDetailPanel({
         same_day_order_allowed: sameDayOrderAllowed,
         custom_options: customOptions as any,
         is_preorder_required: isHoleLike,
-        print_decoration_enabled: canUsePrintDeco ? printDecorationEnabled : false,
+        print_decoration_enabled: isHoleLike ? printDecorationEnabled : false,
         coupon_excluded: couponExcluded,
         hidden_from_regular_order: isChristmasLimited ? hiddenFromRegularOrder : false,
         limited_from: isLimited && limitedFrom ? limitedFrom : null,
@@ -517,28 +513,12 @@ export function ProductDetailPanel({
                 ))}
                 {sizes.length === 0 && <p className="text-xs text-gray-600">サイズが登録されていません</p>}
               </div>
-              {isHole && (
+              {isHoleLike && (
                 <div className="pt-3">
                   <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
                     <input type="checkbox" checked={printDecorationEnabled} onChange={(e) => setPrintDecorationEnabled(e.target.checked)} className="w-4 h-4 accent-amber-500" />
                     プリントデコレーション対応
                   </label>
-                </div>
-              )}
-              {isChristmasLimited && (
-                <div className="pt-3 space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
-                    <input type="checkbox" checked={showPrintDecoSettings}
-                      onChange={(e) => { setShowPrintDecoSettings(e.target.checked); if (!e.target.checked) setPrintDecorationEnabled(false); }}
-                      className="w-4 h-4 accent-amber-500" />
-                    プリントデコレーションを選べるようにする
-                  </label>
-                  {showPrintDecoSettings && (
-                    <label className="flex items-center gap-2 text-sm cursor-pointer pl-6">
-                      <input type="checkbox" checked={printDecorationEnabled} onChange={(e) => setPrintDecorationEnabled(e.target.checked)} className="w-4 h-4 accent-amber-500" />
-                      プリントデコレーション対応
-                    </label>
-                  )}
                 </div>
               )}
             </div>
@@ -738,6 +718,9 @@ export function ProductDetailPanel({
                 setCategory(next);
                 if (next === "おまかせ" && paymentMethodRestriction === null) {
                   setPaymentMethodRestriction("store_only");
+                }
+                if (next === "クリスマス限定") {
+                  setHiddenFromRegularOrder(true);
                 }
               }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all">

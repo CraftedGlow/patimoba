@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { payjpPost } from "@/lib/payjp";
+import { getAuthenticatedAppUser, isGuestUserId } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,20 @@ export async function POST(req: NextRequest) {
         { error: "userId, storeId, amount は必須です" },
         { status: 400 }
       );
+    }
+
+    // 他人のカードに課金できてしまわないよう、呼び出し元を確認する。
+    // ・ログイン済みなら、リクエストのuserIdが認証済み本人と一致すること
+    // ・ログインセッションが無い場合は、LINE未ログインのEC決済ゲスト専用行
+    //   （auth_user_idを持たない）に対してのみ許可する（本物のアカウントへの
+    //   なりすまし課金を防ぐ）
+    const appUser = await getAuthenticatedAppUser(req, supabaseAdmin);
+    if (appUser) {
+      if (appUser.id !== userId) {
+        return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+      }
+    } else if (!(await isGuestUserId(supabaseAdmin, userId))) {
+      return NextResponse.json({ error: "ログインが必要です" }, { status: 401 });
     }
 
     // users テーブルから customer_id を取得

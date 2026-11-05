@@ -58,9 +58,13 @@ export async function updateStore(id: string, updates: StoreUpdate) {
 }
 
 export async function deleteStore(id: string) {
+  const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch("/api/admin/delete-store", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
     body: JSON.stringify({ storeId: id }),
   });
   const result = await res.json();

@@ -410,9 +410,13 @@ export default function TakeoutConfirmPage() {
       // クレジットカード払いの場合は先に PAY.JP で課金する
       if (paymentMethod === "credit") {
         console.log("[takeout-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", totalWithCoupon);
+        const { data: { session } } = await supabase.auth.getSession();
         const chargeRes = await fetch("/api/payjp/charge", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          },
           body: JSON.stringify({
             userId,
             storeId: storeIdForOrder,

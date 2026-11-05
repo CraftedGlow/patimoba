@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthenticatedAppUser } from "@/lib/api-auth";
 
 export async function POST(req: NextRequest) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,6 +16,12 @@ export async function POST(req: NextRequest) {
   const admin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  // 店舗全体とスタッフアカウントを完全削除する操作のため、運営者(admin)本人であることを確認する
+  const appUser = await getAuthenticatedAppUser(req, admin);
+  if (!appUser || appUser.userType !== "admin") {
+    return NextResponse.json({ error: "権限がありません" }, { status: 403 });
+  }
 
   try {
     const { storeId } = await req.json();

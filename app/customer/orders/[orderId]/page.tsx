@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { Calendar, ShoppingBag, CreditCard, Package, Download } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 type OrderItemOption = {
   option_group_name_snapshot: string | null;
@@ -110,7 +111,11 @@ export default function CustomerOrderDetailPage() {
   const handleCancel = async () => {
     setCancelling(true);
     setCancelError(null);
-    const res = await fetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/orders/${orderId}/cancel`, {
+      method: "POST",
+      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined,
+    });
     const data = await res.json();
     if (!res.ok) {
       // 「この注文はキャンセルできません」は既にキャンセル済みの可能性があるので最新データを取得

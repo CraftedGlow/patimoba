@@ -4,6 +4,7 @@ import { Resend } from "resend";
 import { payjpPost } from "@/lib/payjp";
 import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 import { releaseCouponForCancelledOrder } from "@/lib/coupons";
+import { getAuthenticatedAppUser, isGuestUserId, isStoreStaff } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,13 +32,15 @@ async function getStatelessToken(channelId: string, channelSecret: string): Prom
 }
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { orderId: string } }
 ) {
   const { orderId } = params
   if (!orderId) {
     return NextResponse.json({ error: "orderId required" }, { status: 400 })
   }
+
+  const appUser = await getAuthenticatedAppUser(req, supabaseAdmin)
 
   const { data: order, error: fetchErr } = await supabaseAdmin
     .from("orders")
@@ -55,6 +58,20 @@ export async function POST(
 
   if (fetchErr || !order) {
     return NextResponse.json({ error: "注文が見つかりませんでした" }, { status: 404 })
+  }
+
+  // 注文の本人、またはその店舗のスタッフのみキャンセルできる。
+  // ログインセッションが無い場合は、LINE未ログインのECゲスト注文（customer_idが
+  // auth_user_idを持たない行）に限って許可する（本物のアカウントの注文を
+  // 第三者が勝手にキャンセルすることは防ぐ）
+  if (appUser) {
+    const isOwner = order.customer_id === appUser.id
+    const isStaff = await isStoreStaff(supabaseAdmin, appUser.id, order.store_id)
+    if (!isOwner && !isStaff) {
+      return NextResponse.json({ error: "権限がありません" }, { status: 403 })
+    }
+  } else if (!order.customer_id || !(await isGuestUserId(supabaseAdmin, order.customer_id))) {
+    return NextResponse.json({ error: "ログインが必要です" }, { status: 401 })
   }
 
   if (UNCANCELLABLE_STATUSES.includes(order.order_status)) {

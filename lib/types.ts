@@ -156,6 +156,8 @@ export interface WholeCakeProduct {
   tags: string[]
   candleEnabled: boolean
   candleIds: string[]
+  categoryName: string | null
+  hiddenFromRegularOrder: boolean
 }
 
 export interface CartCandleEntry {

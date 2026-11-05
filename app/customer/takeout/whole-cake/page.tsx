@@ -104,10 +104,10 @@ export default function WholeCakePage() {
     return wholeCakes.filter((c) => c.printDecorationEnabled);
   }, [isPrintMode, printDeco, wholeCakes]);
 
-  // クリスマスタグ付きケーキのみ対象
+  // 「クリスマス限定」種類のケーキのみ対象
   const christmasCakes = useMemo(() => {
     if (!isChristmasMode) return [];
-    return wholeCakes.filter((c) => c.tags?.includes("クリスマス"));
+    return wholeCakes.filter((c) => c.categoryName === "クリスマス限定");
   }, [isChristmasMode, wholeCakes]);
 
   // Selected cake

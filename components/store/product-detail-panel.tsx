@@ -65,6 +65,9 @@ export function ProductDetailPanel({
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(product.print_decoration_enabled);
   const [couponExcluded, setCouponExcluded] = useState(product.coupon_excluded);
+  const [hiddenFromRegularOrder, setHiddenFromRegularOrder] = useState(product.hidden_from_regular_order);
+  // 「クリスマス限定」選択時、プリントデコレーションはデフォルトで選べないようにしている
+  const [showPrintDecoSettings, setShowPrintDecoSettings] = useState(product.print_decoration_enabled);
 
   // 期間限定
   const [isLimited, setIsLimited] = useState(!!(product.limited_from || product.limited_until));
@@ -100,6 +103,9 @@ export function ProductDetailPanel({
 
   const isHole = category === "ホール";
   const isOmakase = category === "おまかせ";
+  const isChristmasLimited = category === "クリスマス限定";
+  const isHoleLike = isHole || isChristmasLimited;
+  const canUsePrintDeco = isHole || (isChristmasLimited && showPrintDecoSettings);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -154,6 +160,8 @@ export function ProductDetailPanel({
     setCrossImage(product.cross_section_image ?? "");
     setPrintDecorationEnabled(product.print_decoration_enabled);
     setCouponExcluded(product.coupon_excluded);
+    setHiddenFromRegularOrder(product.hidden_from_regular_order);
+    setShowPrintDecoSettings(product.print_decoration_enabled);
     setIsLimited(!!(product.limited_from || product.limited_until));
     setLimitedFrom(product.limited_from ?? "");
     setLimitedUntil(product.limited_until ?? "");
@@ -212,7 +220,7 @@ export function ProductDetailPanel({
         name: name.trim(),
         print_short_name: printShortName.trim() || null,
         description: description.trim(),
-        base_price: isHole ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
+        base_price: isHoleLike ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
         category_name: category || null,
         image: image || null,
         cross_section_image: crossImage || null,
@@ -223,8 +231,10 @@ export function ProductDetailPanel({
         is_ec: isEc,
         same_day_order_allowed: sameDayOrderAllowed,
         custom_options: customOptions as any,
-        print_decoration_enabled: isHole ? printDecorationEnabled : false,
+        is_preorder_required: isHoleLike,
+        print_decoration_enabled: canUsePrintDeco ? printDecorationEnabled : false,
         coupon_excluded: couponExcluded,
+        hidden_from_regular_order: isChristmasLimited ? hiddenFromRegularOrder : false,
         limited_from: isLimited && limitedFrom ? limitedFrom : null,
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
         available_days_of_month: isDayRestricted && availableDays.length > 0 ? [...availableDays].sort((a, b) => a - b) : null,
@@ -234,8 +244,8 @@ export function ProductDetailPanel({
         tags: selectedTags.length > 0 ? selectedTags : null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
-        message_plate_enabled: !isHole && messagePlateEnabled,
-        message_plate_ids: !isHole && messagePlateEnabled ? messagePlateIds : [],
+        message_plate_enabled: !isHoleLike && messagePlateEnabled,
+        message_plate_ids: !isHoleLike && messagePlateEnabled ? messagePlateIds : [],
         shipping_method: isEc ? shippingMethod.trim() || null : undefined,
         storage_method: isEc ? storageMethod.trim() || null : undefined,
         ingredients: isEc ? ingredients.trim() || null : undefined,
@@ -244,7 +254,7 @@ export function ProductDetailPanel({
       });
       if (err) throw new Error(err);
 
-      if (isHole) {
+      if (isHoleLike) {
         await supabase.from("product_variants").delete().eq("product_id", product.id);
         const validSizes = sizes.filter((s) => s.name.trim());
         if (validSizes.length > 0) {
@@ -480,7 +490,7 @@ export function ProductDetailPanel({
           </div>
 
           {/* 金額 / サイズ */}
-          {isHole ? (
+          {isHoleLike ? (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-sm font-bold">サイズごとの金額</label>
@@ -507,12 +517,30 @@ export function ProductDetailPanel({
                 ))}
                 {sizes.length === 0 && <p className="text-xs text-gray-600">サイズが登録されていません</p>}
               </div>
-              <div className="pt-3">
-                <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
-                  <input type="checkbox" checked={printDecorationEnabled} onChange={(e) => setPrintDecorationEnabled(e.target.checked)} className="w-4 h-4 accent-amber-500" />
-                  プリントデコレーション対応
-                </label>
-              </div>
+              {isHole && (
+                <div className="pt-3">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={printDecorationEnabled} onChange={(e) => setPrintDecorationEnabled(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+                    プリントデコレーション対応
+                  </label>
+                </div>
+              )}
+              {isChristmasLimited && (
+                <div className="pt-3 space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                    <input type="checkbox" checked={showPrintDecoSettings}
+                      onChange={(e) => { setShowPrintDecoSettings(e.target.checked); if (!e.target.checked) setPrintDecorationEnabled(false); }}
+                      className="w-4 h-4 accent-amber-500" />
+                    プリントデコレーションを選べるようにする
+                  </label>
+                  {showPrintDecoSettings && (
+                    <label className="flex items-center gap-2 text-sm cursor-pointer pl-6">
+                      <input type="checkbox" checked={printDecorationEnabled} onChange={(e) => setPrintDecorationEnabled(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+                      プリントデコレーション対応
+                    </label>
+                  )}
+                </div>
+              )}
             </div>
           ) : isOmakase ? (
             <div>
@@ -610,6 +638,21 @@ export function ProductDetailPanel({
               </p>
             )}
           </div>
+
+          {/* クリスマス限定: 通常注文には表示しない */}
+          {isChristmasLimited && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                <input type="checkbox" checked={hiddenFromRegularOrder} onChange={(e) => setHiddenFromRegularOrder(e.target.checked)} className="w-4 h-4 accent-amber-500" />
+                通常注文には表示しない
+              </label>
+              {hiddenFromRegularOrder && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  テイクアウトの通常の商品一覧には出ず、クリスマス予約専用の画面でのみ表示されます
+                </p>
+              )}
+            </div>
+          )}
 
           {/* 毎月の受け取り可能日 */}
           <div>
@@ -848,8 +891,8 @@ export function ProductDetailPanel({
             )}
           </div>
 
-          {/* メッセージプレート設定（ホール以外） */}
-          {!isHole && (
+          {/* メッセージプレート設定（ホール・クリスマス限定以外） */}
+          {!isHoleLike && (
             <div>
               <label className="flex items-center gap-2 text-sm font-bold cursor-pointer mb-1">
                 <input type="checkbox" checked={messagePlateEnabled}

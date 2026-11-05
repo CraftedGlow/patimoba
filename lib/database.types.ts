@@ -1295,6 +1295,7 @@ export type Database = {
           description: string | null
           display_order: number | null
           has_gift_wrapping: boolean
+          hidden_from_regular_order: boolean
           id: string
           image: string | null
           images: string[] | null
@@ -1345,6 +1346,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           has_gift_wrapping?: boolean
+          hidden_from_regular_order?: boolean
           id?: string
           image?: string | null
           images?: string[] | null
@@ -1395,6 +1397,7 @@ export type Database = {
           description?: string | null
           display_order?: number | null
           has_gift_wrapping?: boolean
+          hidden_from_regular_order?: boolean
           id?: string
           image?: string | null
           images?: string[] | null

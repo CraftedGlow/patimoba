@@ -218,9 +218,10 @@ export default function TakeoutProductsPage() {
     | { kind: "printdeco"; price: number };
 
   const visibleWholeCakeList = wholeCakes.filter((c) =>
-    typeParam === "sameday"
+    !c.hiddenFromRegularOrder &&
+    (typeParam === "sameday"
       ? c.sameDayOrderAllowed === true
-      : c.isActive !== false
+      : c.isActive !== false)
   );
 
   // プリントデコレーションは準備日数が必要なため、当日注文では準備日数0の場合のみ表示する

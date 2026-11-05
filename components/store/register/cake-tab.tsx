@@ -52,6 +52,7 @@ interface ProductRow {
   tags: string[] | null;
   print_short_name: string | null;
   coupon_excluded: boolean | null;
+  hidden_from_regular_order: boolean | null;
   isMasterProduct?: boolean;
 }
 
@@ -111,6 +112,12 @@ export function CakeTab() {
   const [candleIds, setCandleIds] = useState<string[]>([]);
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(false);
   const [couponExcluded, setCouponExcluded] = useState(false);
+  const [hiddenFromRegularOrder, setHiddenFromRegularOrder] = useState(false);
+  // 「クリスマス限定」選択時、デフォルトでは選べないようにしているカスタマイズ項目を
+  // 個別に解放するかどうか（フォーム上だけの表示切り替え。DBには保存しない）
+  const [showDecorationSettings, setShowDecorationSettings] = useState(false);
+  const [showCandleSettings, setShowCandleSettings] = useState(false);
+  const [showPrintDecoSettings, setShowPrintDecoSettings] = useState(false);
   // ホール用サイズ (product_variants)
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
 
@@ -125,6 +132,13 @@ export function CakeTab() {
 
   const isHole = category === "ホール";
   const isOmakase = category === "おまかせ";
+  // 「クリスマス限定」は基本的にホールケーキ相当（サイズ別価格が必須）だが、
+  // デコレーション・ろうそく・プリントデコレーションはデフォルトで選べないようにする
+  const isChristmasLimited = category === "クリスマス限定";
+  const isHoleLike = isHole || isChristmasLimited;
+  const canUseDecoration = isHole || (isChristmasLimited && showDecorationSettings);
+  const canUseCandle = isHole || (isChristmasLimited && showCandleSettings);
+  const canUsePrintDeco = isHole || (isChristmasLimited && showPrintDecoSettings);
   const parentStoreIdRef = useRef<string | null>(null);
 
   const PREDEFINED_SIZES = [
@@ -141,7 +155,7 @@ export function CakeTab() {
 
   useEffect(() => {
     if (selectedId) return;
-    if (isHole) {
+    if (isHoleLike) {
       setCustomOptions((prev) => {
         if (prev.length > 0) return prev;
         return [
@@ -157,7 +171,7 @@ export function CakeTab() {
       setCustomOptions([]);
       setSelectedGroupIds([]);
     }
-  }, [isHole, selectedId]);
+  }, [isHoleLike, selectedId]);
 
   const fetchProducts = useCallback(async () => {
     if (!storeId) {
@@ -230,6 +244,10 @@ export function CakeTab() {
     setCandleIds([]);
     setPrintDecorationEnabled(false);
     setCouponExcluded(false);
+    setHiddenFromRegularOrder(false);
+    setShowDecorationSettings(false);
+    setShowCandleSettings(false);
+    setShowPrintDecoSettings(false);
     setSelectedTags([]);
     setSizes([]);
     setMainImage(null);
@@ -273,6 +291,9 @@ export function CakeTab() {
       setCandleIds(Array.isArray(p.candle_ids) ? p.candle_ids : []);
       setPrintDecorationEnabled((p as any).print_decoration_enabled ?? false);
       setCouponExcluded(p.coupon_excluded ?? false);
+      setHiddenFromRegularOrder(p.hidden_from_regular_order ?? false);
+      setShowCandleSettings(p.candle_enabled ?? false);
+      setShowPrintDecoSettings((p as any).print_decoration_enabled ?? false);
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
@@ -283,7 +304,10 @@ export function CakeTab() {
       setPriceMax(p.price_max != null ? String(p.price_max) : "");
       setError(null);
       // デコレーショングループ紐付けを取得
-      getProductGroupIds(p.id).then((ids) => setSelectedGroupIds(ids));
+      getProductGroupIds(p.id).then((ids) => {
+        setSelectedGroupIds(ids);
+        setShowDecorationSettings(ids.length > 0);
+      });
       // サイズ (product_variants) を取得
       setSizes([]);
       supabase
@@ -339,7 +363,7 @@ export function CakeTab() {
       setError("商品名を入力してください");
       return;
     }
-    if (!isHole && !isOmakase && !price.trim()) {
+    if (!isHoleLike && !isOmakase && !price.trim()) {
       setError("金額を入力してください");
       return;
     }
@@ -357,12 +381,12 @@ export function CakeTab() {
         name: productName.trim(),
         print_short_name: printShortName.trim() || null,
         description: description.trim(),
-        base_price: isHole ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
+        base_price: isHoleLike ? 0 : isOmakase ? parsePriceValue(priceMin) : parsePriceValue(price),
         category_name: category || null,
         image: mainImage ?? null,
         cross_section_image: crossImage ?? null,
         same_day_order_allowed: false,
-        is_preorder_required: isHole,
+        is_preorder_required: isHoleLike,
         min_order_lead_minutes: 0,
         is_active: true,
         is_takeout: true,
@@ -374,12 +398,13 @@ export function CakeTab() {
         limited_until: isLimited && limitedUntil ? limitedUntil : null,
         noshi_enabled: noshiEnabled,
         noshi_ids: noshiEnabled ? noshiIds : [],
-        message_plate_enabled: !isHole && messagePlateEnabled,
-        message_plate_ids: !isHole && messagePlateEnabled ? messagePlateIds : [],
-        candle_enabled: candleEnabled,
-        candle_ids: candleEnabled ? candleIds : [],
-        print_decoration_enabled: isHole ? printDecorationEnabled : false,
+        message_plate_enabled: !isHoleLike && messagePlateEnabled,
+        message_plate_ids: !isHoleLike && messagePlateEnabled ? messagePlateIds : [],
+        candle_enabled: canUseCandle ? candleEnabled : false,
+        candle_ids: canUseCandle && candleEnabled ? candleIds : [],
+        print_decoration_enabled: canUsePrintDeco ? printDecorationEnabled : false,
         coupon_excluded: couponExcluded,
+        hidden_from_regular_order: isChristmasLimited ? hiddenFromRegularOrder : false,
         tags: selectedTags.length > 0 ? selectedTags : null,
       };
 
@@ -426,11 +451,11 @@ export function CakeTab() {
 
       // デコレーショングループ紐付けを保存
       if (savedProductId) {
-        await setProductDecorationGroups(savedProductId, selectedGroupIds);
+        await setProductDecorationGroups(savedProductId, canUseDecoration ? selectedGroupIds : []);
       }
 
       // ホールケーキのサイズ (product_variants) を保存
-      if (isHole && savedProductId) {
+      if (isHoleLike && savedProductId) {
         await supabase.from("product_variants").delete().eq("product_id", savedProductId);
         const validSizes = sizes.filter((s) => s.name.trim());
         if (validSizes.length > 0) {
@@ -731,8 +756,8 @@ export function CakeTab() {
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm resize-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         />
 
-        {/* 金額（ホール以外のみ。ホールはサイズ別価格で管理。おまかせは幅で設定） */}
-        {!isHole && !isOmakase && (
+        {/* 金額（ホール・クリスマス限定以外のみ。それらはサイズ別価格で管理。おまかせは幅で設定） */}
+        {!isHoleLike && !isOmakase && (
           <input
             type="text"
             value={price}
@@ -797,7 +822,7 @@ export function CakeTab() {
         </div>
 
         {/* ホールケーキ サイズ管理 */}
-        {isHole && (
+        {isHoleLike && (
           <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-3">
             <span className="text-base font-bold text-amber-800">サイズ設定</span>
             {PREDEFINED_SIZES.map((ps) => {
@@ -840,7 +865,7 @@ export function CakeTab() {
         )}
 
         {/* メッセージプレート設定（ホールのみ） */}
-        {isHole && (() => {
+        {isHoleLike && (() => {
           const msgOpt = customOptions.find((o) => o.name === "メッセージプレート");
           const hasMessagePlate = !!msgOpt;
           const msgRequired = msgOpt?.required ?? false;
@@ -1041,6 +1066,46 @@ export function CakeTab() {
           )}
         </div>
 
+        {/* クリスマス限定専用設定 */}
+        {isChristmasLimited && (
+          <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/40 space-y-3">
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={hiddenFromRegularOrder}
+                  onChange={(e) => setHiddenFromRegularOrder(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500" />
+                通常注文には表示しない
+              </label>
+              {hiddenFromRegularOrder && (
+                <p className="text-xs text-amber-600 pl-6">
+                  テイクアウトの通常の商品一覧には出ず、クリスマス予約専用の画面でのみ表示されます
+                </p>
+              )}
+            </div>
+            <div className="space-y-2 pt-1 border-t border-amber-200">
+              <p className="text-xs font-bold text-amber-800">カスタマイズ項目（デフォルトでは選べません）</p>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={showDecorationSettings}
+                  onChange={(e) => { setShowDecorationSettings(e.target.checked); if (!e.target.checked) setSelectedGroupIds([]); }}
+                  className="w-4 h-4 accent-amber-500" />
+                デコレーションを選べるようにする
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={showCandleSettings}
+                  onChange={(e) => { setShowCandleSettings(e.target.checked); if (!e.target.checked) { setCandleEnabled(false); setCandleIds([]); } }}
+                  className="w-4 h-4 accent-amber-500" />
+                ろうそくを選べるようにする
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={showPrintDecoSettings}
+                  onChange={(e) => { setShowPrintDecoSettings(e.target.checked); if (!e.target.checked) setPrintDecorationEnabled(false); }}
+                  className="w-4 h-4 accent-amber-500" />
+                プリントデコレーションを選べるようにする
+              </label>
+            </div>
+          </div>
+        )}
+
         {/* 毎月の受け取り可能日 */}
         <div className="space-y-1">
           <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
@@ -1088,8 +1153,8 @@ export function CakeTab() {
           )}
         </AnimatePresence>
 
-        {/* デコレーション設定（ホールのみ） */}
-        {isHole && (
+        {/* デコレーション設定（ホール・クリスマス限定で解放時） */}
+        {canUseDecoration && (
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-bold text-gray-700">デコレーション設定</label>
@@ -1137,8 +1202,8 @@ export function CakeTab() {
           </div>
         )}
 
-        {/* プリントデコレーション対応（ホールのみ） */}
-        {isHole && (
+        {/* プリントデコレーション対応（ホール・クリスマス限定で解放時） */}
+        {canUsePrintDeco && (
           <div className="space-y-2 pt-2">
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
               <input
@@ -1206,8 +1271,8 @@ export function CakeTab() {
             )}
           </div>
 
-        {/* ろうそく設定（ホールのみ） */}
-        {isHole && (
+        {/* ろうそく設定（ホール・クリスマス限定で解放時） */}
+        {canUseCandle && (
         <div className="space-y-2 pt-2">
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
               <input
@@ -1264,8 +1329,8 @@ export function CakeTab() {
           </div>
         )}
 
-        {/* メッセージプレート設定（ホール以外） */}
-        {!isHole && (
+        {/* メッセージプレート設定（ホール・クリスマス限定以外） */}
+        {!isHoleLike && (
           <div className="space-y-2 pt-2">
             <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
               <input

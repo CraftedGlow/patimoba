@@ -19,6 +19,7 @@ import { useCart } from "@/lib/cart-context";
 import { uploadPrintPhoto } from "@/lib/upload-image";
 import { supabase } from "@/lib/supabase";
 import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
+import { getProductsTotalQuantitySold } from "@/lib/product-availability";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
 import { fetchCandlesByIds } from "@/hooks/use-candles";
 import { calcCandleTotal } from "@/lib/candle-pricing";
@@ -126,6 +127,18 @@ export default function WholeCakePage() {
     }
     return wholeCakes[0] ?? null;
   }, [isPrintMode, selectedCakeIdForPrint, isChristmasMode, selectedCakeIdForChristmas, wholeCakes, cakeIdParam]);
+
+  // 選択中ケーキが商品自体の累計予約数上限に達していないか
+  const [selectedCakeSoldOut, setSelectedCakeSoldOut] = useState(false);
+  useEffect(() => {
+    if (!selectedCake || selectedCake.maxTotalQuantity == null) { setSelectedCakeSoldOut(false); return; }
+    let cancelled = false;
+    getProductsTotalQuantitySold(supabase, [selectedCake.id]).then((soldMap) => {
+      if (cancelled) return;
+      setSelectedCakeSoldOut((soldMap[selectedCake.id] ?? 0) >= (selectedCake.maxTotalQuantity as number));
+    });
+    return () => { cancelled = true; };
+  }, [selectedCake?.id, selectedCake?.maxTotalQuantity]);
 
   // 選択中ケーキの共通ろうそくカタログ選択を解決
   const [candleOptions, setCandleOptions] = useState<CandleOption[]>([]);
@@ -383,11 +396,11 @@ export default function WholeCakePage() {
     const opt = candleOptions.find((o) => o.id === c.candleOptionId);
     return opt?.type !== "number" || !!c.digit;
   });
-  const canProceedStep1 = isPrintMode
+  const canProceedStep1 = !selectedCakeSoldOut && (isPrintMode
     ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messagePlateOk && candlesOk && !!printPhotoUrl)
     : isChristmasMode
     ? (!!selectedCakeIdForChristmas && selectedSizeId !== "" && messagePlateOk && candlesOk)
-    : (selectedSizeId !== "" && messagePlateOk && candlesOk);
+    : (selectedSizeId !== "" && messagePlateOk && candlesOk));
 
   const isPageLoading = loading || (isPrintMode && printGroupLoading);
 
@@ -475,6 +488,14 @@ export default function WholeCakePage() {
       )}
 
       <StepProgress currentStep={step} steps={wholeCakeSteps} />
+
+      {step === 1 && selectedCakeSoldOut && (
+        <div className="px-4 pb-2">
+          <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
+            このケーキは受付数の上限に達したため、受付を終了しました
+          </p>
+        </div>
+      )}
 
       {step === 1 && (
         <WholeCakeBasicStep

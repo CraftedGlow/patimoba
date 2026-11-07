@@ -158,6 +158,7 @@ export interface WholeCakeProduct {
   candleIds: string[]
   categoryName: string | null
   hiddenFromRegularOrder: boolean
+  maxTotalQuantity: number | null
 }
 
 export interface CartCandleEntry {

@@ -77,6 +77,7 @@ export function useWholeCakes(storeId?: string) {
           candleIds: Array.isArray(product.candle_ids) ? product.candle_ids : [],
           categoryName: product.category_name ?? null,
           hiddenFromRegularOrder: product.hidden_from_regular_order ?? false,
+          maxTotalQuantity: product.max_total_quantity ?? null,
         }))
 
       setWholeCakes(cakes)

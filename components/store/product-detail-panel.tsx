@@ -54,6 +54,7 @@ export function ProductDetailPanel({
   );
   const [prepDays, setPrepDays] = useState(String(product.preparation_days ?? 0));
   const [dailyMax, setDailyMax] = useState(product.daily_max_quantity != null ? String(product.daily_max_quantity) : "");
+  const [maxTotalQuantity, setMaxTotalQuantity] = useState(product.max_total_quantity != null ? String(product.max_total_quantity) : "");
   const [isActive, setIsActive] = useState(product.is_active);
   const [isTakeout, setIsTakeout] = useState(product.is_takeout);
   const [isEc, setIsEc] = useState(product.is_ec);
@@ -148,6 +149,7 @@ export function ProductDetailPanel({
     setPrice(product.base_price > 0 ? `¥${product.base_price.toLocaleString()}` : "");
     setPrepDays(String(product.preparation_days ?? 0));
     setDailyMax(product.daily_max_quantity != null ? String(product.daily_max_quantity) : "");
+    setMaxTotalQuantity(product.max_total_quantity != null ? String(product.max_total_quantity) : "");
     setIsActive(product.is_active);
     setIsTakeout(product.is_takeout);
     setIsEc(product.is_ec);
@@ -222,6 +224,7 @@ export function ProductDetailPanel({
         cross_section_image: crossImage || null,
         preparation_days: Number(prepDays) || 0,
         daily_max_quantity: dailyMax.trim() ? Number(dailyMax) : null,
+        max_total_quantity: maxTotalQuantity.trim() ? Number(maxTotalQuantity) : null,
         is_active: isActive,
         is_takeout: isTakeout,
         is_ec: isEc,
@@ -547,7 +550,7 @@ export function ProductDetailPanel({
             </div>
           )}
 
-          {/* 最大個数 / 準備日数 */}
+          {/* 最大個数 / 最大予約数 / 準備日数 */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-bold block mb-1">最大個数（/日）</label>
@@ -563,6 +566,13 @@ export function ProductDetailPanel({
                 <span className="text-xs text-gray-500">日</span>
               </div>
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-bold block mb-1">最大予約数（期間全体）</label>
+            <input type="number" value={maxTotalQuantity} onChange={(e) => setMaxTotalQuantity(e.target.value)} min={1}
+              placeholder="無制限"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300" />
+            <p className="text-xs text-gray-400 mt-1">受取日を問わず、この数に達すると受付終了になります</p>
           </div>
 
           {/* 販売チャネル / 当日注文 */}

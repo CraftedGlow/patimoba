@@ -16,6 +16,7 @@ import { useCustomerContext } from "@/lib/customer-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
 import { getStoreIdsWithParent } from "@/lib/store-hierarchy";
+import { getProductsTotalQuantitySold } from "@/lib/product-availability";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 
@@ -39,41 +40,48 @@ function ProductBadge({ product }: { product: ProductRegistration }) {
   return null;
 }
 
-function RegistrationCard({ product, basePath }: { product: ProductRegistration; basePath: string }) {
+function RegistrationCard({ product, basePath, soldOut }: { product: ProductRegistration; basePath: string; soldOut?: boolean }) {
   const href = `${basePath}/product/${product.id}`;
 
-  return (
-    <Link href={href}>
-      <motion.div
-        className="group cursor-pointer"
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.2 }}
-      >
-        <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
-              No Image
-            </div>
-          )}
+  const content = (
+    <motion.div
+      className={soldOut ? "group" : "group cursor-pointer"}
+      whileHover={soldOut ? undefined : { y: -2 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+        {product.image ? (
+          <img
+            src={product.image}
+            alt={product.name}
+            className={`w-full h-full object-cover transition-transform duration-300 ${soldOut ? "opacity-40" : "group-hover:scale-105"}`}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
+            No Image
+          </div>
+        )}
+        {soldOut ? (
+          <span className="absolute top-2 left-2 bg-gray-700 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none">
+            受付終了
+          </span>
+        ) : (
           <ProductBadge product={product} />
-        </div>
-        <h3 className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">
-          {product.name}
-        </h3>
-        <p className="text-sm text-gray-900">
-          {product.price_min != null && product.price_max != null
-            ? `¥${product.price_min.toLocaleString()}〜${product.price_max.toLocaleString()}`
-            : `¥${product.base_price.toLocaleString()}`}
-        </p>
-      </motion.div>
-    </Link>
+        )}
+      </div>
+      <h3 className={`mt-2 text-sm font-medium line-clamp-1 ${soldOut ? "text-gray-600" : "text-gray-900"}`}>
+        {product.name}
+      </h3>
+      <p className={`text-sm ${soldOut ? "text-gray-600" : "text-gray-900"}`}>
+        {product.price_min != null && product.price_max != null
+          ? `¥${product.price_min.toLocaleString()}〜${product.price_max.toLocaleString()}`
+          : `¥${product.base_price.toLocaleString()}`}
+      </p>
+    </motion.div>
   );
+
+  if (soldOut) return content;
+  return <Link href={href}>{content}</Link>;
 }
 
 function PrintDecorationCard({ price }: { price: number }) {
@@ -93,43 +101,50 @@ function PrintDecorationCard({ price }: { price: number }) {
   );
 }
 
-function WholeCakeCard({ cake }: { cake: WholeCakeProduct }) {
+function WholeCakeCard({ cake, soldOut }: { cake: WholeCakeProduct; soldOut?: boolean }) {
   const fromPrice = cake.sizes.length
     ? Math.min(...cake.sizes.map((s) => Number(s.price) || 0))
     : 0;
 
-  return (
-    <Link href={`/customer/takeout/product/${cake.id}`}>
-      <motion.div
-        className="group cursor-pointer"
-        whileHover={{ y: -2 }}
-        transition={{ duration: 0.2 }}
-      >
-        <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
-          {cake.image ? (
-            <img
-              src={cake.image}
-              alt={cake.name}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
-              No Image
-            </div>
-          )}
+  const content = (
+    <motion.div
+      className={soldOut ? "group" : "group cursor-pointer"}
+      whileHover={soldOut ? undefined : { y: -2 }}
+      transition={{ duration: 0.2 }}
+    >
+      <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
+        {cake.image ? (
+          <img
+            src={cake.image}
+            alt={cake.name}
+            className={`w-full h-full object-cover transition-transform duration-300 ${soldOut ? "opacity-40" : "group-hover:scale-105"}`}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
+            No Image
+          </div>
+        )}
+        {soldOut ? (
+          <span className="absolute top-2 left-2 bg-gray-700 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none">
+            受付終了
+          </span>
+        ) : (
           <span className="absolute top-2 left-2 text-white text-[10px] font-bold px-2.5 py-1 rounded leading-none" style={{ backgroundColor: cake.tags.length > 0 ? "#8b5cf6" : "#f59e0b" }}>
             {cake.tags.length > 0 ? cake.tags[0] : "ホールケーキ"}
           </span>
-        </div>
-        <h3 className="mt-2 text-sm font-medium text-gray-900 line-clamp-1">
-          {cake.name}
-        </h3>
-        <p className="text-sm text-gray-900">
-          &yen;{fromPrice.toLocaleString()}〜
-        </p>
-      </motion.div>
-    </Link>
+        )}
+      </div>
+      <h3 className={`mt-2 text-sm font-medium line-clamp-1 ${soldOut ? "text-gray-600" : "text-gray-900"}`}>
+        {cake.name}
+      </h3>
+      <p className={`text-sm ${soldOut ? "text-gray-600" : "text-gray-900"}`}>
+        &yen;{fromPrice.toLocaleString()}〜
+      </p>
+    </motion.div>
   );
+
+  if (soldOut) return content;
+  return <Link href={`/customer/takeout/product/${cake.id}`}>{content}</Link>;
 }
 
 export default function TakeoutProductsPage() {
@@ -150,6 +165,30 @@ export default function TakeoutProductsPage() {
   const { itemCount } = useCart();
 
   const [printDecoData, setPrintDecoData] = useState<{ price: number; image: string; preparationDays: number } | null>(null);
+
+  // 商品自体の累計予約数が上限に達した商品（期間全体で受付終了）のID集合
+  const [soldOutProductIds, setSoldOutProductIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (loading || cakesLoading) return;
+    const cappedProducts = [
+      ...products.filter((p) => p.max_total_quantity != null).map((p) => ({ id: p.id, max: p.max_total_quantity as number })),
+      ...wholeCakes.filter((c) => c.maxTotalQuantity != null).map((c) => ({ id: c.id, max: c.maxTotalQuantity as number })),
+    ];
+    if (cappedProducts.length === 0) {
+      setSoldOutProductIds(new Set());
+      return;
+    }
+    let cancelled = false;
+    getProductsTotalQuantitySold(supabase, cappedProducts.map((p) => p.id)).then((soldMap) => {
+      if (cancelled) return;
+      const soldOut = new Set<string>();
+      for (const p of cappedProducts) {
+        if ((soldMap[p.id] ?? 0) >= p.max) soldOut.add(p.id);
+      }
+      setSoldOutProductIds(soldOut);
+    });
+    return () => { cancelled = true; };
+  }, [products, wholeCakes, loading, cakesLoading]);
 
   useEffect(() => {
     if (!storeId || cakesLoading) return;
@@ -359,8 +398,8 @@ export default function TakeoutProductsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.04 }}
                 >
-                  {item.kind === "product" && <RegistrationCard product={item.data} basePath="/customer/takeout" />}
-                  {item.kind === "wholecake" && <WholeCakeCard cake={item.data} />}
+                  {item.kind === "product" && <RegistrationCard product={item.data} basePath="/customer/takeout" soldOut={soldOutProductIds.has(item.data.id)} />}
+                  {item.kind === "wholecake" && <WholeCakeCard cake={item.data} soldOut={soldOutProductIds.has(item.data.id)} />}
                   {item.kind === "printdeco" && <PrintDecorationCard price={item.price} />}
                 </motion.div>
               ))}
@@ -374,7 +413,7 @@ export default function TakeoutProductsPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
             {visibleWholeCakes.map((cake, i) => (
               <motion.div key={`wc-${cake.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                <WholeCakeCard cake={cake} />
+                <WholeCakeCard cake={cake} soldOut={soldOutProductIds.has(cake.id)} />
               </motion.div>
             ))}
             {visiblePrintDeco && selectedCategory === "ホールケーキ" && (
@@ -384,7 +423,7 @@ export default function TakeoutProductsPage() {
             )}
             {filtered.map((product, i) => (
               <motion.div key={product.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (i + visibleWholeCakes.length) * 0.04 }}>
-                <RegistrationCard product={product} basePath="/customer/takeout" />
+                <RegistrationCard product={product} basePath="/customer/takeout" soldOut={soldOutProductIds.has(product.id)} />
               </motion.div>
             ))}
           </div>

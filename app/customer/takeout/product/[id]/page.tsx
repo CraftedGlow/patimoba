@@ -14,6 +14,8 @@ import { useCart } from "@/lib/cart-context";
 import { fetchNoshiByIds, NoshiItem } from "@/hooks/use-noshi";
 import { fetchMessagePlatesByIds, MessagePlateItem } from "@/hooks/use-message-plates";
 import { fetchCandlesByIds, CandleItem } from "@/hooks/use-candles";
+import { getProductsTotalQuantitySold } from "@/lib/product-availability";
+import { supabase } from "@/lib/supabase";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const DIGIT_OPTIONS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -26,6 +28,17 @@ export default function TakeoutProductDetailPage() {
     points, } = useCustomerContext();
   const { product, loading } = useProductRegistration(params.id as string);
   const { addItem } = useCart();
+  const [soldOut, setSoldOut] = useState(false);
+
+  useEffect(() => {
+    if (!product || product.max_total_quantity == null) { setSoldOut(false); return; }
+    let cancelled = false;
+    getProductsTotalQuantitySold(supabase, [product.id]).then((soldMap) => {
+      if (cancelled) return;
+      setSoldOut((soldMap[product.id] ?? 0) >= (product.max_total_quantity as number));
+    });
+    return () => { cancelled = true; };
+  }, [product?.id, product?.max_total_quantity]);
   const [quantity, setQuantity] = useState(1);
   const [showQuantityDropdown, setShowQuantityDropdown] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -742,13 +755,17 @@ export default function TakeoutProductDetailPage() {
           </div>
         )}
 
+        {soldOut && (
+          <p className="text-sm text-red-500 text-center mb-2">この商品は受付数の上限に達したため、受付を終了しました</p>
+        )}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={soldOut ? undefined : { scale: 1.02 }}
+          whileTap={soldOut ? undefined : { scale: 0.98 }}
           onClick={isWholeCake ? handleProceedToWholeCake : handleAddToCart}
-          className="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-2.5 rounded-full text-base shadow-md shadow-amber-200/60 transition-colors"
+          disabled={soldOut}
+          className="w-full bg-amber-400 hover:bg-amber-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-full text-base shadow-md shadow-amber-200/60 transition-colors"
         >
-          {isWholeCake ? "詳細入力に進む" : "カートに追加"}
+          {soldOut ? "受付終了" : isWholeCake ? "詳細入力に進む" : "カートに追加"}
         </motion.button>
       </div>
 

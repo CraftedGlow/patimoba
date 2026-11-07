@@ -35,6 +35,7 @@ interface ProductRow {
   is_takeout: boolean | null;
   is_ec: boolean | null;
   daily_max_quantity: number | null;
+  max_total_quantity: number | null;
   preparation_days: number | null;
   limited_from: string | null;
   limited_until: string | null;
@@ -85,6 +86,7 @@ export function CakeTab() {
   const [isTakeout, setIsTakeout] = useState(true);
   const [isEc, setIsEc] = useState(false);
   const [dailyMaxQuantity, setDailyMaxQuantity] = useState("");
+  const [maxTotalQuantity, setMaxTotalQuantity] = useState("");
   const [preparationDays, setPreparationDays] = useState("");
   const [customOptions, setCustomOptions] = useState<ProductCustomOption[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -226,6 +228,7 @@ export function CakeTab() {
     setIsTakeout(true);
     setIsEc(false);
     setDailyMaxQuantity("");
+    setMaxTotalQuantity("");
     setPreparationDays("");
     setCustomOptions([]);
     setSelectedGroupIds([]);
@@ -271,6 +274,7 @@ export function CakeTab() {
       setIsTakeout(p.is_takeout ?? true);
       setIsEc(p.is_ec ?? false);
       setDailyMaxQuantity(p.daily_max_quantity != null ? String(p.daily_max_quantity) : "");
+      setMaxTotalQuantity(p.max_total_quantity != null ? String(p.max_total_quantity) : "");
       setPreparationDays(p.preparation_days != null ? String(p.preparation_days) : "");
       setCustomOptions(Array.isArray(p.custom_options) ? (p.custom_options as ProductCustomOption[]) : []);
       setNoshiEnabled(p.noshi_enabled ?? false);
@@ -377,6 +381,7 @@ export function CakeTab() {
         is_takeout: true,
         is_ec: false,
         daily_max_quantity: dailyMaxQuantity.trim() === "" ? null : parseInt(dailyMaxQuantity, 10) || null,
+        max_total_quantity: maxTotalQuantity.trim() === "" ? null : parseInt(maxTotalQuantity, 10) || null,
         preparation_days: preparationDays.trim() === "" ? 0 : parseInt(preparationDays, 10) || 0,
         custom_options: customOptions,
         limited_from: isLimited && limitedFrom ? limitedFrom : null,
@@ -609,6 +614,9 @@ export function CakeTab() {
             if (next === "クリスマス限定") {
               setHiddenFromRegularOrder(true);
             }
+            if (next === "ホール" || next === "クリスマス限定") {
+              setCandleEnabled(true);
+            }
           }}
           className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-amber-300 focus:border-amber-400 transition-all"
         >
@@ -783,8 +791,8 @@ export function CakeTab() {
           </div>
         )}
 
-        {/* 1日の最大数 / 準備日数 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* 1日の最大数 / 商品自体の最大予約数 / 準備日数 */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label className="text-xs text-gray-600 block mb-1">1日の最大数</label>
             <input
@@ -795,6 +803,18 @@ export function CakeTab() {
               placeholder="未設定"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
             />
+          </div>
+          <div>
+            <label className="text-xs text-gray-600 block mb-1">最大予約数（期間全体）</label>
+            <input
+              type="number"
+              min={0}
+              value={maxTotalQuantity}
+              onChange={(e) => setMaxTotalQuantity(e.target.value)}
+              placeholder="未設定"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-300"
+            />
+            <p className="text-[11px] text-gray-500 mt-1">受取日を問わず、この数に達すると受付終了になります</p>
           </div>
           <div>
             <label className="text-xs text-gray-600 block mb-1">準備日数（日）</label>
@@ -945,6 +965,64 @@ export function CakeTab() {
             </div>
           );
         })()}
+
+        {/* ろうそく設定（ホール・クリスマス限定） */}
+        {isHoleLike && (
+        <div className="space-y-2 pt-2">
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={candleEnabled}
+                onChange={(e) => {
+                  setCandleEnabled(e.target.checked);
+                  if (!e.target.checked) setCandleIds([]);
+                }}
+                className="w-4 h-4 accent-amber-500"
+              />
+              ろうそくを使用する
+            </label>
+            {candleEnabled && (
+              <div className="pl-6 space-y-1.5">
+                {candleList.length === 0 ? (
+                  <p className="text-xs text-gray-600">
+                    ろうそくが未登録です。{" "}
+                    <Link href="/store/register" className="text-amber-600 underline">
+                      ろうそく管理
+                    </Link>
+                    タブから登録してください。
+                  </p>
+                ) : (
+                  candleList.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={candleIds.includes(c.id)}
+                        onChange={(e) => {
+                          setCandleIds((prev) =>
+                            e.target.checked ? [...prev, c.id] : prev.filter((id) => id !== c.id)
+                          );
+                        }}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      {c.imageUrl ? (
+                        <img src={c.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
+                      ) : (
+                        <img src="/candle-icon.png" alt="" className="w-6 h-6" />
+                      )}
+                      <span>{c.name}</span>
+                      <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                        {c.type === "number" ? "ナンバー型" : c.type === "bag" ? "袋型" : "ノーマル型"}
+                      </span>
+                      {c.price > 0 && (
+                        <span className="text-xs text-gray-600">+¥{c.price.toLocaleString()}</span>
+                      )}
+                    </label>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">タグ（シーズン・用途）</label>
@@ -1235,64 +1313,6 @@ export function CakeTab() {
               </div>
             )}
           </div>
-
-        {/* ろうそく設定（ホール・クリスマス限定） */}
-        {isHoleLike && (
-        <div className="space-y-2 pt-2">
-            <label className="flex items-center gap-2 text-sm font-bold text-gray-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={candleEnabled}
-                onChange={(e) => {
-                  setCandleEnabled(e.target.checked);
-                  if (!e.target.checked) setCandleIds([]);
-                }}
-                className="w-4 h-4 accent-amber-500"
-              />
-              ろうそくを使用する
-            </label>
-            {candleEnabled && (
-              <div className="pl-6 space-y-1.5">
-                {candleList.length === 0 ? (
-                  <p className="text-xs text-gray-600">
-                    ろうそくが未登録です。{" "}
-                    <Link href="/store/register" className="text-amber-600 underline">
-                      ろうそく管理
-                    </Link>
-                    タブから登録してください。
-                  </p>
-                ) : (
-                  candleList.map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={candleIds.includes(c.id)}
-                        onChange={(e) => {
-                          setCandleIds((prev) =>
-                            e.target.checked ? [...prev, c.id] : prev.filter((id) => id !== c.id)
-                          );
-                        }}
-                        className="w-4 h-4 accent-amber-500"
-                      />
-                      {c.imageUrl ? (
-                        <img src={c.imageUrl} alt="" className="w-6 h-6 rounded object-cover" />
-                      ) : (
-                        <img src="/candle-icon.png" alt="" className="w-6 h-6" />
-                      )}
-                      <span>{c.name}</span>
-                      <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
-                        {c.type === "number" ? "ナンバー型" : c.type === "bag" ? "袋型" : "ノーマル型"}
-                      </span>
-                      {c.price > 0 && (
-                        <span className="text-xs text-gray-600">+¥{c.price.toLocaleString()}</span>
-                      )}
-                    </label>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* メッセージプレート設定（ホール・クリスマス限定以外） */}
         {!isHoleLike && (

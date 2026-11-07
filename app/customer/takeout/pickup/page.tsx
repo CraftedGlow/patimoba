@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase";
 import { isClosedByRule } from "@/components/store/business-days/types";
 import { isJapaneseHoliday } from "@/lib/japanese-holidays";
 import { getStoreIdsWithParent, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
+import { getProductsQuantitySoldByDate } from "@/lib/product-availability";
 
 const steps = ["店舗選択", "商品選択", "受取日時", "注文確認"];
 const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
@@ -100,6 +101,10 @@ export default function TakeoutPickupPage() {
   const [limitedUntil, setLimitedUntil] = useState<Date | null>(null);
   // カート内商品の「毎月の受け取り可能日」の共通部分（積集合）。nullなら制限なし
   const [allowedDaysOfMonth, setAllowedDaysOfMonth] = useState<number[] | null>(null);
+  // 1日の最大数が設定されているカート内商品（商品ID・上限・この注文での数量）
+  const [dailyCappedItems, setDailyCappedItems] = useState<{ productId: string; cap: number; cartQty: number }[]>([]);
+  // 日付×商品ごとの既存予約数（キー: `${productId}|${date}`）
+  const [soldByProductDate, setSoldByProductDate] = useState<Record<string, number>>({});
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -184,7 +189,7 @@ export default function TakeoutPickupPage() {
         if (productIds.length > 0) {
           const { data: rawProductRows } = await supabase
             .from("products")
-            .select("id, store_id, preparation_days, limited_from, limited_until, available_days_of_month")
+            .select("id, store_id, preparation_days, limited_from, limited_until, available_days_of_month, daily_max_quantity")
             .in("id", productIds);
           if (rawProductRows && rawProductRows.length > 0) {
             // 共有商品はこの店舗の上書き設定（毎月の受け取り可能日など）をマージする
@@ -232,11 +237,40 @@ export default function TakeoutPickupPage() {
             } else {
               setAllowedDaysOfMonth(null);
             }
+
+            // 1日の最大数が設定されている商品について、その日ごとの既存予約数を取得する
+            const cappedRows = productRows.filter((p: any) => p.daily_max_quantity != null) as { id: string; daily_max_quantity: number }[];
+            if (cappedRows.length > 0) {
+              const cartQtyByProduct: Record<string, number> = {};
+              for (const item of cartItems) {
+                if (!item.productId) continue;
+                cartQtyByProduct[item.productId] = (cartQtyByProduct[item.productId] ?? 0) + item.quantity;
+              }
+              setDailyCappedItems(
+                cappedRows.map((p) => ({ productId: p.id, cap: p.daily_max_quantity, cartQty: cartQtyByProduct[p.id] ?? 0 }))
+              );
+              const rangeTo = new Date(today);
+              rangeTo.setDate(rangeTo.getDate() + (rules?.max_future_days ?? 30));
+              const soldMap = await getProductsQuantitySoldByDate(
+                supabase,
+                cappedRows.map((p) => p.id),
+                dateKey(today),
+                dateKey(rangeTo)
+              );
+              setSoldByProductDate(soldMap);
+            } else {
+              setDailyCappedItems([]);
+              setSoldByProductDate({});
+            }
           } else {
             setAllowedDaysOfMonth(null);
+            setDailyCappedItems([]);
+            setSoldByProductDate({});
           }
         } else {
           setAllowedDaysOfMonth(null);
+          setDailyCappedItems([]);
+          setSoldByProductDate({});
         }
       } finally {
         setLoading(false);
@@ -296,15 +330,32 @@ export default function TakeoutPickupPage() {
     // 毎月の受け取り可能日チェック
     if (allowedDaysOfMonth && !allowedDaysOfMonth.includes(date.getDate())) return false;
 
+    // 1日の最大数チェック: この日に受け取ると上限を超えてしまう商品がカートにあれば選択不可
+    if (dailyCappedItems.length > 0) {
+      const key = dateKey(date);
+      for (const item of dailyCappedItems) {
+        const sold = soldByProductDate[`${item.productId}|${key}`] ?? 0;
+        if (sold + item.cartQty > item.cap) return false;
+      }
+    }
+
     // 営業日チェック（特定日override + 曜日ルール）
     return isDateOpen(date);
   };
+
+  // 当日注文: 本日分の1日の最大数チェック
+  const sameDayCapExceeded = isSameDay && dailyCappedItems.some((item) => {
+    const sold = soldByProductDate[`${item.productId}|${dateKey(today)}`] ?? 0;
+    return sold + item.cartQty > item.cap;
+  });
 
   // 当日注文の時間スロット
   const sameDayTimeSlots = (() => {
     if (!isSameDay) return [];
     // 準備日数が必要な商品・デコレーション（プリントデコレーション等）が含まれる場合は当日注文不可
     if (itemPreparationDays > 0) return [];
+    // カート内商品の本日分の受付上限に達している場合は当日注文不可
+    if (sameDayCapExceeded) return [];
     const now = new Date();
     const key = dateKey(now);
     // 特定日で is_open = false の場合は空
@@ -497,6 +548,8 @@ export default function TakeoutPickupPage() {
               {isSameDay
                 ? itemPreparationDays > 0
                   ? "カート内の商品には準備日数が必要なため、当日受け取りはできません。予約注文をご利用ください。"
+                  : sameDayCapExceeded
+                  ? "カート内の商品は本日分の受付数が上限に達しました"
                   : "現在、当日注文の受付時間外です"
                 : selectedDate ? "この日は営業していません" : "日付を選択してください"}
             </p>

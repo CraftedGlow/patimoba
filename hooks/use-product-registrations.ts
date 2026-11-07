@@ -38,6 +38,7 @@ export interface ProductRegistration {
   is_takeout: boolean
   is_ec: boolean
   daily_max_quantity: number | null
+  max_total_quantity: number | null
   preparation_days: number
   custom_options: ProductCustomOption[]
   noshi_enabled: boolean
@@ -119,6 +120,7 @@ function mapRow(row: any): ProductRegistration {
     is_takeout: row.is_takeout ?? true,
     is_ec: row.is_ec ?? false,
     daily_max_quantity: row.daily_max_quantity ?? null,
+    max_total_quantity: row.max_total_quantity ?? null,
     preparation_days: row.preparation_days ?? 0,
     custom_options: normalizeCustomOptions(row.custom_options),
     noshi_enabled: row.noshi_enabled ?? false,
@@ -259,6 +261,7 @@ export function useProductRegistrations(options: UseProductRegistrationsOptions 
     if (updates.is_takeout !== undefined) payload.is_takeout = updates.is_takeout
     if (updates.is_ec !== undefined) payload.is_ec = updates.is_ec
     if (updates.daily_max_quantity !== undefined) assign("daily_max_quantity", updates.daily_max_quantity)
+    if (updates.max_total_quantity !== undefined) payload.max_total_quantity = updates.max_total_quantity
     if (updates.preparation_days !== undefined) assign("preparation_days", updates.preparation_days)
     if (updates.custom_options !== undefined) payload.custom_options = updates.custom_options
     if (updates.print_decoration_enabled !== undefined) payload.print_decoration_enabled = updates.print_decoration_enabled

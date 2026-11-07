@@ -1307,6 +1307,7 @@ export type Database = {
           is_takeout: boolean
           limited_from: string | null
           limited_until: string | null
+          max_total_quantity: number | null
           message_plate_enabled: boolean
           message_plate_ids: string[]
           min_order_lead_minutes: number | null
@@ -1358,6 +1359,7 @@ export type Database = {
           is_takeout?: boolean
           limited_from?: string | null
           limited_until?: string | null
+          max_total_quantity?: number | null
           message_plate_enabled?: boolean
           message_plate_ids?: string[]
           min_order_lead_minutes?: number | null
@@ -1409,6 +1411,7 @@ export type Database = {
           is_takeout?: boolean
           limited_from?: string | null
           limited_until?: string | null
+          max_total_quantity?: number | null
           message_plate_enabled?: boolean
           message_plate_ids?: string[]
           min_order_lead_minutes?: number | null

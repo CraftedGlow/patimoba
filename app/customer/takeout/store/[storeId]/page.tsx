@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CalendarDays, MapPin, X } from "lucide-react";
+import { Clock, CalendarDays, MapPin, X, Gift } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
@@ -262,6 +262,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [store, setStore] = useState<Store | null>(null);
+  const [hasChristmasProducts, setHasChristmasProducts] = useState(false);
   const [storeFetchDone, setStoreFetchDone] = useState(false);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
 
@@ -390,6 +391,27 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
     };
     fetchData();
   }, [params.storeId, isChristmasEntry]);
+
+  // 「クリスマス限定」で公開中の商品が1つでもあれば、TOPページにクリスマス予約の
+  // 導線を自動で出す（商品が無くなれば自動的に引っ込む）
+  useEffect(() => {
+    if (!params.storeId) return;
+    let cancelled = false;
+    (async () => {
+      const { supabase } = await import("@/lib/supabase");
+      const { getStoreIdsWithParent } = await import("@/lib/store-hierarchy");
+      const { storeIds } = await getStoreIdsWithParent(params.storeId);
+      const { data } = await supabase
+        .from("products")
+        .select("id")
+        .in("store_id", storeIds)
+        .eq("category_name", "クリスマス限定")
+        .eq("is_active", true)
+        .limit(1);
+      if (!cancelled) setHasChristmasProducts((data?.length ?? 0) > 0);
+    })();
+    return () => { cancelled = true; };
+  }, [params.storeId]);
 
   // リッチメニュー等からの深いリンク（?mode=christmas）は、当日/予約の選択画面を
   // 経由させずクリスマスケーキ専用の予約フローへ直接飛ばす。
@@ -597,6 +619,27 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             </button>
           );
         })()}
+
+        {/* クリスマスケーキ予約（対象商品が公開されている間だけ表示） */}
+        {hasChristmasProducts && store?.isPublished !== false && (
+          <button
+            onClick={() => router.push(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`)}
+            className="w-full border border-red-200 rounded-xl p-4 mt-3 text-left transition-shadow hover:shadow-md bg-white active:bg-red-50/40"
+          >
+            <div className="flex items-center gap-3 mb-1.5">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-green-100">
+                <Gift className="w-4 h-4 text-green-700" />
+              </div>
+              <span className="text-sm font-bold text-gray-900">クリスマスケーキのご予約</span>
+            </div>
+            <p className="text-xs leading-relaxed text-gray-500">数量限定のクリスマスケーキを特別にご予約いただけます。</p>
+            <div className="mt-2 flex gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
+            </div>
+          </button>
+        )}
 
         {/* 利用規約・特商法リンク */}
         <div className="text-center space-y-2 pt-6 pb-2">

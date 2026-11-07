@@ -643,6 +643,7 @@ export default function StoreOrdersPage() {
             )}
             {manageOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
+              const isChristmas = order.isChristmas;
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
               const isCancelled = order.orderStatus === "cancelled";
               const prevOrder = i > 0 ? manageOrders[i - 1] : null;
@@ -660,6 +661,8 @@ export default function StoreOrdersPage() {
                   } ${
                     isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                      : isChristmas
+                      ? "bg-red-50 border-l-red-400 hover:bg-red-100"
                       : isEc
                       ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
                       : "bg-white border-l-gray-200 hover:bg-gray-50"
@@ -693,8 +696,8 @@ export default function StoreOrdersPage() {
                             {order.pickupDate && <div className="text-xs text-gray-500">{order.pickupDate}</div>}
                           </div>
                         )}
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isEc ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"}`}>
-                          {isEc ? "EC" : "テイクアウト"}
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isChristmas ? "bg-red-100 text-red-700" : isEc ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"}`}>
+                          {isChristmas ? "クリスマス" : isEc ? "EC" : "テイクアウト"}
                         </span>
                       </div>
                     </div>
@@ -777,6 +780,7 @@ export default function StoreOrdersPage() {
 
             {manageOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
+              const isChristmas = order.isChristmas;
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
               const isCancelled = order.orderStatus === "cancelled";
               const fulfilledLabel = isEc ? "出荷済" : "受渡済";
@@ -795,6 +799,8 @@ export default function StoreOrdersPage() {
                   } ${
                     isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                      : isChristmas
+                      ? "bg-red-50 border-l-red-400 hover:bg-red-100"
                       : isEc
                       ? "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
                       : "bg-white border-l-gray-200 hover:bg-gray-50"
@@ -805,6 +811,11 @@ export default function StoreOrdersPage() {
                   )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
+                    {isChristmas && (
+                      <div className="text-[10px] px-1.5 py-0.5 rounded font-bold mt-0.5 inline-block bg-red-100 text-red-700">
+                        クリスマス
+                      </div>
+                    )}
                     {isMaster && selectedChildId === null && (
                       <div className={`text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                         {childStoreMap[order.storeId]}
@@ -949,6 +960,7 @@ export default function StoreOrdersPage() {
             )}
             {historyOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
+              const isChristmas = order.isChristmas;
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
               const isCancelled = order.orderStatus === "cancelled";
               const fulfilledLabel = isEc ? "出荷済" : "受渡済";
@@ -963,6 +975,8 @@ export default function StoreOrdersPage() {
                   className={`relative border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
                     isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                      : isChristmas
+                      ? "bg-red-50 border-l-red-400 hover:bg-red-100"
                       : isEc
                       ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
                       : "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
@@ -996,8 +1010,8 @@ export default function StoreOrdersPage() {
                             {order.pickupTime && <div className="text-xs text-gray-500">{order.pickupTime.slice(0, 5)}</div>}
                           </div>
                         )}
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isEc ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}`}>
-                          {isEc ? "EC" : "テイクアウト"}
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isChristmas ? "bg-red-100 text-red-700" : isEc ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"}`}>
+                          {isChristmas ? "クリスマス" : isEc ? "EC" : "テイクアウト"}
                         </span>
                       </div>
                     </div>
@@ -1070,6 +1084,7 @@ export default function StoreOrdersPage() {
 
             {historyOrders.map((order, i) => {
               const isEc = order.orderType === "ec";
+              const isChristmas = order.isChristmas;
               const isFulfilled = order.fulfillmentStatus === "fulfilled";
               const isCancelled = order.orderStatus === "cancelled";
               const fulfilledLabel = isEc ? "出荷済" : "受渡済";
@@ -1083,6 +1098,8 @@ export default function StoreOrdersPage() {
                   className={`relative grid grid-cols-[160px_150px_minmax(0,1fr)_130px_80px] pr-4 py-4 items-center border-t border-gray-100 border-l-4 cursor-pointer transition-colors ${
                     isFulfilled
                       ? "bg-gray-50 border-l-gray-300 hover:bg-gray-100"
+                      : isChristmas
+                      ? "bg-red-50 border-l-red-400 hover:bg-red-100"
                       : isEc
                       ? "bg-sky-50 border-l-sky-400 hover:bg-sky-100"
                       : "bg-amber-50 border-l-amber-400 hover:bg-amber-100"
@@ -1094,6 +1111,11 @@ export default function StoreOrdersPage() {
                   )}
                   <div className="pl-3">
                     <span className="text-xs">{order.customerName || order.lineName || "-"}</span>
+                    {isChristmas && (
+                      <div className="text-[10px] px-1.5 py-0.5 rounded font-bold mt-0.5 inline-block bg-red-100 text-red-700">
+                        クリスマス
+                      </div>
+                    )}
                     {isMaster && selectedChildId === null && (
                       <div className={`text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block ${getChildStoreBadgeColor(childStoreMap[order.storeId])}`}>
                         {childStoreMap[order.storeId]}

@@ -83,6 +83,7 @@ export interface Order {
   pickupTime: string
   items: { name: string; quantity: number; totalAmount: number; variantName?: string | null; hasPrintDecoration?: boolean }[]
   hasWholeCake: boolean
+  isChristmas: boolean
   subtotal: number
   discountAmount: number
   couponDiscountAmount: number
@@ -411,6 +412,7 @@ export function toUIOrder(row: any): Order {
     pickupTime,
     items,
     hasWholeCake: (row.order_items || []).some((it: any) => !!it.variant_name_snapshot || (it.order_item_options?.length ?? 0) > 0),
+    isChristmas: (row.order_items || []).some((it: any) => it.products?.category_name === "クリスマス限定"),
     subtotal: Number(row.subtotal) || 0,
     discountAmount: Number(row.discount_amount) || 0,
     couponDiscountAmount: Number(row.coupon_discount_amount) || 0,

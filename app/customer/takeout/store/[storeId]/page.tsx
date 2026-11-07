@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CalendarDays, MapPin, X, Gift } from "lucide-react";
+import { Clock, CalendarDays, MapPin, X, Snowflake, TreePine, ChevronRight } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
@@ -263,6 +263,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
 
   const [store, setStore] = useState<Store | null>(null);
   const [hasChristmasProducts, setHasChristmasProducts] = useState(false);
+  const [christmasCakeImage, setChristmasCakeImage] = useState<string | null>(null);
   const [storeFetchDone, setStoreFetchDone] = useState(false);
   const [businessHours, setBusinessHours] = useState<BusinessHour[]>([]);
 
@@ -403,12 +404,15 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
       const { storeIds } = await getStoreIdsWithParent(params.storeId);
       const { data } = await supabase
         .from("products")
-        .select("id")
+        .select("id, image")
         .in("store_id", storeIds)
         .eq("category_name", "クリスマス限定")
         .eq("is_active", true)
+        .order("display_order", { ascending: true })
         .limit(1);
-      if (!cancelled) setHasChristmasProducts((data?.length ?? 0) > 0);
+      if (cancelled) return;
+      setHasChristmasProducts((data?.length ?? 0) > 0);
+      setChristmasCakeImage(data?.[0]?.image ?? null);
     })();
     return () => { cancelled = true; };
   }, [params.storeId]);
@@ -541,19 +545,33 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         {hasChristmasProducts && store?.isPublished !== false && (
           <button
             onClick={() => router.push(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`)}
-            className="w-full border border-red-200 rounded-xl p-4 mb-3 text-left transition-shadow hover:shadow-md bg-white active:bg-red-50/40"
+            className="relative w-full rounded-2xl border-2 border-red-300 overflow-hidden text-left transition-shadow hover:shadow-lg mb-3 bg-gradient-to-br from-[#fdf6ec] via-[#fbeee0] to-[#f7e3cf]"
           >
-            <div className="flex items-center gap-3 mb-1.5">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-green-100">
-                <Gift className="w-4 h-4 text-green-700" />
+            {/* 左上のリボン飾り */}
+            <div className="absolute -left-10 top-3 w-32 rotate-[-45deg] bg-red-500 py-1 shadow-sm" />
+
+            {/* 雪の結晶の飾り */}
+            <Snowflake className="absolute left-[38%] top-2 w-3.5 h-3.5 text-amber-400/60" />
+            <Snowflake className="absolute left-[52%] top-6 w-3 h-3 text-amber-400/40" />
+            <Snowflake className="absolute right-[32%] top-3 w-4 h-4 text-amber-400/50" />
+
+            <div className="flex items-center gap-3 p-4 pl-10">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <TreePine className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm italic font-serif tracking-wide text-amber-600">Christmas</span>
+                </div>
+                <p className="text-base font-bold text-gray-900 mb-1">クリスマスケーキのご予約</p>
+                <div className="flex items-center gap-0.5 text-xs text-gray-600 whitespace-nowrap">
+                  <span>特別な日に、ぜひご予約ください</span>
+                  <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                </div>
               </div>
-              <span className="text-sm font-bold text-gray-900">クリスマスケーキのご予約</span>
-            </div>
-            <p className="text-xs leading-relaxed text-gray-500">数量限定のクリスマスケーキを特別にご予約いただけます。</p>
-            <div className="mt-2 flex gap-1.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600" />
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
+              {christmasCakeImage && (
+                <div className="w-20 h-20 rounded-full overflow-hidden shrink-0 border-2 border-white shadow-md">
+                  <img src={christmasCakeImage} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
             </div>
           </button>
         )}

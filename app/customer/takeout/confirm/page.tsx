@@ -90,6 +90,8 @@ export default function TakeoutConfirmPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(() => { try { return (sessionStorage.getItem("patimoba_takeout_payment_method") as PaymentMethod | null) ?? "credit" } catch { return "credit" } });
   const [showOrderComplete, setShowOrderComplete] = useState(false);
   const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
+  // クリスマス予約の注文だったかどうか（clearCart()でカートが空になる前に控えておく）
+  const [wasChristmasOrder, setWasChristmasOrder] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -540,6 +542,7 @@ export default function TakeoutConfirmPage() {
       await refreshPoints();
     }
 
+    setWasChristmasOrder(cartItems.some((i) => i.isChristmas));
     clearCart();
     sessionStorage.removeItem("patimoba_pickup_date");
     sessionStorage.removeItem("patimoba_pickup_time");
@@ -570,7 +573,11 @@ export default function TakeoutConfirmPage() {
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
-  const continueShoppingHref = selectedStoreId || cartStoreId
+  // クリスマス予約の注文の場合、通常の商品一覧ではなくクリスマス専用画面に戻す
+  const isChristmasCart = cartItems.some((i) => i.isChristmas);
+  const continueShoppingHref = wasChristmasOrder && (selectedStoreId || cartStoreId)
+    ? `/customer/takeout/whole-cake?mode=christmas&store=${selectedStoreId || cartStoreId}`
+    : selectedStoreId || cartStoreId
     ? `/customer/takeout/products?store=${selectedStoreId || cartStoreId}`
     : "/customer/takeout";
 
@@ -580,7 +587,13 @@ export default function TakeoutConfirmPage() {
 
   const handleStepClick = (step: number) => {
     if (step === 1) router.push("/customer/takeout");
-    if (step === 2 && selectedStoreId) router.push(`/customer/takeout/products?store=${selectedStoreId}`);
+    if (step === 2 && selectedStoreId) {
+      router.push(
+        isChristmasCart
+          ? `/customer/takeout/whole-cake?mode=christmas&store=${selectedStoreId}`
+          : `/customer/takeout/products?store=${selectedStoreId}`
+      );
+    }
     if (step === 3) router.push("/customer/takeout/pickup");
   };
 

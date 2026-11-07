@@ -456,13 +456,20 @@ export default function TakeoutPickupPage() {
     ? `カート内の商品は毎月${allowedDaysOfMonth.map((d) => `${d}日`).join("・")}のみ受け取り可能です`
     : null;
 
+  // クリスマス予約フローのカートの場合、戻る先を通常の商品一覧ではなく
+  // クリスマス専用の選択画面に戻す（他の商品を一覧に表示させないため）
+  const isChristmasCart = cartItems.some((i) => i.isChristmas);
+  const backHref = isChristmasCart
+    ? `/customer/takeout/whole-cake?mode=christmas&store=${storeId ?? ""}`
+    : `/customer/takeout/products?store=${storeId ?? ""}&type=${orderType}`;
+
   return (
     <div className="min-h-screen bg-white">
       <CustomerHeader
         userName={profile?.lineName}
         avatarUrl={profile?.avatar || undefined}
         showBack
-        backHref={`/customer/takeout/products?store=${storeId ?? ""}&type=${orderType}`}
+        backHref={backHref}
         onCartClick={() => setCartOpen(true)}
       />
 

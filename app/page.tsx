@@ -13,7 +13,7 @@ export default function Home() {
   const router = useRouter();
   const { setUser } = useAuth();
 
-  const handleLiffCallback = useCallback(async (liffId: string, storeId?: string | null) => {
+  const handleLiffCallback = useCallback(async (liffId: string, storeId?: string | null, deepLinkPath?: string | null) => {
     if (!liffId) {
       router.replace("/customer/login");
       return;
@@ -64,11 +64,13 @@ export default function Home() {
       }
 
       if (liff.isLoggedIn()) {
+        if (deepLinkPath) sessionStorage.setItem("liff_return_path", deepLinkPath);
         const { authUser, returnPath } = await completeLiffLogin(liff);
         setUser(authUser);
         sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
-        window.location.replace(returnPath || "/customer/takeout");
+        window.location.replace(returnPath || deepLinkPath || "/customer/takeout");
       } else {
+        if (deepLinkPath) sessionStorage.setItem("liff_return_path", deepLinkPath);
         router.replace("/customer/login");
       }
     } catch {
@@ -88,8 +90,8 @@ export default function Home() {
 
     const params = new URLSearchParams(window.location.search);
     // LIFF 認証コールバック / liff.state によるパス転送 / miniapp.line.me の
-    // シンプルなクエリ形式(?coupon=)でなければ /login へ
-    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state") && !params.has("coupon")) {
+    // シンプルなクエリ形式(?coupon= や ?mode=)でなければ /login へ
+    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state") && !params.has("coupon") && !params.has("mode")) {
       router.replace("/login");
       return;
     }
@@ -114,8 +116,14 @@ export default function Home() {
       }
 
       const storeId = params.get("store") || parseLiffStateStoreId();
+      // miniapp.line.me/{liffId}?mode=christmas&store=xxx 形式（クリスマス予約リッチメニュー等の深いリンク）も
+      // 追加パスが無いためクエリがそのままエンドポイントに渡ってくる。ログイン後に店舗TOPのクリスマス専用
+      // 導線へ戻せるよう、遷移先パスを組み立てておく
+      const mode = params.get("mode");
+      const deepLinkPath = mode && storeId ? `/customer/takeout/store/${storeId}?mode=${mode}` : null;
+
       const liffId = await getLiffId(storeId);
-      handleLiffCallback(liffId, storeId);
+      handleLiffCallback(liffId, storeId, deepLinkPath);
     })();
   }, [handleLiffCallback, router]);
 

@@ -574,8 +574,10 @@ export default function TakeoutConfirmPage() {
   }, []);
 
   // クリスマス予約の注文の場合、通常の商品一覧ではなくクリスマス専用画面に戻す
+  // （注文確定前は isChristmasCart、確定後は clearCart() でカートが空になるため
+  // 代わりに wasChristmasOrder を見る）
   const isChristmasCart = cartItems.some((i) => i.isChristmas);
-  const continueShoppingHref = wasChristmasOrder && (selectedStoreId || cartStoreId)
+  const continueShoppingHref = (wasChristmasOrder || isChristmasCart) && (selectedStoreId || cartStoreId)
     ? `/customer/takeout/products?mode=christmas&store=${selectedStoreId || cartStoreId}`
     : selectedStoreId || cartStoreId
     ? `/customer/takeout/products?store=${selectedStoreId || cartStoreId}`

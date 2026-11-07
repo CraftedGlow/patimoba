@@ -442,7 +442,7 @@ export default function WholeCakePage() {
           </Link>
         ) : (
           <button
-            onClick={() => setStep(step - 1)}
+            onClick={() => setStep(step === 3 && !groupsLoading && decorationGroups.length === 0 ? 1 : step - 1)}
             className="inline-flex items-center text-gray-600 mb-1"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -484,7 +484,7 @@ export default function WholeCakePage() {
           onMessageChange={setMessageText}
           total={total}
           canProceed={canProceedStep1}
-          onNext={() => setStep(2)}
+          onNext={() => setStep(!groupsLoading && decorationGroups.length === 0 ? 3 : 2)}
           isPrintMode={isPrintMode}
           printCakes={printCakes}
           selectedCakeIdForPrint={selectedCakeIdForPrint}

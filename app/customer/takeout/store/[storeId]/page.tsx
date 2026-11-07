@@ -537,6 +537,27 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
           </div>
         )}
 
+        {/* クリスマスケーキ予約（対象商品が公開されている間だけ表示。期間中は一番上に出す） */}
+        {hasChristmasProducts && store?.isPublished !== false && (
+          <button
+            onClick={() => router.push(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`)}
+            className="w-full border border-red-200 rounded-xl p-4 mb-3 text-left transition-shadow hover:shadow-md bg-white active:bg-red-50/40"
+          >
+            <div className="flex items-center gap-3 mb-1.5">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-green-100">
+                <Gift className="w-4 h-4 text-green-700" />
+              </div>
+              <span className="text-sm font-bold text-gray-900">クリスマスケーキのご予約</span>
+            </div>
+            <p className="text-xs leading-relaxed text-gray-500">数量限定のクリスマスケーキを特別にご予約いただけます。</p>
+            <div className="mt-2 flex gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
+            </div>
+          </button>
+        )}
+
         {/* 当日受取注文（当日受付なしの店舗は非表示） */}
         {store?.acceptsWalkin !== false && (() => {
           const active = sameDayOk && (store?.isPublished !== false);
@@ -619,27 +640,6 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             </button>
           );
         })()}
-
-        {/* クリスマスケーキ予約（対象商品が公開されている間だけ表示） */}
-        {hasChristmasProducts && store?.isPublished !== false && (
-          <button
-            onClick={() => router.push(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`)}
-            className="w-full border border-red-200 rounded-xl p-4 mt-3 text-left transition-shadow hover:shadow-md bg-white active:bg-red-50/40"
-          >
-            <div className="flex items-center gap-3 mb-1.5">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-green-100">
-                <Gift className="w-4 h-4 text-green-700" />
-              </div>
-              <span className="text-sm font-bold text-gray-900">クリスマスケーキのご予約</span>
-            </div>
-            <p className="text-xs leading-relaxed text-gray-500">数量限定のクリスマスケーキを特別にご予約いただけます。</p>
-            <div className="mt-2 flex gap-1.5">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-600" />
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-400" />
-            </div>
-          </button>
-        )}
 
         {/* 利用規約・特商法リンク */}
         <div className="text-center space-y-2 pt-6 pb-2">

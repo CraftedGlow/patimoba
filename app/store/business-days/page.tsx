@@ -317,6 +317,7 @@ export default function BusinessDaysPage() {
         isOpen: bd.isOpen,
         openTime: formatTimeHm(bd.openTime) || cellDefault.open,
         closeTime: formatTimeHm(bd.closeTime) || cellDefault.close,
+        reservationStopped: bd.reservationStopped,
         dailyNote: bd.dailyNote ?? "",
       };
     }
@@ -515,6 +516,7 @@ export default function BusinessDaysPage() {
           openTime: openT,
           closeTime: closeT,
           isOpen: true,
+          reservationStopped: false,
           dailyNote: note,
         });
       } else {
@@ -523,6 +525,7 @@ export default function BusinessDaysPage() {
           openTime: openT,
           closeTime: closeT,
           isOpen: true,
+          reservationStopped: false,
           storeId,
           dailyNote: note,
         });
@@ -533,6 +536,55 @@ export default function BusinessDaysPage() {
           isOpen: true,
           openTime: openT,
           closeTime: closeT,
+          reservationStopped: false,
+          dailyNote: note ?? "",
+        },
+      }));
+      setShowEditPanel(false);
+    } catch (e: any) {
+      console.error(e);
+      setSaveError(e?.message || "保存に失敗しました。通信状況と権限をご確認ください。");
+    }
+    setSaving(false);
+  };
+
+  const handleSetReservationStopped = async () => {
+    if (!storeId || !editDate) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const note = editNote.trim() || null;
+      const [editY, editM, editD] = editDate.split("-").map(Number);
+      const editCellDefault = getDefaultHoursForDate(hoursProfiles, editY, editM - 1, editD);
+      const openT = (editOpen && editOpen.trim()) || editCellDefault.open;
+      const closeT = (editClose && editClose.trim()) || editCellDefault.close;
+      const existing = businessDays.find((bd) => bd.date === editDate);
+      if (existing) {
+        await updateBusinessDay(existing.id, {
+          openTime: openT,
+          closeTime: closeT,
+          isOpen: true,
+          reservationStopped: true,
+          dailyNote: note,
+        });
+      } else {
+        await addBusinessDay({
+          date: editDate,
+          openTime: openT,
+          closeTime: closeT,
+          isOpen: true,
+          reservationStopped: true,
+          storeId,
+          dailyNote: note,
+        });
+      }
+      setSchedules((prev) => ({
+        ...prev,
+        [editDate]: {
+          isOpen: true,
+          openTime: openT,
+          closeTime: closeT,
+          reservationStopped: true,
           dailyNote: note ?? "",
         },
       }));
@@ -558,6 +610,7 @@ export default function BusinessDaysPage() {
           isOpen: false,
           openTime: null,
           closeTime: null,
+          reservationStopped: false,
           dailyNote: note,
         });
       } else {
@@ -566,6 +619,7 @@ export default function BusinessDaysPage() {
           openTime: null,
           closeTime: null,
           isOpen: false,
+          reservationStopped: false,
           storeId,
           dailyNote: note,
         });
@@ -576,6 +630,7 @@ export default function BusinessDaysPage() {
           isOpen: false,
           openTime: editCellDefault.open,
           closeTime: editCellDefault.close,
+          reservationStopped: false,
           dailyNote: note ?? "",
         },
       }));
@@ -975,6 +1030,18 @@ export default function BusinessDaysPage() {
                 >
                   {viewMode === "month" ? "営業日に変更" : "上記の時間に変更"}
                 </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => void handleSetReservationStopped()}
+                  disabled={saving}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm disabled:opacity-50"
+                >
+                  予約停止に変更
+                </motion.button>
+                <p className="text-[11px] text-gray-600 -mt-1">
+                  営業はするがパティモバ経由の予約受付のみ停止します（期間限定商品・おまかせ商品は選択可能のままです）
+                </p>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}

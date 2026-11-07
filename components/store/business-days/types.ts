@@ -30,6 +30,8 @@ export interface DaySchedule {
   isOpen: boolean;
   openTime: string;
   closeTime: string;
+  /** 営業はしているがパティモバ経由の予約受付のみ停止する */
+  reservationStopped?: boolean;
   /** カレンダー日付セル用の一言（store_special_dates.reason 等） */
   dailyNote?: string;
 }

@@ -1701,6 +1701,7 @@ export type Database = {
           open_time: string | null
           pickup_last_time: string | null
           reason: string | null
+          reservation_stopped: boolean
           store_id: string
           target_date: string
           updated_at: string
@@ -1715,6 +1716,7 @@ export type Database = {
           open_time?: string | null
           pickup_last_time?: string | null
           reason?: string | null
+          reservation_stopped?: boolean
           store_id: string
           target_date: string
           updated_at?: string
@@ -1729,6 +1731,7 @@ export type Database = {
           open_time?: string | null
           pickup_last_time?: string | null
           reason?: string | null
+          reservation_stopped?: boolean
           store_id?: string
           target_date?: string
           updated_at?: string

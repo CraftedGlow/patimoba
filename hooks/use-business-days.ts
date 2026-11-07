@@ -24,6 +24,8 @@ export interface SpecialDate {
   openTime: string | null
   closeTime: string | null
   isClosed: boolean
+  /** 営業はしているがパティモバ経由の予約受付のみ停止する */
+  reservationStopped: boolean
   reason: string | null
   /** カレンダー用の一言 */
   dailyNote: string | null
@@ -60,6 +62,7 @@ export function useBusinessDays(storeId?: string) {
           openTime: row.open_time,
           closeTime: row.close_time,
           isClosed: row.is_closed ?? false,
+          reservationStopped: row.reservation_stopped ?? false,
           reason: row.reason,
           // daily_note 列が無い環境でも動くよう、一言は reason を主に使う（あれば daily_note も参照）
           dailyNote: (row.daily_note ?? row.reason) ?? null,
@@ -81,6 +84,7 @@ export function useBusinessDays(storeId?: string) {
       open_time: toPgTime(day.openTime),
       close_time: toPgTime(day.closeTime),
       is_closed: day.isClosed,
+      reservation_stopped: day.reservationStopped,
       // 一言は reason に保存（daily_note 未マイグレーションの DB でも 400 にならない）
       reason: note,
       store_id: day.storeId,
@@ -95,6 +99,7 @@ export function useBusinessDays(storeId?: string) {
     if (updates.openTime !== undefined) payload.open_time = toPgTime(updates.openTime)
     if (updates.closeTime !== undefined) payload.close_time = toPgTime(updates.closeTime)
     if (updates.isClosed !== undefined) payload.is_closed = updates.isClosed
+    if (updates.reservationStopped !== undefined) payload.reservation_stopped = updates.reservationStopped
     if (updates.reason !== undefined) payload.reason = updates.reason
     if (updates.dailyNote !== undefined) payload.reason = updates.dailyNote
 
@@ -168,6 +173,7 @@ export function useBusinessDays(storeId?: string) {
         openTime: sd.openTime,
         closeTime: sd.closeTime,
         isOpen: !sd.isClosed,
+        reservationStopped: sd.reservationStopped,
         storeId: sd.storeId,
         dailyNote: sd.dailyNote,
       })),
@@ -187,6 +193,7 @@ export function useBusinessDays(storeId?: string) {
       openTime: string | null
       closeTime: string | null
       isOpen: boolean
+      reservationStopped?: boolean
       storeId: string
       dailyNote?: string | null
     }) => {
@@ -195,6 +202,7 @@ export function useBusinessDays(storeId?: string) {
         openTime: day.openTime,
         closeTime: day.closeTime,
         isClosed: !day.isOpen,
+        reservationStopped: day.reservationStopped ?? false,
         reason: null,
         dailyNote: day.dailyNote ?? null,
         storeId: day.storeId,
@@ -206,6 +214,7 @@ export function useBusinessDays(storeId?: string) {
         openTime: updates.openTime,
         closeTime: updates.closeTime,
         isClosed: updates.isOpen !== undefined ? !updates.isOpen : undefined,
+        reservationStopped: updates.reservationStopped,
         dailyNote: updates.dailyNote,
       })
     },

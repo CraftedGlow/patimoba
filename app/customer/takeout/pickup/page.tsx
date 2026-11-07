@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CustomerHeader } from "@/components/customer/customer-header";
@@ -105,6 +105,10 @@ export default function TakeoutPickupPage() {
   const [dailyCappedItems, setDailyCappedItems] = useState<{ productId: string; cap: number; cartQty: number }[]>([]);
   // 日付×商品ごとの既存予約数（キー: `${productId}|${date}`）
   const [soldByProductDate, setSoldByProductDate] = useState<Record<string, number>>({});
+  // 予約停止（営業はしているがパティモバ経由の予約受付のみ停止）の日付集合
+  const [reservationStoppedDates, setReservationStoppedDates] = useState<Record<string, boolean>>({});
+  // カート内商品が全て期間限定商品・おまかせ商品の場合、予約停止日でも選択可能にする
+  const [canBypassReservationStop, setCanBypassReservationStop] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -165,20 +169,23 @@ export default function TakeoutPickupPage() {
         toDate.setMonth(toDate.getMonth() + 3);
         const { data: sdRows } = await supabase
           .from("store_special_dates")
-          .select("target_date, is_closed, open_time, close_time")
+          .select("target_date, is_closed, open_time, close_time, reservation_stopped")
           .eq("store_id", storeId)
           .gte("target_date", fromDate)
           .lte("target_date", dateKey(toDate));
         const overrides: Record<string, boolean> = {};
         const hours: Record<string, { openTime: string | null; closeTime: string | null }> = {};
-        for (const row of (sdRows || []) as { target_date: string; is_closed: boolean; open_time: string | null; close_time: string | null }[]) {
+        const stoppedDates: Record<string, boolean> = {};
+        for (const row of (sdRows || []) as { target_date: string; is_closed: boolean; open_time: string | null; close_time: string | null; reservation_stopped: boolean | null }[]) {
           overrides[row.target_date] = !row.is_closed;
           if (row.open_time || row.close_time) {
             hours[row.target_date] = { openTime: row.open_time, closeTime: row.close_time };
           }
+          if (row.reservation_stopped) stoppedDates[row.target_date] = true;
         }
         setBusinessDayOverrides(overrides);
         setSpecialDateHours(hours);
+        setReservationStoppedDates(stoppedDates);
 
         // カート内商品の制約
         const productIds = cartItems.map((i) => i.productId).filter(Boolean);
@@ -189,7 +196,7 @@ export default function TakeoutPickupPage() {
         if (productIds.length > 0) {
           const { data: rawProductRows } = await supabase
             .from("products")
-            .select("id, store_id, preparation_days, limited_from, limited_until, available_days_of_month, daily_max_quantity")
+            .select("id, store_id, preparation_days, limited_from, limited_until, available_days_of_month, daily_max_quantity, category_name")
             .in("id", productIds);
           if (rawProductRows && rawProductRows.length > 0) {
             // 共有商品はこの店舗の上書き設定（毎月の受け取り可能日など）をマージする
@@ -197,6 +204,11 @@ export default function TakeoutPickupPage() {
             const overrides = await fetchProductStoreOverrides(storeId, parentStoreId);
             const productRows = rawProductRows.map((row: any) =>
               applyProductStoreOverride(row, row.id, parentStoreId, overrides)
+            );
+
+            // カート内商品が全て期間限定商品・おまかせ商品なら予約停止日でも選択可能にする
+            setCanBypassReservationStop(
+              productRows.every((p: any) => !!p.limited_from || !!p.limited_until || p.category_name === "おまかせ")
             );
 
             let maxDays = Math.max(...productRows.map((p: any) => Number(p.preparation_days) || 0));
@@ -270,11 +282,13 @@ export default function TakeoutPickupPage() {
             setAllowedDaysOfMonth(null);
             setDailyCappedItems([]);
             setSoldByProductDate({});
+            setCanBypassReservationStop(false);
           }
         } else {
           setAllowedDaysOfMonth(null);
           setDailyCappedItems([]);
           setSoldByProductDate({});
+          setCanBypassReservationStop(false);
         }
       } finally {
         setLoading(false);
@@ -305,8 +319,8 @@ export default function TakeoutPickupPage() {
     return d;
   })();
 
-  const isDateSelectable = (day: number): boolean => {
-    const date = new Date(currentYear, currentMonth, day);
+  const isSelectable = (dateInput: Date): boolean => {
+    const date = new Date(dateInput);
     date.setHours(0, 0, 0, 0);
 
     // 最低事前日数チェック
@@ -345,9 +359,47 @@ export default function TakeoutPickupPage() {
       }
     }
 
+    // 予約停止チェック（営業はしているがパティモバ経由の予約のみ停止している日）。
+    // カート内商品が全て期間限定商品・おまかせ商品の場合は対象外として選択可能にする
+    if (!canBypassReservationStop && reservationStoppedDates[dateKey(date)]) return false;
+
     // 営業日チェック（特定日override + 曜日ルール）
     return isDateOpen(date);
   };
+
+  const isDateSelectable = (day: number): boolean => {
+    return isSelectable(new Date(currentYear, currentMonth, day));
+  };
+
+  // データ読み込みが変わるたびに1回だけ、表示中の月に受け取り可能日が無ければ
+  // 次に受け取り可能日がある月まで自動的にカレンダーを進める
+  // （期間限定商品の受付開始が数ヶ月先の場合、今月のカレンダーが全て選択不可になるのを防ぐ）
+  const hasAutoAdvancedMonthRef = useRef(false);
+  useEffect(() => {
+    hasAutoAdvancedMonthRef.current = false;
+  }, [storeId, cartItems]);
+
+  useEffect(() => {
+    if (isSameDay || loading || hasAutoAdvancedMonthRef.current) return;
+    hasAutoAdvancedMonthRef.current = true;
+
+    let y = currentYear;
+    let m = currentMonth;
+    for (let i = 0; i < 13; i++) {
+      const days = new Date(y, m + 1, 0).getDate();
+      const found = Array.from({ length: days }, (_, idx) => idx + 1).some((d) => isSelectable(new Date(y, m, d)));
+      if (found) {
+        if (y !== currentYear || m !== currentMonth) {
+          setCurrentYear(y);
+          setCurrentMonth(m);
+        }
+        return;
+      }
+      m += 1;
+      if (m > 11) { m = 0; y += 1; }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, isSameDay, minDate, maxFutureDays, limitedFrom, limitedUntil, allowedDaysOfMonth, dailyCappedItems, soldByProductDate, canBypassReservationStop, reservationStoppedDates, businessDayOverrides, businessHours]);
 
   // 当日注文: 本日分の1日の最大数チェック
   const sameDayCapExceeded = isSameDay && dailyCappedItems.some((item) => {

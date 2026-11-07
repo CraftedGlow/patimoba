@@ -117,6 +117,9 @@ export function MonthView({
                       {schedule.openTime.slice(0, 5)}〜{schedule.closeTime.slice(0, 5)}
                     </p>
                   )}
+                  {cell.isCurrentMonth && isOpen && schedule?.reservationStopped && (
+                    <p className="text-[10px] font-medium text-orange-600 mt-0.5 leading-none">予約停止</p>
+                  )}
                   {cell.isCurrentMonth && schedule?.dailyNote?.trim() ? (
                     <p className="text-xs mt-1 text-gray-500 leading-snug line-clamp-2">
                       {schedule.dailyNote.trim()}

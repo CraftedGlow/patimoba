@@ -1315,6 +1315,7 @@ export type Database = {
           noshi_enabled: boolean
           noshi_ids: string[]
           payment_method_restriction: string | null
+          pickup_time_options: Json | null
           preparation_days: number | null
           price_max: number | null
           price_min: number | null
@@ -1367,6 +1368,7 @@ export type Database = {
           noshi_enabled?: boolean
           noshi_ids?: string[]
           payment_method_restriction?: string | null
+          pickup_time_options?: Json | null
           preparation_days?: number | null
           price_max?: number | null
           price_min?: number | null
@@ -1419,6 +1421,7 @@ export type Database = {
           noshi_enabled?: boolean
           noshi_ids?: string[]
           payment_method_restriction?: string | null
+          pickup_time_options?: Json | null
           preparation_days?: number | null
           price_max?: number | null
           price_min?: number | null

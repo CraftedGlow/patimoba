@@ -107,6 +107,8 @@ export default function TakeoutPickupPage() {
   const [soldByProductDate, setSoldByProductDate] = useState<Record<string, number>>({});
   // 予約停止（営業はしているがパティモバ経由の予約受付のみ停止）の日付集合
   const [reservationStoppedDates, setReservationStoppedDates] = useState<Record<string, boolean>>({});
+  // クリスマス限定商品などに設定された、通常の時間刻みの代わりに使う受け取り時間帯（例: 午前/午後）
+  const [customPickupTimeOptions, setCustomPickupTimeOptions] = useState<{ label: string; start: string; end: string }[]>([]);
   // カート内商品が全て期間限定商品・おまかせ商品の場合、予約停止日でも選択可能にする
   const [canBypassReservationStop, setCanBypassReservationStop] = useState(false);
 
@@ -196,7 +198,7 @@ export default function TakeoutPickupPage() {
         if (productIds.length > 0) {
           const { data: rawProductRows } = await supabase
             .from("products")
-            .select("id, store_id, preparation_days, limited_from, limited_until, available_days_of_month, daily_max_quantity, category_name")
+            .select("id, store_id, preparation_days, limited_from, limited_until, available_days_of_month, daily_max_quantity, category_name, pickup_time_options")
             .in("id", productIds);
           if (rawProductRows && rawProductRows.length > 0) {
             // 共有商品はこの店舗の上書き設定（毎月の受け取り可能日など）をマージする
@@ -210,6 +212,13 @@ export default function TakeoutPickupPage() {
             setCanBypassReservationStop(
               productRows.every((p: any) => !!p.limited_from || !!p.limited_until || p.category_name === "おまかせ")
             );
+
+            // カート内商品に専用の受け取り時間帯（例: クリスマス限定の午前/午後）が設定されていれば、
+            // 通常の時間刻みの代わりにそちらを使う
+            const productWithTimeOptions = productRows.find(
+              (p: any) => Array.isArray(p.pickup_time_options) && p.pickup_time_options.length > 0
+            );
+            setCustomPickupTimeOptions(productWithTimeOptions?.pickup_time_options ?? []);
 
             let maxDays = Math.max(...productRows.map((p: any) => Number(p.preparation_days) || 0));
 
@@ -283,12 +292,14 @@ export default function TakeoutPickupPage() {
             setDailyCappedItems([]);
             setSoldByProductDate({});
             setCanBypassReservationStop(false);
+            setCustomPickupTimeOptions([]);
           }
         } else {
           setAllowedDaysOfMonth(null);
           setDailyCappedItems([]);
           setSoldByProductDate({});
           setCanBypassReservationStop(false);
+          setCustomPickupTimeOptions([]);
         }
       } finally {
         setLoading(false);
@@ -435,12 +446,18 @@ export default function TakeoutPickupPage() {
     // 当日注文受付終了（受け取り終了時刻のN分前）を過ぎていたら受付不可
     if (nowMin > pickupCloseMin - leadTimeMinutes) return [];
     const startMin = Math.max(nowMin + prepMinutes, pickupStartTime ? toMin(pickupStartTime) : 0);
-    return generateTimeSlots(startMin, pickupCloseMin);
+    return generateTimeSlots(startMin, pickupCloseMin).map((t) => ({ value: t, label: t }));
   })();
 
   // 予約注文の時間スロット
   const reservationTimeSlots = (() => {
     if (isSameDay || !selectedDate) return [];
+    // カート内商品に専用の受け取り時間帯（例: クリスマス限定の午前/午後）が設定されていれば、
+    // 通常の営業時間に基づく時間刻みの代わりにそちらを選択肢にする
+    // （選択可能な日付は isDateSelectable 側で既に営業日に絞られているため、営業時間の再計算は不要）
+    if (customPickupTimeOptions.length > 0) {
+      return customPickupTimeOptions.map((o) => ({ value: o.start, label: `${o.label}（${o.start}〜${o.end}）` }));
+    }
     const dow = selectedDate.getDay();
     const key = dateKey(selectedDate);
     // 特定日で is_open = false の場合は空
@@ -460,13 +477,13 @@ export default function TakeoutPickupPage() {
     const closeMin = toMin(pickupCloseTime);
     // 深夜越え（例: 23:00〜10:00）は endMin に +1440 して対応
     const endMin = closeMin <= openMin ? closeMin + 1440 : closeMin;
-    return generateTimeSlots(openMin, endMin);
+    return generateTimeSlots(openMin, endMin).map((t) => ({ value: t, label: t }));
   })();
 
   const timeSlots = isSameDay ? sameDayTimeSlots : reservationTimeSlots;
 
   useEffect(() => {
-    if (timeSlots.length > 0 && !selectedTime) setSelectedTime(timeSlots[0]);
+    if (timeSlots.length > 0 && !selectedTime) setSelectedTime(timeSlots[0].value);
   }, [timeSlots, selectedTime]);
 
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
@@ -629,7 +646,7 @@ export default function TakeoutPickupPage() {
                 backgroundPosition: "right 12px center",
               }}
             >
-              {timeSlots.map((t) => <option key={t} value={t}>{t}</option>)}
+              {timeSlots.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           )}
         </div>

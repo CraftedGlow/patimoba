@@ -143,6 +143,12 @@ export interface WholeCakeSize {
   displayOrder: number
 }
 
+export interface PickupTimeOption {
+  label: string
+  start: string
+  end: string
+}
+
 export interface WholeCakeProduct {
   id: string
   storeId: string
@@ -159,6 +165,7 @@ export interface WholeCakeProduct {
   categoryName: string | null
   hiddenFromRegularOrder: boolean
   maxTotalQuantity: number | null
+  pickupTimeOptions: PickupTimeOption[]
 }
 
 export interface CartCandleEntry {

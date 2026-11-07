@@ -78,6 +78,7 @@ export function useWholeCakes(storeId?: string) {
           categoryName: product.category_name ?? null,
           hiddenFromRegularOrder: product.hidden_from_regular_order ?? false,
           maxTotalQuantity: product.max_total_quantity ?? null,
+          pickupTimeOptions: Array.isArray(product.pickup_time_options) ? product.pickup_time_options : [],
         }))
 
       setWholeCakes(cakes)

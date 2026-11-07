@@ -16,6 +16,7 @@ import { useMessagePlates } from "@/hooks/use-message-plates";
 import { useCandles } from "@/hooks/use-candles";
 import { toLocalDateString } from "@/lib/date-utils";
 import { getStoreIdsWithParent, upsertProductStoreOverride, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
+import { timeOptions } from "@/components/store/business-days/types";
 import Link from "next/link";
 
 interface ProductRow {
@@ -54,6 +55,7 @@ interface ProductRow {
   print_short_name: string | null;
   coupon_excluded: boolean | null;
   hidden_from_regular_order: boolean | null;
+  pickup_time_options: { label: string; start: string; end: string }[] | null;
   isMasterProduct?: boolean;
 }
 
@@ -115,6 +117,8 @@ export function CakeTab() {
   const [printDecorationEnabled, setPrintDecorationEnabled] = useState(false);
   const [couponExcluded, setCouponExcluded] = useState(false);
   const [hiddenFromRegularOrder, setHiddenFromRegularOrder] = useState(false);
+  // クリスマス限定: 通常の受け取り時間とは別の受け取り時間帯（例: 午前/午後）を設定
+  const [pickupTimeOptions, setPickupTimeOptions] = useState<{ label: string; start: string; end: string }[]>([]);
   // ホール用サイズ (product_variants)
   const [sizes, setSizes] = useState<{ id?: string; name: string; price: string }[]>([]);
 
@@ -241,6 +245,7 @@ export function CakeTab() {
     setPrintDecorationEnabled(false);
     setCouponExcluded(false);
     setHiddenFromRegularOrder(false);
+    setPickupTimeOptions([]);
     setSelectedTags([]);
     setSizes([]);
     setMainImage(null);
@@ -286,6 +291,7 @@ export function CakeTab() {
       setPrintDecorationEnabled((p as any).print_decoration_enabled ?? false);
       setCouponExcluded(p.coupon_excluded ?? false);
       setHiddenFromRegularOrder(p.hidden_from_regular_order ?? false);
+      setPickupTimeOptions(Array.isArray(p.pickup_time_options) ? p.pickup_time_options : []);
       setSelectedTags(Array.isArray(p.tags) ? p.tags as string[] : []);
       setMainImage(p.image ?? null);
       setCrossImage(p.cross_section_image ?? null);
@@ -395,6 +401,7 @@ export function CakeTab() {
         print_decoration_enabled: isHoleLike ? printDecorationEnabled : false,
         coupon_excluded: couponExcluded,
         hidden_from_regular_order: isChristmasLimited ? hiddenFromRegularOrder : false,
+        pickup_time_options: isChristmasLimited && pickupTimeOptions.length > 0 ? pickupTimeOptions : null,
         tags: selectedTags.length > 0 ? selectedTags : null,
       };
 
@@ -1145,6 +1152,61 @@ export function CakeTab() {
               <p className="text-xs text-amber-600 pl-6">
                 テイクアウトの通常の商品一覧には出ず、クリスマス予約専用の画面でのみ表示されます
               </p>
+            )}
+          </div>
+        )}
+
+        {/* クリスマス限定: 受け取り時間帯の設定（通常の時間刻みではなく午前/午後等の枠を使う） */}
+        {isChristmasLimited && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-bold text-gray-700">受け取り時間帯</label>
+              <button
+                type="button"
+                onClick={() => setPickupTimeOptions((prev) => [...prev, { label: "", start: "10:00", end: "12:00" }])}
+                className="inline-flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700"
+              >
+                <Plus className="w-3.5 h-3.5" /> 追加
+              </button>
+            </div>
+            <p className="text-xs text-gray-600">
+              設定すると、受け取り日時選択で30分刻みの時間の代わりにここで設定した時間帯から選べるようになります。未設定の場合は通常通り時間刻みで選択します。
+            </p>
+            {pickupTimeOptions.map((opt, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={opt.label}
+                  onChange={(e) => setPickupTimeOptions((prev) => prev.map((o, i) => i === idx ? { ...o, label: e.target.value } : o))}
+                  placeholder="例: 午前"
+                  className="w-24 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white"
+                />
+                <select
+                  value={opt.start}
+                  onChange={(e) => setPickupTimeOptions((prev) => prev.map((o, i) => i === idx ? { ...o, start: e.target.value } : o))}
+                  className="flex-1 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white"
+                >
+                  {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <span className="text-gray-600">〜</span>
+                <select
+                  value={opt.end}
+                  onChange={(e) => setPickupTimeOptions((prev) => prev.map((o, i) => i === idx ? { ...o, end: e.target.value } : o))}
+                  className="flex-1 border border-gray-300 rounded-lg px-2 py-2 text-sm bg-white"
+                >
+                  {timeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setPickupTimeOptions((prev) => prev.filter((_, i) => i !== idx))}
+                  className="shrink-0 text-gray-400 hover:text-gray-600 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {pickupTimeOptions.some((o) => !o.label.trim()) && (
+              <p className="text-[11px] text-red-500">ラベルを入力してください</p>
             )}
           </div>
         )}

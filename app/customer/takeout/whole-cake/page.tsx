@@ -526,6 +526,7 @@ export default function WholeCakePage() {
           plateMessages={plateMessages}
           allergyNote={allergyNote}
           onAllergyChange={setAllergyNote}
+          hideAllergyNote={isChristmasMode}
           total={total}
           showPrintPhotoUpload={hasPrintDecorationFromRegularMode}
           printPhotoUrl={printPhotoUrl}

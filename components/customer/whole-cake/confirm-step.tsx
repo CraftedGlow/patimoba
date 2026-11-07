@@ -26,6 +26,7 @@ interface ConfirmStepProps {
   plateMessages?: Record<string, string>;
   allergyNote: string;
   onAllergyChange: (note: string) => void;
+  hideAllergyNote?: boolean;
   total: number;
   showPrintPhotoUpload: boolean;
   printPhotoUrl: string | null;
@@ -49,6 +50,7 @@ export function WholeCakeConfirmStep({
   plateMessages,
   allergyNote,
   onAllergyChange,
+  hideAllergyNote,
   total,
   showPrintPhotoUpload,
   printPhotoUrl,
@@ -211,14 +213,16 @@ export function WholeCakeConfirmStep({
         </div>
       )}
 
-      <div className="mb-8">
-        <textarea
-          value={allergyNote}
-          onChange={(e) => onAllergyChange(e.target.value)}
-          placeholder={"苦手な食べ物やアレルギーがあればご記入ください\n例)キウイが苦手です"}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent placeholder:text-gray-400"
-        />
-      </div>
+      {!hideAllergyNote && (
+        <div className="mb-8">
+          <textarea
+            value={allergyNote}
+            onChange={(e) => onAllergyChange(e.target.value)}
+            placeholder={"苦手な食べ物やアレルギーがあればご記入ください\n例)キウイが苦手です"}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent placeholder:text-gray-400"
+          />
+        </div>
+      )}
 
       <div className="flex gap-3">
         <motion.button

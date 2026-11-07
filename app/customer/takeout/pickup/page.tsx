@@ -221,7 +221,8 @@ export default function TakeoutPickupPage() {
             // limited_from: 最も遅い開始日（全商品が開始している最も遅い日）
             setLimitedFrom(froms.length > 0 ? froms.reduce((a, b) => (a > b ? a : b)) : null);
             // limited_until: 最も早い終了日
-            setLimitedUntil(untils.length > 0 ? untils.reduce((a, b) => (a < b ? a : b)) : null);
+            const earliestLimitedUntil = untils.length > 0 ? untils.reduce((a, b) => (a < b ? a : b)) : null;
+            setLimitedUntil(earliestLimitedUntil);
 
             // 毎月の受け取り可能日: カート内商品それぞれの許可日の積集合（1つでも制限があれば絞り込む）
             const dayRestricted = productRows.filter(
@@ -251,6 +252,9 @@ export default function TakeoutPickupPage() {
               );
               const rangeTo = new Date(today);
               rangeTo.setDate(rangeTo.getDate() + (rules?.max_future_days ?? 30));
+              if (earliestLimitedUntil && earliestLimitedUntil > rangeTo) {
+                rangeTo.setTime(earliestLimitedUntil.getTime());
+              }
               const soldMap = await getProductsQuantitySoldByDate(
                 supabase,
                 cappedRows.map((p) => p.id),
@@ -308,10 +312,12 @@ export default function TakeoutPickupPage() {
     // 最低事前日数チェック
     if (date < minDate) return false;
 
-    // 予約受付上限日数チェック
-    const maxDate = new Date(today);
-    maxDate.setDate(today.getDate() + maxFutureDays);
-    if (date > maxDate) return false;
+    // 予約受付上限日数チェック（期間限定商品は受取終了日が優先されるためスキップ）
+    if (!limitedUntil) {
+      const maxDate = new Date(today);
+      maxDate.setDate(today.getDate() + maxFutureDays);
+      if (date > maxDate) return false;
+    }
 
     // 期間限定: 開始日チェック
     if (limitedFrom) {

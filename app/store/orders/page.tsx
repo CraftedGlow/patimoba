@@ -15,10 +15,12 @@ import { supabase } from "@/lib/supabase";
 import { getChildStoreBadgeColor } from "@/lib/child-store-badge-color";
 import type { FulfillmentStatus, Order } from "@/lib/types";
 
-const channelTabs: { label: string; value: "" | OrderChannel }[] = [
+type ChannelTabValue = "" | OrderChannel | "christmas";
+const channelTabs: { label: string; value: ChannelTabValue }[] = [
   { label: "すべて", value: "" },
   { label: "テイクアウト", value: "takeout" },
   { label: "EC", value: "ec" },
+  { label: "クリスマス", value: "christmas" },
 ];
 
 type FulfillmentFilter = "" | FulfillmentStatus;
@@ -252,7 +254,7 @@ export default function StoreOrdersPage() {
     : storeName;
 
   // ── 当日管理タブ state ──
-  const [manageChannel, setManageChannel] = useState<"" | OrderChannel>("");
+  const [manageChannel, setManageChannel] = useState<ChannelTabValue>("");
   const [manageFulfillment, setManageFulfillment] = useState<FulfillmentFilter>("");
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -332,13 +334,14 @@ export default function StoreOrdersPage() {
   }, [storeId, isMaster, selectedChildId, childStores.map((s) => s.id).join(",")]);
 
   const manageOrders = (() => {
+    if (manageChannel === "christmas") return manageTakeoutOrders.filter((o) => o.isChristmas);
     if (manageChannel === "takeout") return manageTakeoutOrders;
     if (manageChannel === "ec") return manageEcOrders;
     return [...manageEcOrders, ...manageTakeoutOrders];
   })();
 
   // ── 注文履歴タブ state ──
-  const [historyChannel, setHistoryChannel] = useState<"" | OrderChannel>("");
+  const [historyChannel, setHistoryChannel] = useState<ChannelTabValue>("");
   const [historyFulfillment, setHistoryFulfillment] = useState<FulfillmentFilter>("");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [wholeCakeDetailOrder, setWholeCakeDetailOrder] = useState<Order | null>(null);
@@ -368,6 +371,7 @@ export default function StoreOrdersPage() {
   const historyLoading = historyTakeoutLoading || historyEcLoading;
 
   const historyOrders = (() => {
+    if (historyChannel === "christmas") return historyTakeoutOrders.filter((o) => o.isChristmas);
     if (historyChannel === "takeout") return historyTakeoutOrders;
     if (historyChannel === "ec") return historyEcOrders;
     return [...historyEcOrders, ...historyTakeoutOrders];
@@ -416,7 +420,8 @@ export default function StoreOrdersPage() {
       const orderIds = historyOrders.map((o) => o.id);
       const optionsMap = await fetchOrderItemOptions(orderIds);
       const slug = (exportStoreName || "store").replace(/\s+/g, "_");
-      const filename = `orders_history_${slug}_${yyyymmdd(new Date())}.csv`;
+      const channelLabel = historyChannel === "christmas" ? "_christmas" : "";
+      const filename = `orders_history_${slug}${channelLabel}_${yyyymmdd(new Date())}.csv`;
       downloadCSV(filename, buildCSV(historyOrders, optionsMap));
     } finally {
       setCsvExporting(false);
@@ -436,7 +441,8 @@ export default function StoreOrdersPage() {
       const slug = (exportStoreName || "store").replace(/\s+/g, "_");
       const fromLabel = managePickupDateFromStr ?? todayStr;
       const toLabel = managePickupDateToStr ? `_${managePickupDateToStr}` : "以降";
-      const filename = `orders_${slug}_${fromLabel}${toLabel}.csv`;
+      const channelLabel = manageChannel === "christmas" ? "_christmas" : "";
+      const filename = `orders_${slug}${channelLabel}_${fromLabel}${toLabel}.csv`;
       downloadCSV(filename, buildCSV(manageOrders, optionsMap));
     } finally {
       setManageCsvExporting(false);

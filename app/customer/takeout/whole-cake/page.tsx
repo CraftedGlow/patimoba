@@ -481,12 +481,6 @@ export default function WholeCakePage() {
         </div>
       )}
 
-      {isChristmasMode && (
-        <div className="px-4 pb-1">
-          <p className="text-base font-bold">クリスマスケーキご予約</p>
-        </div>
-      )}
-
       <StepProgress currentStep={step} steps={wholeCakeSteps} />
 
       {step === 1 && selectedCakeSoldOut && (

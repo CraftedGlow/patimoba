@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, CalendarDays, MapPin, X, Snowflake, TreePine, ChevronRight } from "lucide-react";
+import { Clock, CalendarDays, MapPin, X, Snowflake, ChevronRight } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
@@ -547,18 +547,14 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
             onClick={() => router.push(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`)}
             className="relative w-full rounded-2xl border-2 border-red-300 overflow-hidden text-left transition-shadow hover:shadow-lg mb-3 bg-gradient-to-br from-[#fdf6ec] via-[#fbeee0] to-[#f7e3cf]"
           >
-            {/* 左上のリボン飾り */}
-            <div className="absolute -left-10 top-3 w-32 rotate-[-45deg] bg-red-500 py-1 shadow-sm" />
-
             {/* 雪の結晶の飾り */}
             <Snowflake className="absolute left-[38%] top-2 w-3.5 h-3.5 text-amber-400/60" />
             <Snowflake className="absolute left-[52%] top-6 w-3 h-3 text-amber-400/40" />
             <Snowflake className="absolute right-[32%] top-3 w-4 h-4 text-amber-400/50" />
 
-            <div className="flex items-center gap-3 p-4 pl-10">
+            <div className="flex items-center gap-3 p-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <TreePine className="w-4 h-4 text-amber-600" />
                   <span className="text-sm italic font-serif tracking-wide text-amber-600">Christmas</span>
                 </div>
                 <p className="text-base font-bold text-gray-900 mb-1">クリスマスケーキのご予約</p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -24,6 +24,8 @@ const QTY_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 export default function TakeoutProductDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isChristmasMode = searchParams.get("mode") === "christmas";
   const { selectedStoreId, profile,
     points, } = useCustomerContext();
   const { product, loading } = useProductRegistration(params.id as string);
@@ -95,8 +97,12 @@ export default function TakeoutProductDetailPage() {
   const normalCandles = candleItems.filter((c) => c.type !== "number");
 
   const handleStepClick = (step: number) => {
-    if (step === 1) router.push("/customer/takeout");
-    if (step === 2 && selectedStoreId) router.push(`/customer/takeout/products?store=${selectedStoreId}`);
+    if (step === 1) {
+      router.push(isChristmasMode && selectedStoreId ? `/customer/takeout/store/${selectedStoreId}` : "/customer/takeout");
+    }
+    if (step === 2 && selectedStoreId) {
+      router.push(`/customer/takeout/products?store=${selectedStoreId}${isChristmasMode ? "&mode=christmas" : ""}`);
+    }
   };
 
   if (loading) {
@@ -250,6 +256,10 @@ export default function TakeoutProductDetailPage() {
       params.set("noshiId", selectedNoshiDesign.id);
       if (selectedNoshiPurpose) params.set("noshiPurpose", selectedNoshiPurpose);
       if (noshiName.trim()) params.set("noshiName", noshiName.trim());
+    }
+    if (isChristmasMode) {
+      params.set("mode", "christmas");
+      if (selectedStoreId) params.set("store", selectedStoreId);
     }
     router.push(`/customer/takeout/whole-cake?${params.toString()}`);
   };

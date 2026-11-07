@@ -423,7 +423,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
   // mode パラメータを引き継がずに店舗ページへ戻してしまうため、ログイン完了後にのみ行う。
   useEffect(() => {
     if (!loginDone || !isChristmasEntry || !store) return;
-    router.replace(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`);
+    router.replace(`/customer/takeout/products?mode=christmas&store=${params.storeId}`);
   }, [loginDone, isChristmasEntry, store, params.storeId]);
 
   const handleSameDay = () => {
@@ -544,7 +544,7 @@ export default function StorePage({ params }: { params: { storeId: string } }) {
         {/* クリスマスケーキ予約（対象商品が公開されている間だけ表示。期間中は一番上に出す） */}
         {hasChristmasProducts && store?.isPublished !== false && (
           <button
-            onClick={() => router.push(`/customer/takeout/whole-cake?mode=christmas&store=${params.storeId}`)}
+            onClick={() => router.push(`/customer/takeout/products?mode=christmas&store=${params.storeId}`)}
             className="relative w-full rounded-2xl border-2 border-red-300 overflow-hidden text-left transition-shadow hover:shadow-lg mb-3 bg-gradient-to-br from-[#fdf6ec] via-[#fbeee0] to-[#f7e3cf]"
           >
             {/* 雪の結晶の飾り */}

@@ -105,28 +105,18 @@ export default function WholeCakePage() {
     return wholeCakes.filter((c) => c.printDecorationEnabled);
   }, [isPrintMode, printDeco, wholeCakes]);
 
-  // 「クリスマス限定」種類のケーキのみ対象
-  const christmasCakes = useMemo(() => {
-    if (!isChristmasMode) return [];
-    return wholeCakes.filter((c) => c.categoryName === "クリスマス限定");
-  }, [isChristmasMode, wholeCakes]);
-
   // Selected cake
   const [selectedCakeIdForPrint, setSelectedCakeIdForPrint] = useState<string | null>(null);
-  const [selectedCakeIdForChristmas, setSelectedCakeIdForChristmas] = useState<string | null>(null);
 
   const selectedCake = useMemo(() => {
     if (isPrintMode) {
       return wholeCakes.find((c) => c.id === selectedCakeIdForPrint) ?? null;
     }
-    if (isChristmasMode) {
-      return wholeCakes.find((c) => c.id === selectedCakeIdForChristmas) ?? null;
-    }
     if (cakeIdParam) {
       return wholeCakes.find((c) => c.id === cakeIdParam) ?? null;
     }
     return wholeCakes[0] ?? null;
-  }, [isPrintMode, selectedCakeIdForPrint, isChristmasMode, selectedCakeIdForChristmas, wholeCakes, cakeIdParam]);
+  }, [isPrintMode, selectedCakeIdForPrint, wholeCakes, cakeIdParam]);
 
   // 選択中ケーキが商品自体の累計予約数上限に達していないか
   const [selectedCakeSoldOut, setSelectedCakeSoldOut] = useState(false);
@@ -166,8 +156,6 @@ export default function WholeCakePage() {
   const [uploadingPrintPhoto, setUploadingPrintPhoto] = useState(false);
 
   // ケーキ切り替え時にサイズ・ろうそく・メッセージ・デコレーション・備考をリセット
-  // （クリスマス予約フローでは画面遷移せず同一ページで次のケーキを選び直すため、
-  // 前のケーキの入力が持ち越されないようにする必要がある）
   useEffect(() => {
     setSelectedSizeId("");
     setCandles([]);
@@ -177,7 +165,7 @@ export default function WholeCakePage() {
     setSelectedDecorations({});
     setAllergyNote("");
     setPrintPhotoUrl(null);
-  }, [selectedCakeIdForPrint, selectedCakeIdForChristmas]);
+  }, [selectedCakeIdForPrint]);
 
   const { groups: linkedDecorationGroups, loading: groupsLoading } = useProductDecorationGroups(
     selectedCake?.id
@@ -357,14 +345,11 @@ export default function WholeCakePage() {
     if (!item) return;
     const res = addItem({ ...item, isTakeout: true });
     if (!res.ok) { alert(res.error || "カートに追加できませんでした"); return; }
-    if (isChristmasMode) {
-      // クリスマス予約フローでは通常の商品一覧に出さず、もう1つクリスマスケーキを
-      // 選ぶ画面（ステップ1のグリッド）に戻すだけにする
-      setSelectedCakeIdForChristmas(null);
-      setStep(1);
-      return;
-    }
-    router.push("/customer/takeout/products");
+    router.push(
+      isChristmasMode && selectedStoreId
+        ? `/customer/takeout/products?store=${selectedStoreId}&mode=christmas`
+        : "/customer/takeout/products"
+    );
   };
 
   const handleProceedToDateTime = () => {
@@ -398,8 +383,6 @@ export default function WholeCakePage() {
   });
   const canProceedStep1 = !selectedCakeSoldOut && (isPrintMode
     ? (!!selectedCakeIdForPrint && selectedSizeId !== "" && messagePlateOk && candlesOk && !!printPhotoUrl)
-    : isChristmasMode
-    ? (!!selectedCakeIdForChristmas && selectedSizeId !== "" && messagePlateOk && candlesOk)
     : (selectedSizeId !== "" && messagePlateOk && candlesOk));
 
   const isPageLoading = loading || (isPrintMode && printGroupLoading);
@@ -412,7 +395,7 @@ export default function WholeCakePage() {
     );
   }
 
-  if (!isPrintMode && !isChristmasMode && !selectedCake) {
+  if (!isPrintMode && !selectedCake) {
     return (
       <div className="min-h-screen bg-white">
         <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={points} onCartClick={() => setCartOpen(true)} />
@@ -436,18 +419,6 @@ export default function WholeCakePage() {
     );
   }
 
-  if (isChristmasMode && christmasCakes.length === 0) {
-    return (
-      <div className="min-h-screen bg-white">
-        <CustomerHeader userName={profile?.lineName} avatarUrl={profile?.avatar || undefined} points={points} onCartClick={() => setCartOpen(true)} />
-        <div className="flex items-center justify-center py-24 text-gray-500 text-sm">
-          クリスマスケーキのご予約は現在受け付けていません
-        </div>
-        <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <CustomerHeader
@@ -460,7 +431,11 @@ export default function WholeCakePage() {
       <div className="px-4 pt-2">
         {step === 1 ? (
           <Link
-            href={isChristmasMode && selectedStoreId ? `/customer/takeout/store/${selectedStoreId}` : "/customer/takeout/products"}
+            href={
+              isChristmasMode && selectedStoreId
+                ? `/customer/takeout/products?store=${selectedStoreId}&mode=christmas`
+                : "/customer/takeout/products"
+            }
             className="inline-flex items-center text-gray-600 mb-1"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -514,10 +489,6 @@ export default function WholeCakePage() {
           printCakes={printCakes}
           selectedCakeIdForPrint={selectedCakeIdForPrint}
           onCakeSelectForPrint={setSelectedCakeIdForPrint}
-          isChristmasMode={isChristmasMode}
-          christmasCakes={christmasCakes}
-          selectedCakeIdForChristmas={selectedCakeIdForChristmas}
-          onCakeSelectForChristmas={setSelectedCakeIdForChristmas}
           printPhotoUrl={printPhotoUrl}
           uploadingPrintPhoto={uploadingPrintPhoto}
           onPrintPhotoUpload={handlePrintPhotoUpload}

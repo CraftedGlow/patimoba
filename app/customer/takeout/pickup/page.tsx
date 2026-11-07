@@ -466,7 +466,7 @@ export default function TakeoutPickupPage() {
   // クリスマス専用の選択画面に戻す（他の商品を一覧に表示させないため）
   const isChristmasCart = cartItems.some((i) => i.isChristmas);
   const backHref = isChristmasCart
-    ? `/customer/takeout/whole-cake?mode=christmas&store=${storeId ?? ""}`
+    ? `/customer/takeout/products?mode=christmas&store=${storeId ?? ""}`
     : `/customer/takeout/products?store=${storeId ?? ""}&type=${orderType}`;
 
   return (

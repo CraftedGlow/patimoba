@@ -576,7 +576,7 @@ export default function TakeoutConfirmPage() {
   // クリスマス予約の注文の場合、通常の商品一覧ではなくクリスマス専用画面に戻す
   const isChristmasCart = cartItems.some((i) => i.isChristmas);
   const continueShoppingHref = wasChristmasOrder && (selectedStoreId || cartStoreId)
-    ? `/customer/takeout/whole-cake?mode=christmas&store=${selectedStoreId || cartStoreId}`
+    ? `/customer/takeout/products?mode=christmas&store=${selectedStoreId || cartStoreId}`
     : selectedStoreId || cartStoreId
     ? `/customer/takeout/products?store=${selectedStoreId || cartStoreId}`
     : "/customer/takeout";
@@ -590,7 +590,7 @@ export default function TakeoutConfirmPage() {
     if (step === 2 && selectedStoreId) {
       router.push(
         isChristmasCart
-          ? `/customer/takeout/whole-cake?mode=christmas&store=${selectedStoreId}`
+          ? `/customer/takeout/products?mode=christmas&store=${selectedStoreId}`
           : `/customer/takeout/products?store=${selectedStoreId}`
       );
     }

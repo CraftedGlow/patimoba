@@ -101,7 +101,7 @@ function PrintDecorationCard({ price }: { price: number }) {
   );
 }
 
-function WholeCakeCard({ cake, soldOut }: { cake: WholeCakeProduct; soldOut?: boolean }) {
+function WholeCakeCard({ cake, soldOut, mode }: { cake: WholeCakeProduct; soldOut?: boolean; mode?: string }) {
   const fromPrice = cake.sizes.length
     ? Math.min(...cake.sizes.map((s) => Number(s.price) || 0))
     : 0;
@@ -144,13 +144,15 @@ function WholeCakeCard({ cake, soldOut }: { cake: WholeCakeProduct; soldOut?: bo
   );
 
   if (soldOut) return content;
-  return <Link href={`/customer/takeout/product/${cake.id}`}>{content}</Link>;
+  return <Link href={`/customer/takeout/product/${cake.id}${mode ? `?mode=${mode}` : ""}`}>{content}</Link>;
 }
 
 export default function TakeoutProductsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeParam = searchParams.get("store");
+  const modeParam = searchParams.get("mode");
+  const isChristmasMode = modeParam === "christmas";
   const typeParam = searchParams.get("type") || (() => { try { return sessionStorage.getItem("patimoba_order_type_selection"); } catch { return null; } })();
   const orderTypeParam = (typeParam === "sameday" ? "sameday" : "reservation") as "sameday" | "reservation";
   const { selectedStoreId, selectedStoreName, profile,
@@ -263,6 +265,9 @@ export default function TakeoutProductsPage() {
       : c.isActive !== false)
   );
 
+  // クリスマスケーキご予約: 「クリスマス限定」種類のケーキのみを一覧表示する
+  const christmasCakes = wholeCakes.filter((c) => c.categoryName === "クリスマス限定");
+
   // プリントデコレーションは準備日数が必要なため、当日注文では準備日数0の場合のみ表示する
   const visiblePrintDeco =
     printDecoData && !(typeParam === "sameday" && printDecoData.preparationDays > 0)
@@ -306,7 +311,7 @@ export default function TakeoutProductsPage() {
 
   const handleStepClick = (step: number) => {
     if (step === 1) {
-      router.push("/customer/takeout");
+      router.push(isChristmasMode && storeId ? `/customer/takeout/store/${storeId}` : "/customer/takeout");
     }
   };
 
@@ -325,10 +330,11 @@ export default function TakeoutProductsPage() {
       <div className="px-4 md:px-8 lg:px-12 pb-8 flex-1" style={{ paddingBottom: itemCount > 0 ? "6rem" : "2rem" }}>
         <div className="flex items-center justify-between mb-1">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">商品一覧</h2>
+            <h2 className="text-lg font-bold text-gray-900">{isChristmasMode ? "クリスマスケーキを選択" : "商品一覧"}</h2>
             <div className="h-1 w-16 bg-amber-400 rounded-full mt-1" />
           </div>
 
+          {!isChristmasMode && (
           <div className="relative">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -379,6 +385,7 @@ export default function TakeoutProductsPage() {
               )}
             </AnimatePresence>
           </div>
+          )}
         </div>
         <p className="text-right mb-3" style={{ fontSize: 11 }}>表示価格は全て税込です</p>
 
@@ -386,6 +393,20 @@ export default function TakeoutProductsPage() {
           <div className="flex items-center justify-center py-20">
             <LineSpinner size={24} />
           </div>
+        ) : isChristmasMode ? (
+          christmasCakes.length === 0 ? (
+            <div className="text-center py-20 text-gray-600 text-sm">
+              クリスマスケーキのご予約は現在受け付けていません
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 lg:gap-6">
+              {christmasCakes.map((cake, i) => (
+                <motion.div key={`wc-${cake.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
+                  <WholeCakeCard cake={cake} soldOut={soldOutProductIds.has(cake.id)} mode="christmas" />
+                </motion.div>
+              ))}
+            </div>
+          )
         ) : selectedCategory === "すべて" ? (
           allGridItems.length === 0 ? (
             <div className="text-center py-20 text-gray-600 text-sm">商品が見つかりませんでした</div>

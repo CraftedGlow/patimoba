@@ -90,8 +90,8 @@ export default function Home() {
 
     const params = new URLSearchParams(window.location.search);
     // LIFF 認証コールバック / liff.state によるパス転送 / miniapp.line.me の
-    // シンプルなクエリ形式(?coupon= や ?mode=)でなければ /login へ
-    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state") && !params.has("coupon") && !params.has("mode")) {
+    // シンプルなクエリ形式(?coupon= や ?mode=christmas)でなければ /login へ
+    if (!params.has("code") && !params.has("liffClientId") && !params.has("liff.state") && !params.has("coupon") && params.get("mode") !== "christmas") {
       router.replace("/login");
       return;
     }
@@ -119,8 +119,8 @@ export default function Home() {
       // miniapp.line.me/{liffId}?mode=christmas&store=xxx 形式（クリスマス予約リッチメニュー等の深いリンク）も
       // 追加パスが無いためクエリがそのままエンドポイントに渡ってくる。ログイン後、店舗TOPを経由せず
       // 直接クリスマスケーキ一覧へ飛ばして余計な画面遷移・ローディングを減らす
-      const mode = params.get("mode");
-      const deepLinkPath = mode && storeId ? `/customer/takeout/products?mode=${mode}&store=${storeId}` : null;
+      const isChristmasDeepLink = params.get("mode") === "christmas";
+      const deepLinkPath = isChristmasDeepLink && storeId ? `/customer/takeout/products?mode=christmas&store=${storeId}` : null;
 
       const liffId = await getLiffId(storeId);
       handleLiffCallback(liffId, storeId, deepLinkPath);

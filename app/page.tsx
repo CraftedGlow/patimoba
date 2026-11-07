@@ -117,10 +117,10 @@ export default function Home() {
 
       const storeId = params.get("store") || parseLiffStateStoreId();
       // miniapp.line.me/{liffId}?mode=christmas&store=xxx 形式（クリスマス予約リッチメニュー等の深いリンク）も
-      // 追加パスが無いためクエリがそのままエンドポイントに渡ってくる。ログイン後に店舗TOPのクリスマス専用
-      // 導線へ戻せるよう、遷移先パスを組み立てておく
+      // 追加パスが無いためクエリがそのままエンドポイントに渡ってくる。ログイン後、店舗TOPを経由せず
+      // 直接クリスマスケーキ一覧へ飛ばして余計な画面遷移・ローディングを減らす
       const mode = params.get("mode");
-      const deepLinkPath = mode && storeId ? `/customer/takeout/store/${storeId}?mode=${mode}` : null;
+      const deepLinkPath = mode && storeId ? `/customer/takeout/products?mode=${mode}&store=${storeId}` : null;
 
       const liffId = await getLiffId(storeId);
       handleLiffCallback(liffId, storeId, deepLinkPath);

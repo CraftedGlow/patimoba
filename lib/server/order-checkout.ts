@@ -169,6 +169,17 @@ export function isClientRequestIdConflict(error: { code?: string; message?: stri
   return !!error && error.code === "23505" && String(error.message ?? "").includes("client_request_id");
 }
 
+/**
+ * 明細作成に失敗したときにお客様へ返すエラー。
+ * 商品の累計予約数上限のトリガー（enforce_product_max_total_quantity）は errcode P0001 で
+ * お客様向けの文言を返すため、その場合はそのまま伝える
+ */
+export function orderLinesFailure(error: unknown): { error: string; status: number } {
+  const e = error as { code?: string; message?: string } | null | undefined;
+  if (e?.code === "P0001" && e.message) return { error: e.message, status: 409 };
+  return { error: "注文の作成に失敗しました", status: 500 };
+}
+
 // ───────────────────────── 明細・オプションの作成 ─────────────────────────
 
 /**

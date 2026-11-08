@@ -9,6 +9,7 @@ import {
   findOrderByClientRequestId,
   insertOrderLines,
   isClientRequestIdConflict,
+  orderLinesFailure,
   isValidClientRequestId,
   rollbackOrder,
 } from "@/lib/server/order-checkout";
@@ -209,7 +210,8 @@ export async function POST(req: NextRequest) {
     if (!lines.ok) {
       console.error("[takeout-order] 明細作成エラー:", lines.error);
       await rollbackOrder(supabaseAdmin, order.id, couponDeliveryId);
-      return NextResponse.json({ error: "注文の作成に失敗しました" }, { status: 500 });
+      const failure = orderLinesFailure(lines.error);
+      return NextResponse.json({ error: failure.error }, { status: failure.status });
     }
 
     const result = await completeOrder(supabaseAdmin, {

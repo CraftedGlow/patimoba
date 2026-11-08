@@ -8,7 +8,9 @@ const supabaseAdmin = createClient(
 );
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  // CRON_SECRET 未設定時に "Bearer undefined" で通ってしまわないよう、未設定なら常に拒否する
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

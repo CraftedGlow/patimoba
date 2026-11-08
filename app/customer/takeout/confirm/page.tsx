@@ -15,8 +15,12 @@ import { useOrderMutations } from "@/hooks/use-order-mutations";
 import { useMyCoupons, type MyCouponEligibility } from "@/hooks/use-my-coupons";
 import { calcCouponDiscountAmount } from "@/lib/coupons";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/auth-fetch";
 import { getLiffId } from "@/lib/get-liff-id";
 import { getStoreIdsWithParent, fetchProductStoreOverrides, applyProductStoreOverride } from "@/lib/store-hierarchy";
+import { loadCheckoutAttempt, saveCheckoutAttempt, newCheckoutAttempt } from "@/lib/checkout-attempt";
+
+const CHECKOUT_ATTEMPT_KEY = "patimoba_takeout_checkout_attempt";
 
 function previewCouponDiscount(c: Pick<MyCouponEligibility, "discountType" | "discountValue">, subtotal: number) {
   return calcCouponDiscountAmount({ discount_type: c.discountType, discount_value: c.discountValue }, subtotal);
@@ -30,7 +34,7 @@ function couponEligibleLabel(c: Pick<MyCouponEligibility, "discountType" | "disc
 
 async function releaseCoupon(deliveryId: string) {
   try {
-    await fetch("/api/coupons/release", {
+    await authFetch("/api/coupons/release", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ deliveryId }),
@@ -237,7 +241,7 @@ export default function TakeoutConfirmPage() {
 
       // 既存カードをセッションに未格納の場合は PAY.JP から取得して表示
       if (data.customer_id && !sessionStorage.getItem("patimoba_has_card")) {
-        const res = await fetch(`/api/payjp/cards?customer_id=${data.customer_id}`);
+        const res = await authFetch(`/api/payjp/cards?userId=${userId}`);
         if (!res.ok || cancelled) return;
         const cardsData = await res.json();
         const card = cardsData.data?.[0];
@@ -268,7 +272,7 @@ export default function TakeoutConfirmPage() {
     if (!pendingToken) return;
     (async () => {
       console.log("[takeout-confirm] finalize-card 開始, token:", pendingToken);
-      const res = await fetch("/api/payjp/finalize-card", {
+      const res = await authFetch("/api/payjp/finalize-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token_id: pendingToken, user_id: userId, skip_tds_finish: true }),
@@ -372,17 +376,30 @@ export default function TakeoutConfirmPage() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const printPhotoUrl = cartItems.find((i) => i.customization?.printPhotoUrl)?.customization?.printPhotoUrl ?? null;
+    // 注文確定の試行。通信エラー等で結果が分からなかった場合は、同じ内容での再送に同じ試行（clientRequestId・
+    // クーポン予約）を使い回し、サーバー側で二重に注文・課金されないようにする。内容が変わったら新しい試行にする。
+    const fingerprint = JSON.stringify({
+      storeIdForOrder, cartItems, bag: selectedBag, usedPoints, coupon: selectedCoupon?.deliveryId ?? null,
+      paymentMethod, pickupDate, pickupTime, lastName, firstName,
+    });
+    let attempt = loadCheckoutAttempt(CHECKOUT_ATTEMPT_KEY);
+    if (attempt && attempt.fingerprint !== fingerprint) {
+      // 以前の試行のクーポン予約は解放する（注文に紐付いた予約は解放されない）
+      if (attempt.couponDeliveryId) await releaseCoupon(attempt.couponDeliveryId);
+      attempt = null;
+    }
+    if (!attempt) attempt = newCheckoutAttempt(fingerprint);
+    saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, attempt);
 
     // クーポンを選択している場合は注文確定の直前でサーバー側検証つきで予約する。
     // apply〜注文作成までの間で例外が発生した場合も必ずクーポンを解放できるよう、
     // この区間全体を try/catch で囲む。
-    let couponDeliveryId: string | null = null;
-    let couponDiscountAmountFinal = 0;
-    let result: { orderId: string; error: string | null };
+    let couponDeliveryId: string | null = attempt.couponDeliveryId;
+    let couponDiscountAmountFinal = attempt.couponDiscountAmount;
+    let result: { orderId: string; error: string | null; outcomeUnknown?: boolean };
     try {
-      if (selectedCoupon) {
-        const applyRes = await fetch("/api/coupons/apply", {
+      if (selectedCoupon && !couponDeliveryId) {
+        const applyRes = await authFetch("/api/coupons/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -394,6 +411,7 @@ export default function TakeoutConfirmPage() {
           }),
         });
         if (!applyRes.ok) {
+          saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
           submittingRef.current = false;
           setSubmitting(false);
           setSelectedCoupon(null);
@@ -403,63 +421,34 @@ export default function TakeoutConfirmPage() {
         const applyData = await applyRes.json();
         couponDeliveryId = applyData.deliveryId;
         couponDiscountAmountFinal = applyData.discountAmount;
+        attempt = { ...attempt, couponDeliveryId, couponDiscountAmount: couponDiscountAmountFinal };
+        saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, attempt);
       }
 
       const totalWithCoupon = Math.max(0, subtotal - usedPoints - couponDiscountAmountFinal);
 
-      let payjpChargeId: string | null = null;
-
-      // クレジットカード払いの場合は先に PAY.JP で課金する
-      if (paymentMethod === "credit") {
-        console.log("[takeout-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", totalWithCoupon);
-        const { data: { session } } = await supabase.auth.getSession();
-        const chargeRes = await fetch("/api/payjp/charge", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-          },
-          body: JSON.stringify({
-            userId,
-            storeId: storeIdForOrder,
-            amount: totalWithCoupon,
-            currency: "jpy",
-          }),
-        });
-        const chargeData = await chargeRes.json();
-        console.log("[takeout-confirm] charge →", chargeRes.status, chargeData);
-        if (!chargeRes.ok) {
-          if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
-          submittingRef.current = false;
-          setSubmitting(false);
-          setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
-          return;
-        }
-        payjpChargeId = chargeData.chargeId ?? null;
-      }
-
-      console.log("[takeout-confirm] createOrder 開始");
+      // 金額の計算・注文作成・クーポン確定・ポイント反映・カード課金はすべてサーバー側
+      // （/api/customer/takeout-order）がDB上の価格から行う。画面表示の合計を expectedTotal として渡し、
+      // 一致しない場合は注文は作成されず課金もされない。
+      console.log("[takeout-confirm] createOrder 開始, paymentMethod:", paymentMethod, "amount:", totalWithCoupon);
       result = await createOrder({
+        clientRequestId: attempt.requestId,
         storeId: storeIdForOrder,
         customerId: userId,
         customerName: `${lastName} ${firstName}`.trim() || null,
-        paymentStatus: paymentMethod === "credit" ? "paid" : "unpaid",
         paymentMethod,
+        expectedTotal: totalWithCoupon,
         items: cartItems,
-        subtotal,
         discountAmount: usedPoints,
         couponId: selectedCoupon?.couponId ?? null,
         couponDeliveryId,
-        couponDiscountAmount: couponDiscountAmountFinal,
-        orderType: "takeout",
         pickupDate: pickupDate || null,
         pickupTime: pickupTime || null,
-        printPhotoUrl,
-        payjpChargeId,
-        bag: selectedBag ? { name: selectedBag.name, unitPrice: selectedBag.price, quantity: selectedBag.quantity } : null,
+        bag: selectedBag ? { id: selectedBag.id, quantity: selectedBag.quantity } : null,
       });
     } catch (e: any) {
       if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
+      saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
       submittingRef.current = false;
       setSubmitting(false);
       setSubmitError(e?.message || "注文処理中にエラーが発生しました");
@@ -470,7 +459,17 @@ export default function TakeoutConfirmPage() {
     setSubmitting(false);
     console.log("[takeout-confirm] createOrder →", result);
 
-    if (result.error) { setSubmitError(result.error); return; }
+    if (result.error) {
+      // 結果が分からない場合は試行を残し、再送時に同じ clientRequestId を送る。
+      // 失敗が確定した場合（サーバー側で注文・クーポン予約は取り消し済み）は次回は新しい試行にする
+      if (!result.outcomeUnknown) {
+        if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
+        saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
+      }
+      setSubmitError(result.error);
+      return;
+    }
+    saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
 
     if (result.orderId) {
       setCompletedOrderId(result.orderId);
@@ -483,7 +482,7 @@ export default function TakeoutConfirmPage() {
       const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
       if (preIssuedToken) {
         try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
-        fetch("/api/line/send-service-message", {
+        authFetch("/api/line/send-service-message", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
@@ -499,14 +498,14 @@ export default function TakeoutConfirmPage() {
           if (liffId) await liff.init({ liffId });
           const liffAccessToken = liff.getAccessToken();
           if (liffAccessToken) {
-            const tokenRes = await fetch("/api/line/issue-notification-token", {
+            const tokenRes = await authFetch("/api/line/issue-notification-token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ orderId: result.orderId, liffAccessToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
             });
             if (tokenRes.ok) {
               const { notificationToken } = await tokenRes.json();
-              fetch("/api/line/send-service-message", {
+              authFetch("/api/line/send-service-message", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ orderId: result.orderId, notificationToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
@@ -518,7 +517,7 @@ export default function TakeoutConfirmPage() {
       }
 
       if (!serviceMessageSent) {
-        fetch("/api/line/send-order-message", {
+        authFetch("/api/line/send-order-message", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ orderId: result.orderId }),
@@ -526,19 +525,11 @@ export default function TakeoutConfirmPage() {
       }
     }
 
-    // ポイント付与・消費と電話番号をDBに反映
+    // ポイントの利用・付与はサーバー側で注文確定時に反映済み。ここでは電話番号のみ保存し、表示用にポイントを再取得する
     if (userId) {
-      const { data: userData } = await supabase
-        .from("users")
-        .select("points")
-        .eq("id", userId)
-        .maybeSingle();
-      const currentPts = Number(userData?.points) || 0;
-      const newPts = Math.max(0, currentPts - usedPoints + earnedPoints);
-      await supabase
-        .from("users")
-        .update({ points: newPts, ...(phone.trim() ? { phone: phone.trim() } : {}) })
-        .eq("id", userId);
+      if (phone.trim()) {
+        await supabase.from("users").update({ phone: phone.trim() }).eq("id", userId);
+      }
       await refreshPoints();
     }
 

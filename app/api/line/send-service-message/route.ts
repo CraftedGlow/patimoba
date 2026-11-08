@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
+import { authorizeUserAccess } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     const { data: order } = await supabaseAdmin
       .from("orders")
       .select(`
-        id, store_id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
+        id, store_id, customer_id, order_type, pickup_date, pickup_time, customer_name_snapshot, total_amount,
         service_notification_token, source_liff_id,
         stores(name, address),
         users!orders_customer_id_fkey(name),
@@ -41,13 +42,24 @@ export async function POST(req: NextRequest) {
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-    // リクエストボディで直接渡された場合は DB に保存してから使用（RLS 回避）
-    if (bodyToken) {
-      await supabaseAdmin
+    // 他人の注文に通知トークンを紐付けたりメッセージを再送したりできないよう、注文者本人に限定する
+    if (!order.customer_id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const access = await authorizeUserAccess(req, supabaseAdmin, order.customer_id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    // リクエストボディで直接渡された場合は DB に保存してから使用（RLS 回避）。
+    // 既にトークンが設定済みの注文は上書きしない
+    if (bodyToken && !order.service_notification_token) {
+      const { data: saved } = await supabaseAdmin
         .from("orders")
         .update({ service_notification_token: bodyToken })
-        .eq("id", orderId);
-      order.service_notification_token = bodyToken;
+        .eq("id", orderId)
+        .is("service_notification_token", null)
+        .select("id")
+        .maybeSingle();
+      if (saved) order.service_notification_token = bodyToken;
     }
 
     const notificationToken: string | null = order.service_notification_token;

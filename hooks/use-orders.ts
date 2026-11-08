@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
 import { Order, OrderStatus, toUIOrder } from "@/lib/types"
+import { STORE_VISIBLE_ORDER_FILTER } from "@/lib/order-visibility"
 
 export type OrderChannel = "takeout" | "ec"
 
@@ -54,6 +55,8 @@ export function useOrders(options: UseOrdersOptions = {}) {
         coupons(title)
       `)
       .order(sortColumn, { ascending: sortAscending })
+      // 作成処理中・処理が中断された注文（ポイント未反映）は表示しない（決済の要確認で保留した注文は表示する）
+      .or(STORE_VISIBLE_ORDER_FILTER)
 
     if (options.storeIds && options.storeIds.length > 0) {
       query = query.in("store_id", options.storeIds)

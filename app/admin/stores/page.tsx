@@ -120,8 +120,8 @@ export default function AdminStoresPage() {
       setDeleteTarget(null);
       load();
       showToast("店舗を削除しました");
-    } catch {
-      showToast("削除に失敗しました");
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "削除に失敗しました");
     }
   };
 

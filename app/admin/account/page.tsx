@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/auth-fetch";
 import { PasswordInput } from "@/components/ui/password-input";
 
 const notificationSettings = [
@@ -178,7 +179,8 @@ export default function AdminAccountPage() {
       };
 
       if (isNew) {
-        const res = await fetch("/api/admin/create-user", {
+        // 管理者のログイントークンを付けて呼ぶ（API 側で管理者か検証する）
+        const res = await authFetch("/api/admin/create-user", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: email.trim(), password: newPassword }),

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/auth-fetch";
 
 export default function TdsCallbackPage() {
   const router = useRouter();
@@ -10,43 +10,30 @@ export default function TdsCallbackPage() {
 
   useEffect(() => {
     const run = async () => {
-      console.log("[tds-callback] コールバックページ 開始");
       const customerId = sessionStorage.getItem("patimoba_customer_id");
       const userId = sessionStorage.getItem("patimoba_user_id");
       const returnPath =
         sessionStorage.getItem("patimoba_tds_return_path") ||
         "/customer/takeout/confirm";
-      console.log("[tds-callback] customerId:", customerId, "userId:", userId, "returnPath:", returnPath);
 
-      if (!customerId) {
-        console.error("[tds-callback] customerId が sessionStorage に見つからない");
+      if (!customerId || !userId) {
+        console.error("[tds-callback] customerId / userId が sessionStorage に見つからない");
         setErrorMsg("セッション情報が見つかりません。最初からやり直してください。");
         return;
       }
 
-      // 3DS 完了処理
-      console.log("[tds-callback] tds-finish 呼び出し 開始");
-      const res = await fetch("/api/payjp/tds-finish", {
+      // 3DS 完了処理（サーバー側で本人に登録済みの顧客であることを検証する。
+      // customer_id の保存はサーバー側でのみ行うため、ここでは users を更新しない）
+      const res = await authFetch("/api/payjp/tds-finish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customer_id: customerId }),
+        body: JSON.stringify({ customer_id: customerId, user_id: userId }),
       });
       const resData = await res.json();
-      console.log("[tds-callback] tds-finish →", res.status, resData);
 
       if (!res.ok) {
         setErrorMsg(resData.error?.message ?? "3Dセキュア認証に失敗しました。もう一度お試しください。");
         return;
-      }
-
-      // PAY.JP 顧客 ID を users テーブルに保存
-      if (userId) {
-        console.log("[tds-callback] DB 保存 開始, userId:", userId, "customerId:", customerId);
-        const { error: dbErr } = await supabase
-          .from("users")
-          .update({ customer_id: customerId })
-          .eq("id", userId);
-        console.log("[tds-callback] DB 保存 →", dbErr ?? "OK");
       }
 
       // sessionStorage クリーンアップ
@@ -55,8 +42,7 @@ export default function TdsCallbackPage() {
       sessionStorage.removeItem("patimoba_user_id");
       sessionStorage.removeItem("patimoba_tds_return_path");
 
-      console.log("[tds-callback] 完了 → redirect:", returnPath);
-      router.replace(returnPath);
+      router.replace(returnPath.startsWith("/") && !returnPath.startsWith("//") ? returnPath : "/customer/takeout/confirm");
     };
 
     run();

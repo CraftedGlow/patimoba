@@ -1,27 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { payjpPost } from "@/lib/payjp";
+import { authorizeUserAccess } from "@/lib/api-auth";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // POST /api/payjp/create-customer
-// body: { card: "<payjp_token>", tds_finish_url?: string }
+// body: { card: "<payjp_token>", user_id, tds_finish_url?: string }
 export async function POST(req: NextRequest) {
   try {
-    const { card, tds_finish_url } = await req.json();
+    const { card, user_id, tds_finish_url } = await req.json();
 
-    if (!card) {
-      return NextResponse.json({ error: "card トークンは必須です" }, { status: 400 });
+    if (!card || !user_id) {
+      return NextResponse.json({ error: "card トークンと user_id は必須です" }, { status: 400 });
     }
 
-    const params: Record<string, string> = { card };
+    const access = await authorizeUserAccess(req, supabaseAdmin, user_id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    // 作成した顧客がどのユーザーのものかを後から検証できるよう metadata に紐付ける
+    const params: Record<string, string> = { card, "metadata[user_id]": user_id };
     if (tds_finish_url) params.tds_finish_url = tds_finish_url;
 
     const res = await payjpPost("/customers", params);
     const data = await res.json();
 
     if (!res.ok) {
+      console.error("[create-customer] PAY.JP エラー:", data?.error?.code ?? res.status);
       return NextResponse.json({ error: data.error }, { status: res.status });
     }
-
-    console.log("[create-customer] PAY.JP response:", JSON.stringify(data, null, 2));
 
     // tds_id は customer 直下 or カードオブジェクト内、または tds_url から抽出
     const tdsUrl: string | null =
@@ -30,10 +42,9 @@ export async function POST(req: NextRequest) {
     const tdsId: string | null =
       data.tds_id ?? data.cards?.data?.[0]?.tds_id ?? tdsIdFromUrl ?? null;
 
-    console.log("[create-customer] customerId:", data.id, "tdsId:", tdsId, "tdsUrl:", tdsUrl);
     return NextResponse.json({ customerId: data.id, tdsUrl, tdsId });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "顧客作成に失敗しました";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[create-customer] 例外:", e);
+    return NextResponse.json({ error: "顧客作成に失敗しました" }, { status: 500 });
   }
 }

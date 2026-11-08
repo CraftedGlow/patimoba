@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { FINALIZED_ORDER_COLUMN } from "@/lib/order-visibility"
 
 interface DashboardStats {
   todaySales: number
@@ -54,6 +55,8 @@ export function useDashboardStats(storeId?: string | string[]) {
         .select("total_amount")
         .gte("created_at", todayStart)
         .lt("created_at", todayEnd)
+        // 作成処理中・処理が中断された注文（ポイント未反映）は集計しない
+        .not(FINALIZED_ORDER_COLUMN, "is", null)
       if (ids.length === 1) todayQuery = todayQuery.eq("store_id", ids[0])
       else if (ids.length > 1) todayQuery = todayQuery.in("store_id", ids)
 
@@ -62,6 +65,7 @@ export function useDashboardStats(storeId?: string | string[]) {
         .select("total_amount")
         .gte("created_at", monthStart)
         .lt("created_at", monthEnd)
+        .not(FINALIZED_ORDER_COLUMN, "is", null)
         .not("order_status", "in", "(cancelled)")
       if (ids.length === 1) monthQuery = monthQuery.eq("store_id", ids[0])
       else if (ids.length > 1) monthQuery = monthQuery.in("store_id", ids)

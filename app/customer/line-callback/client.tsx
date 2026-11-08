@@ -41,7 +41,8 @@ export function LineCallbackClient({
       }
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser))
-      document.cookie = "line_session_uid=; path=/; max-age=0"
+      // httpOnly クッキーは document.cookie では消せないのでサーバー側で削除する（使い回し防止）
+      await fetch("/api/line/auth/session", { method: "DELETE" }).catch(() => {})
 
       router.push("/customer/takeout")
     })()

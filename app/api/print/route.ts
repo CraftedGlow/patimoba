@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { buildReceiptMarkup } from "@/lib/star-markup"
 import { resolveOptionPrintName } from "@/lib/receipt-short-names"
+import { formatPaymentStatus } from "@/lib/types"
+import { authorizeStoreStaff } from "@/lib/api-auth"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,13 +12,9 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const {
-      orderId,
-      lineName,
-      phone,
-      orderDate,
-      paymentStatus,
-    } = await req.json()
+    // レシートに印字する LINE名・電話番号・注文日時・支払状況は改ざんを防ぐため
+    // リクエストボディではなくDBの値から組み立てる（orderId 以外のボディ値は使わない）
+    const { orderId } = await req.json()
     if (!orderId) {
       return NextResponse.json({ error: "orderId required" }, { status: 400 })
     }
@@ -26,7 +24,8 @@ export async function POST(req: NextRequest) {
       .select(`
         id, order_no, store_id, customer_name_snapshot,
         subtotal, discount_amount, coupon_discount_amount, total_amount,
-        pickup_date, pickup_time, order_type, notes,
+        pickup_date, pickup_time, order_type, notes, created_at, payment_status,
+        users!orders_customer_id_fkey ( line_name, phone ),
         order_items (
           product_id, product_name_snapshot, product_short_name_snapshot, quantity, unit_price, subtotal,
           variant_name_snapshot,
@@ -49,6 +48,20 @@ export async function POST(req: NextRequest) {
     if (error || !order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
+
+    // 注文の店舗（または親のマスター店舗）のスタッフのみ印刷ジョブを登録できる
+    const auth = await authorizeStoreStaff(req, supabaseAdmin, order.store_id)
+    if (!auth.ok) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status })
+    }
+
+    const customer = (order as any).users as { line_name: string | null; phone: string | null } | null
+    const lineName = customer?.line_name || null
+    const phone = customer?.phone || null
+    const paymentStatus = formatPaymentStatus(order.payment_status)
+    // 店舗画面（lib/types.ts の toUIOrder）と同じ「YYYY年 M月 D日 H:MM」形式を日本時間で組み立てる
+    const jst = new Date(new Date(order.created_at).getTime() + 9 * 3600 * 1000)
+    const orderDate = `${jst.getUTCFullYear()}年 ${jst.getUTCMonth() + 1}月 ${jst.getUTCDate()}日 ${jst.getUTCHours()}:${String(jst.getUTCMinutes()).padStart(2, "0")}`
 
     // 注文後に印刷用短縮名が追加/変更された場合にも反映されるよう、
     // スナップショットではなく商品/デコレーションの現在値を優先して使う
@@ -91,10 +104,10 @@ export async function POST(req: NextRequest) {
       shippingAddress,
       deliveryTimeSlot,
       customerName: order.customer_name_snapshot,
-      lineName: lineName ?? null,
-      phone: phone ?? null,
-      orderDate: orderDate ?? null,
-      paymentStatus: paymentStatus ?? null,
+      lineName,
+      phone,
+      orderDate,
+      paymentStatus,
       items: orderItemsRaw.map((item) => ({
         name: (item.product_id && currentShortNameMap.get(item.product_id)) || item.product_short_name_snapshot || item.product_name_snapshot,
         quantity: item.quantity,

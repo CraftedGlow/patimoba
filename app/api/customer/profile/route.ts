@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { authorizeUserAccess } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "userId は必須です" }, { status: 400 });
     }
 
+    // 他人の個人情報を取得できないよう、本人（またはゲスト行）に限定する
+    const access = await authorizeUserAccess(req, supabaseAdmin, userId);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
     const { data, error } = await supabaseAdmin
       .from("users")
       .select("name, name_kana, phone, email, customer_id")
@@ -25,12 +32,13 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("[customer/profile] DB エラー:", error);
+      return NextResponse.json({ error: "プロフィール取得に失敗しました" }, { status: 500 });
     }
 
     return NextResponse.json({ profile: data });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "プロフィール取得に失敗しました";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[customer/profile] 例外:", e);
+    return NextResponse.json({ error: "プロフィール取得に失敗しました" }, { status: 500 });
   }
 }

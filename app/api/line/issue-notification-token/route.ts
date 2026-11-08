@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
+import { authorizeUserAccess } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -34,11 +35,19 @@ export async function POST(req: NextRequest) {
     if (orderId) {
       const { data: order } = await supabaseAdmin
         .from("orders")
-        .select("store_id")
+        .select("store_id, customer_id")
         .eq("id", orderId)
         .maybeSingle() as any;
       if (!order?.store_id) {
         return NextResponse.json({ error: "Store not found" }, { status: 404 });
+      }
+      // 他人の注文に自分の通知トークンを紐付けて通知を横取りできないよう、注文者本人に限定する
+      if (!order.customer_id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      const access = await authorizeUserAccess(req, supabaseAdmin, order.customer_id);
+      if (!access.ok) {
+        return NextResponse.json({ error: access.error }, { status: access.status });
       }
       resolvedStoreId = order.store_id;
     } else if (bodyStoreId) {
@@ -95,10 +104,12 @@ export async function POST(req: NextRequest) {
     const { notificationToken } = await tokenRes.json();
 
     if (orderId) {
+      // 既にトークンが設定済みの注文は上書きしない
       await supabaseAdmin
         .from("orders")
         .update({ service_notification_token: notificationToken, source_liff_id: liffId || null })
-        .eq("id", orderId);
+        .eq("id", orderId)
+        .is("service_notification_token", null);
       console.log(`[issue-notification-token] issued: orderId=${orderId}`);
     } else {
       console.log("[issue-notification-token] issued (pre-3DS, no orderId)");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStoreIdsWithParent } from "@/lib/coupons";
+import { authorizeUserAccess } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,6 +13,12 @@ export async function GET(req: NextRequest) {
   const storeId = req.nextUrl.searchParams.get("storeId");
   if (!userId || !storeId) {
     return NextResponse.json({ error: "userId and storeId required" }, { status: 400 });
+  }
+
+  // 他人の保有クーポンを覗けないよう、本人（またはゲスト行）に限定する
+  const access = await authorizeUserAccess(req, supabaseAdmin, userId);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
   // クーポンはマスター店舗と子店舗で共有されるため、子店舗のstoreIdで見ている場合も

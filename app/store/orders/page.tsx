@@ -8,12 +8,14 @@ import { useOrders, type OrderChannel } from "@/hooks/use-orders";
 import { useStoreContext } from "@/lib/store-context";
 import { useAuth } from "@/lib/auth-context";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
+import { isNewlyFinalizedOrder } from "@/lib/order-visibility";
 import { OrderDetailModal } from "@/components/store/order-detail-modal";
 import { WholeCakeDetailModal } from "@/components/store/whole-cake-detail-modal";
 import { DatePickerPopup } from "@/components/store/date-picker-popup";
 import { supabase } from "@/lib/supabase";
 import { getChildStoreBadgeColor } from "@/lib/child-store-badge-color";
 import type { FulfillmentStatus, Order } from "@/lib/types";
+import { authFetch } from "@/lib/auth-fetch";
 
 type ChannelTabValue = "" | OrderChannel | "christmas";
 const channelTabs: { label: string; value: ChannelTabValue }[] = [
@@ -322,8 +324,9 @@ export default function StoreOrdersPage() {
         .channel(`manage-orders-${id}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "orders", filter: `store_id=eq.${id}` },
-          () => { refetchManageTakeout(true); refetchManageEc(true); }
+          // 注文の作成完了（ポイント反映）は UPDATE イベントになる（lib/order-visibility.ts）
+          { event: "UPDATE", schema: "public", table: "orders", filter: `store_id=eq.${id}` },
+          (payload: any) => { if (isNewlyFinalizedOrder(payload.new)) { refetchManageTakeout(true); refetchManageEc(true); } }
         )
         .subscribe()
     );
@@ -392,7 +395,7 @@ export default function StoreOrdersPage() {
         if (confirmAction.isEc) {
           const targetOrder = manageOrders.find((o) => o.id === confirmAction.orderId);
           const customerName = targetOrder?.customerName || targetOrder?.lineName || "";
-          const shipRes = await fetch("/api/line/send-ship-notification", {
+          const shipRes = await authFetch("/api/line/send-ship-notification", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orderId: confirmAction.orderId, customerName }),

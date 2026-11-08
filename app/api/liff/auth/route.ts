@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyLiffIdToken } from "@/lib/line-user";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,23 +8,40 @@ const supabaseAdmin = createClient(
 );
 
 // POST /api/liff/auth
-// body: { userId: string (LINE), displayName: string, pictureUrl: string }
+// body: { idToken: string (liff.getIDToken()), liffId?: string, displayName?: string, pictureUrl?: string }
+// LINE ユーザーIDはクライアント申告値を使わず、ID トークンを LINE で検証して得た sub を使う
+// （app/api/line/liff-login と同じ検証）。
 export async function POST(req: NextRequest) {
   try {
-    const { userId: lineUserId, displayName, pictureUrl } = await req.json();
-
-    if (!lineUserId) {
-      return NextResponse.json({ error: "lineUserId is required" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    const idToken = body?.idToken;
+    if (!idToken) {
+      return NextResponse.json({ error: "id_token_required" }, { status: 400 });
     }
+    const liffId: string | null = body?.liffId ? String(body.liffId) : null;
+
+    const verifyResult = await verifyLiffIdToken(supabaseAdmin, String(idToken), liffId);
+    if (!verifyResult.ok) {
+      return NextResponse.json({ error: verifyResult.error }, { status: verifyResult.status });
+    }
+    const lineUserId = verifyResult.claims.sub;
+    const displayName: string | undefined = body?.displayName ?? verifyResult.claims.name;
+    const pictureUrl: string | undefined = body?.pictureUrl ?? verifyResult.claims.picture;
 
     console.log("[liff/auth] lineUserId:", lineUserId, "displayName:", displayName);
 
-    // 既存ユーザー検索
-    const { data: existing } = await supabaseAdmin
+    // 既存ユーザー検索（重複行があってもエラーで新規作成に流れないよう limit で1件に絞る）
+    const { data: existingRows, error: lookupError } = await supabaseAdmin
       .from("users")
       .select("id, points")
       .eq("line_user_id", lineUserId)
-      .maybeSingle();
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (lookupError) {
+      console.error("[liff/auth] lookup error:", lookupError);
+      return NextResponse.json({ error: "ユーザー検索に失敗しました" }, { status: 500 });
+    }
+    const existing = existingRows?.[0];
 
     if (existing) {
       await supabaseAdmin

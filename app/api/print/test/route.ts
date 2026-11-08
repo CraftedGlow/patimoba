@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import iconv from "iconv-lite"
+import { authorizeStoreStaff } from "@/lib/api-auth"
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,6 +47,12 @@ export async function POST(req: NextRequest) {
   const { storeId } = await req.json().catch(() => ({}))
   if (!storeId) {
     return NextResponse.json({ error: "storeId required" }, { status: 400 })
+  }
+
+  // その店舗（または親のマスター店舗）のスタッフのみテスト印刷を登録できる
+  const auth = await authorizeStoreStaff(req, supabaseAdmin, storeId)
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
   const binary = buildSizeTestReceipt()

@@ -27,15 +27,13 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !data) {
-      return NextResponse.json(
-        { error: error?.message || "ユーザー作成に失敗しました" },
-        { status: 500 }
-      );
+      console.error("[guest-user] 作成エラー:", error);
+      return NextResponse.json({ error: "ユーザー作成に失敗しました" }, { status: 500 });
     }
 
     return NextResponse.json({ userId: data.id });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "ユーザー作成に失敗しました";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[guest-user] 例外:", e);
+    return NextResponse.json({ error: "ユーザー作成に失敗しました" }, { status: 500 });
   }
 }

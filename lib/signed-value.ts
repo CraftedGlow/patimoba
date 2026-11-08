@@ -10,6 +10,12 @@ import { createHmac, timingSafeEqual } from "crypto"
 export const LINE_SESSION_PURPOSE = "line_session_uid"
 /** LINE 連携済み・未登録ユーザーの登録待ち情報（値: JSON {lineUserId, lineName, avatarUrl}） */
 export const LINE_PENDING_USER_PURPOSE = "line_pending_user"
+/** 注文確認メールのリンクから、ログインなしで注文詳細の確認・キャンセルを行うための鍵（値: orders.id） */
+const ORDER_ACCESS_PURPOSE = "order_access"
+/** 注文確認メールのリンクの有効期間（受取・配送後の問い合わせにも使えるよう長めにする） */
+const ORDER_ACCESS_TTL_SECONDS = 365 * 24 * 60 * 60
+/** 注文詳細のリンクの鍵を API に渡すヘッダー名 */
+export const ORDER_ACCESS_HEADER = "x-order-access-key"
 
 function getSecret(): string {
   const secret = process.env.LINE_LOGIN_CHANNEL_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -50,4 +56,14 @@ export function verifySignedValue(purpose: string, signed: string | undefined | 
   if (!Number.isFinite(expiresAt) || Date.now() > expiresAt) return null
 
   return Buffer.from(encoded, "base64url").toString("utf8")
+}
+
+/** 注文確認メールに載せる、その注文専用の閲覧・キャンセル用の鍵を発行する */
+export function createOrderAccessKey(orderId: string): string {
+  return signValue(ORDER_ACCESS_PURPOSE, orderId, ORDER_ACCESS_TTL_SECONDS)
+}
+
+/** 鍵がこの注文のために発行された正しいものかどうか */
+export function isValidOrderAccessKey(key: string | null | undefined, orderId: string): boolean {
+  return verifySignedValue(ORDER_ACCESS_PURPOSE, key) === orderId
 }

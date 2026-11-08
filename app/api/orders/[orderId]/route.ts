@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { authorizeStoreStaff, authorizeUserAccess } from "@/lib/api-auth";
+import { ORDER_ACCESS_HEADER, isValidOrderAccessKey } from "@/lib/signed-value";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,10 @@ export async function GET(
 
   // 注文の本人（未ログインのECゲスト注文はゲスト行に限り許可）、またはその店舗のスタッフのみ閲覧できる
   const { customer_id: customerId, store_id: storeId, ...order } = data;
-  const ownerAccess = customerId ? await authorizeUserAccess(req, supabaseAdmin, customerId) : null;
-  if (!ownerAccess?.ok) {
+  // 注文確認メールのリンク（その注文専用の鍵付き）から開いた場合は、ログインなしで閲覧できる
+  const hasAccessKey = isValidOrderAccessKey(req.headers.get(ORDER_ACCESS_HEADER), orderId);
+  const ownerAccess = !hasAccessKey && customerId ? await authorizeUserAccess(req, supabaseAdmin, customerId) : null;
+  if (!hasAccessKey && !ownerAccess?.ok) {
     const staffAccess = await authorizeStoreStaff(req, supabaseAdmin, storeId);
     if (!staffAccess.ok) {
       const status = ownerAccess && !ownerAccess.ok ? ownerAccess.status : staffAccess.status;

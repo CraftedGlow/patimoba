@@ -508,6 +508,8 @@ export default function TakeoutPickupPage() {
     sessionStorage.setItem("patimoba_pickup_date", dateStr);
     sessionStorage.setItem("patimoba_pickup_time", selectedTime);
     sessionStorage.setItem("patimoba_order_type", orderType);
+    // 袋の選択画面を飛ばす場合、以前のカートで選んだ袋が残っていると注文時に弾かれるため消しておく
+    if (!hasApplicableBag) sessionStorage.removeItem("patimoba_selected_bag");
     router.push(hasApplicableBag ? "/customer/takeout/bag" : "/customer/takeout/confirm");
   };
 

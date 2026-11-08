@@ -22,11 +22,18 @@ export function LineCallbackClient({
     ;(async () => {
       if (otp) {
         const { supabase } = await import("@/lib/supabase")
-        await supabase.auth.verifyOtp({
+        const { error: otpError } = await supabase.auth.verifyOtp({
           email: otp.email,
           token: otp.token,
           type: "magiclink",
         })
+        // 失敗したままログイン済みとして進むと、ログイン必須のAPIがすべて失敗するため、ログイン画面からやり直してもらう
+        if (otpError) {
+          console.error("[line-callback] ログインセッションの確立に失敗:", otpError)
+          await fetch("/api/line/auth/session", { method: "DELETE" }).catch(() => {})
+          router.replace("/customer/login?error=server_error")
+          return
+        }
       }
 
       const nameParts = (user.name || user.line_name || "").split(" ")

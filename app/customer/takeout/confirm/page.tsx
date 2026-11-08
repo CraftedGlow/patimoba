@@ -112,7 +112,7 @@ export default function TakeoutConfirmPage() {
   const [pickupTime, setPickupTime] = useState("");
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
-  const [selectedBag, setSelectedBag] = useState<{ id: string; name: string; price: number; quantity: number } | null>(null);
+  const [selectedBag, setSelectedBag] = useState<{ id: string; name: string; price: number; quantity: number; productIds?: string[] } | null>(null);
   // カート内に「店頭決済のみ」の商品が含まれる、または店舗が店頭決済のみに設定している
   const [paymentRestricted, setPaymentRestricted] = useState(false);
   // 店舗が「カード決済のみ」に設定している（商品側の店頭決済限定が優先されるため両立時はfalse）
@@ -293,6 +293,15 @@ export default function TakeoutConfirmPage() {
       setCardLabel(label);
     })();
   }, [userId]);
+
+  // 袋の対象商品がカートから外れたら袋も外す（サーバーは対象商品のない袋を含む注文を受け付けない）。
+  // カートの読み込み前（空の間）に誤って外さないよう、カートに商品がある場合だけ判定する
+  useEffect(() => {
+    if (!selectedBag?.productIds || cartItems.length === 0) return;
+    if (cartItems.some((i) => selectedBag.productIds!.includes(i.productId))) return;
+    setSelectedBag(null);
+    try { sessionStorage.removeItem("patimoba_selected_bag"); } catch { /* ignore */ }
+  }, [selectedBag, cartItems]);
 
   const bagTotal = selectedBag ? selectedBag.price * selectedBag.quantity : 0;
   const subtotal = cartTotal + bagTotal;

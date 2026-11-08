@@ -77,6 +77,16 @@ export default function CustomerOrderDetailPage() {
   const params = useParams();
   const orderId = params?.orderId as string;
 
+  // 注文確認メールのリンク（?key=...）から開いた場合は、その注文専用の鍵をAPIに渡して
+  // ログインなしで確認・キャンセルできるようにする（ヘッダー名は lib/signed-value.ts の ORDER_ACCESS_HEADER）
+  const orderFetch = (input: string, init: RequestInit = {}) => {
+    const key = new URLSearchParams(window.location.search).get("key");
+    if (!key) return authFetch(input, init);
+    const headers = new Headers(init.headers);
+    headers.set("x-order-access-key", key);
+    return authFetch(input, { ...init, headers });
+  };
+
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +101,7 @@ export default function CustomerOrderDetailPage() {
     if (!orderId) return;
     (async () => {
       try {
-        const res = await authFetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        const res = await orderFetch(`/api/orders/${orderId}`, { cache: "no-store" });
         if (res.status === 404) {
           setError("注文が見つかりませんでした");
         } else if (res.status === 401 || res.status === 403) {
@@ -111,12 +121,12 @@ export default function CustomerOrderDetailPage() {
   const handleCancel = async () => {
     setCancelling(true);
     setCancelError(null);
-    const res = await authFetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
+    const res = await orderFetch(`/api/orders/${orderId}/cancel`, { method: "POST" });
     const data = await res.json();
     if (!res.ok) {
       // 「この注文はキャンセルできません」は既にキャンセル済みの可能性があるので最新データを取得
       if (data.error === "この注文はキャンセルできません") {
-        const freshRes = await authFetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        const freshRes = await orderFetch(`/api/orders/${orderId}`, { cache: "no-store" });
         if (freshRes.ok) {
           const freshOrder = await freshRes.json();
           setOrder(freshOrder);
@@ -136,7 +146,7 @@ export default function CustomerOrderDetailPage() {
     setOrder((prev) => prev ? { ...prev, order_status: "cancelled" } : prev);
     setCancelling(false);
     // バックグラウンドで最新データを取得（他フィールドの更新を反映）
-    authFetch(`/api/orders/${orderId}`, { cache: "no-store" }).then(async (freshRes) => {
+    orderFetch(`/api/orders/${orderId}`, { cache: "no-store" }).then(async (freshRes) => {
       if (freshRes.ok) {
         const freshOrder = await freshRes.json();
         setOrder(freshOrder.order_status === "cancelled" ? freshOrder : { ...freshOrder, order_status: "cancelled" });

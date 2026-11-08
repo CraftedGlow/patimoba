@@ -6,6 +6,7 @@ import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 import { releaseCouponForCancelledOrder } from "@/lib/coupons";
 import { revertOrderPoints } from "@/lib/order-points";
 import { getAuthenticatedAppUser, isGuestUserId, isStoreStaff } from "@/lib/api-auth";
+import { ORDER_ACCESS_HEADER, isValidOrderAccessKey } from "@/lib/signed-value";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -65,7 +66,10 @@ export async function POST(
   // ログインセッションが無い場合は、LINE未ログインのECゲスト注文（customer_idが
   // auth_user_idを持たない行）に限って許可する（本物のアカウントの注文を
   // 第三者が勝手にキャンセルすることは防ぐ）
-  if (appUser) {
+  // 注文確認メールのリンク（その注文専用の鍵付き）から開いた場合は、ログインなしでも本人として扱う
+  if (isValidOrderAccessKey(req.headers.get(ORDER_ACCESS_HEADER), orderId)) {
+    // 鍵はその注文のためだけに発行され、メールの受信者（注文者）しか知らない
+  } else if (appUser) {
     const isOwner = order.customer_id === appUser.id
     const isStaff = await isStoreStaff(supabaseAdmin, appUser.id, order.store_id)
     if (!isOwner && !isStaff) {

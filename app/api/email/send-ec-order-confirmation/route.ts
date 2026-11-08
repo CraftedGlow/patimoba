@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { authorizeUserAccess } from "@/lib/api-auth";
+import { createOrderAccessKey } from "@/lib/signed-value";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,7 +88,9 @@ export async function POST(req: NextRequest) {
     const host = req.headers.get("host") ?? "order.patisseriemobile.com";
     const proto = host.startsWith("localhost") ? "http" : "https";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `${proto}://${host}`;
-    const orderDetailUrl = `${siteUrl}/customer/orders/${orderId}`;
+    // メールはLINEの外（ログインしていないブラウザ）で開かれることが多いため、
+    // この注文専用の鍵を付けて、ログインなしで確認・キャンセルできるようにする
+    const orderDetailUrl = `${siteUrl}/customer/orders/${orderId}?key=${encodeURIComponent(createOrderAccessKey(orderId))}`;
     const cancelDeadlineStr = order.cancel_deadline_at
       ? new Date(order.cancel_deadline_at).toLocaleString("ja-JP", {
           timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",

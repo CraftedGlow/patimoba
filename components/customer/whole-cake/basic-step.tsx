@@ -46,6 +46,10 @@ interface BasicStepProps {
   uploadingPrintPhoto?: boolean;
   onPrintPhotoUpload?: (file: File) => Promise<void>;
   onPrintPhotoRemove?: () => void;
+  // クリスマス注文: 店舗が設定した追加オプションチェックボックス（nullなら表示しない）
+  christmasCheckboxLabel?: string | null;
+  extraOptionChecked?: boolean;
+  onExtraOptionChange?: (checked: boolean) => void;
 }
 
 export function WholeCakeBasicStep({
@@ -74,6 +78,9 @@ export function WholeCakeBasicStep({
   uploadingPrintPhoto,
   onPrintPhotoUpload,
   onPrintPhotoRemove,
+  christmasCheckboxLabel,
+  extraOptionChecked,
+  onExtraOptionChange,
 }: BasicStepProps) {
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -173,6 +180,17 @@ export function WholeCakeBasicStep({
         {/* サイズ・ろうそく・メッセージ（ケーキ選択後 or 通常モード） */}
         {showForm && (
           <>
+            {christmasCheckboxLabel && (
+              <label className="flex items-center gap-2 text-sm text-gray-700 mb-4 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!extraOptionChecked}
+                  onChange={(e) => onExtraOptionChange?.(e.target.checked)}
+                  className="w-4 h-4 accent-amber-500"
+                />
+                {christmasCheckboxLabel}
+              </label>
+            )}
             <div className="mb-6">
               <p className="text-sm font-medium text-gray-700 mb-2">ケーキのサイズを選択</p>
               <select

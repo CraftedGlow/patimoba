@@ -1805,6 +1805,8 @@ export type Database = {
           blackout_periods: Json | null
           building: string | null
           category: string | null
+          christmas_checkbox_label: string | null
+          christmas_checkbox_reveals: string[]
           created_at: string
           description: string | null
           ec_background_color: string | null
@@ -1850,6 +1852,8 @@ export type Database = {
           blackout_periods?: Json | null
           building?: string | null
           category?: string | null
+          christmas_checkbox_label?: string | null
+          christmas_checkbox_reveals?: string[]
           created_at?: string
           description?: string | null
           ec_background_color?: string | null
@@ -1895,6 +1899,8 @@ export type Database = {
           blackout_periods?: Json | null
           building?: string | null
           category?: string | null
+          christmas_checkbox_label?: string | null
+          christmas_checkbox_reveals?: string[]
           created_at?: string
           description?: string | null
           ec_background_color?: string | null

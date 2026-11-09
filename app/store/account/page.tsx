@@ -79,6 +79,11 @@ export default function StoreAccountPage() {
   const [buttonColor, setButtonColor] = useState<string>("#fbbf24");
   const [backgroundColor, setBackgroundColor] = useState<string>("#ffffff");
 
+  const [christmasCheckboxLabel, setChristmasCheckboxLabel] = useState("");
+  const [christmasRevealsMessagePlate, setChristmasRevealsMessagePlate] = useState(false);
+  const [christmasRevealsCandle, setChristmasRevealsCandle] = useState(false);
+  const [christmasSaving, setChristmasSaving] = useState(false);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -192,6 +197,11 @@ export default function StoreAccountPage() {
         if (Array.isArray(rawBlackouts)) {
           setBlackoutPeriods(rawBlackouts as BlackoutPeriod[]);
         }
+
+        setChristmasCheckboxLabel(store.christmas_checkbox_label ?? "");
+        const christmasReveals = Array.isArray(store.christmas_checkbox_reveals) ? store.christmas_checkbox_reveals : [];
+        setChristmasRevealsMessagePlate(christmasReveals.includes("message_plate"));
+        setChristmasRevealsCandle(christmasReveals.includes("candle"));
       }
       if (user) setHasPassword(true);
     } catch {
@@ -425,6 +435,25 @@ export default function StoreAccountPage() {
     if (!storeId) return;
     await supabase.from("stores").update({ [column]: value }).eq("id", storeId);
   }, [storeId]);
+
+  const saveChristmasCheckbox = useCallback(async () => {
+    if (!storeId) return;
+    setChristmasSaving(true);
+    try {
+      const reveals = [
+        ...(christmasRevealsMessagePlate ? ["message_plate"] : []),
+        ...(christmasRevealsCandle ? ["candle"] : []),
+      ];
+      await supabase.from("stores").update({
+        christmas_checkbox_label: christmasCheckboxLabel.trim() || null,
+        christmas_checkbox_reveals: reveals,
+      }).eq("id", storeId);
+      setModal("saved");
+      setTimeout(() => setModal(null), 1500);
+    } finally {
+      setChristmasSaving(false);
+    }
+  }, [storeId, christmasCheckboxLabel, christmasRevealsMessagePlate, christmasRevealsCandle]);
 
   const handleHeaderColorChange = (value: string) => {
     setHeaderColor(value);
@@ -962,6 +991,56 @@ export default function StoreAccountPage() {
             )}
             <p className="text-xs text-gray-600 mt-1.5">この期間は顧客の予約受付を停止します</p>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-10 border-t border-gray-200 pt-8">
+        <h2 className="text-lg font-bold mb-4">クリスマスケーキ注文：追加オプション</h2>
+        <div className="max-w-md space-y-4">
+          <div>
+            <p className="text-sm text-gray-500 mb-2">チェックボックスのタイトル</p>
+            <input
+              type="text"
+              value={christmasCheckboxLabel}
+              onChange={(e) => setChristmasCheckboxLabel(e.target.value)}
+              placeholder="例：誕生日仕様にしたい"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+            />
+            <p className="text-xs text-gray-600 mt-1">空欄のままにすると、この機能は使われません（クリスマスケーキの注文で、メッセージプレート・ろうそく欄は従来通り常に表示されます）</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 mb-2">チェックが入ったときに表示する項目</p>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={christmasRevealsMessagePlate}
+                  onChange={(e) => setChristmasRevealsMessagePlate(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                メッセージプレートを表示
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={christmasRevealsCandle}
+                  onChange={(e) => setChristmasRevealsCandle(e.target.checked)}
+                  className="rounded border-gray-300"
+                />
+                ろうそくを表示
+              </label>
+            </div>
+          </div>
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => void saveChristmasCheckbox()}
+            disabled={christmasSaving}
+            className="px-4 py-2 rounded-md bg-amber-400 text-white text-sm font-bold hover:bg-amber-500 transition-colors disabled:opacity-50"
+          >
+            保存
+          </motion.button>
         </div>
       </div>
 

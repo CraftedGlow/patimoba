@@ -99,6 +99,28 @@ export default function WholeCakePage() {
       });
   }, [selectedStoreId, loading]);
 
+  // クリスマス注文時の追加オプションチェックボックス（タイトル・表示項目は店舗ごとに設定可能）
+  const [christmasCheckboxLabel, setChristmasCheckboxLabel] = useState<string | null>(null);
+  const [christmasCheckboxReveals, setChristmasCheckboxReveals] = useState<string[]>([]);
+  const [extraOptionChecked, setExtraOptionChecked] = useState(false);
+
+  useEffect(() => {
+    if (!isChristmasMode || !selectedStoreId) {
+      setChristmasCheckboxLabel(null);
+      setChristmasCheckboxReveals([]);
+      return;
+    }
+    supabase
+      .from("stores")
+      .select("christmas_checkbox_label, christmas_checkbox_reveals")
+      .eq("id", selectedStoreId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setChristmasCheckboxLabel(data?.christmas_checkbox_label ?? null);
+        setChristmasCheckboxReveals(Array.isArray(data?.christmas_checkbox_reveals) ? data!.christmas_checkbox_reveals : []);
+      });
+  }, [isChristmasMode, selectedStoreId]);
+
   // プリントデコレーション対応ケーキのみ対象
   const printCakes = useMemo(() => {
     if (!isPrintMode || !printDeco) return [];
@@ -138,12 +160,18 @@ export default function WholeCakePage() {
       setCandleOptions(items.map((c) => ({ id: c.id, name: c.name, price: c.price, storeId: c.storeId, type: c.type, imageUrl: c.imageUrl, freeQuantity: c.freeQuantity, bagQuantity: c.bagQuantity })))
     );
   }, [selectedCake?.id, selectedCake?.candleEnabled, selectedCake?.candleIds]);
-  const hasCandles = !!selectedCake?.candleEnabled && candleOptions.length > 0;
+  const rawHasCandles = !!selectedCake?.candleEnabled && candleOptions.length > 0;
 
   const messagePlateOption = selectedCake?.customOptions?.find((o) => o.name === "メッセージプレート");
-  const hasMessagePlate = !!messagePlateOption;
+  const rawHasMessagePlate = !!messagePlateOption;
   const messagePlateRequired = messagePlateOption?.required ?? false;
   const messagePlateSizes = messagePlateOption?.values ?? [];
+
+  // 店舗がクリスマス注文用の追加オプションチェックボックスを設定している場合、
+  // チェックが入るまではメッセージプレート・ろうそく欄を隠す（未設定なら従来通り常時表示）
+  const gatedByChristmasCheckbox = isChristmasMode && !!christmasCheckboxLabel;
+  const hasCandles = rawHasCandles && (!gatedByChristmasCheckbox || (extraOptionChecked && christmasCheckboxReveals.includes("candle")));
+  const hasMessagePlate = rawHasMessagePlate && (!gatedByChristmasCheckbox || (extraOptionChecked && christmasCheckboxReveals.includes("message_plate")));
 
   const [selectedSizeId, setSelectedSizeId] = useState("");
   const [candles, setCandles] = useState<CandleEntry[]>([]);
@@ -165,6 +193,7 @@ export default function WholeCakePage() {
     setSelectedDecorations({});
     setAllergyNote("");
     setPrintPhotoUrl(null);
+    setExtraOptionChecked(false);
   }, [selectedCakeIdForPrint]);
 
   const { groups: linkedDecorationGroups, loading: groupsLoading } = useProductDecorationGroups(
@@ -291,6 +320,17 @@ export default function WholeCakePage() {
         name: printDeco.name,
         price: printDeco.price,
         groupName: "プリントデコレーション",
+      });
+    }
+
+    // クリスマス注文の追加オプションチェックボックスがオンの場合、店舗側の注文確認画面で
+    // 分かるようにオプションとして追加しておく
+    if (gatedByChristmasCheckbox && extraOptionChecked && christmasCheckboxLabel) {
+      cakeOptions.push({
+        wholeCakeOptionId: "christmas-extra-option",
+        name: christmasCheckboxLabel,
+        price: 0,
+        groupName: "追加オプション",
       });
     }
 
@@ -493,6 +533,9 @@ export default function WholeCakePage() {
           uploadingPrintPhoto={uploadingPrintPhoto}
           onPrintPhotoUpload={handlePrintPhotoUpload}
           onPrintPhotoRemove={() => setPrintPhotoUrl(null)}
+          christmasCheckboxLabel={gatedByChristmasCheckbox ? christmasCheckboxLabel : null}
+          extraOptionChecked={extraOptionChecked}
+          onExtraOptionChange={setExtraOptionChecked}
         />
       )}
 

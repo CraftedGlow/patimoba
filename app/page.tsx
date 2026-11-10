@@ -121,15 +121,23 @@ export default function Home() {
       // 直接クリスマスケーキ一覧へ飛ばして余計な画面遷移・ローディングを減らす
       const isChristmasDeepLink = params.get("mode") === "christmas";
 
-      // store パラメータが欠落した mode=christmas リンクは、どの店舗向けか特定できない。
-      // ここで getLiffId(null) を呼ぶと別店舗を見た際にキャッシュされた liffId を誤って
-      // 使い回してしまう（別店舗のクリスマスページに飛ぶ不具合の原因になるため）、
-      // キャッシュをクリアしてログイン画面に戻す
-      if (isChristmasDeepLink && !storeId) {
+      if (isChristmasDeepLink) {
+        // 全店舗が同じドメインを共有しているため、LINEアプリ側がミニアプリ間でブラウザの
+        // セッションを使い回した場合、前回見ていた別店舗のキャッシュ（liffId・戻り先パス）が
+        // 残ったままになることがある。クリスマスの深いリンクは必ずここで最新の状態に
+        // 作り直すため、古いキャッシュを先に無条件で破棄しておく
         clearLiffIdCache();
-        try { sessionStorage.removeItem("liff_return_path"); } catch {}
-        router.replace("/login");
-        return;
+        try {
+          sessionStorage.removeItem("liff_return_path");
+          sessionStorage.removeItem("liff_login_timestamp");
+        } catch {}
+
+        // store パラメータが欠落している場合はどの店舗向けか特定できないため、
+        // このまま進めず安全にログイン画面へ戻す
+        if (!storeId) {
+          router.replace("/login");
+          return;
+        }
       }
 
       const deepLinkPath = isChristmasDeepLink && storeId ? `/customer/takeout/products?mode=christmas&store=${storeId}` : null;

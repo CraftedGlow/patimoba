@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { authFetch } from "@/lib/auth-fetch"
 
 export interface MyCoupon {
   deliveryId: string
@@ -39,7 +40,7 @@ export function useMyCoupons({ userId, storeId }: UseMyCouponsOptions) {
     }
     setLoading(true)
     try {
-      const res = await fetch(`/api/coupons/my-coupons?userId=${userId}&storeId=${storeId}`)
+      const res = await authFetch(`/api/coupons/my-coupons?userId=${userId}&storeId=${storeId}`)
       const data = await res.json()
       setCoupons(data.coupons ?? [])
     } finally {

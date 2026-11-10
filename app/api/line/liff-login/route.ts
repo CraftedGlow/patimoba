@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/database.types"
-import { findOrCreateLineUser } from "@/lib/line-user"
+import { findOrCreateLineUser, verifyLiffIdToken } from "@/lib/line-user"
 import { formatDiscount } from "@/lib/coupons"
 
 export async function POST(request: NextRequest) {
@@ -12,38 +12,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "id_token_required" }, { status: 400 })
   }
 
-  // liffId の `-` より前がチャンネルID。未送信時は環境変数にフォールバック
-  const channelId = body?.liffId
-    ? String(body.liffId).split("-")[0]
-    : process.env.LINE_LOGIN_CHANNEL_ID
-  if (!channelId) {
-    return NextResponse.json({ error: "server_misconfigured", detail: "channel_id missing" }, { status: 500 })
-  }
-
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) {
     return NextResponse.json({ error: "server_misconfigured", detail: "SUPABASE_SERVICE_ROLE_KEY missing" }, { status: 500 })
   }
 
-  // LINE ID トークン検証
-  const verifyRes = await fetch("https://api.line.me/oauth2/v2.1/verify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ id_token: idToken, client_id: channelId }),
-  })
-  const verified = await verifyRes.json()
-  if (!verifyRes.ok || !verified.sub) {
-    return NextResponse.json({ error: "invalid_token" }, { status: 401 })
-  }
-
-  const lineUserId: string = verified.sub
-  const liffId: string | null = body?.liffId ? String(body.liffId) : null
-  console.log(`[LIFF Login] ログイン試行: lineUserId=${lineUserId}, liffId=${liffId ?? "(none)"}`)
-
   const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceRoleKey
   )
+
+  // LINE ID トークン検証（liffId は登録済みの LIFF ID のみ許可。lib/line-user.ts 参照）
+  const liffId: string | null = body?.liffId ? String(body.liffId) : null
+  const verifyResult = await verifyLiffIdToken(supabase, String(idToken), liffId)
+  if (!verifyResult.ok) {
+    return NextResponse.json({ error: verifyResult.error }, { status: verifyResult.status })
+  }
+  const verified = verifyResult.claims
+
+  const lineUserId: string = verified.sub
+  console.log(`[LIFF Login] ログイン試行: lineUserId=${lineUserId}, liffId=${liffId ?? "(none)"}`)
 
   // 表示名・アイコンの最新化はログイン後にクライアント側が liff.getProfile()
   // で直接反映するので、ここではIDトークンのクレームを新規ユーザー作成時の

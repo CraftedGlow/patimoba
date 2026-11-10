@@ -7,6 +7,7 @@ import { CustomerHeader } from "@/components/customer/customer-header";
 import { StepProgress } from "@/components/customer/step-progress";
 import { useCustomerContext } from "@/lib/customer-context";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/auth-fetch";
 
 interface PayjpCardElement {
   mount(selector: string): void;
@@ -204,7 +205,7 @@ export default function CardAddPage() {
         }
       })() ?? "/customer/ec/confirm";
 
-    const res = await fetch("/api/payjp/start-tds", {
+    const res = await authFetch("/api/payjp/start-tds", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

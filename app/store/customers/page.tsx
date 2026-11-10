@@ -9,6 +9,7 @@ import { useCustomers } from "@/hooks/use-customers";
 import { useStoreContext } from "@/lib/store-context";
 import { supabase } from "@/lib/supabase";
 import type { Customer } from "@/lib/types";
+import { authFetch } from "@/lib/auth-fetch";
 
 interface CustomerDetail {
   id: string;
@@ -116,7 +117,7 @@ export default function StoreCustomersPage() {
     setSending(true);
     setSendError(null);
     try {
-      const res = await fetch("/api/line/send-customer-message", {
+      const res = await authFetch("/api/line/send-customer-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

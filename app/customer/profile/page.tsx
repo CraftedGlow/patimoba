@@ -9,6 +9,7 @@ import NextImage from "next/image";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { getLiffId } from "@/lib/get-liff-id";
+import { authFetch } from "@/lib/auth-fetch";
 
 const ANNIVERSARY_TYPES = [
   "誕生日",
@@ -218,7 +219,7 @@ export default function CustomerProfilePage() {
 
       setShowAnniversaryModal(true);
       if (cleanedAnniversaries.length > 0) {
-        fetch("/api/line/send-anniversary-registered", {
+        authFetch("/api/line/send-anniversary-registered", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId, storeId }),

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStoreLineConfig } from "@/lib/line";
 import { Resend } from "resend";
+import { authorizeStoreStaff } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,8 +13,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "noreply@example.com";
 
 async function sendLineMessage(lineUserId: string, message: string, channelAccessToken: string) {
-  if (!channelAccessToken) return;
-  await fetch("https://api.line.me/v2/bot/message/push", {
+  const res = await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -24,6 +24,10 @@ async function sendLineMessage(lineUserId: string, message: string, channelAcces
       messages: [{ type: "text", text: message }],
     }),
   });
+  // 失敗を成功扱いで返さないよう、LINE API のエラーは呼び出し元へ伝える
+  if (!res.ok) {
+    throw new Error(`LINE push failed: ${res.status} ${await res.text()}`);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -43,6 +47,10 @@ export async function POST(req: NextRequest) {
       .maybeSingle() as any;
 
     if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+
+    // 注文の店舗（または親のマスター店舗）のスタッフのみ発送通知を送れる
+    const auth = await authorizeStoreStaff(req, supabaseAdmin, order.store_id);
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
     const storeName = order.stores?.name ?? "";
     const storePhone = order.stores?.phone ?? "";
@@ -93,7 +101,12 @@ ${storeName}
 TEL：${storePhone}`;
 
     if (lineUserId && channelAccessToken) {
-      await sendLineMessage(lineUserId, lineMessage, channelAccessToken);
+      try {
+        await sendLineMessage(lineUserId, lineMessage, channelAccessToken);
+      } catch (e) {
+        console.error("send-ship-notification LINE error:", e);
+        return NextResponse.json({ error: "LINE送信に失敗しました" }, { status: 502 });
+      }
     } else if (email) {
       const { error: sendError } = await resend.emails.send({
         from: `${storeName || "パティモバ"} <${FROM_EMAIL}>`,

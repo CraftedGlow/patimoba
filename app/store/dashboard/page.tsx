@@ -16,8 +16,10 @@ import { useDashboardStats } from "@/hooks/use-dashboard-stats";
 import { useStoreContext } from "@/lib/store-context";
 import { DatePickerPopup } from "@/components/store/date-picker-popup";
 import { useOrderMutations } from "@/hooks/use-order-mutations";
+import { isNewlyFinalizedOrder } from "@/lib/order-visibility";
 import { supabase } from "@/lib/supabase";
 import { getChildStoreBadgeColor } from "@/lib/child-store-badge-color";
+import { authFetch } from "@/lib/auth-fetch";
 
 const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
 const INACTIVITY_MS = 3 * 60 * 1000; // 3分
@@ -110,8 +112,9 @@ export default function StoreDashboardPage() {
         .channel(`dashboard-orders-${id}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "orders", filter: `store_id=eq.${id}` },
-          () => { refetchOrders(); refetchStats(); }
+          // 注文の作成完了（ポイント反映）は UPDATE イベントになる（lib/order-visibility.ts）
+          { event: "UPDATE", schema: "public", table: "orders", filter: `store_id=eq.${id}` },
+          (payload: any) => { if (isNewlyFinalizedOrder(payload.new)) { refetchOrders(); refetchStats(); } }
         )
         .subscribe()
     );
@@ -128,7 +131,7 @@ export default function StoreDashboardPage() {
       if (confirmAction.isEc) {
         await updateFulfillmentStatus(confirmAction.orderId, confirmAction.toReady, null);
         if (confirmAction.toReady) {
-          await fetch("/api/line/send-ship-notification", {
+          await authFetch("/api/line/send-ship-notification", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orderId: confirmAction.orderId }),

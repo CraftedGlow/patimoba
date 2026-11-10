@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { authFetch } from "@/lib/auth-fetch";
 
 function Check2Content() {
   const params = useSearchParams();
@@ -23,7 +24,7 @@ function Check2Content() {
 
     (async () => {
       // tds_finish → customer 作成（verified）→ DB 保存
-      const res = await fetch("/api/payjp/finalize-card", {
+      const res = await authFetch("/api/payjp/finalize-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token_id: tokenId, user_id: userId }),
@@ -47,8 +48,11 @@ function Check2Content() {
 
       setStatus("done");
 
-      if (!isLiff && returnPath) {
-        window.location.href = decodeURIComponent(returnPath);
+      // オープンリダイレクト防止: サイト内の相対パスのみ遷移する
+      const decodedReturn = returnPath ? decodeURIComponent(returnPath) : null;
+      // URL パーサーはタブ・改行を除去するため、制御文字・バックスラッシュを含むものも拒否する
+      if (!isLiff && decodedReturn && decodedReturn.startsWith("/") && !decodedReturn.startsWith("//") && !/[\x00-\x1f\x7f\\]/.test(decodedReturn)) {
+        window.location.href = decodedReturn;
       }
     })();
   }, []);

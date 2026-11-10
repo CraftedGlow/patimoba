@@ -17,6 +17,7 @@ import {
   type StoreHoursInput,
 } from "@/lib/admin-api";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/auth-fetch";
 import type { StorePlanSlug } from "@/lib/store-plans";
 import { StorePlanPicker } from "@/components/admin/store-plan-picker";
 
@@ -170,7 +171,8 @@ export default function AdminStoreNewPage() {
       };
       await saveStoreHours(created.id, hoursInput, closedDayRules);
 
-      const res = await fetch("/api/admin/create-user", {
+      // 管理者のログイントークンを付けて呼ぶ（API 側で管理者か検証する）
+      const res = await authFetch("/api/admin/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),

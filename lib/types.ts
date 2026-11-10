@@ -1,6 +1,7 @@
 import type { Database } from "./database.types"
 import type { StorePlanSlug } from "./store-plans"
 import { normalizeStorePlan } from "./store-plans"
+import { STALLED_ORDER_NOTE, isStalledOrder } from "./order-visibility"
 
 // 新スキーマは text カラムベースなので enum は定義しない（代わりに union type）
 export type OrderStatus = "new" | "pending" | "confirmed" | "preparing" | "ready" | "completed" | "cancelled"
@@ -425,7 +426,7 @@ export function toUIOrder(row: any): Order {
     fulfillmentStatus: (row.fulfillment_status === "fulfilled" ? "fulfilled" : "pending") as FulfillmentStatus,
     fulfilledAt: row.fulfilled_at || null,
     fulfilledBy: row.fulfilled_by || null,
-    notes: row.notes || undefined,
+    notes: (isStalledOrder(row) ? `${STALLED_ORDER_NOTE}${row.notes ? `\n${row.notes}` : ""}` : row.notes) || undefined,
     shippingFee: Number(row.shipping_fee) || 0,
     printPhotoUrl: row.print_photo_url || null,
     createdAt: row.created_at || new Date().toISOString(),

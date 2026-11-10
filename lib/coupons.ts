@@ -224,6 +224,26 @@ export async function reserveCoupon(
 }
 
 export async function releaseCouponReservation(deliveryId: string, supabaseAdmin: AdminClient) {
+  const { data: delivery } = await supabaseAdmin
+    .from("coupon_deliveries")
+    .select("id, coupon_id, user_id, used_at, order_id")
+    .eq("id", deliveryId)
+    .maybeSingle();
+  if (!delivery || delivery.order_id || !delivery.used_at) return;
+
+  // 予約後に作られた（キャンセルされていない）注文がこのクーポンの割引付きで残っている場合は
+  // 解放しない。解放すると注文は割引されたまま、クーポンだけ再利用できてしまうため。
+  const { data: activeOrder } = await supabaseAdmin
+    .from("orders")
+    .select("id")
+    .eq("customer_id", delivery.user_id)
+    .eq("coupon_id", delivery.coupon_id)
+    .neq("order_status", "cancelled")
+    .gte("created_at", delivery.used_at)
+    .limit(1)
+    .maybeSingle();
+  if (activeOrder) return;
+
   await supabaseAdmin
     .from("coupon_deliveries")
     .update({ used_at: null, order_id: null, discount_amount: 0 })
@@ -242,36 +262,96 @@ export async function releaseCouponForCancelledOrder(orderId: string, supabaseAd
     .eq("order_id", orderId);
 }
 
+export type FinalizeCouponResult =
+  | { ok: true; couponDiscountAmount: number; totalAmount: number }
+  | { ok: false; error: string };
+
 /**
  * 注文作成後にクーポン券を注文へ確定紐付けする。
- * reserveCoupon で保存済みの discount_amount を正として orders.coupon_discount_amount / total_amount を
- * 上書き訂正する（takeoutはクライアント直接insertのため、注文作成時点の値をここで必ず正しい値に補正する）。
+ * 割引額は apply 時のクライアント申告の小計ではなく、DB上の注文小計（orders.subtotal）から
+ * サーバー側で再計算し、orders.coupon_id / coupon_discount_amount / total_amount を上書きする。
+ * - 予約済み（used_at あり）かつ未紐付け（order_id なし）で、注文者本人が保持している券のみ対象
+ * - 決済済みの注文は対象外（課金額と注文金額がずれるため）
+ * 失敗した場合は呼び出し側で注文のロールバックとクーポン解放を行うこと。
  */
-export async function finalizeCouponDelivery(deliveryId: string, orderId: string, supabaseAdmin: AdminClient) {
-  const { data: delivery } = await supabaseAdmin
-    .from("coupon_deliveries")
-    .update({ order_id: orderId })
-    .eq("id", deliveryId)
-    .not("used_at", "is", null)
-    .select("discount_amount")
-    .maybeSingle();
-
-  if (!delivery) return;
-
+export async function finalizeCouponDelivery(
+  deliveryId: string,
+  orderId: string,
+  supabaseAdmin: AdminClient
+): Promise<FinalizeCouponResult> {
   const { data: order } = await supabaseAdmin
     .from("orders")
-    .select("subtotal, discount_amount, shipping_fee")
+    .select("id, store_id, customer_id, subtotal, discount_amount, shipping_fee, payment_status, payjp_charge_id, order_items(product_id)")
     .eq("id", orderId)
     .maybeSingle();
-  if (!order) return;
+  if (!order || !order.customer_id) return { ok: false, error: "order_not_found" };
+  if (order.payment_status !== "unpaid" || order.payjp_charge_id) {
+    return { ok: false, error: "order_already_paid" };
+  }
 
-  const correctedTotal =
-    Math.max(0, order.subtotal - (order.discount_amount ?? 0) - delivery.discount_amount) + (order.shipping_fee ?? 0);
+  const { data: delivery } = await supabaseAdmin
+    .from("coupon_deliveries")
+    .select("id, coupon_id, user_id, used_at, order_id")
+    .eq("id", deliveryId)
+    .maybeSingle();
+  if (!delivery || delivery.user_id !== order.customer_id || !delivery.used_at || delivery.order_id) {
+    return { ok: false, error: "coupon_reservation_invalid" };
+  }
 
-  await supabaseAdmin
+  const storeIds = await resolveStoreIdsWithParent(order.store_id, supabaseAdmin);
+  const { data: coupon } = await supabaseAdmin
+    .from("coupons")
+    .select("discount_type, discount_value, min_order_amount, whole_cake_only")
+    .eq("id", delivery.coupon_id)
+    .in("store_id", storeIds)
+    .maybeSingle();
+  if (!coupon) return { ok: false, error: "coupon_not_found" };
+
+  const subtotal = Number(order.subtotal) || 0;
+  if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
+    return { ok: false, error: "coupon_min_order_amount_not_met" };
+  }
+
+  // 「クーポン対象外」「ホールケーキ限定」も実際の注文明細で再検証する
+  const productIds = Array.from(
+    new Set(((order.order_items ?? []) as { product_id: string | null }[]).map((i) => i.product_id).filter(Boolean))
+  ) as string[];
+  const { data: products } = productIds.length
+    ? await supabaseAdmin.from("products").select("store_id, coupon_excluded, is_preorder_required").in("id", productIds)
+    : { data: [] as any[] };
+  if ((products ?? []).some((p: any) => p.coupon_excluded)) {
+    return { ok: false, error: "coupon_excluded_product" };
+  }
+  if (coupon.whole_cake_only && !(products ?? []).some((p: any) => p.is_preorder_required && storeIds.includes(p.store_id))) {
+    return { ok: false, error: "coupon_whole_cake_only" };
+  }
+
+  const discountAmount = calcCouponDiscountAmount(coupon, subtotal);
+
+  // order_id が未設定の場合のみ紐付ける（既に別の注文に紐付いた券の付け替え・同時実行を防ぐ）
+  const { data: linked } = await supabaseAdmin
+    .from("coupon_deliveries")
+    .update({ order_id: orderId, discount_amount: discountAmount })
+    .eq("id", deliveryId)
+    .is("order_id", null)
+    .not("used_at", "is", null)
+    .select("id")
+    .maybeSingle();
+  if (!linked) return { ok: false, error: "coupon_reservation_invalid" };
+
+  const totalAmount =
+    Math.max(0, subtotal - (Number(order.discount_amount) || 0) - discountAmount) + (Number(order.shipping_fee) || 0);
+
+  const { error: updateErr } = await supabaseAdmin
     .from("orders")
-    .update({ coupon_discount_amount: delivery.discount_amount, total_amount: correctedTotal })
+    .update({ coupon_id: delivery.coupon_id, coupon_discount_amount: discountAmount, total_amount: totalAmount })
     .eq("id", orderId);
+  if (updateErr) {
+    await supabaseAdmin.from("coupon_deliveries").update({ order_id: null }).eq("id", deliveryId).eq("order_id", orderId);
+    return { ok: false, error: "order_update_failed" };
+  }
+
+  return { ok: true, couponDiscountAmount: discountAmount, totalAmount };
 }
 
 export type EnsureCouponDeliveryStatus = "issued" | "held" | "used";
@@ -392,7 +472,8 @@ export interface SendCouponResult {
 }
 
 /**
- * 対象ユーザーにクーポンをLINE pushメッセージで送り、成功分を coupon_deliveries に記録する。
+ * 対象ユーザーにクーポンをLINE pushメッセージで送る。送信前に coupon_deliveries を記録して二重送信を防ぎ、
+ * 送信に失敗したユーザーの記録は取り消す。
  * 管理画面の即時送信ボタンと配信スケジュールcronの両方から使う共通ロジック。
  */
 export async function sendCouponPush(
@@ -427,16 +508,26 @@ export async function sendCouponPush(
   }[];
   const skippedNoLine = (users ?? []).length - eligibleUsers.length;
 
-  const { data: existingDeliveries } = eligibleUsers.length
+  // 送信前に coupon_deliveries へ先に記録して「このユーザーへの配信権」を確保する。
+  // (coupon_id, user_id) の一意制約により、同時実行や途中でタイムアウトした後の再実行でも
+  // 既に記録済みのユーザーは挿入されず（＝返ってこず）、二重にpushされない。
+  const { data: claimedDeliveries, error: claimErr } = eligibleUsers.length
     ? await supabaseAdmin
         .from("coupon_deliveries")
-        .select("user_id")
-        .eq("coupon_id", couponId)
-        .in("user_id", eligibleUsers.map((u) => u.id))
-    : { data: [] as { user_id: string }[] };
-  const alreadyDeliveredUserIds = new Set((existingDeliveries ?? []).map((d: { user_id: string }) => d.user_id));
+        .upsert(
+          eligibleUsers.map((u) => ({ coupon_id: couponId, user_id: u.id, claim_method: claimMethod })),
+          { onConflict: "coupon_id,user_id", ignoreDuplicates: true }
+        )
+        .select("id, user_id")
+    : { data: [] as { id: string; user_id: string }[], error: null };
+  if (claimErr) {
+    return { sent: 0, failed: 0, skipped: 0, error: "delivery_record_failed" };
+  }
+  const deliveryIdByUserId = new Map<string, string>(
+    (claimedDeliveries ?? []).map((d: { id: string; user_id: string }) => [d.user_id, d.id])
+  );
 
-  const sendableUsers = eligibleUsers.filter((u) => !alreadyDeliveredUserIds.has(u.id));
+  const sendableUsers = eligibleUsers.filter((u) => deliveryIdByUserId.has(u.id));
   const skippedAlreadyDelivered = eligibleUsers.length - sendableUsers.length;
 
   const results = await Promise.allSettled(
@@ -449,32 +540,33 @@ export async function sendCouponPush(
         `有効期限：${expiryLabel}\n\n` +
         `ご注文の際にアプリ内でクーポンをお選びください🎂`;
 
-      const res = await fetch("https://api.line.me/v2/bot/message/push", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${lineConfig.channelAccessToken}`,
-        },
-        body: JSON.stringify({ to: u.line_user_id, messages: [{ type: "text", text: message }] }),
-      });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`LINE push failed for user ${u.id}: ${body}`);
+      try {
+        const res = await fetch("https://api.line.me/v2/bot/message/push", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${lineConfig.channelAccessToken}`,
+          },
+          body: JSON.stringify({ to: u.line_user_id, messages: [{ type: "text", text: message }] }),
+        });
+        if (!res.ok) {
+          const body = await res.text();
+          throw new Error(`LINE push failed for user ${u.id}: ${body}`);
+        }
+        return u.id;
+      } catch (e) {
+        // 送れなかったユーザーは従来どおり未配布扱いに戻し、次回の配信で再送できるようにする
+        await supabaseAdmin
+          .from("coupon_deliveries")
+          .delete()
+          .eq("id", deliveryIdByUserId.get(u.id))
+          .is("used_at", null);
+        throw e;
       }
-      return u.id;
     })
   );
 
-  const sentUserIds = results
-    .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
-    .map((r) => r.value);
-
-  if (sentUserIds.length > 0) {
-    await supabaseAdmin
-      .from("coupon_deliveries")
-      .insert(sentUserIds.map((userId) => ({ coupon_id: couponId, user_id: userId, claim_method: claimMethod })));
-  }
-
+  const sent = results.filter((r) => r.status === "fulfilled").length;
   const failed = results.filter((r) => r.status === "rejected").length;
-  return { sent: sentUserIds.length, failed, skipped: skippedNoLine + skippedAlreadyDelivered };
+  return { sent, failed, skipped: skippedNoLine + skippedAlreadyDelivered };
 }

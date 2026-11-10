@@ -8,6 +8,7 @@ import { useStoreContext } from "@/lib/store-context";
 import { useCouponAudience } from "@/hooks/use-coupon-audience";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { formatDiscount, type Coupon as CouponBase } from "@/lib/coupons";
+import { authFetch } from "@/lib/auth-fetch";
 
 interface Coupon extends CouponBase {
   created_at: string;
@@ -268,7 +269,7 @@ export default function StoreCouponsPage() {
       return;
     }
 
-    const res = await fetch("/api/line/send-coupon", {
+    const res = await authFetch("/api/line/send-coupon", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ couponId: sendTarget.id, storeId, userIds }),

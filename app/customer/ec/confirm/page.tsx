@@ -11,10 +11,14 @@ import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { calcItemSubtotal } from "@/lib/cart-pricing";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/auth-fetch";
 import { PrintReceipt } from "@/components/customer/ec/print-receipt";
 import type { UICartItem } from "@/lib/types";
 import { useMyCoupons, type MyCouponEligibility } from "@/hooks/use-my-coupons";
 import { calcCouponDiscountAmount } from "@/lib/coupons";
+import { loadCheckoutAttempt, saveCheckoutAttempt, newCheckoutAttempt } from "@/lib/checkout-attempt";
+
+const CHECKOUT_ATTEMPT_KEY = "ec_checkout_attempt";
 
 function previewCouponDiscount(c: Pick<MyCouponEligibility, "discountType" | "discountValue">, subtotal: number) {
   return calcCouponDiscountAmount({ discount_type: c.discountType, discount_value: c.discountValue }, subtotal);
@@ -28,7 +32,7 @@ function couponEligibleLabel(c: Pick<MyCouponEligibility, "discountType" | "disc
 
 async function releaseCoupon(deliveryId: string) {
   try {
-    await fetch("/api/coupons/release", {
+    await authFetch("/api/coupons/release", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ deliveryId }),
@@ -73,6 +77,10 @@ export default function ECConfirmPage() {
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress | null>(null);
   const [deliveryTime, setDeliveryTime] = useState("");
   const [shippingFee, setShippingFee] = useState(0);
+  // 送料は注文確定時と同じ計算をサーバーで行った結果を表示する（読み込み中・失敗時は注文を確定できない）
+  const [shippingFeeStatus, setShippingFeeStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [shippingFeeReloadKey, setShippingFeeReloadKey] = useState(0);
+  const [addressLoaded, setAddressLoaded] = useState(false);
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
 
@@ -101,6 +109,7 @@ export default function ECConfirmPage() {
       if (raw) setShippingAddress(JSON.parse(raw));
       const time = sessionStorage.getItem("ec_delivery_time");
       if (time) setDeliveryTime(time);
+      // 前の画面で計算した送料は読み込み中の仮表示にだけ使う（確定値はサーバーから取得する）
       const fee = sessionStorage.getItem("ec_shipping_fee");
       if (fee) setShippingFee(Number(fee) || 0);
       setHasCardInfo(!!sessionStorage.getItem("patimoba_has_card"));
@@ -114,7 +123,40 @@ export default function ECConfirmPage() {
         setCardLabel(pendingLabel);
       }
     } catch { /* ignore */ }
+    setAddressLoaded(true);
   }, []);
+
+  // 送料をサーバー（/api/ec/create-order と同じ計算）から取得する。カート内容（送料無料の条件）や
+  // 店舗の配送設定が前の画面の計算時から変わっていても、画面の表示と確定時の金額が食い違わないようにする
+  const shippingStoreId = selectedStoreId || cartStoreId;
+  const shippingPrefecture = shippingAddress?.prefecture ?? "";
+  const shippingCartKey = JSON.stringify(cartItems);
+  useEffect(() => {
+    if (!addressLoaded || !shippingStoreId || cartItems.length === 0) return;
+    let cancelled = false;
+    setShippingFeeStatus("loading");
+    (async () => {
+      try {
+        const res = await fetch("/api/ec/shipping-fee", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ storeId: shippingStoreId, items: cartItems, prefecture: shippingPrefecture || null }),
+        });
+        const data = await res.json().catch(() => null);
+        if (cancelled) return;
+        if (!res.ok || typeof data?.shippingFee !== "number") {
+          setShippingFeeStatus("error");
+          return;
+        }
+        setShippingFee(data.shippingFee);
+        setShippingFeeStatus("ready");
+      } catch {
+        if (!cancelled) setShippingFeeStatus("error");
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressLoaded, shippingStoreId, shippingPrefecture, shippingCartKey, shippingFeeReloadKey]);
 
   // 名前・電話番号・メールをsessionStorageに保存（カード入力ページ遷移後も維持）
   useEffect(() => {
@@ -133,7 +175,7 @@ export default function ECConfirmPage() {
       if (document.hidden || hasCardInfo) return;
       const pendingRaw = (() => { try { return sessionStorage.getItem("patimoba_pending_3ds"); } catch { return null; } })();
       if (!pendingRaw) return;
-      const res = await fetch(`/api/customer/profile?userId=${userId}`);
+      const res = await authFetch(`/api/customer/profile?userId=${userId}`);
       if (!res.ok) return;
       const { profile: data } = await res.json();
       if (data?.customer_id) {
@@ -155,7 +197,7 @@ export default function ECConfirmPage() {
     if (!userId) return;
     let cancelled = false;
     (async () => {
-      const res = await fetch(`/api/customer/profile?userId=${userId}`);
+      const res = await authFetch(`/api/customer/profile?userId=${userId}`);
       if (!res.ok || cancelled) return;
       const { profile: data } = await res.json();
       if (cancelled || !data) return;
@@ -170,7 +212,7 @@ export default function ECConfirmPage() {
 
       // 既存カードをセッションに未格納の場合は PAY.JP から取得して表示
       if (data.customer_id && !sessionStorage.getItem("patimoba_has_card")) {
-        const res = await fetch(`/api/payjp/cards?customer_id=${data.customer_id}`);
+        const res = await authFetch(`/api/payjp/cards?userId=${userId}`);
         if (!res.ok || cancelled) return;
         const cardsData = await res.json();
         const card = cardsData.data?.[0];
@@ -201,7 +243,7 @@ export default function ECConfirmPage() {
     if (!pendingToken) return;
     (async () => {
       console.log("[ec-confirm] finalize-card 開始, token:", pendingToken);
-      const res = await fetch("/api/payjp/finalize-card", {
+      const res = await authFetch("/api/payjp/finalize-card", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token_id: pendingToken, user_id: userId, skip_tds_finish: true }),
@@ -284,6 +326,7 @@ export default function ECConfirmPage() {
     const storeIdForOrder = selectedStoreId || cartStoreId || persistedStoreId;
     if (!storeIdForOrder) { submittingRef.current = false; setSubmitError("店舗が選択されていません"); return; }
     if (cartItems.length === 0) { submittingRef.current = false; setSubmitError("カートに商品がありません"); return; }
+    if (shippingFeeStatus !== "ready") { submittingRef.current = false; setSubmitError("送料を計算しています。しばらくしてから再度お試しください。"); return; }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -293,15 +336,30 @@ export default function ECConfirmPage() {
       : undefined;
     const guestEmailVal = email.trim() || null;
 
+    // 注文確定の試行。通信エラー等で結果が分からなかった場合は、同じ内容での再送に同じ試行（clientRequestId・
+    // クーポン予約）を使い回し、サーバー側で二重に注文・課金されないようにする。内容が変わったら新しい試行にする。
+    const fingerprint = JSON.stringify({
+      storeIdForOrder, userId, cartItems, usedPoints, coupon: selectedCoupon?.deliveryId ?? null,
+      shippingAddress, deliveryTime, lastName, firstName, email: guestEmailVal,
+    });
+    let attempt = loadCheckoutAttempt(CHECKOUT_ATTEMPT_KEY);
+    if (attempt && attempt.fingerprint !== fingerprint) {
+      // 以前の試行のクーポン予約は解放する（注文に紐付いた予約は解放されない）
+      if (attempt.couponDeliveryId) await releaseCoupon(attempt.couponDeliveryId);
+      attempt = null;
+    }
+    if (!attempt) attempt = newCheckoutAttempt(fingerprint);
+    saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, attempt);
+
     // クーポンを選択している場合は注文確定の直前でサーバー側検証つきで予約する。
     // apply〜注文作成までの間で例外が発生した場合も必ずクーポンを解放できるよう、
     // この区間全体を try/catch で囲む。
-    let couponDeliveryId: string | null = null;
-    let couponDiscountAmountFinal = 0;
-    let result: { orderId: string; error: string | null };
+    let couponDeliveryId: string | null = attempt.couponDeliveryId;
+    let couponDiscountAmountFinal = attempt.couponDiscountAmount;
+    let result: { orderId: string; error: string | null; outcomeUnknown?: boolean };
     try {
-      if (selectedCoupon) {
-        const applyRes = await fetch("/api/coupons/apply", {
+      if (selectedCoupon && !couponDeliveryId) {
+        const applyRes = await authFetch("/api/coupons/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -313,6 +371,7 @@ export default function ECConfirmPage() {
           }),
         });
         if (!applyRes.ok) {
+          saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
           submittingRef.current = false;
           setSubmitting(false);
           setSelectedCoupon(null);
@@ -322,64 +381,52 @@ export default function ECConfirmPage() {
         const applyData = await applyRes.json();
         couponDeliveryId = applyData.deliveryId;
         couponDiscountAmountFinal = applyData.discountAmount;
+        attempt = { ...attempt, couponDeliveryId, couponDiscountAmount: couponDiscountAmountFinal };
+        saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, attempt);
       }
 
       const totalWithCoupon = Math.max(0, subtotal - usedPoints - couponDiscountAmountFinal) + shippingFee;
 
-      // EC はクレジットカード払いのみ → 先に PAY.JP で課金する
-      console.log("[ec-confirm] PAY.JP charge 開始, userId:", userId, "storeId:", storeIdForOrder, "amount:", totalWithCoupon);
-      const { data: { session } } = await supabase.auth.getSession();
-      const chargeRes = await fetch("/api/payjp/charge", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({
-          userId,
-          storeId: storeIdForOrder,
-          amount: totalWithCoupon,
-          currency: "jpy",
-        }),
-      });
-      const chargeData = await chargeRes.json();
-      console.log("[ec-confirm] charge →", chargeRes.status, chargeData);
-      if (!chargeRes.ok) {
-        if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
-        submittingRef.current = false;
-        setSubmitting(false);
-        setSubmitError(chargeData.error?.message ?? "決済処理に失敗しました");
-        return;
+      // EC注文は常にサーバーAPI経由。EC はクレジットカード払いのみで、金額の確定・PAY.JP 課金は
+      // サーバー側で行う（画面表示の合計を expectedTotal として渡し、一致しない場合は課金されない）。
+      // 失敗時のクーポン予約の解放もサーバー側で行われる。
+      console.log("[ec-confirm] create-order 開始, amount:", totalWithCoupon);
+      let res: Response | null = null;
+      try {
+        res = await authFetch("/api/ec/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientRequestId: attempt.requestId,
+            storeId: storeIdForOrder,
+            customerId: userId ?? null,
+            items: cartItems,
+            expectedTotal: totalWithCoupon,
+            discountAmount: usedPoints,
+            couponId: selectedCoupon?.couponId ?? null,
+            couponDeliveryId,
+            notes: notesStr,
+            shippingAddress,
+            deliveryTimeSlot: deliveryTime,
+            guestEmail: guestEmailVal,
+            customerName: `${lastName} ${firstName}`.trim() || null,
+          }),
+        });
+      } catch {
+        res = null;
       }
-
-      // EC注文は常にサーバーAPI経由（RLSをバイパス）
-      console.log("[ec-confirm] create-order 開始");
-      const res = await fetch("/api/ec/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          storeId: storeIdForOrder,
-          customerId: userId ?? null,
-          paymentStatus: hasCardInfo ? "paid" : "unpaid",
-          items: cartItems,
-          subtotal,
-          discountAmount: usedPoints,
-          couponId: selectedCoupon?.couponId ?? null,
-          couponDeliveryId,
-          notes: notesStr,
-          shippingAddress,
-          deliveryTimeSlot: deliveryTime,
-          guestEmail: guestEmailVal,
-          customerName: `${lastName} ${firstName}`.trim() || null,
-          payjpChargeId: chargeData.chargeId ?? null,
-        }),
-      });
-      const json = await res.json();
-      result = res.ok
-        ? { orderId: json.orderId, error: null }
-        : { orderId: "", error: json.error || "注文の作成に失敗しました" };
+      const json = res ? await res.json().catch(() => null) : null;
+      if (res?.ok && json?.orderId) {
+        result = { orderId: json.orderId, error: null };
+      } else if (!json || json.code === "order_in_progress") {
+        // 応答が届かなかった・別の要求が処理中: 注文が作成されたか分からないため、同じ試行のまま再送してもらう
+        result = { orderId: "", error: json?.error || "通信エラーが発生しました。もう一度「注文を確定する」を押してください。", outcomeUnknown: true };
+      } else {
+        result = { orderId: "", error: json.error || "注文の作成に失敗しました" };
+      }
     } catch (e: any) {
       if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
+      saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
       submittingRef.current = false;
       setSubmitting(false);
       setSubmitError(e?.message || "注文処理中にエラーが発生しました");
@@ -389,18 +436,22 @@ export default function ECConfirmPage() {
     submittingRef.current = false;
     setSubmitting(false);
     console.log("[ec-confirm] create-order →", result);
-    if (result.error) { setSubmitError(result.error); return; }
+    if (result.error) {
+      // 失敗が確定した場合（サーバー側で注文・クーポン予約は取り消し済み）は次回は新しい試行にする
+      if (!result.outcomeUnknown) {
+        if (couponDeliveryId) await releaseCoupon(couponDeliveryId);
+        saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
+      }
+      setSubmitError(result.error);
+      return;
+    }
+    saveCheckoutAttempt(CHECKOUT_ATTEMPT_KEY, null);
 
-    // ポイント付与・消費と電話番号をDBに反映
+    // ポイントの利用・付与はサーバー側で注文確定時に反映済み。ここでは電話番号のみ保存し、表示用にポイントを再取得する
     if (userId) {
-      const { data: userData } = await supabase
-        .from("users").select("points").eq("id", userId).maybeSingle();
-      const currentPts = Number(userData?.points) || 0;
-      const newPts = Math.max(0, currentPts - usedPoints + earnedPoints);
-      await supabase
-        .from("users")
-        .update({ points: newPts, ...(phone.trim() ? { phone: phone.trim() } : {}) })
-        .eq("id", userId);
+      if (phone.trim()) {
+        await supabase.from("users").update({ phone: phone.trim() }).eq("id", userId);
+      }
       await refreshPoints();
     }
 
@@ -427,17 +478,11 @@ export default function ECConfirmPage() {
       }
     } catch { /* ignore */ }
 
-    fetch("/api/email/send-ec-order-confirmation", {
+    authFetch("/api/email/send-ec-order-confirmation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        orderId: result.orderId,
-        customerName: `${lastName} ${firstName}`.trim(),
-        customerPhone: phone,
-        shippingAddress,
-        deliveryTime,
-        guestEmail: guestEmailVal,
-      }),
+      // メール本文・宛先はサーバー側で注文データ（DB）から組み立てる
+      body: JSON.stringify({ orderId: result.orderId }),
     })
       .then(async (r) => {
         const data = await r.json();
@@ -679,8 +724,16 @@ export default function ECConfirmPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">配送料</span>
-              <span className="text-sm">{shippingFee === 0 ? "無料" : `${shippingFee.toLocaleString()}円`}</span>
+              <span className="text-sm">
+                {shippingFeeStatus === "loading" ? "計算中..." : shippingFee === 0 ? "無料" : `${shippingFee.toLocaleString()}円`}
+              </span>
             </div>
+            {shippingFeeStatus === "error" && (
+              <p className="text-xs text-red-500">
+                送料を計算できませんでした。
+                <button type="button" onClick={() => setShippingFeeReloadKey((k) => k + 1)} className="underline ml-1">再計算する</button>
+              </p>
+            )}
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">ポイント利用</span>
               <span className="text-sm text-gray-500">{pointLabel}</span>
@@ -723,10 +776,10 @@ export default function ECConfirmPage() {
             買い物を続ける
           </motion.button>
           <motion.button
-            whileHover={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim() ? undefined : { scale: 1.02 }}
-            whileTap={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim() ? undefined : { scale: 0.98 }}
+            whileHover={submitting || shippingFeeStatus !== "ready" || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim() ? undefined : { scale: 1.02 }}
+            whileTap={submitting || shippingFeeStatus !== "ready" || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim() ? undefined : { scale: 0.98 }}
             onClick={handleConfirmOrder}
-            disabled={submitting || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim()}
+            disabled={submitting || shippingFeeStatus !== "ready" || !hasCardInfo || !lastName.trim() || !firstName.trim() || !phone.trim() || !email.trim()}
             className="flex-1 bg-[var(--ec-400,#fbbf24)] hover:bg-[var(--ec-500,#f59e0b)] disabled:bg-[var(--ec-200,#fde68a)] disabled:cursor-not-allowed text-[var(--ec-button-text,#ffffff)] font-bold py-3 rounded-md text-sm transition-colors">
             {submitting ? "処理中..." : "注文を確定する"}
           </motion.button>

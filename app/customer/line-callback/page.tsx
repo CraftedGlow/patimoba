@@ -2,11 +2,14 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/database.types"
+import { LINE_SESSION_PURPOSE, verifySignedValue } from "@/lib/signed-value"
 import { LineCallbackClient } from "./client"
 
 export default async function LineCallbackPage() {
   const cookieStore = await cookies()
-  const uid = cookieStore.get("line_session_uid")?.value
+  // 署名と有効期限を検証する（改ざん・期限切れは未ログイン扱い）。
+  // 使用後のクッキーはクライアントから /api/line/auth/session で削除する。
+  const uid = verifySignedValue(LINE_SESSION_PURPOSE, cookieStore.get("line_session_uid")?.value)
 
   if (!uid) {
     redirect("/customer/login?error=session_expired")

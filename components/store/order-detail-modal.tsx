@@ -6,6 +6,7 @@ import { X, Printer, Check } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import type { Order } from "@/lib/types";
 import { supabase } from "@/lib/supabase";
+import { authFetch } from "@/lib/auth-fetch";
 
 interface OrderItemWithOptions {
   id: string;
@@ -92,16 +93,11 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
     setPrintError(null);
     setPrintDone(false);
     try {
-      const res = await fetch("/api/print", {
+      const res = await authFetch("/api/print", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: order.id,
-          lineName: order.lineName || null,
-          phone: order.phone || null,
-          orderDate: order.orderDate || null,
-          paymentStatus: order.paymentStatus || null,
-        }),
+        // LINE名・電話番号・注文日時・支払状況はサーバー側でDBから取得する
+        body: JSON.stringify({ orderId: order.id }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));

@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { payjpPost } from "@/lib/payjp";
+import { payjpPost, verifyTdsCallbackUid, isSafeReturnPath } from "@/lib/payjp";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// GET /api/payjp/tds-callback?uid=<user_id>&rp=<return_path>
+// GET /api/payjp/tds-callback?uid=<user_id>&sig=<uid の署名>&rp=<return_path>
 // PAY.JP リダイレクト型 3DS のコールバックエンドポイント
 // tds_finish → Customer 作成 → DB 保存 → 確認ページへリダイレクト
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const userId = searchParams.get("uid");
-  const returnPath = searchParams.get("rp") ?? "/customer/ec/confirm";
+  const sig = searchParams.get("sig");
+  const rawReturnPath = searchParams.get("rp");
+  // オープンリダイレクト防止: サイト内の相対パスのみ許可
+  const returnPath = isSafeReturnPath(rawReturnPath) ? rawReturnPath : "/customer/ec/confirm";
 
   const errorRedirect = (msg: string) =>
     NextResponse.redirect(
@@ -22,6 +25,11 @@ export async function GET(req: NextRequest) {
 
   if (!userId) {
     return errorRedirect("ユーザー情報が見つかりません");
+  }
+
+  // start-tds が発行した署名付きURLでなければ受け付けない（他ユーザー向けのコールバック偽造防止）
+  if (!verifyTdsCallbackUid(userId, sig)) {
+    return errorRedirect("セッション情報が見つかりません。最初からやり直してください。");
   }
 
   try {
@@ -44,7 +52,7 @@ export async function GET(req: NextRequest) {
     const tdsData = await tdsRes.json();
 
     if (!tdsRes.ok) {
-      console.error("[tds-callback] tds_finish エラー:", tdsData);
+      console.error("[tds-callback] tds_finish エラー:", tdsData?.error?.code ?? tdsRes.status);
       return errorRedirect("3Dセキュア認証に失敗しました。もう一度お試しください。");
     }
 
@@ -56,11 +64,11 @@ export async function GET(req: NextRequest) {
     }
 
     // 4. Customer 作成
-    const cusRes = await payjpPost("/customers", { card: tokenId });
+    const cusRes = await payjpPost("/customers", { card: tokenId, "metadata[user_id]": userId });
     const cusData = await cusRes.json();
 
     if (!cusRes.ok) {
-      console.error("[tds-callback] customer 作成エラー:", cusData);
+      console.error("[tds-callback] customer 作成エラー:", cusData?.error?.code ?? cusRes.status);
       return errorRedirect("カード登録に失敗しました。もう一度お試しください。");
     }
 
@@ -75,7 +83,6 @@ export async function GET(req: NextRequest) {
       return errorRedirect("カード情報の保存に失敗しました。");
     }
 
-    console.log("[tds-callback] 完了 customerId:", cusData.id, "→", returnPath);
     return NextResponse.redirect(new URL(returnPath, req.url));
   } catch (e) {
     console.error("[tds-callback] 例外:", e);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { resolveStoreLineConfig } from "@/lib/line";
+import { authorizeStoreStaff } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,22 @@ export async function POST(req: NextRequest) {
     const text = typeof message === "string" ? message.trim() : "";
     if (!storeId || !customerId || !text) {
       return NextResponse.json({ error: "storeId, customerId, message required" }, { status: 400 });
+    }
+
+    // 店舗の公式LINEから任意の文面を送れる操作のため、その店舗（または親のマスター店舗）のスタッフに限る
+    const auth = await authorizeStoreStaff(req, supabaseAdmin, storeId);
+    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status });
+
+    // 顧客一覧（hooks/use-customers.ts）と同じく「その店舗で注文実績がある顧客」のみ送信対象とする
+    const { data: storeOrder } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .eq("store_id", storeId)
+      .eq("customer_id", customerId)
+      .limit(1)
+      .maybeSingle();
+    if (!storeOrder) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const [{ data: user }, lineConfig] = await Promise.all([

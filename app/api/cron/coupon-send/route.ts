@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendCouponPush, resolveStoreAudience, resolveOrderedCustomerIds } from "@/lib/coupons";
 
+// processing のまま、この時間を過ぎた配信予約は中断されたものとみなして再開する（関数の最大実行時間より十分長く）
+const STALE_PROCESSING_MS = 30 * 60 * 1000;
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -70,21 +73,48 @@ async function processSend(send: any) {
 }
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) {
+  // CRON_SECRET 未設定時に "Bearer undefined" で通ってしまわないよう、未設定なら常に拒否する
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const now = new Date();
+  // processing のまま一定時間経過したもの（前回実行がタイムアウト等で中断された）も再開対象にする
+  const staleBefore = new Date(now.getTime() - STALE_PROCESSING_MS).toISOString();
+
   const { data: pendingSends } = await supabaseAdmin
     .from("coupon_sends")
-    .select("*")
-    .eq("status", "pending")
-    .lte("scheduled_at", new Date().toISOString());
+    .select("id, status, processing_started_at")
+    .or(`status.eq.pending,and(status.eq.processing,processing_started_at.lt.${staleBefore})`)
+    .lte("scheduled_at", now.toISOString());
 
   if (!pendingSends || pendingSends.length === 0) {
     return NextResponse.json({ processed: 0 });
   }
 
-  await Promise.allSettled(pendingSends.map(processSend));
+  // cron の多重起動・前回実行の長引きで同じ配信予約を二重に処理しないよう、
+  // 読み取った時点の状態のままである場合に限る条件付き更新で、1件ずつ確保できたものだけを処理する。
+  // 再開時に既に配布済みのユーザーは sendCouponPush 側で配布記録の一意制約によりスキップされる
+  const claimed: any[] = [];
+  for (const row of pendingSends) {
+    let claim = supabaseAdmin
+      .from("coupon_sends")
+      .update({ status: "processing", processing_started_at: now.toISOString() })
+      .eq("id", row.id)
+      .eq("status", row.status);
+    claim = row.processing_started_at
+      ? claim.eq("processing_started_at", row.processing_started_at)
+      : claim.is("processing_started_at", null);
+    const { data, error } = await claim.select("*").maybeSingle();
+    if (error) {
+      console.error("[coupon-send cron] claim failed for send:", row.id, error);
+      continue;
+    }
+    if (data) claimed.push(data);
+  }
 
-  return NextResponse.json({ processed: pendingSends.length });
+  await Promise.allSettled(claimed.map(processSend));
+
+  return NextResponse.json({ processed: claimed.length });
 }

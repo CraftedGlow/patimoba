@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { payjpPost } from "@/lib/payjp";
+import { payjpRefund, payjpIsChargeRefunded } from "@/lib/payjp";
 import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 import { releaseCouponForCancelledOrder } from "@/lib/coupons";
+import { revertOrderPoints } from "@/lib/order-points";
 import { getAuthenticatedAppUser, isGuestUserId, isStoreStaff } from "@/lib/api-auth";
+import { ORDER_ACCESS_HEADER, isValidOrderAccessKey } from "@/lib/signed-value";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -64,7 +66,10 @@ export async function POST(
   // ログインセッションが無い場合は、LINE未ログインのECゲスト注文（customer_idが
   // auth_user_idを持たない行）に限って許可する（本物のアカウントの注文を
   // 第三者が勝手にキャンセルすることは防ぐ）
-  if (appUser) {
+  // 注文確認メールのリンク（その注文専用の鍵付き）から開いた場合は、ログインなしでも本人として扱う
+  if (isValidOrderAccessKey(req.headers.get(ORDER_ACCESS_HEADER), orderId)) {
+    // 鍵はその注文のためだけに発行され、メールの受信者（注文者）しか知らない
+  } else if (appUser) {
     const isOwner = order.customer_id === appUser.id
     const isStaff = await isStoreStaff(supabaseAdmin, appUser.id, order.store_id)
     if (!isOwner && !isStaff) {
@@ -82,49 +87,63 @@ export async function POST(
     return NextResponse.json({ error: "キャンセル期限を過ぎています" }, { status: 400 })
   }
 
-  // クレジットカード決済済みの場合は PAY.JP で返金
-  let refunded = false
-  if (order.payment_status === "paid" && order.payjp_charge_id) {
-    const refundRes = await payjpPost(`/charges/${order.payjp_charge_id}/refund`, {})
-    const refundData = await refundRes.json()
-    if (!refundRes.ok) {
-      console.error("[cancel] PAY.JP 返金エラー:", refundData)
-      return NextResponse.json({ error: "返金処理に失敗しました。お手数ですが店舗までご連絡ください。" }, { status: 500 })
-    }
-    refunded = true
+  // 返金・ポイント返還・クーポン解放より先に、読み取った時点のステータスのままである場合に限って
+  // cancelled へ条件付き更新し、このリクエストがキャンセル処理の権利を確保する。
+  // 同時に複数のキャンセルが来ても1件しか更新できないため、返金やポイント返還が二重に行われない。
+  const previousStatus: string = order.order_status
+  const { data: claimed, error: claimErr } = await supabaseAdmin
+    .from("orders")
+    .update({ order_status: "cancelled" })
+    .eq("id", orderId)
+    .eq("order_status", previousStatus)
+    .select("id")
+    .maybeSingle()
+
+  if (claimErr) {
+    console.error("[cancel] DB 更新エラー:", claimErr)
+    return NextResponse.json({ error: "キャンセル処理に失敗しました" }, { status: 500 })
+  }
+  if (!claimed) {
+    // 他のリクエストが先にステータスを変更した（キャンセル済み等）
+    return NextResponse.json({ error: "この注文はキャンセルできません" }, { status: 400 })
   }
 
-  // 使用ポイントを返還
-  const discountAmount = Number(order.discount_amount ?? 0)
-  if (discountAmount > 0 && order.customer_id) {
-    const { data: user } = await supabaseAdmin
-      .from("users")
-      .select("points")
-      .eq("id", order.customer_id)
-      .maybeSingle()
-
-    if (user) {
-      await supabaseAdmin
-        .from("users")
-        .update({ points: (Number(user.points) ?? 0) + discountAmount })
-        .eq("id", order.customer_id)
+  // クレジットカード決済済みの場合は PAY.JP で返金
+  if (order.payment_status === "paid" && order.payjp_charge_id) {
+    // 返金APIが失敗・通信エラーになった場合でも、実際には返金済み（前回の試行で返金された等）のことがあるため確認する
+    const refunded =
+      (await payjpRefund(order.payjp_charge_id)) ||
+      (await payjpIsChargeRefunded(order.payjp_charge_id)) === true
+    if (!refunded) {
+      console.error("[cancel] PAY.JP 返金エラー:", { orderId, chargeId: order.payjp_charge_id })
+      // 返金できなかった場合はキャンセルを取り消し、元のステータスへ戻して再試行できるようにする
+      const { error: revertErr } = await supabaseAdmin
+        .from("orders")
+        .update({ order_status: previousStatus })
+        .eq("id", orderId)
+        .eq("order_status", "cancelled")
+      if (revertErr) console.error("[cancel] ステータス復元エラー:", revertErr)
+      return NextResponse.json({ error: "返金処理に失敗しました。お手数ですが店舗までご連絡ください。" }, { status: 500 })
     }
+
+    // 店舗側の一覧・レシートで「決済済み」のまま残らないよう payment_status も反映する。
+    // ここで失敗しても返金・キャンセル自体は完了しているため、ログのみ残して処理を続ける
+    const { error: paymentErr } = await supabaseAdmin
+      .from("orders")
+      .update({ payment_status: "refunded" })
+      .eq("id", orderId)
+    if (paymentErr) console.error("[cancel] payment_status 更新エラー（返金は完了済み）:", paymentErr)
+  }
+
+  // ポイントを戻す（利用分を返還し、この注文で付与した分を回収する）。
+  // DB関数 revert_order_points が反映済みの注文に限り1回だけ処理するため、二重返還は起こらない
+  if (order.customer_id) {
+    const reverted = await revertOrderPoints(supabaseAdmin, orderId)
+    if (!reverted) console.error(`[cancel] ポイント返還に失敗しました: orderId=${orderId}`)
   }
 
   // 使用済みクーポンを未使用状態へ戻す
   await releaseCouponForCancelledOrder(orderId, supabaseAdmin)
-
-  // order_status を cancelled に更新（ステータス確認済みのため単純 UPDATE）
-  // 返金済みの場合は payment_status も反映し、店舗側の一覧・レシートで「決済済み」のまま残らないようにする
-  const { error: updateErr } = await supabaseAdmin
-    .from("orders")
-    .update({ order_status: "cancelled", ...(refunded ? { payment_status: "refunded" } : {}) })
-    .eq("id", orderId)
-
-  if (updateErr) {
-    console.error("[cancel] DB 更新エラー:", updateErr)
-    return NextResponse.json({ error: "キャンセル処理に失敗しました" }, { status: 500 })
-  }
 
   // キャンセル通知メッセージ送信（レスポンス前に完了させる）
   // LINEサービスメッセージを優先し、送れなかった場合（ECゲスト等）はメールで通知する

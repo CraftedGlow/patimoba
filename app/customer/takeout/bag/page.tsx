@@ -84,7 +84,7 @@ export default function TakeoutBagPage() {
       if (selectedBag) {
         sessionStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ id: selectedBag.id, name: selectedBag.name, price: selectedBag.price, quantity })
+          JSON.stringify({ id: selectedBag.id, name: selectedBag.name, price: selectedBag.price, quantity, productIds: selectedBag.productIds })
         );
       } else {
         sessionStorage.removeItem(STORAGE_KEY);

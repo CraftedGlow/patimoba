@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import jwt from "jsonwebtoken";
+import { authorizeUserAccess } from "@/lib/api-auth";
+import { signTdsCallbackUid, isSafeReturnPath } from "@/lib/payjp";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,6 +22,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "token_id と user_id は必須です" }, { status: 400 });
     }
 
+    // 他人の pending_tds_token を書き換え、3DS コールバック経由で他人の customer_id を
+    // 上書きできないよう、本人（またはゲスト行）に限定する
+    const access = await authorizeUserAccess(req, supabaseAdmin, user_id);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
     const { error: dbError } = await supabaseAdmin
       .from("users")
       .update({ pending_tds_token: token_id })
@@ -27,19 +36,19 @@ export async function POST(req: NextRequest) {
 
     if (dbError) {
       console.error("[start-tds] DB 保存エラー:", dbError);
-      return NextResponse.json({ error: "DB 保存エラー: " + dbError.message }, { status: 500 });
+      return NextResponse.json({ error: "3Dセキュア開始に失敗しました" }, { status: 500 });
     }
 
     const host = req.headers.get("host") ?? "localhost:3000";
     const proto = host.startsWith("localhost") ? "http" : "https";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? `${proto}://${host}`;
-    const rp = return_path ?? "/customer/ec/confirm";
+    const rp = isSafeReturnPath(return_path) ? return_path : "/customer/ec/confirm";
+    // uid の署名（sig）を付け、コールバックを他ユーザー向けに偽造できないようにする
     const callbackUrl =
       `${siteUrl}/api/payjp/tds-callback` +
       `?uid=${encodeURIComponent(user_id)}` +
+      `&sig=${signTdsCallbackUid(user_id)}` +
       `&rp=${encodeURIComponent(rp)}`;
-
-    console.log("[start-tds] callbackUrl:", callbackUrl);
 
     const secretKey = process.env.PAYJP_SECRET_KEY!;
     const jws = jwt.sign({ url: callbackUrl }, secretKey, { algorithm: "HS256" });
@@ -52,8 +61,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ redirectUrl: tdsStartUrl });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "3DS 開始処理に失敗しました";
     console.error("[start-tds] 例外:", e);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "3DS 開始処理に失敗しました" }, { status: 500 });
   }
 }

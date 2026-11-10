@@ -92,7 +92,8 @@ export default function CustomerSignupPage() {
       const res = await fetch("/api/admin/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: cleanEmail, password }),
+        // 顧客の新規会員登録（未ログインで呼べるモード。管理者用のアカウント作成とは区別する）
+        body: JSON.stringify({ email: cleanEmail, password, mode: "customer" }),
       });
       const result = await res.json();
       if (!res.ok) {
@@ -104,6 +105,11 @@ export default function CustomerSignupPage() {
       }
 
       const fullName = [lastName, firstName].filter(Boolean).join(" ");
+
+      // users 行の作成は RLS（users_insert_self_or_admin: auth_user_id = auth.uid()）を通すため、
+      // 作成した auth ユーザーで先にログインしてから行う
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+      if (signInErr) throw new Error("ログインに失敗しました");
 
       if (linkUserId) {
         const { error: updateErr } = await supabase

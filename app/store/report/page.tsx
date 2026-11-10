@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
+import { storeVisibleOrderFilter } from "@/lib/order-visibility";
 
 function RankIcon({ rank }: { rank: number }) {
   if (rank === 0) {
@@ -143,13 +144,16 @@ export default function StoreReportPage() {
           .eq("store_id", storeId)
           .gte("created_at", start)
           .lt("created_at", end)
+          // 作成処理中の注文は売上に含めない（店舗の注文一覧と同じ条件）
+          .or(storeVisibleOrderFilter())
           .order("created_at", { ascending: true }),
         supabase
           .from("orders")
           .select("total_amount, customer_id")
           .eq("store_id", storeId)
           .gte("created_at", prevStart)
-          .lt("created_at", prevEnd),
+          .lt("created_at", prevEnd)
+          .or(storeVisibleOrderFilter()),
         supabase
           .from("store_business_hours")
           .select("day_of_week, is_closed, open_time, close_time")
@@ -169,7 +173,8 @@ export default function StoreReportPage() {
             .select("customer_id")
             .eq("store_id", storeId)
             .in("customer_id", customerIds)
-            .lt("created_at", start);
+            .lt("created_at", start)
+            .or(storeVisibleOrderFilter());
           setRepeatCustomerIds(new Set((histRows ?? []).map((r: any) => r.customer_id).filter(Boolean)));
         } else {
           setRepeatCustomerIds(new Set());

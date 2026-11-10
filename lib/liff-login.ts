@@ -35,11 +35,13 @@ export async function completeLiffLogin(liff: any): Promise<LiffLoginResult> {
 
   if (otp) {
     const { supabase } = await import("@/lib/supabase")
-    await supabase.auth.verifyOtp({
+    // ここで失敗したままログイン済みとして進むと、ログイン必須のAPIがすべて失敗するため止める
+    const { error: otpError } = await supabase.auth.verifyOtp({
       email: otp.email,
       token: otp.token,
       type: "magiclink",
     })
+    if (otpError) throw new Error(`login_failed: ${otpError.message}`)
 
     // ログイン中の本人の「今の」LINE表示名・アイコンをそのまま反映する。
     // アカウント確定（IDトークン検証・OTPログイン）は既に終わっているので、

@@ -159,9 +159,14 @@ export async function priceCartItems(
     customizations.flatMap((c) => (c.options ?? []).map((o) => o?.wholeCakeOptionId)).filter((id) => UUID_RE.test(String(id)))
   );
   const cakeProductIds = (products ?? []).filter((p: any) => p.is_preorder_required).map((p: any) => p.id);
+  // クリスマス注文の追加オプションチェックボックス: ラベルはクライアント申告値を使わず、
+  // 店舗設定（stores.christmas_checkbox_label）から取得する
+  const hasChristmasExtraOption = customizations.some((c) =>
+    (c.options ?? []).some((o) => o?.wholeCakeOptionId === "christmas-extra-option")
+  );
 
   const empty = Promise.resolve({ data: [] as any[] });
-  const [noshiRes, plateRes, sizeRes, candleRes, decorationRes, linkedGroupRes] = await Promise.all([
+  const [noshiRes, plateRes, sizeRes, candleRes, decorationRes, linkedGroupRes, christmasOptRes] = await Promise.all([
     noshiIds.length ? supabaseAdmin.from("noshi").select("id, name, price").in("id", noshiIds) : empty,
     plateIds.length ? supabaseAdmin.from("message_plates").select("id, name, price").in("id", plateIds) : empty,
     channel === "takeout" && sizeIds.length
@@ -180,7 +185,11 @@ export async function priceCartItems(
           .select("product_id, decoration_groups ( id, name, decoration_group_items ( decoration_id ) )")
           .in("product_id", cakeProductIds)
       : empty,
+    hasChristmasExtraOption
+      ? supabaseAdmin.from("stores").select("christmas_checkbox_label").eq("id", storeId).maybeSingle()
+      : Promise.resolve({ data: null as any }),
   ]);
+  const christmasCheckboxLabel: string | null = christmasOptRes?.data?.christmas_checkbox_label ?? null;
   const noshiMap = new Map<string, any>((noshiRes.data ?? []).map((n: any) => [n.id, n]));
   const plateMap = new Map<string, any>((plateRes.data ?? []).map((m: any) => [m.id, m]));
   const sizeMap = new Map<string, any>((sizeRes.data ?? []).map((s: any) => [s.id, s]));
@@ -279,6 +288,21 @@ export async function priceCartItems(
               name: String(plateSize.label ?? ""),
               price: Number(plateSize.additional_price) || 0,
               groupName: "メッセージプレート",
+              decorationId: null,
+              shortName: null,
+            });
+            continue;
+          }
+
+          if (optionId === "christmas-extra-option") {
+            // 店舗がクリスマス注文用に設定した追加オプションチェックボックス。
+            // ラベルはクライアント申告値を使わず、店舗設定（christmasCheckboxLabel）から取得する
+            if (!christmasCheckboxLabel) return invalid;
+            options.push({
+              wholeCakeOptionId: optionId,
+              name: christmasCheckboxLabel,
+              price: 0,
+              groupName: "追加オプション",
               decorationId: null,
               shortName: null,
             });

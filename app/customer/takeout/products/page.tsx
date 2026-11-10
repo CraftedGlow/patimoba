@@ -266,7 +266,7 @@ export default function TakeoutProductsPage() {
   );
 
   // クリスマスケーキご予約: 「クリスマス限定」種類のケーキのみを一覧表示する
-  const christmasCakes = wholeCakes.filter((c) => c.categoryName === "クリスマス限定");
+  const christmasCakes = wholeCakes.filter((c) => c.categoryName === "クリスマス限定" && c.isActive !== false);
 
   // プリントデコレーションは準備日数が必要なため、当日注文では準備日数0の場合のみ表示する
   const visiblePrintDeco =

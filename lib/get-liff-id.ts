@@ -133,3 +133,14 @@ export function getLiffStoreInfo(): { storeId: string; isMaster: boolean } | nul
     return null;
   }
 }
+
+/**
+ * 店舗が特定できない深いリンク（store パラメータ欠落等）で、前回アクセスした
+ * 別店舗のキャッシュ済み liffId をそのまま使い回してしまわないようクリアする
+ */
+export function clearLiffIdCache(): void {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_STORE_ID_KEY);
+  } catch {}
+}

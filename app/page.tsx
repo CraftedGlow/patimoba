@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { LineSpinner } from "@/components/ui/line-spinner";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
-import { getLiffId, parseLiffStateStoreId, parseLiffStateCouponToken } from "@/lib/get-liff-id";
+import { getLiffId, parseLiffStateStoreId, parseLiffStateCouponToken, clearLiffIdCache } from "@/lib/get-liff-id";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp"
 
@@ -120,6 +120,18 @@ export default function Home() {
       // 追加パスが無いためクエリがそのままエンドポイントに渡ってくる。ログイン後、店舗TOPを経由せず
       // 直接クリスマスケーキ一覧へ飛ばして余計な画面遷移・ローディングを減らす
       const isChristmasDeepLink = params.get("mode") === "christmas";
+
+      // store パラメータが欠落した mode=christmas リンクは、どの店舗向けか特定できない。
+      // ここで getLiffId(null) を呼ぶと別店舗を見た際にキャッシュされた liffId を誤って
+      // 使い回してしまう（別店舗のクリスマスページに飛ぶ不具合の原因になるため）、
+      // キャッシュをクリアしてログイン画面に戻す
+      if (isChristmasDeepLink && !storeId) {
+        clearLiffIdCache();
+        try { sessionStorage.removeItem("liff_return_path"); } catch {}
+        router.replace("/login");
+        return;
+      }
+
       const deepLinkPath = isChristmasDeepLink && storeId ? `/customer/takeout/products?mode=christmas&store=${storeId}` : null;
 
       const liffId = await getLiffId(storeId);

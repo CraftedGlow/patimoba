@@ -85,6 +85,12 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     setViewedStoreIds(loadArray(VIEWED_KEY))
   }, [])
 
+  // LINEアプリ内ブラウザのヘッダーにはページタイトルが表示されるため、店舗が
+  // 決まっている間はその店舗名を表示する（未選択時はデフォルトのタイトルに戻す）
+  useEffect(() => {
+    document.title = selectedStoreName || "パティモバ - 洋菓子店向けSaaS"
+  }, [selectedStoreName])
+
   // LINE未ログインのままEC決済まで進んだゲスト用に作成したユーザーIDを復元する
   const setGuestUserId = (id: string | null) => {
     setUserId(id)

@@ -491,12 +491,14 @@ export default function TakeoutConfirmPage() {
       const preIssuedToken = (() => { try { return sessionStorage.getItem("patimoba_notification_token"); } catch { return null; } })();
       if (preIssuedToken) {
         try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
-        authFetch("/api/line/send-service-message", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
-        }).catch(() => {});
-        serviceMessageSent = true;
+        try {
+          const sendRes = await authFetch("/api/line/send-service-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: result.orderId, notificationToken: preIssuedToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
+          });
+          serviceMessageSent = sendRes.ok;
+        } catch { /* 送信失敗時は下のフォールバックに進む */ }
       }
 
       if (!serviceMessageSent) {
@@ -514,12 +516,12 @@ export default function TakeoutConfirmPage() {
             });
             if (tokenRes.ok) {
               const { notificationToken } = await tokenRes.json();
-              authFetch("/api/line/send-service-message", {
+              const sendRes = await authFetch("/api/line/send-service-message", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ orderId: result.orderId, notificationToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
-              }).catch(() => {});
-              serviceMessageSent = true;
+              });
+              serviceMessageSent = sendRes.ok;
             }
           }
         } catch { /* LIFF未初期化時はスキップ */ }

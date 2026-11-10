@@ -103,9 +103,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No channel access token available" }, { status: 500 });
     }
 
-    const templateName = isEc
-      ? (process.env.LINE_SERVICE_TEMPLATE_EC ?? "order_confirmed_ec_ja")
-      : (process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_request_d_o_ja");
+    // EC・テイクアウトで審査済みの同じテンプレートを共用する(文面はhow_to_receiveで出し分け)
+    const templateName = process.env.LINE_SERVICE_TEMPLATE_TAKEOUT ?? "order_request_d_o_ja";
 
     // 受取日時
     let dateStr = "";

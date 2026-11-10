@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { useStores } from "@/hooks/use-stores";
+import { useAuth } from "@/lib/auth-context";
 import { useCustomerContext } from "@/lib/customer-context";
+import { completeLiffLogin } from "@/lib/liff-login";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { Store } from "@/lib/types";
 import { Search } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
+
+const LIFF_LOGIN_TIMESTAMP_KEY = "patimoba_liff_login_ts";
+// takeoutのpatimoba_order_liff_idと同じ目的だが、同一タブ内でEC/テイクアウトの
+// フローが混ざらないよう別キーにする
+const EC_ORDER_LIFF_ID_KEY = "patimoba_ec_order_liff_id";
 
 function StoreCard({
   store,
@@ -48,19 +55,70 @@ function StoreCard({
 export default function ECStorePage() {
   const router = useRouter();
   const { stores, loading } = useStores();
+  const { user, loading: authLoading, setUser } = useAuth();
   const { setSelectedStoreId, setSelectedStoreName, profile, userId,
     points } = useCustomerContext();
   const { storeLogoUrl } = useEcContext();
   const { clear: clearCart } = useCart();
+  const [loginDone, setLoginDone] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // 店舗選択画面では前回選んだ店舗のロゴ・テーマを引きずらないようにリセットする
   useEffect(() => {
     setSelectedStoreId(null);
   }, []);
 
-  // ゲストがリンクから入り直したときはカートをリセット
+  // テイクアウトの一覧画面と同じ「店舗に紐付かない共通LIFF」でログインを試みる。
+  // LINEアプリ外からの通常アクセスはエラーにせずゲストのまま進める。
   useEffect(() => {
-    if (userId) return;
+    if (authLoading) return;
+
+    const ts = sessionStorage.getItem(LIFF_LOGIN_TIMESTAMP_KEY);
+    if (ts && Date.now() - Number(ts) < 15000 && user) {
+      setLoginDone(true);
+      return;
+    }
+
+    (async () => {
+      try {
+        const liffId = process.env.NEXT_PUBLIC_LIFF_ID;
+        if (!liffId) {
+          setLoginDone(true);
+          return;
+        }
+
+        const liff = (await import("@line/liff")).default;
+        await liff.init({ liffId });
+
+        if (!liff.isInClient()) {
+          setLoginDone(true);
+          return;
+        }
+
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        const { authUser } = await completeLiffLogin(liff);
+        setUser(authUser);
+        sessionStorage.setItem(LIFF_LOGIN_TIMESTAMP_KEY, Date.now().toString());
+        sessionStorage.setItem(EC_ORDER_LIFF_ID_KEY, liffId);
+        setLoginDone(true);
+      } catch (err: any) {
+        console.error("[EC List LIFF] login error:", err);
+        setLoginError(err?.message || "LIFF初期化エラー");
+      }
+    })();
+  }, [authLoading]);
+
+  // ゲストがリンクから入り直したときはカートをリセット(LIFFログイン判定が終わるまで待つ。
+  // 先に判定してしまうとLINEログイン済みの再訪問者のカートまで誤って消してしまうため)
+  // userIdはCustomerProvider側のeffectで1テンポ遅れて更新されることがあるため、
+  // 同じレンダーで確定しているuser(useAuth)も合わせて見て誤判定を防ぐ
+  useEffect(() => {
+    if (!loginDone) return;
+    if (user || userId) return;
     clearCart();
     // フロー中のsessionStorageもクリア
     try {
@@ -71,7 +129,7 @@ export default function ECStorePage() {
       sessionStorage.removeItem("ec_customer_phone");
       sessionStorage.removeItem("ec_customer_email");
     } catch { /* ignore */ }
-  }, []);
+  }, [loginDone]);
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredStores = stores.filter((s) =>
@@ -83,6 +141,25 @@ export default function ECStorePage() {
     setSelectedStoreName(store.name);
     router.push(`/customer/ec/products?store=${store.id}`);
   };
+
+  if (loginError) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center px-8">
+        <p className="text-red-500 text-sm text-center">{loginError}</p>
+      </div>
+    );
+  }
+
+  if (!loginDone) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <LineSpinner size={30} />
+          <p className="text-lg font-bold text-gray-900">ログイン中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--ec-bg,#ffffff)] flex flex-col">

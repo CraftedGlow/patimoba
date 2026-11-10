@@ -7,8 +7,10 @@ import { ArrowLeft, X, ShoppingBag, PartyPopper } from "lucide-react";
 import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { useCustomerContext } from "@/lib/customer-context";
+import { useAuth } from "@/lib/auth-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
+import { getStoreLiffIdStrict } from "@/lib/get-liff-id";
 import { calcItemSubtotal } from "@/lib/cart-pricing";
 import { supabase } from "@/lib/supabase";
 import { authFetch } from "@/lib/auth-fetch";
@@ -62,6 +64,7 @@ interface ShippingAddress {
 export default function ECConfirmPage() {
   const router = useRouter();
   const { userId, selectedStoreId, selectedStoreName, profile, points: userPoints, refreshPoints, setGuestUserId } = useCustomerContext();
+  const { user } = useAuth();
   const { storeLogoUrl } = useEcContext();
   const { items: cartItems, total: cartTotal, storeId: cartStoreId, clear: clearCart } = useCart();
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -478,20 +481,60 @@ export default function ECConfirmPage() {
       }
     } catch { /* ignore */ }
 
-    authFetch("/api/email/send-ec-order-confirmation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // メール本文・宛先はサーバー側で注文データ（DB）から組み立てる
-      body: JSON.stringify({ orderId: result.orderId }),
-    })
-      .then(async (r) => {
-        const data = await r.json();
-        console.log("[メール送信]", r.status, data);
-      })
-      .catch((e) => console.error("[メール送信エラー]", e));
+    // LINEミニアプリ経由でログイン済みの場合はテイクアウトと同様にLINE通知、
+    // 通常リンク経由のゲストの場合は従来通りメールで通知する
+    if (user?.raw?.line_user_id) {
+      try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
+      (async () => {
+        let serviceMessageSent = false;
+        try {
+          // 注文フローを開始した一覧LIFF(ログインに実際使ったチャネル)を優先する。
+          // 無い場合のみ店舗固有liff_idにフォールバック(他店舗やsessionStorageの
+          // キャッシュの使い回しはしない)
+          const orderLiffId = (() => { try { return sessionStorage.getItem("patimoba_ec_order_liff_id"); } catch { return null; } })();
+          const liffId = orderLiffId || (selectedStoreId ? await getStoreLiffIdStrict(selectedStoreId) : "");
+          const liff = (await import("@line/liff")).default;
+          if (liffId) await liff.init({ liffId });
+          const liffAccessToken = liff.getAccessToken();
+          if (liffAccessToken) {
+            const tokenRes = await authFetch("/api/line/issue-notification-token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: result.orderId, liffAccessToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
+            });
+            if (tokenRes.ok) {
+              const { notificationToken } = await tokenRes.json();
+              const sendRes = await authFetch("/api/line/send-service-message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId: result.orderId, notificationToken, ...(orderLiffId ? { sourceLiffId: orderLiffId } : {}) }),
+              });
+              serviceMessageSent = sendRes.ok;
+            }
+          }
+        } catch { /* LIFF未初期化時はスキップ */ }
 
-    // EC注文の通知はメールのみで行う（LINE通知は送信しない）
-    try { sessionStorage.removeItem("patimoba_notification_token"); } catch { /* ignore */ }
+        if (!serviceMessageSent) {
+          authFetch("/api/line/send-order-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: result.orderId }),
+          }).catch(() => {});
+        }
+      })();
+    } else {
+      // メール本文・宛先はサーバー側で注文データ（DB）から組み立てる
+      authFetch("/api/email/send-ec-order-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: result.orderId }),
+      })
+        .then(async (r) => {
+          const data = await r.json();
+          console.log("[メール送信]", r.status, data);
+        })
+        .catch((e) => console.error("[メール送信エラー]", e));
+    }
 
     setShowOrderComplete(true);
     setCountdown(5);

@@ -89,6 +89,32 @@ export async function getLiffId(storeId?: string | null): Promise<string> {
   return "";
 }
 
+/**
+ * storeIdからDBのみを見てliff_idを解決する(店舗自身→無ければ親店舗)。
+ * getLiffIdと違いsessionStorageのキャッシュにはフォールバックしない。
+ * 同一タブ内で他のフロー/他店舗のliff_idが混ざってはいけない呼び出し元
+ * (EC側のLIFF解決など)専用。
+ */
+export async function getStoreLiffIdStrict(storeId: string): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from("stores")
+      .select("liff_id, parent_store_id")
+      .eq("id", storeId)
+      .single();
+    if (data?.liff_id) return data.liff_id;
+    if (data?.parent_store_id) {
+      const { data: parent } = await supabase
+        .from("stores")
+        .select("liff_id")
+        .eq("id", data.parent_store_id)
+        .single();
+      if (parent?.liff_id) return parent.liff_id;
+    }
+  } catch {}
+  return "";
+}
+
 export function saveLiffId(liffId: string): void {
   try { sessionStorage.setItem(SESSION_KEY, liffId); } catch {}
 }

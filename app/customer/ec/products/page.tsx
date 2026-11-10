@@ -9,18 +9,26 @@ import { CustomerHeader } from "@/components/customer/customer-header";
 import { CartDrawer } from "@/components/customer/cart-drawer";
 import { ProductCard } from "@/components/customer/product-card";
 import { useProducts } from "@/hooks/use-products";
+import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
+import { completeLiffLogin } from "@/lib/liff-login";
 import { useCustomerContext } from "@/lib/customer-context";
 import { useEcContext } from "@/lib/ec-context";
 import { useCart } from "@/lib/cart-context";
 import { supabase } from "@/lib/supabase";
+import { parseLiffStateStoreId, getLiffId } from "@/lib/get-liff-id";
+
+const EC_ORDER_LIFF_ID_KEY = "patimoba_ec_order_liff_id";
 
 export default function ECProductsPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const storeFromUrl = searchParams.get("store");
+  // LINEミニアプリのURL(miniapp.line.me/{liffId}?store=xxx)経由の初回アクセスでは
+  // storeパラメータが liff.state にラップされて渡ってくることがあるためフォールバックする
+  const storeFromUrl = searchParams.get("store") ?? parseLiffStateStoreId();
   const { selectedStoreId, setSelectedStoreId, selectedStoreName, setSelectedStoreName, profile,
     points, } = useCustomerContext();
   const { storeLogoUrl } = useEcContext();
+  const { loading: authLoading, setUser } = useAuth();
 
   // URLパラメータのstoreIdを優先（直リンクで以前選択していた別店舗が残っていても上書きする）
   useEffect(() => {
@@ -37,6 +45,45 @@ export default function ECProductsPage() {
   }, [storeFromUrl, selectedStoreId, setSelectedStoreId, setSelectedStoreName]);
 
   const effectiveStoreId = selectedStoreId ?? storeFromUrl;
+
+  // この店舗が一覧(共有の「パティモバ」LIFF)とは別の公式LINEを持っている場合、
+  // 一覧ページのチャネルのまま注文完了まで進むとその店舗ではなく共有アカウントから
+  // 通知が送られてしまう(テイクアウト側で見つかった不具合と同種)。店舗が確定した
+  // 時点でその店舗自身のチャネルへ再ログインしておく。LINEアプリ外のゲスト利用は
+  // ブロックしない。
+  useEffect(() => {
+    if (!effectiveStoreId || authLoading) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const liffId = await getLiffId(effectiveStoreId);
+        if (!liffId) return;
+
+        const cachedLiffId = (() => { try { return sessionStorage.getItem(EC_ORDER_LIFF_ID_KEY); } catch { return null; } })();
+        if (cachedLiffId === liffId) return;
+
+        const liff = (await import("@line/liff")).default;
+        await liff.init({ liffId });
+        try { sessionStorage.setItem(EC_ORDER_LIFF_ID_KEY, liffId); } catch {}
+
+        if (!liff.isInClient()) return;
+
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        if (!cancelled) setUser(null);
+
+        if (!liff.isLoggedIn()) {
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        const { authUser } = await completeLiffLogin(liff);
+        if (!cancelled) setUser(authUser);
+      } catch (err) {
+        console.error("[EC Products LIFF] re-login error:", err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [effectiveStoreId, authLoading, setUser]);
   const { itemCount } = useCart();
   const { products, loading: productsLoading } = useProducts({ storeId: effectiveStoreId ?? undefined, ecOnly: true, publishedOnly: true });
 

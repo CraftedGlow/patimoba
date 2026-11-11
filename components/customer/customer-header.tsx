@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { User, ShoppingCart, ArrowLeft, Ticket } from "lucide-react";
+import { User, ShoppingCart, ArrowLeft, Ticket, Receipt } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/cart-context";
 import { useOptionalCouponBadge } from "@/lib/coupon-badge-context";
 import { useRouter } from "next/navigation";
+import { OrderHistoryDrawer } from "./order-history-drawer";
 
 interface CustomerHeaderProps {
   shopName?: string;
@@ -36,6 +37,7 @@ export function CustomerHeader({
   const couponBadge = useOptionalCouponBadge();
   const router = useRouter();
   const [erroredAvatarUrl, setErroredAvatarUrl] = useState<string | null>(null);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
 
   const handleBack = () => {
     if (backHref) router.push(backHref);
@@ -112,6 +114,9 @@ export function CustomerHeader({
               )}
             </button>
           )}
+          <button onClick={() => setShowOrderHistory(true)} className="relative">
+            <Receipt className="w-6 h-6 text-[var(--ec-header-text,#111827)]" />
+          </button>
         </div>
       </motion.header>
 
@@ -126,6 +131,8 @@ export function CustomerHeader({
           </button>
         </div>
       )}
+
+      <OrderHistoryDrawer open={showOrderHistory} onClose={() => setShowOrderHistory(false)} />
     </>
   );
 }

@@ -1,27 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
+import { resolveStoreLineConfig, resolveChannelByLiffId, getStatelessToken } from "@/lib/line";
 import { authorizeUserAccess } from "@/lib/api-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
-async function getStatelessToken(channelId: string, channelSecret: string): Promise<string> {
-  const res = await fetch("https://api.line.me/oauth2/v3/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: channelId,
-      client_secret: channelSecret,
-    }),
-  });
-  if (!res.ok) throw new Error(`stateless token error: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  return data.access_token;
-}
 
 export async function POST(req: NextRequest) {
   try {

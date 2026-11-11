@@ -6,6 +6,22 @@ export interface StoreLineConfig {
   channelSecret: string | null;
 }
 
+/** LINE Login チャネルはstatelessトークン（client_credentials）経由でのみMessaging API相当の操作ができる */
+export async function getStatelessToken(channelId: string, channelSecret: string): Promise<string> {
+  const res = await fetch("https://api.line.me/oauth2/v3/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: channelId,
+      client_secret: channelSecret,
+    }),
+  });
+  if (!res.ok) throw new Error(`stateless token error: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return data.access_token;
+}
+
 /**
  * LIFF ID でチャネル設定を逆引きする（一覧LIFFフローで使用）
  * 見つからない場合は null を返す

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, X, ShoppingBag, PartyPopper } from "lucide-react";
+import { ArrowLeft, X, ShoppingBag, PartyPopper, Receipt } from "lucide-react";
 import Link from "next/link";
 import { CustomerHeader } from "@/components/customer/customer-header";
 import { useCustomerContext } from "@/lib/customer-context";
@@ -950,12 +950,22 @@ export default function ECConfirmPage() {
               </div>
               <p className="text-base font-bold mb-2">ご注文ありがとうございます！</p>
               <p className="text-sm text-gray-500 leading-relaxed mb-1">
-                注文情報がご入力いただいたメールアドレスに届いています。
+                {user?.raw?.line_user_id
+                  ? "注文情報がLINEに届いています。"
+                  : "注文情報がご入力いただいたメールアドレスに届いています。"}
               </p>
               <p className="text-sm text-gray-500 leading-relaxed mb-5">
                 準備が整い次第発送いたします。
               </p>
               <p className="text-xs text-gray-600 mb-4">{countdown}秒後に自動で商品一覧に戻ります</p>
+              {user?.raw?.line_user_id && (
+                <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => { if (countdownRef.current) clearInterval(countdownRef.current); router.push("/customer/orders"); }}
+                  className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-full text-base transition-colors mb-3">
+                  <Receipt className="w-5 h-5" />
+                  注文履歴を確認する
+                </motion.button>
+              )}
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   console.log("[ec-confirm] 商品一覧に戻るボタン clicked");

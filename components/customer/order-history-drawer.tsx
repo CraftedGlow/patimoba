@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Receipt } from "lucide-react";
+import { X, ClipboardCheck } from "lucide-react";
 import { authFetch } from "@/lib/auth-fetch";
 import { type OrderSummary, ORDER_TYPE_LABELS, formatPickupDateTime, itemsSummary } from "@/lib/order-history";
 
@@ -63,7 +63,7 @@ export function OrderHistoryDrawer({ open, onClose }: OrderHistoryDrawerProps) {
         }`}
       >
         <div className="flex items-center gap-2">
-          <Receipt className="w-5 h-5 text-[var(--ec-500,#f59e0b)]" />
+          <ClipboardCheck className="w-5 h-5 text-[var(--ec-500,#f59e0b)]" />
           <h2 className="text-lg font-bold text-gray-900">注文履歴</h2>
         </div>
         <button

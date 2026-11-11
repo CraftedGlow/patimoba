@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, ShoppingCart, ArrowLeft, Ticket, Receipt } from "lucide-react";
+import { User, ShoppingCart, ArrowLeft, Ticket, ClipboardCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useCart } from "@/lib/cart-context";
 import { useOptionalCouponBadge } from "@/lib/coupon-badge-context";
@@ -115,7 +115,7 @@ export function CustomerHeader({
             </button>
           )}
           <button onClick={() => setShowOrderHistory(true)} className="relative">
-            <Receipt className="w-6 h-6 text-[var(--ec-header-text,#111827)]" />
+            <ClipboardCheck className="w-6 h-6 text-[var(--ec-header-text,#111827)]" />
           </button>
         </div>
       </motion.header>

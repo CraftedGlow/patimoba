@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search } from "lucide-react";
 import { LineSpinner } from "@/components/ui/line-spinner";
@@ -31,12 +31,6 @@ export default function StoreProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedProduct, setSelectedProduct] =
     useState<ProductRegistration | null>(null);
-  const [dailyOrderMax, setDailyOrderMax] = useState(30);
-  const [perOrderMax, setPerOrderMax] = useState(10);
-  const [showSettings, setShowSettings] = useState(false);
-  const [settingsSaving, setSettingsSaving] = useState(false);
-  const [settingsSaved, setSettingsSaved] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
   const [acceptsWalkin, setAcceptsWalkin] = useState(true);
 
   useEffect(() => {
@@ -50,25 +44,10 @@ export default function StoreProductsPage() {
       .then(({ data }) => {
         if (!cancelled) setAcceptsWalkin(data?.accepts_walkin ?? true);
       });
-    // Note: max_per_day/max_per_order have been removed from schema; kept as UI state only.
-    void cancelled;
     return () => {
       cancelled = true;
     };
   }, [storeId]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        settingsRef.current &&
-        !settingsRef.current.contains(e.target as Node)
-      ) {
-        setShowSettings(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     setSelectedProduct(null);
@@ -100,24 +79,6 @@ export default function StoreProductsPage() {
 
   const handleToggleSameDay = async (p: ProductRegistration) => {
     await updateProduct(p.id, { same_day_order_allowed: !p.same_day_order_allowed });
-  };
-
-  const handleSaveSettings = async () => {
-    if (!storeId) return;
-    setSettingsSaving(true);
-    setSettingsSaved(false);
-    try {
-      // Note: these limits are no longer persisted to DB.
-      void dailyOrderMax;
-      void perOrderMax;
-      setShowSettings(false);
-      setSettingsSaved(true);
-      setTimeout(() => setSettingsSaved(false), 2000);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSettingsSaving(false);
-    }
   };
 
   if (isMaster && childStores.length === 0) {
@@ -168,7 +129,7 @@ export default function StoreProductsPage() {
             ))}
           </div>
         )}
-        {/* ヘッダー: 検索 + 注文設定 */}
+        {/* ヘッダー: 検索 */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <input
@@ -185,90 +146,6 @@ export default function StoreProductsPage() {
             >
               検索
             </motion.button>
-          </div>
-
-          <div
-            className="flex items-center gap-3 text-sm"
-            ref={settingsRef}
-          >
-            <span>
-              1日の注文可能数 <b>{dailyOrderMax}個</b>
-            </span>
-            <span>
-              1回の注文可能数 <b>{perOrderMax}個</b>
-            </span>
-            <div className="relative">
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowSettings(!showSettings)}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-1.5 rounded-lg transition-colors text-sm"
-              >
-                変更
-              </motion.button>
-              <AnimatePresence>
-                {showSettings && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                    className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl p-5 z-50 w-[260px]"
-                  >
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-bold block mb-1.5">
-                          1日の注文可能数
-                        </label>
-                        <select
-                          value={dailyOrderMax}
-                          onChange={(e) =>
-                            setDailyOrderMax(Number(e.target.value))
-                          }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        >
-                          {Array.from({ length: 80 }, (_, i) => i + 1).map(
-                            (n) => (
-                              <option key={n} value={n}>
-                                {n} 個
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-bold block mb-1.5">
-                          1回の注文可能数
-                        </label>
-                        <select
-                          value={perOrderMax}
-                          onChange={(e) =>
-                            setPerOrderMax(Number(e.target.value))
-                          }
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        >
-                          {Array.from({ length: 50 }, (_, i) => i + 1).map(
-                            (n) => (
-                              <option key={n} value={n}>
-                                {n} 個
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleSaveSettings}
-                        disabled={settingsSaving}
-                        className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg transition-colors text-sm"
-                      >
-                        変更
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
           </div>
         </div>
 
@@ -597,26 +474,6 @@ export default function StoreProductsPage() {
         )}
       </AnimatePresence>
 
-      {/* 設定変更トースト */}
-      <AnimatePresence>
-        {settingsSaved && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 pointer-events-none"
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-white rounded-xl shadow-xl w-full max-w-xs mx-4 p-6"
-            >
-              <p className="text-lg font-bold text-center">変更しました</p>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { payjpRefund, payjpIsChargeRefunded } from "@/lib/payjp";
 import { resolveStoreLineConfig, resolveChannelByLiffId } from "@/lib/line";
 import { releaseCouponForCancelledOrder } from "@/lib/coupons";
 import { revertOrderPoints } from "@/lib/order-points";
-import { getAuthenticatedAppUser, isGuestUserId, isStoreStaff } from "@/lib/api-auth";
+import { getAuthenticatedAppUser, isStoreStaff } from "@/lib/api-auth";
 import { ORDER_ACCESS_HEADER, isValidOrderAccessKey } from "@/lib/signed-value";
 
 const supabaseAdmin = createClient(
@@ -63,10 +63,9 @@ export async function POST(
   }
 
   // 注文の本人、またはその店舗のスタッフのみキャンセルできる。
-  // ログインセッションが無い場合は、LINE未ログインのECゲスト注文（customer_idが
-  // auth_user_idを持たない行）に限って許可する（本物のアカウントの注文を
-  // 第三者が勝手にキャンセルすることは防ぐ）
-  // 注文確認メールのリンク（その注文専用の鍵付き）から開いた場合は、ログインなしでも本人として扱う
+  // 注文確認メールのリンク（その注文専用の鍵付き）から開いた場合は、ログインなしでも本人として扱う。
+  // orderId自体は秘密情報ではない（レシートURL・LINE通知のリンク等で露出する）ため、
+  // 「customer_idがゲスト行かどうか」だけでは未ログイン者を本人と認めない。鍵がゲストの唯一の証明。
   if (isValidOrderAccessKey(req.headers.get(ORDER_ACCESS_HEADER), orderId)) {
     // 鍵はその注文のためだけに発行され、メールの受信者（注文者）しか知らない
   } else if (appUser) {
@@ -75,7 +74,7 @@ export async function POST(
     if (!isOwner && !isStaff) {
       return NextResponse.json({ error: "権限がありません" }, { status: 403 })
     }
-  } else if (!order.customer_id || !(await isGuestUserId(supabaseAdmin, order.customer_id))) {
+  } else {
     return NextResponse.json({ error: "ログインが必要です" }, { status: 401 })
   }
 

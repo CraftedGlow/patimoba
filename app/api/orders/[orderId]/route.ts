@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { authorizeStoreStaff, authorizeUserAccess } from "@/lib/api-auth";
+import { authorizeStoreStaff, getAuthenticatedAppUser } from "@/lib/api-auth";
 import { ORDER_ACCESS_HEADER, isValidOrderAccessKey } from "@/lib/signed-value";
 
 export const dynamic = "force-dynamic";
@@ -34,16 +34,23 @@ export async function GET(
   if (error) return NextResponse.json({ error: "Failed to fetch order" }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // 注文の本人（未ログインのECゲスト注文はゲスト行に限り許可）、またはその店舗のスタッフのみ閲覧できる
+  // 注文の本人、またはその店舗のスタッフのみ閲覧できる。
+  // 注文確認メールのリンク（その注文専用の鍵付き）から開いた場合は、ログインなしでも本人として扱う。
+  // orderId自体は秘密情報ではない（レシートURL・LINE通知のリンク等で露出する）ため、
+  // 「customer_idがゲスト行かどうか」だけでは未ログイン者を本人と認めない。鍵がゲストの唯一の証明。
   const { customer_id: customerId, store_id: storeId, ...order } = data;
-  // 注文確認メールのリンク（その注文専用の鍵付き）から開いた場合は、ログインなしで閲覧できる
   const hasAccessKey = isValidOrderAccessKey(req.headers.get(ORDER_ACCESS_HEADER), orderId);
-  const ownerAccess = !hasAccessKey && customerId ? await authorizeUserAccess(req, supabaseAdmin, customerId) : null;
-  if (!hasAccessKey && !ownerAccess?.ok) {
-    const staffAccess = await authorizeStoreStaff(req, supabaseAdmin, storeId);
-    if (!staffAccess.ok) {
-      const status = ownerAccess && !ownerAccess.ok ? ownerAccess.status : staffAccess.status;
-      return NextResponse.json({ error: status === 401 ? "ログインが必要です" : "権限がありません" }, { status });
+  if (!hasAccessKey) {
+    const appUser = await getAuthenticatedAppUser(req, supabaseAdmin);
+    const isOwner = !!appUser && (appUser.id === customerId || appUser.userType === "admin");
+    if (!isOwner) {
+      const staffAccess = await authorizeStoreStaff(req, supabaseAdmin, storeId);
+      if (!staffAccess.ok) {
+        return NextResponse.json(
+          { error: appUser ? "権限がありません" : "ログインが必要です" },
+          { status: appUser ? 403 : 401 }
+        );
+      }
     }
   }
 

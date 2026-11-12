@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { resolveEffectiveLiffId } from "@/lib/store-liff"
+import { authFetch } from "@/lib/auth-fetch"
 
 export interface AudienceMember {
   id: string
@@ -14,6 +14,8 @@ export interface AudienceMember {
 /**
  * クーポン配信の母集団（この店舗のLIFFでログイン済み＝LINEユーザーIDが取得できている顧客）を返す。
  * 注文実績の有無は問わない。「注文実績がある人のみ」は orderedUserIds との組み合わせで別途絞り込む。
+ * 通常のRLS（orders経由でしか users が見えない）では注文実績が無い客が見えないため、
+ * サーバー側（service role + staff権限チェック）で取得する専用APIを使う。
  */
 export function useCouponAudience(storeId?: string | null) {
   const [audience, setAudience] = useState<AudienceMember[]>([])
@@ -29,28 +31,14 @@ export function useCouponAudience(storeId?: string | null) {
     }
     setLoading(true)
 
-    const effectiveLiffId = await resolveEffectiveLiffId(storeId, supabase)
-
-    const [{ data: userRows }, { data: orderRows }] = await Promise.all([
-      effectiveLiffId
-        ? supabase
-            .from("users")
-            .select("id, name, line_name, gender")
-            .eq("liff_id", effectiveLiffId)
-            .not("line_user_id", "is", null)
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as any[] }),
+    const [audienceRows, { data: orderRows }] = await Promise.all([
+      authFetch(`/api/store/coupon-audience?storeId=${storeId}`)
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
       supabase.from("orders").select("customer_id").eq("store_id", storeId).not("customer_id", "is", null),
     ])
 
-    setAudience(
-      (userRows ?? []).map((u: any) => ({
-        id: u.id,
-        name: u.name || u.line_name || "",
-        lineName: u.line_name || "",
-        gender: u.gender ?? null,
-      }))
-    )
+    setAudience(Array.isArray(audienceRows) ? audienceRows : [])
     setOrderedUserIds(new Set((orderRows ?? []).map((r: any) => r.customer_id as string)))
     setLoading(false)
   }, [storeId])

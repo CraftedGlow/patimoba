@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
+import { PREFECTURES } from "@/lib/constants/regions";
 import { releaseCouponReservation } from "@/lib/coupons";
 import { authorizeUserAccess } from "@/lib/api-auth";
 import { priceCartItems, type IncomingCartItem } from "@/lib/server/cart-pricing";
@@ -132,6 +133,20 @@ export async function POST(req: NextRequest) {
     const usedPoints = Number(discountAmount ?? 0);
     if (!Number.isInteger(usedPoints) || usedPoints < 0 || usedPoints > subtotal || usedPoints > (Number(userRow.points) || 0)) {
       return fail("ご利用ポイントが不正です。お手数ですが再度お試しください。", 400);
+    }
+
+    // 配送先住所は必須項目かつ、都道府県は選択肢（PREFECTURES）のいずれかに一致する必要がある。
+    // 不一致・空の場合に送料計算が安全側のフラットフィーへ無言でフォールバックしてしまうのを防ぐ
+    if (
+      !shippingAddress?.postalCode?.trim() ||
+      !shippingAddress?.prefecture?.trim() ||
+      !shippingAddress?.city?.trim() ||
+      !shippingAddress?.address?.trim()
+    ) {
+      return fail("配送先住所を入力してください", 400);
+    }
+    if (!(PREFECTURES as readonly string[]).includes(shippingAddress.prefecture)) {
+      return fail("配送先の都道府県が不正です", 400);
     }
 
     // 送料はクライアントの申告値を信用せず、店舗設定に基づきサーバー側で再計算する

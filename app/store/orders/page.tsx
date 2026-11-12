@@ -133,7 +133,7 @@ function buildCSV(orders: Order[], optionsMap: Map<string, OrderItemOption[]>): 
       o.createdAt,
       o.pickupDate,
       o.pickupTime,
-      isEc ? "EC" : "テイクアウト",
+      o.isChristmas ? "クリスマス" : isEc ? "EC" : "テイクアウト",
       o.customerName || o.lineName,
       itemsStr,
       qtySum,
@@ -182,7 +182,7 @@ function printOrdersPDF(
       <tr>
         <td>${o.orderNo || o.id.slice(0, 8)}</td>
         <td>${o.customerName || o.lineName || "-"}</td>
-        <td>${isEc ? "EC" : "テイクアウト"}</td>
+        <td>${o.isChristmas ? "クリスマス" : isEc ? "EC" : "テイクアウト"}</td>
         <td>${o.pickupDate || "-"} ${o.pickupTime ? o.pickupTime.slice(0,5) : ""}</td>
         <td>${itemsStr}</td>
         <td class="num">¥${o.totalAmount.toLocaleString()}</td>

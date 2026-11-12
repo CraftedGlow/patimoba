@@ -81,7 +81,7 @@ export function useOrderMutations() {
     return { orderId: "", error: data.error || "注文の作成に失敗しました" }
   }
 
-  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+  const updateOrderStatus = async (orderId: string, status: Exclude<OrderStatus, "cancelled">) => {
     const payload: any = { order_status: status }
     if (status === "confirmed") {
       payload.confirmed_at = new Date().toISOString()

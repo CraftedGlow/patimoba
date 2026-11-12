@@ -3,18 +3,22 @@
 -- products 行を FOR UPDATE でロックしてから、同じ受取日の既存の非キャンセル注文の
 -- 合計数量を数えることで、同時に複数の注文が来ても上限を超えて受け付けないようにする。
 -- 受取日（orders.pickup_date）が無い注文（EC発送など）には受取日の概念が無いため対象外とする。
+-- 店舗ごとの上書き設定（product_store_overrides）があればそちらを優先する
+-- （クライアント側の applyProductStoreOverride と同じ null=継承の解釈）。
 create or replace function enforce_product_daily_max_quantity()
 returns trigger as $$
 declare
   v_max integer;
+  v_override_max integer;
   v_pickup_date date;
+  v_store_id uuid;
   v_current numeric;
 begin
   if new.product_id is null then
     return new;
   end if;
 
-  select pickup_date into v_pickup_date
+  select pickup_date, store_id into v_pickup_date, v_store_id
   from orders
   where id = new.order_id;
 
@@ -26,6 +30,16 @@ begin
   from products
   where id = new.product_id
   for update;
+
+  if v_store_id is not null then
+    select daily_max_quantity into v_override_max
+    from product_store_overrides
+    where product_id = new.product_id and store_id = v_store_id;
+
+    if v_override_max is not null then
+      v_max := v_override_max;
+    end if;
+  end if;
 
   if v_max is null then
     return new;

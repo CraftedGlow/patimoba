@@ -494,7 +494,14 @@ export default function ECConfirmPage() {
           const orderLiffId = (() => { try { return sessionStorage.getItem("patimoba_ec_order_liff_id"); } catch { return null; } })();
           const liffId = orderLiffId || (selectedStoreId ? await getStoreLiffIdStrict(selectedStoreId) : "");
           const liff = (await import("@line/liff")).default;
-          if (liffId) await liff.init({ liffId });
+          if (liffId) {
+            // liff.init() が解決も拒否もせずハングするケースがあるため、注文完了後の画面を
+            // いつまでも止めないよう一定時間でタイムアウトさせる（app/page.tsx と同じ対策）
+            await Promise.race([
+              liff.init({ liffId }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("liff_init_timeout")), 8000)),
+            ]);
+          }
           const liffAccessToken = liff.getAccessToken();
           if (liffAccessToken) {
             const tokenRes = await authFetch("/api/line/issue-notification-token", {

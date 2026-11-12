@@ -10,16 +10,13 @@ export async function getProductsTotalQuantitySold(
   productIds: string[]
 ): Promise<Record<string, number>> {
   if (productIds.length === 0) return {}
-  const { data } = await supabase
-    .from("order_items")
-    .select("product_id, quantity, orders!inner(order_status)")
-    .in("product_id", productIds)
-    .neq("orders.order_status", "cancelled")
+  // お客様のセッション（anonキー）は自分自身の注文しかRLSで見えないため、全顧客分の
+  // 集計値のみを返す SECURITY DEFINER の RPC 経由で取得する（supabase/migrations/20261112000100）
+  const { data } = await supabase.rpc("get_products_sold_quantity", { p_product_ids: productIds })
 
   const result: Record<string, number> = {}
-  for (const row of (data ?? []) as { product_id: string | null; quantity: number }[]) {
-    if (!row.product_id) continue
-    result[row.product_id] = (result[row.product_id] ?? 0) + (Number(row.quantity) || 0)
+  for (const row of (data ?? []) as { product_id: string; total_quantity: number }[]) {
+    result[row.product_id] = Number(row.total_quantity) || 0
   }
   return result
 }
@@ -36,20 +33,17 @@ export async function getProductsQuantitySoldByDate(
   toDate: string
 ): Promise<Record<string, number>> {
   if (productIds.length === 0) return {}
-  const { data } = await supabase
-    .from("order_items")
-    .select("product_id, quantity, orders!inner(order_status, pickup_date)")
-    .in("product_id", productIds)
-    .gte("orders.pickup_date", fromDate)
-    .lte("orders.pickup_date", toDate)
-    .neq("orders.order_status", "cancelled")
+  // 上と同じ理由で、全顧客分の受取日ごとの集計値を RPC 経由で取得する
+  const { data } = await supabase.rpc("get_products_sold_quantity_by_date", {
+    p_product_ids: productIds,
+    p_from_date: fromDate,
+    p_to_date: toDate,
+  })
 
   const result: Record<string, number> = {}
-  for (const row of (data ?? []) as { product_id: string | null; quantity: number; orders: { pickup_date: string | null } }[]) {
-    const pickupDate = row.orders?.pickup_date
-    if (!row.product_id || !pickupDate) continue
-    const key = `${row.product_id}|${pickupDate}`
-    result[key] = (result[key] ?? 0) + (Number(row.quantity) || 0)
+  for (const row of (data ?? []) as { product_id: string; pickup_date: string; total_quantity: number }[]) {
+    const key = `${row.product_id}|${row.pickup_date}`
+    result[key] = Number(row.total_quantity) || 0
   }
   return result
 }

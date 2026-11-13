@@ -35,6 +35,9 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
   const [printing, setPrinting] = useState(false);
   const [printDone, setPrintDone] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,6 +118,31 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
       setPrinting(false);
     }
   };
+
+  const handleCancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await authFetch(`/api/orders/${order.id}/cancel`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCancelError(data?.error ?? "キャンセルに失敗しました");
+        setCancelling(false);
+        return;
+      }
+      setShowCancelConfirm(false);
+      setCancelling(false);
+      onConfirmed?.();
+      onClose();
+    } catch {
+      setCancelError("通信エラーが発生しました");
+      setCancelling(false);
+    }
+  };
+
+  const isCancelled = order.orderStatus === "cancelled";
+  const isCompleted = order.orderStatus === "completed";
 
   const pickupDisplay =
     order.pickupDate
@@ -321,8 +349,59 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
             </div>
           </div>
 
+          {/* 注文キャンセル（返金） */}
+          {!isCancelled && !isCompleted && (
+            <button
+              onClick={() => { setCancelError(null); setShowCancelConfirm(true); }}
+              className="w-full flex items-center justify-center gap-2 bg-white border border-red-200 rounded-xl px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
+            >
+              注文をキャンセルする
+            </button>
+          )}
         </div>
       </motion.div>
+
+      {/* キャンセル確認モーダル */}
+      {showCancelConfirm && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4"
+          onClick={() => !cancelling && setShowCancelConfirm(false)}
+        >
+          <div
+            className="bg-white rounded-xl w-full max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-bold text-center mb-2">注文をキャンセルしますか？</h2>
+            <p className="text-xs text-gray-600 text-center mb-3 leading-relaxed">
+              この操作は取り消せません。
+              {order.paymentStatus === "決済済み" && <> クレジットカードへの返金処理も同時に行われます。</>}
+            </p>
+            {cancelError && (
+              <p className="text-xs text-red-600 text-center mb-3">{cancelError}</p>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelConfirm(false)}
+                disabled={cancelling}
+                className="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg text-sm disabled:opacity-60"
+              >
+                戻る
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-lg text-sm disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                {cancelling && <LineSpinner size={16} />}
+                {cancelling ? "処理中..." : "キャンセルする"}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

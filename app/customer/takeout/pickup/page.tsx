@@ -109,7 +109,7 @@ export default function TakeoutPickupPage() {
   const [reservationStoppedDates, setReservationStoppedDates] = useState<Record<string, boolean>>({});
   // クリスマス限定商品などに設定された、通常の時間刻みの代わりに使う受け取り時間帯（例: 午前/午後）
   const [customPickupTimeOptions, setCustomPickupTimeOptions] = useState<{ label: string; start: string; end: string }[]>([]);
-  // カート内商品が全て期間限定商品・おまかせ商品の場合、予約停止日でも選択可能にする
+  // カート内商品が全て期間限定商品の場合、予約停止日でも選択可能にする
   const [canBypassReservationStop, setCanBypassReservationStop] = useState(false);
 
   const today = new Date();
@@ -208,9 +208,9 @@ export default function TakeoutPickupPage() {
               applyProductStoreOverride(row, row.id, parentStoreId, overrides)
             );
 
-            // カート内商品が全て期間限定商品・おまかせ商品なら予約停止日でも選択可能にする
+            // カート内商品が全て期間限定商品なら予約停止日でも選択可能にする
             setCanBypassReservationStop(
-              productRows.every((p: any) => !!p.limited_from || !!p.limited_until || p.category_name === "おまかせ")
+              productRows.every((p: any) => !!p.limited_from || !!p.limited_until)
             );
 
             // カート内商品に専用の受け取り時間帯（例: クリスマス限定の午前/午後）が設定されていれば、
@@ -371,7 +371,7 @@ export default function TakeoutPickupPage() {
     }
 
     // 予約停止チェック（営業はしているがパティモバ経由の予約のみ停止している日）。
-    // カート内商品が全て期間限定商品・おまかせ商品の場合は対象外として選択可能にする
+    // カート内商品が全て期間限定商品の場合は対象外として選択可能にする
     if (!canBypassReservationStop && reservationStoppedDates[dateKey(date)]) return false;
 
     // 営業日チェック（特定日override + 曜日ルール）

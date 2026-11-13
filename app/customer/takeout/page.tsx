@@ -99,6 +99,12 @@ export default function TakeoutStorePage() {
   const [loginDone, setLoginDone] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
+  // 店舗一覧ページでは、前回見ていた店舗名がLINEアプリ内ブラウザのヘッダーに
+  // 残ったままにならないよう、ここでタイトルを明示的に戻す
+  useEffect(() => {
+    document.title = "パティモバ";
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
 

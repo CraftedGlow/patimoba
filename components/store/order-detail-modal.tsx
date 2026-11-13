@@ -375,7 +375,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
             className="bg-white rounded-xl w-full max-w-sm p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-bold text-center mb-2">注文をキャンセルしますか？</h2>
+            <h2 className="text-base font-bold text-center mb-2">本当にキャンセルしますか？</h2>
             <p className="text-xs text-gray-600 text-center mb-3 leading-relaxed">
               この操作は取り消せません。
               {order.paymentStatus === "決済済み" && <> クレジットカードへの返金処理も同時に行われます。</>}
@@ -389,7 +389,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                 disabled={cancelling}
                 className="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg text-sm disabled:opacity-60"
               >
-                戻る
+                いいえ
               </button>
               <button
                 onClick={handleCancel}
@@ -397,7 +397,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                 className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-lg text-sm disabled:opacity-60 flex items-center justify-center gap-1.5"
               >
                 {cancelling && <LineSpinner size={16} />}
-                {cancelling ? "処理中..." : "キャンセルする"}
+                {cancelling ? "処理中..." : "はい"}
               </button>
             </div>
           </div>

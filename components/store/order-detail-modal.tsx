@@ -38,6 +38,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelDone, setCancelDone] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,8 +134,8 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
       }
       setShowCancelConfirm(false);
       setCancelling(false);
+      setCancelDone(true);
       onConfirmed?.();
-      onClose();
     } catch {
       setCancelError("通信エラーが発生しました");
       setCancelling(false);
@@ -350,7 +351,7 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
           </div>
 
           {/* 注文キャンセル（返金） */}
-          {!isCancelled && !isCompleted && (
+          {!isCancelled && !isCompleted && !cancelDone && (
             <button
               onClick={() => { setCancelError(null); setShowCancelConfirm(true); }}
               className="w-full flex items-center justify-center gap-2 bg-white border border-red-200 rounded-xl px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-50 active:bg-red-100 transition-colors"
@@ -399,6 +400,32 @@ export function OrderDetailModal({ order, onClose, onConfirmed }: OrderDetailMod
                 {cancelling ? "処理中..." : "キャンセルする"}
               </button>
             </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* キャンセル・返金完了ポップアップ */}
+      {cancelDone && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4"
+        >
+          <div className="bg-white rounded-xl w-full max-w-sm p-6 text-center">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+              <Check className="w-6 h-6 text-green-600" />
+            </div>
+            <h2 className="text-base font-bold mb-2">キャンセル・返金処理が完了しました</h2>
+            <p className="text-xs text-gray-600 mb-5 leading-relaxed">
+              お客様へのキャンセル通知も送信されています。
+            </p>
+            <button
+              onClick={onClose}
+              className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2.5 rounded-lg text-sm"
+            >
+              閉じる
+            </button>
           </div>
         </motion.div>
       )}

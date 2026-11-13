@@ -400,6 +400,9 @@ export async function completeOrder(
   supabaseAdmin: AdminClient,
   params: {
     orderId: string;
+    /** 直近の重複課金チェック（二重注文検知）に使う。クレジット払いのときのみ必須 */
+    customerId?: string | null;
+    storeId?: string | null;
     initialTotal: number;
     couponDeliveryId: string | null;
     expectedTotal: number;
@@ -440,6 +443,28 @@ async function completeOrderSteps(
     await rollbackOrder(supabaseAdmin, orderId, couponDeliveryId);
     return { ok: false, status, error };
   };
+
+  // 二重課金の最後の砦: クライアント側のclientRequestIdが何らかの理由で前回と異なってしまった場合
+  // （再送信・ページ再読み込み等）でも、同じ客・同じ店舗・同じ金額の決済済み注文が直近にあれば
+  // 明らかな重複とみなして課金せずに中止する。店頭払い（charge無し）は実際の課金が発生しないため対象外
+  if (params.charge && params.customerId && params.storeId) {
+    const recentWindowStart = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+    const { data: recentPaid } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .eq("customer_id", params.customerId)
+      .eq("store_id", params.storeId)
+      .eq("payment_status", "paid")
+      .eq("total_amount", params.expectedTotal)
+      .neq("id", orderId)
+      .gte("created_at", recentWindowStart)
+      .limit(1)
+      .maybeSingle();
+    if (recentPaid) {
+      console.warn(`[${logTag}] 直近の重複注文を検知、課金を中止: orderId=${orderId} duplicateOf=${recentPaid.id}`);
+      return abort("直前に同じ内容のご注文が完了しています。二重注文の可能性があるため、この注文はキャンセルしました。お手数ですが注文履歴をご確認ください。", 409);
+    }
+  }
 
   let totalAmount = params.initialTotal;
   if (couponDeliveryId) {

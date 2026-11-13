@@ -216,6 +216,8 @@ export async function POST(req: NextRequest) {
 
     const result = await completeOrder(supabaseAdmin, {
       orderId: order.id,
+      customerId,
+      storeId,
       initialTotal: Number(order.total_amount),
       couponDeliveryId,
       expectedTotal,

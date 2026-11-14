@@ -7,6 +7,7 @@ import { completeLiffLogin } from "@/lib/liff-login";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { getLiffId, parseLiffStateStoreId, parseLiffStateCouponToken, clearLiffIdCache } from "@/lib/get-liff-id";
 import { supabase } from "@/lib/supabase";
+import { isDevOnlyStoreVisible } from "@/lib/store-visibility";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp"
 
@@ -149,12 +150,16 @@ export default function Home() {
         try {
           const { data: storeRow } = await supabase.from("stores").select("is_master").eq("id", storeId).maybeSingle();
           if (storeRow?.is_master) {
-            const { count } = await supabase
+            // store-select ページ自身のフィルタ（is_dev_only）と条件を揃える。
+            // ここで数え方がズレると、store-select側で0件になってクリスマスモードを
+            // 失ったまま汎用の/customer/takeoutへ飛ばされてしまう
+            const { data: childRows } = await supabase
               .from("stores")
-              .select("id", { count: "exact", head: true })
+              .select("is_dev_only")
               .eq("parent_store_id", storeId)
               .eq("is_active", true);
-            if (count && count > 0) {
+            const visibleChildCount = (childRows ?? []).filter((s) => isDevOnlyStoreVisible(s.is_dev_only)).length;
+            if (visibleChildCount > 0) {
               deepLinkPath = `/customer/store-select?master=${storeId}&mode=christmas`;
             }
           }

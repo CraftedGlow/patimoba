@@ -110,6 +110,9 @@ export default function TakeoutConfirmPage() {
 
   const [pickupDate, setPickupDate] = useState("");
   const [pickupTime, setPickupTime] = useState("");
+  // 複数店舗（マスター/子店舗）で運営されている場合のみ、どの店舗で受け取るか確認画面に表示する
+  const [pickupStoreName, setPickupStoreName] = useState<string | null>(null);
+  const [isMultiStoreGroup, setIsMultiStoreGroup] = useState(false);
   const [hasCardInfo, setHasCardInfo] = useState(false);
   const [cardLabel, setCardLabel] = useState("");
   const [selectedBag, setSelectedBag] = useState<{ id: string; name: string; price: number; quantity: number; productIds?: string[] } | null>(null);
@@ -158,6 +161,36 @@ export default function TakeoutConfirmPage() {
     })();
     return () => { cancelled = true; };
   }, [selectedStoreId, cartStoreId, cartItems]);
+
+  useEffect(() => {
+    const sid = selectedStoreId || cartStoreId;
+    if (!sid) { setPickupStoreName(null); setIsMultiStoreGroup(false); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("stores")
+        .select("name, parent_store_id, is_master")
+        .eq("id", sid)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setPickupStoreName(data.name ?? null);
+      if (data.parent_store_id) {
+        setIsMultiStoreGroup(true);
+        return;
+      }
+      if (data.is_master) {
+        const { count } = await supabase
+          .from("stores")
+          .select("id", { count: "exact", head: true })
+          .eq("parent_store_id", sid)
+          .eq("is_active", true);
+        if (!cancelled) setIsMultiStoreGroup((count ?? 0) > 0);
+      } else {
+        setIsMultiStoreGroup(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedStoreId, cartStoreId]);
 
   useEffect(() => {
     if (paymentRestricted) setPaymentMethod("store");
@@ -636,13 +669,19 @@ export default function TakeoutConfirmPage() {
           <p className="text-xs text-gray-600 mt-0.5">まだ注文は確定していません</p>
         </div>
 
-        {/* 受け取り日時 (表示のみ) */}
+        {/* 受け取り日時・受け取り店舗 (表示のみ) */}
         {(pickupDate || pickupTime) && (
           <div className="mb-4 border border-amber-200 rounded-xl px-4 py-3 bg-amber-50/60">
             <p className="text-xs font-bold text-amber-700 mb-0.5">受け取り日時</p>
             <p className="text-sm font-bold text-gray-900">
               {fmtDate(pickupDate)}{pickupTime ? `　${pickupTime}` : ""}
             </p>
+            {isMultiStoreGroup && pickupStoreName && (
+              <>
+                <p className="text-xs font-bold text-amber-700 mb-0.5 mt-2.5">受け取り店舗</p>
+                <p className="text-sm font-bold text-gray-900">{pickupStoreName}</p>
+              </>
+            )}
           </div>
         )}
 

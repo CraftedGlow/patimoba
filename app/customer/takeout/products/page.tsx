@@ -155,10 +155,30 @@ export default function TakeoutProductsPage() {
   const isChristmasMode = modeParam === "christmas";
   const typeParam = searchParams.get("type") || (() => { try { return sessionStorage.getItem("patimoba_order_type_selection"); } catch { return null; } })();
   const orderTypeParam = (typeParam === "sameday" ? "sameday" : "reservation") as "sameday" | "reservation";
-  const { selectedStoreId, selectedStoreName, profile,
+  const { selectedStoreId, selectedStoreName, setSelectedStoreId, setSelectedStoreName, profile,
     points, } = useCustomerContext();
-  const storeId = selectedStoreId || storeParam || undefined;
+  // URLのstoreパラメータ（深いリンク等で明示された店舗）を、ブラウザに残っている
+  // 以前の選択店舗（selectedStoreId、localStorageに長期間残る）より優先する。
+  // 優先順位を逆にすると、別店舗のクリスマス深いリンクを踏んだ時に前回見ていた
+  // 店舗の商品がそのまま表示されてしまう
+  const storeId = storeParam || selectedStoreId || undefined;
   const pickupPath = `/customer/takeout/pickup?store=${storeId ?? ""}&type=${orderTypeParam}`;
+
+  // クリスマスの深いリンクは店舗TOPページを経由せず直接ここに来るため、selectedStoreId
+  // がそのままだと以降の商品詳細・確認画面でも前回の店舗のまま進んでしまう。
+  // URLのstoreパラメータが現在のselectedStoreIdと異なる場合はここで同期しておく
+  useEffect(() => {
+    if (!storeParam || storeParam === selectedStoreId) return;
+    setSelectedStoreId(storeParam);
+    supabase
+      .from("stores")
+      .select("name")
+      .eq("id", storeParam)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.name) setSelectedStoreName(data.name);
+      });
+  }, [storeParam, selectedStoreId, setSelectedStoreId, setSelectedStoreName]);
 
   const { products, categories, loading } = useProductRegistrations({
     storeId,

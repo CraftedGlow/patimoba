@@ -70,7 +70,10 @@ export default function TakeoutPickupPage() {
 
   const { selectedStoreName, selectedStoreId, profile } = useCustomerContext();
   const { items: cartItems, storeId: cartStoreId } = useCart();
-  const storeId = selectedStoreId || cartStoreId || storeParam || null;
+  // カートの中身が属する店舗（cartStoreId）を最優先し、次にURLのstoreパラメータを使う。
+  // 以前の選択店舗（selectedStoreId、localStorageに長期間残る）は最後の手段にする
+  // （優先順位を逆にすると、別店舗の深いリンクを踏んだ時に前回の店舗のまま進んでしまう）
+  const storeId = cartStoreId || storeParam || selectedStoreId || null;
   const { bags, loading: bagsLoading } = useBags(storeId ?? undefined);
   const hasApplicableBag = (() => {
     const cartProductIds = new Set(cartItems.map((i) => i.productId));

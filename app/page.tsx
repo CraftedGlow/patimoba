@@ -6,6 +6,7 @@ import { LineSpinner } from "@/components/ui/line-spinner";
 import { completeLiffLogin } from "@/lib/liff-login";
 import { useAuth, STORAGE_KEY } from "@/lib/auth-context";
 import { getLiffId, parseLiffStateStoreId, parseLiffStateCouponToken, clearLiffIdCache } from "@/lib/get-liff-id";
+import { supabase } from "@/lib/supabase";
 
 const LIFF_LOGIN_TIMESTAMP_KEY = "liff_login_timestamp"
 
@@ -140,7 +141,25 @@ export default function Home() {
         }
       }
 
-      const deepLinkPath = isChristmasDeepLink && storeId ? `/customer/takeout/products?mode=christmas&store=${storeId}` : null;
+      // マスター店舗（複数の子店舗を持つ）宛のクリスマス深いリンクは、どの店舗で受け取るか
+      // 選べないと困るため、先に店舗選択画面を経由させる。子店舗が無い・通常の（マスターでない）
+      // 店舗の場合は従来通り直接クリスマスケーキ一覧へ飛ばす
+      let deepLinkPath: string | null = isChristmasDeepLink && storeId ? `/customer/takeout/products?mode=christmas&store=${storeId}` : null;
+      if (isChristmasDeepLink && storeId) {
+        try {
+          const { data: storeRow } = await supabase.from("stores").select("is_master").eq("id", storeId).maybeSingle();
+          if (storeRow?.is_master) {
+            const { count } = await supabase
+              .from("stores")
+              .select("id", { count: "exact", head: true })
+              .eq("parent_store_id", storeId)
+              .eq("is_active", true);
+            if (count && count > 0) {
+              deepLinkPath = `/customer/store-select?master=${storeId}&mode=christmas`;
+            }
+          }
+        } catch {}
+      }
 
       const liffId = await getLiffId(storeId);
       handleLiffCallback(liffId, storeId, deepLinkPath);

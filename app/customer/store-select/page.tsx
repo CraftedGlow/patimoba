@@ -75,8 +75,11 @@ export default function StoreSelectPage() {
   }, [masterStoreId, user]);
 
   const handleSelect = (storeId: string) => {
-    // マスター店舗経由のクリスマス予約深いリンクでも、子店舗を選んだ先でmodeを
-    // 引き継いでクリスマス専用フローへ進めるようにする
+    if (modeParam === "christmas") {
+      // クリスマス予約は店舗TOPページを経由せず直接クリスマスケーキ一覧へ進める
+      router.push(`/customer/takeout/products?mode=christmas&store=${storeId}`);
+      return;
+    }
     router.push(`/customer/takeout/store/${storeId}${modeParam ? `?mode=${modeParam}` : ""}`);
   };
 
